@@ -13,7 +13,7 @@ Authentification :
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
 | GET | `/api/health` | 🔓 | `select 1` sur la DB, retourne `{ok:true}` ou 500 |
-| POST | `/api/seed` | 🔓 ⚠️ | **Truncate + réinsère** 8 propriétés de démo (Paris, Marrakech, Nice, Rome, Barcelone, Djerba, Tokyo, NYC). ⚠️ À protéger avant prod, voir `SECURITY.md`. |
+| POST | `/api/seed` | 🔓 en dev / 🔒 en prod | Idempotent : peuple 8 propriétés de démo + 3 comptes (admin, host, customer) si la base est vide. En production, retourne 404 sauf si l'en-tête `x-seed-token` correspond à `process.env.SEED_TOKEN` (voir ADR-004, BUG-002). |
 
 ## Auth
 

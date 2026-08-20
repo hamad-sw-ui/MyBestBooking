@@ -1,9 +1,34 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { users, properties, rooms, bookings, reviews, promotions, wishlists } from "@/db/schema";
 import { hashPassword } from "@/lib/auth";
 import { generateSlug, generateBookingReference } from "@/lib/utils";
 import { eq } from "drizzle-orm";
+import { timingSafeEqual } from "node:crypto";
+
+/**
+ * Vérifie qu'une requête POST /api/seed est autorisée.
+ * — En dev/test : toujours autorisée.
+ * — En prod : exige l'en-tête `x-seed-token` égal à `SEED_TOKEN` (env var)
+ *   avec comparaison en temps constant. Retourne `null` si autorisé, une
+ *   Response 404 sinon (on cache l'existence de la route).
+ * Voir ADR-004, BUG-002.
+ */
+function checkSeedAuthorization(request: NextRequest): NextResponse | null {
+  const isProd = process.env.NODE_ENV === "production";
+  if (!isProd) return null;
+
+  const expected = process.env.SEED_TOKEN;
+  const received = request.headers.get("x-seed-token");
+  if (!expected || !received || expected.length !== received.length) {
+    return new NextResponse("Not Found", { status: 404 });
+  }
+  const ok = timingSafeEqual(
+    Buffer.from(expected, "utf8"),
+    Buffer.from(received, "utf8"),
+  );
+  return ok ? null : new NextResponse("Not Found", { status: 404 });
+}
 
 const DEMO_PROPERTIES = [
   {
@@ -166,7 +191,10 @@ const REVIEW_COMMENTS = [
   { positive: "Décoration superbe et ambiance très agréable.", negative: "La climatisation était un peu bruyante.", travelerType: "couple" },
 ];
 
-export async function POST() {
+export async function POST(request: NextRequest) {
+  const forbidden = checkSeedAuthorization(request);
+  if (forbidden) return forbidden;
+
   try {
     // Check if data already exists
     const existingUsers = await db.select().from(users).limit(1);

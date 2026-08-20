@@ -53,11 +53,12 @@ serait une seconde ligne de défense simple à ajouter.
    émis si le secret fait moins de 32 caractères. Un test automatisé
    (`src/lib/auth.test.ts`, 9 cas) protège contre la régression.
 
-2. **`POST /api/seed` accessible publiquement** (`src/app/api/seed/route.ts`).
-   Une simple requête POST anonyme suffit à **truncate + réinsérer** toute la
-   base. Deux options :
-   - protéger derrière `NODE_ENV !== 'production'` **et** un token admin ;
-   - ou retirer la route et déclencher le seed via un script CLI hors serveur.
+2. ~~**`POST /api/seed` accessible publiquement**~~ **CORRIGÉ 2026-08-20 (T-002, BUG-002, ADR-004)**.
+   Le handler retourne `404` en production sauf si l'en-tête
+   `x-seed-token` correspond à `process.env.SEED_TOKEN` (comparaison
+   timing-safe). En développement, aucun changement. 7 tests
+   automatisés (`src/app/api/seed/route.test.ts`) couvrent les
+   scénarios.
 
 3. **Paiement non implémenté**. `POST /api/bookings` force
    `paymentStatus: 'paid'` sans aucun débit. Une intégration réelle

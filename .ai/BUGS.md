@@ -9,9 +9,6 @@ suivante.
 
 ## Ouverts
 
-- [ ] **BUG-002 — `POST /api/seed` accessible publiquement** sans auth ni token.
-  Truncate + réinsère toute la base. À protéger ou à retirer avant prod.
-
 - [ ] **BUG-003 — Paiement non implémenté**. `POST /api/bookings` force
   `paymentStatus: 'paid'` et `status: 'confirmed'` sans intégration
   paiement réelle. Toute réservation est gratuite aujourd'hui.
@@ -66,6 +63,11 @@ suivante.
   Générer les migrations et versionner un dossier `drizzle/`.
 
 ## Corrigés
+
+- [x] **2026-08-20 — BUG-002** : `POST /api/seed` retourne 404 en
+  production sauf en-tête `x-seed-token` valide (comparaison
+  timing-safe). Tâche **T-002** (niveau C), ADR-004, 7 tests
+  automatisés dans `src/app/api/seed/route.test.ts`.
 
 - [x] **2026-08-20 — BUG-001** : `JWT_SECRET` obligatoire au boot.
   `src/lib/auth.ts` throw explicitement si la variable est absente,
