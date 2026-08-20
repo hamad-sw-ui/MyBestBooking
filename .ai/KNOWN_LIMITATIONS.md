@@ -16,7 +16,7 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Paiement mocké.** `POST /api/bookings` force `paymentStatus: 'paid'`
   sans débit. Limite assumée le temps du prototype ; devient un bug le jour
-  où le produit est exposé à de vrais utilisateurs (déjà tracé en B-003).
+  où le produit est exposé à de vrais utilisateurs (déjà tracé en BUG-003).
 - **Uniquement le français.** Le modèle DB supporte `descriptionEn` et
   `users.language`, mais aucun mécanisme d'i18n n'est en place côté UI.
   Assumé tant que le marché cible est francophone.
@@ -29,18 +29,18 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Aucune migration Drizzle versionnée.** Le schéma est synchronisé via
   `drizzle-kit push` en dev. Assumé jusqu'au premier déploiement, ensuite
-  ce devient un bloqueur (tracé en B-015).
+  ce devient un bloqueur (tracé en BUG-015).
 - **Aucun test automatisé.** État courant, cible : voir `TEST_PLAN.md`.
 - **`<img>` HTML natif** partout au lieu de `next/image`. Assumé pour aller
-  vite sur le prototype ; à migrer avant tout SEO sérieux (B-006).
+  vite sur le prototype ; à migrer avant tout SEO sérieux (BUG-006).
 - **Fallback `JWT_SECRET`** hard-codé. Assumé **uniquement en dev**. Devient
-  une faille P1 en prod (B-001).
+  une faille P1 en prod (BUG-001).
 - **`POST /api/seed` public.** Assumé en dev, à supprimer/protéger en prod
-  (B-002).
+  (BUG-002).
 - **Pas de rate-limiting.** Assumé sans utilisateurs réels. Devient bug avec
-  premier utilisateur (B-009).
+  premier utilisateur (BUG-009).
 - **`averageRating` recalculé à la main** dans `POST /api/reviews`. Race
-  condition théorique acceptée tant que le trafic est faible (B-010).
+  condition théorique acceptée tant que le trafic est faible (BUG-010).
 
 ## Framework
 

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
+  "version": "1.0.2",
   "name": "MyBestBooking AI Development Operating System (AI-DOS Web)",
   "description": "Framework de gouvernance hybride pour un projet Next.js/PostgreSQL/Drizzle : traçabilité des preuves, proportionnalité T/L/S/C, checklists bloquantes, honnêteté technique.",
   "derived_from": "AI-DOS 3.0 (MobileCaisse) — philosophie conservée, contenu réécrit pour le web",
@@ -15,7 +15,14 @@
       "version": "1.0.1",
       "date": "2026-08-20",
       "session": "Session 3",
+      "commit": "cbb3b2e",
       "changes": "Auto-audit : correction de 4 défauts rouges (STATE.md HEAD, reading_order aligné, libellé rôle sécurité uniformisé, README.md ajouté aux mandatory_documents), clause transitoire §13.4 (test manuel documenté vaut preuve tant que TEST_PLAN J1 n'est pas livré), ajout du script scripts/check-ai.mjs tranché par ADR-002."
+    },
+    {
+      "version": "1.0.2",
+      "date": "2026-08-20",
+      "session": "Session 3 (second tour)",
+      "changes": "Second tour d'audit : convention d'IDs BUG-xxx (bugs) / T-xxx (tâches) formalisée §8.1 (défaut A), blocking_rules enrichies d'un flag 'implemented' et étendues (défaut B), 4 règles ajoutées au script : R10 branche Git, R11 collision d'IDs BUG/T, R12 rapports d'impact/conception présents pour tâche S/C, R13 items TRACEABILITY 'VALIDÉ' portent au moins une preuve 🔨/🧪/▶️. Jaunes C-J reportés à Session 4 (voir PROCESS_IMPROVEMENTS.md)."
     }
   ],
   "mandatory_documents": [
@@ -65,13 +72,14 @@
     "ADR/"
   ],
   "blocking_rules": {
-    "missing_mandatory_document": true,
-    "obsolete_roadmap": true,
-    "unresolved_critical_bugs": false,
-    "mismatched_git_state": true,
-    "unchecked_pre_commit_checklist": true,
-    "missing_impact_analysis_for_S_or_C": true,
-    "closure_without_evidence": true
+    "missing_mandatory_document":         { "blocking": true,  "implemented": true,  "verified_by": "R2 mandatory_present" },
+    "mismatched_git_state":               { "blocking": true,  "implemented": true,  "verified_by": "R7 state_head_synced + R10 git_branch" },
+    "id_collision_bug_task":              { "blocking": true,  "implemented": true,  "verified_by": "R11 id_collision" },
+    "missing_impact_analysis_for_S_or_C": { "blocking": true,  "implemented": true,  "verified_by": "R12 impact_reports_for_S_or_C" },
+    "closure_without_evidence":           { "blocking": true,  "implemented": true,  "verified_by": "R13 validated_items_have_evidence" },
+    "obsolete_roadmap":                   { "blocking": true,  "implemented": false, "note": "Aspirational : aucun critère mesurable dans ROADMAP.md aujourd'hui. Voir Session 4." },
+    "unchecked_pre_commit_checklist":     { "blocking": true,  "implemented": false, "note": "Aspirational : nécessite un hook Git ; contournable via --no-verify. Voir Session 4." },
+    "unresolved_critical_bugs":           { "blocking": false, "implemented": false, "note": "Désactivé volontairement pour ne pas bloquer les évolutions de framework quand des bugs applicatifs P1 restent ouverts." }
   },
   "proportionality_levels": {
     "T": {

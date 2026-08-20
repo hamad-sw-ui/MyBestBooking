@@ -26,19 +26,36 @@ considéré comme non valide (audit §22) et repasse en `INSPECTION`.
 
 | ID | Titre | Niveau | Statut | Preuves | Commit(s) | Rapports |
 |---|---|---|---|---|---|---|
-| B-000 v1 | Mise en place du framework `.ai/` v1.0.0 | S | CORRIGÉ (INSPECTION) | 🔍 tous les fichiers `.ai/` obligatoires existent · 🔍 `framework.manifest.json` valide JSON | `4ad8884` + `455c121` | `REPORTS/analyse_impact_2026-08-20_governance_setup.md` · `REPORTS/analyse_conception_2026-08-20_governance_setup.md` · `ADR/ADR-001_Framework_de_gouvernance.md` |
-| B-000 v1.1 | Auto-audit + ajustements framework v1.0.1 | S (§15.0-bis exception maintenance) | CORRIGÉ (INSPECTION) | 🔍 10 défauts détectés puis corrigés (voir rapport d'audit) · ▶️ `node scripts/check-ai.mjs` retourne **9 OK · 0 warn · 0 fail · exit 0** sur le HEAD post-corrections · 🔨 preuve validée avant commit final, à ré-exécuter par le responsable pour audit §22 | commit de la Session 3 (à renseigner post-commit) | `REPORTS/audit_2026-08-20_framework_v1.0.0.md` · `ADR/ADR-001_Framework_de_gouvernance.md` (section « Niveau assumé S ») · `ADR/ADR-002_Automatisation_hors_dossier_ai.md` |
+| T-000 v1 | Mise en place du framework `.ai/` v1.0.0 | S | CORRIGÉ (VALIDÉ) | 🔍 tous les fichiers `.ai/` obligatoires existent · ▶️ `npm run ai:check` R1/R2/R4 tous verts sur HEAD post-consolidation | `4ad8884` + `455c121` | `REPORTS/analyse_impact_2026-08-20_governance_setup.md` · `REPORTS/analyse_conception_2026-08-20_governance_setup.md` · `ADR/ADR-001_Framework_de_gouvernance.md` |
+| T-000 v1.1 | Auto-audit tour 1 + framework v1.0.1 | S (§15.0-bis exception maintenance) | CORRIGÉ (VALIDÉ) | 🔍 10 défauts détectés puis corrigés · ▶️ `npm run ai:check` retourne **9 OK · 0 warn · 0 fail** (v1.0.1 initial) puis **8 OK · 1 warn attendu R7 · 0 fail** (post-commit `cbb3b2e`) | `cbb3b2e` | `REPORTS/audit_2026-08-20_framework_v1.0.0.md` · `ADR/ADR-001_Framework_de_gouvernance.md` (section « Niveau assumé S ») · `ADR/ADR-002_Automatisation_hors_dossier_ai.md` |
+| T-000 v1.2 | Auto-audit tour 2 + framework v1.0.2 | S (§15.0-bis exception maintenance) | CORRIGÉ (INSPECTION) | 🔍 10 nouveaux défauts détectés dont 2 rouges (A collision IDs, B blocking_rules non implémentées) · 🔍 66 occurrences B-xxx renommées en BUG-xxx/T-xxx (16 fichiers touchés, 0 résiduel) · ▶️ `npm run ai:check` retourne **11 OK · 2 warn · 0 fail · exit 0** avec R10/R11/R12/R13 ajoutées, sortie complète consignée ci-dessous · 🔨 preuve reproductible via `npm run ai:check` | commit de la Session 3 tour 2 (à renseigner post-commit) | `REPORTS/audit_2026-08-20_framework_v1.0.1_tour2.md` |
 
 ## Audits historiques
 
-_Aucun audit encore réalisé._
+### 2026-08-20 — Audit de la mise en place initiale (auto-audit tour 1)
+- Items audités : T-000 v1
+- Commande rejouée : ▶️ `npm run ai:check` sur HEAD `455c121`
+- Résultat : 10 défauts détectés (4 rouges, 3 orange, 3 jaunes)
+- Action : ouverture de T-000 v1.1 pour corriger, aboutissant à framework v1.0.1 (commit `cbb3b2e`)
+- Rapport : `REPORTS/audit_2026-08-20_framework_v1.0.0.md`
 
-Format à venir :
+### 2026-08-20 — Audit du framework v1.0.1 (auto-audit tour 2)
+- Items audités : T-000 v1 + T-000 v1.1 + le framework v1.0.1 lui-même
+- Commande rejouée : ▶️ `npm run ai:check` + inventaire manuel des blocking_rules vs règles Rn
+- Résultat : 10 nouveaux défauts détectés (2 rouges A/B, 3 orange C/D/E, 5 jaunes F-J)
+- Action décidée par le responsable :
+  - A → **préfixes distincts** BUG-xxx / T-xxx (formalisation §8.1)
+  - B → **hybride** : implémenter R10/R11/R12/R13 dans le script, marquer `unchecked_pre_commit_checklist` et `obsolete_roadmap` comme `implemented: false` (aspirationnelles)
+  - C-J → reportés Session 4 (voir `PROCESS_IMPROVEMENTS.md`)
+- Résultat post-corrections : ▶️ `npm run ai:check` → **11 OK · 2 warn · 0 fail · exit 0**
+  - 2 warn attendus et documentés : R7 (HEAD à mettre à jour en fin de session, motif toléré) et R11 (numéro 001 partagé entre BUG- et T-, informationnel)
+- Rapport : `REPORTS/audit_2026-08-20_framework_v1.0.1_tour2.md`
 
+### Format standard des audits à venir
 ```
-### 2026-XX-XX — Audit demandé par <responsable>
-- Item audité : B-xxx
-- Preuve rejouée : ▶️ <commande>
+### YYYY-MM-DD — Audit demandé par <responsable>
+- Items audités : T-xxx, BUG-yyy
+- Commande rejouée : ▶️ <commande>
 - Résultat : conforme | RÉGRESSION
 - Action : —
 ```

@@ -3,7 +3,7 @@
 - **Date** : 2026-08-20
 - **Statut** : accepté
 - **Niveau** : S
-- **Tâche associée** : B-000
+- **Tâche associée** : T-000
 - **Rapports liés** :
   - `REPORTS/analyse_impact_2026-08-20_governance_setup.md`
   - `REPORTS/analyse_conception_2026-08-20_governance_setup.md`
@@ -96,7 +96,7 @@ au titre qu'elle modifie les règles de gouvernance elles-mêmes ?
 
 Le niveau **S** est **assumé** pour les raisons suivantes :
 
-1. **Périmètre purement documentaire.** B-000 n'a modifié aucun runtime,
+1. **Périmètre purement documentaire.** T-000 n'a modifié aucun runtime,
    aucun schéma DB, aucune surface exposée à un utilisateur final. Elle ne
    crée aucun risque de perte de données ni de faille de sécurité
    applicative.
@@ -111,7 +111,7 @@ Le niveau **S** est **assumé** pour les raisons suivantes :
    Session 1 et rejetée par le responsable.
 4. **Auto-application impossible.** Un framework de gouvernance ne peut
    pas être validé selon ses propres règles avant d'exister. Insister
-   sur le niveau **C** pour B-000 aurait exigé un débat 11 rôles et une
+   sur le niveau **C** pour T-000 aurait exigé un débat 11 rôles et une
    double validation… par un framework qui n'existait pas encore.
    C'est un cas classique de « bootstrap ».
 
@@ -130,7 +130,7 @@ rubrique « Historique des règles » comme règle §15.0-bis.
   existent après commit (vérifiable via `ls .ai/`).
 - 🔍 Les checklists `avant_commit`, `avant_pull_request`, `avant_release`
   portent l'avertissement ⛔ « bloquantes ».
-- 🔍 `CURRENT_TASK.md` référence bien B-000.
+- 🔍 `CURRENT_TASK.md` référence bien T-000.
 - ❓ `framework.manifest.json` est syntaxiquement JSON — à confirmer par
   `jq . .ai/framework.manifest.json` en début de prochaine session.
 - ❓ Aucun `npm run typecheck`/`build` — hors périmètre (100 % doc).

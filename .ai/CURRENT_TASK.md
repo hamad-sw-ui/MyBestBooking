@@ -8,118 +8,121 @@
 
 ## Identifiant
 
-- **ID** : B-000 v1.1
-- **Titre** : Auto-audit + ajustements du framework `.ai/` v1.0.1
-- **Niveau de proportionnalité** : **S** (Structurant)
-- **Assigné à** : Arena Agent Mode
-- **Ouverte le** : 2026-08-20 (Session 3)
-- **Prédécesseur** : B-000 v1 (mise en place initiale v1.0.0, commits
-  `4ad8884` + `455c121`)
+- **ID** : T-001
+- **Titre** : Rendre `JWT_SECRET` obligatoire au démarrage
+- **Niveau de proportionnalité** : **C (Critique)** — sécurité de l'auth
+- **Bug associé** : BUG-001
+- **Ouverte le** : 2026-08-20 (Session 3, en attente de démarrage effectif)
+- **Prédécesseur** : T-000 v1.2 (framework v1.0.2), en attente de validation
 
 ## Contexte
 
-À la demande du responsable de valider/ajuster la mise en place initiale,
-un auto-audit a été mené qui a détecté **10 défauts** (voir
-`REPORTS/audit_2026-08-20_framework_v1.0.0.md`). Les décisions du
-responsable ont fixé le périmètre de cette version 1.0.1 :
+`src/lib/auth.ts:9` utilise aujourd'hui :
 
-- Corriger les **4 défauts rouges** (contradictions internes objectives).
-- **Assumer le niveau S** pour B-000, documenter la justification dans
-  ADR-001.
-- Ajouter une **clause transitoire §13.4** : test manuel ▶️ documenté vaut
-  preuve tant que `TEST_PLAN.md → J1` n'est pas livré.
-- Créer `scripts/check-ai.mjs` + `npm run ai:check`, tranché par
-  **ADR-002** (le framework peut produire du code de vérification hors de
-  `.ai/`).
+```ts
+const JWT_SECRET = new TextEncoder().encode(
+  process.env.JWT_SECRET || "mybestbooking-secret-key-2025"
+);
+```
+
+Ce fallback constitue une **faille P1** : si `JWT_SECRET` n'est pas défini
+en production (oubli de variable d'environnement, mauvaise configuration
+de déploiement), n'importe qui connaissant le code (public sur GitHub)
+peut forger un JWT admin valide. La chaîne fallback est un secret
+publiquement lisible dans le dépôt.
 
 ## Objectif
 
-Livrer la version **1.0.1** du framework avec :
+Remplacer le fallback par un **`throw` explicite au démarrage** du module
+`src/lib/auth.ts` :
 
-1. `STATE.md` cohérent avec le HEAD Git courant.
-2. `framework.manifest.json → reading_order` aligné sur `INDEX.md`
-   (8 documents, `framework.manifest.json` inclus).
-3. `PROMPTS/roles.md` libellé du rôle 7 aligné sur le manifest.
-4. `CURRENT_TASK.md` (ce fichier) avec tags §16 sur les critères
-   d'acceptation.
-5. `CODING_RULES.md §13.4` amendé avec la clause transitoire.
-6. `ADR-001` complété d'une section « Niveau assumé S : justification ».
-7. `ADR-002_Automatisation_hors_dossier_ai.md` créé.
-8. `scripts/check-ai.mjs` créé + entrée `npm run ai:check` dans
-   `package.json`.
-9. `README.md` racine ajouté à `mandatory_documents`.
-10. `PROCESS_IMPROVEMENTS.md` mis à jour avec l'audit et les décisions.
-11. `PROGRESS.md` ouvre une nouvelle entrée Session 3.
-12. `TRACEABILITY.md` référence les nouveaux artefacts.
-13. `npm run ai:check` **passe** (▶️ preuve d'exécution requise pour
-    clôturer VALIDÉ).
+```ts
+const secret = process.env.JWT_SECRET;
+if (!secret) {
+  throw new Error("JWT_SECRET is required (see .ai/SECURITY.md)");
+}
+const JWT_SECRET = new TextEncoder().encode(secret);
+```
+
+Le comportement attendu : le serveur Next.js refuse de démarrer si
+`JWT_SECRET` n'est pas fourni. Un fail-fast au boot est infiniment
+préférable à une faille silencieuse.
 
 ## Périmètre autorisé
 
-- ✅ Modifier tout `.ai/`.
-- ✅ Créer `scripts/check-ai.mjs`.
-- ✅ Modifier `package.json` (ajout scripts uniquement, aucune dépendance
-  runtime).
-- ✅ Committer sur `arena/01a01eee-mybestbooking`.
-- ❌ **Ne pas toucher** au code applicatif `src/`.
+- ✅ Modifier `src/lib/auth.ts` (uniquement la partie chargement du secret).
+- ✅ Documenter la variable dans `DEV_ENVIRONMENT.md` si ce n'est pas
+  déjà fait (à vérifier au moment de l'implémentation).
+- ✅ Créer `.env.example` s'il n'existe pas (T-001 le rend nécessaire).
+- ✅ Mettre à jour `SECURITY.md` — la P1 devient un point réglé.
+- ✅ Mettre à jour `BUGS.md` — BUG-001 passe à `CORRIGÉ (VALIDÉ)`.
+- ❌ **Ne pas toucher** à la logique JWT elle-même (`SignJWT`, `jwtVerify`).
 - ❌ **Ne pas modifier** le schéma DB.
-- ❌ **Ne pas ouvrir** de PR sans validation.
+- ❌ **Ne pas** exécuter `POST /api/seed` (elle réécrirait la DB).
 
-## Analyse d'impact (§14)
+## Rituels obligatoires — niveau C
 
-Voir `REPORTS/audit_2026-08-20_framework_v1.0.0.md` (l'audit lui-même
-tient lieu d'analyse d'impact pour cette itération corrective).
+Conformément à §15.0 et §15.0-bis, T-001 déclenche le **cycle complet** :
 
-## Conception (§15.1)
+- [ ] **§14 Analyse d'impact** dans `REPORTS/analyse_impact_2026-08-20_jwt_secret.md`
+  (les 9 questions).
+- [ ] **§15.1 Conception** dans `REPORTS/analyse_conception_2026-08-20_jwt_secret.md`
+  (options : `throw`, `assert`, `process.exit`, valeur de fallback dev-only ; option
+  retenue ; alternatives écartées ; migration).
+- [ ] **§15.2 Débat multi-rôles** dans
+  `REPORTS/debat_technique_2026-08-20_jwt_secret.md` (11 rôles, voir
+  `PROMPTS/roles.md`, chaque rôle 3-5 lignes, objections bloquantes
+  résolues).
+- [ ] **ADR-003_JWT_Secret_Obligatoire.md** (§11, §15.0).
+- [ ] **§13.5 Double validation** : implémentation + test automatisé
+  indépendant validant le comportement (le test doit être écrit à partir
+  du contrat, pas dérivé du même raisonnement que l'implémentation).
 
-- **ADR-001** actualisé — assume le niveau S pour la mise en place
-  initiale.
-- **ADR-002** — tranche la question de l'automatisation hors `.ai/`.
+## Critères d'acceptation (§13, §16)
 
-## Critères d'acceptation
+Chaque critère porte un tag §16.
 
-Chaque critère porte un **tag de preuve §16**. Un critère `[x]` sans tag
-▶️/🔨/🧪 est considéré comme mensonger (§16, §22).
-
-- [ ] 🔨 `npm run ai:check` passe sans erreur — **preuve principale, seule
-  qui autorise le passage à `VALIDÉ`**
-- [ ] 🔍 `STATE.md → HEAD` référence le SHA du commit courant (à mettre à
-  jour juste avant commit final)
-- [ ] 🔍 `framework.manifest.json → reading_order` contient les 8
-  documents de `INDEX.md`
-- [ ] 🔍 `PROMPTS/roles.md § rôle 7` est libellé « Expert sécurité web
-  (auth, cookies, CSP) »
-- [ ] 🔍 `CURRENT_TASK.md` (ce fichier) : chaque critère porte un tag §16
-- [ ] 🔍 `CODING_RULES.md §13.4` inclut la clause transitoire de preuve
-  manuelle
-- [ ] 🔍 `ADR-001` contient une section « Niveau assumé S : justification »
-- [ ] 🔍 `ADR-002_Automatisation_hors_dossier_ai.md` existe
-- [ ] 🔍 `scripts/check-ai.mjs` existe et est exécutable
-- [ ] 🔍 `package.json → scripts.ai:check` existe
-- [ ] 🔍 `README.md` figure dans `mandatory_documents`
-- [ ] 🔍 `PROCESS_IMPROVEMENTS.md` a une entrée « Session 3 — auto-audit »
-- [ ] 🔍 `PROGRESS.md` a une entrée « Session 3 »
-- [ ] 🔍 `TRACEABILITY.md` référence B-000 v1.1
+- [ ] 🔍 `src/lib/auth.ts` ne contient plus la chaîne
+  `"mybestbooking-secret-key-2025"`.
+- [ ] 🔍 Un `throw new Error(...)` explicite au chargement du module si
+  `JWT_SECRET` n'est pas défini.
+- [ ] 🔨 `npm run typecheck` passe.
+- [ ] 🔨 `npm run build` passe **avec `JWT_SECRET` défini**.
+- [ ] ▶️ `npm run build` échoue **sans `JWT_SECRET` défini**, avec un
+  message d'erreur clair mentionnant la variable et pointant sur
+  `.ai/SECURITY.md`.
+- [ ] 🧪 Test automatisé (Vitest ou équivalent minimal si J1 pas encore
+  livré) qui vérifie le comportement dans les deux cas — **§13.5 double
+  validation**.
+- [ ] ▶️ `npm run ai:check` continue de passer (11 OK · warnings tolérés
+  · 0 fail).
+- [ ] 🔍 `.env.example` existe et documente `JWT_SECRET` avec
+  `openssl rand -hex 32` en commentaire.
+- [ ] 🔍 `SECURITY.md` : BUG-001 marqué corrigé.
+- [ ] 🔍 `BUGS.md` : BUG-001 déplacé en « Corrigés » avec la date.
+- [ ] 🔍 `TRACEABILITY.md` : ligne T-001 avec preuves 🔨/🧪/▶️.
+- [ ] 🔍 `STATE.md` mis à jour.
+- [ ] 🔍 `PROGRESS.md` : entrée Session 4.
 
 ## Statut
 
-**CORRIGÉ (INSPECTION)** — tant que `npm run ai:check` n'a pas été exécuté
-avec succès ▶️ et le résultat consigné dans `TRACEABILITY.md`, la tâche
-reste en INSPECTION (§13).
+**PLANIFIÉ** — attente de deux préalables :
 
-Passage à **CORRIGÉ (VALIDÉ)** possible seulement quand :
+1. Validation par le responsable de T-000 v1.2 (framework v1.0.2) pour
+   consolider le socle avant de l'utiliser.
+2. Feu vert explicite du responsable pour démarrer T-001 (les tâches de
+   niveau **C** exigent validation préalable §12 + MISSION §7).
 
-- ▶️ `npm run ai:check` retourne code 0 dans une exécution horodatée
-  documentée ;
-- 🔍 tous les critères ci-dessus sont vérifiables ;
-- 🔍 le responsable a explicitement validé (le framework n'autorise pas
-  l'auto-validation §22).
+Le simple fait d'ouvrir `CURRENT_TASK.md` ne démarre pas les travaux.
 
-## Prochaine tâche recommandée
+## Prochaine tâche prévue
 
-Après clôture VALIDÉ de B-000 v1.1 → **B-001** : `JWT_SECRET` obligatoire
-au boot (niveau **C** — première tâche déclenchant analyse d'impact
-complète + conception + débat multi-rôles 11 rôles + double validation).
+Après clôture VALIDÉ de T-001 :
+
+- **T-002** : protection de `POST /api/seed` (BUG-002, niveau **C**).
+  Suggestion de conception : `if (process.env.NODE_ENV === "production") return 404`
+  ou header token `x-seed-token` vérifié contre une env var. À arbitrer
+  en analyse de conception dédiée.
 
 ---
 

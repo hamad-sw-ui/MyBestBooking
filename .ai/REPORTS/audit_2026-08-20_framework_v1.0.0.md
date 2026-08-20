@@ -4,7 +4,7 @@
 - **Auteur** : Arena Agent Mode (auto-audit à la demande du responsable)
 - **Objet** : Valider/ajuster la mise en place initiale du framework
   (commits `4ad8884` + `455c121`).
-- **Tâche déclenchée** : B-000 v1.1
+- **Tâche déclenchée** : T-000 v1.1
 
 ---
 
@@ -31,8 +31,8 @@ l'audit.
 
 | # | Défaut | Décision responsable | Application |
 |---|---|---|---|
-| 5 | B-000 s'auto-valide (auteur = validateur). | Assumé : validation par le responsable = preuve de clôture. | `CURRENT_TASK.md` exige désormais explicitement la validation du responsable pour passer à `VALIDÉ`. |
-| 6 | Niveau B-000 = S discutable (modifie les règles opposables). | **Garder S**, documenter la justification dans ADR-001. | ADR-001 complété d'une section « Niveau assumé S : justification » (4 arguments : périmètre docs, rollback trivial, aucune règle antérieure à défendre, auto-application impossible). Nouvelle règle §15.0-bis introduite dans `CODING_RULES.md` : toute évolution ultérieure du framework est de niveau **C**. |
+| 5 | T-000 s'auto-valide (auteur = validateur). | Assumé : validation par le responsable = preuve de clôture. | `CURRENT_TASK.md` exige désormais explicitement la validation du responsable pour passer à `VALIDÉ`. |
+| 6 | Niveau T-000 = S discutable (modifie les règles opposables). | **Garder S**, documenter la justification dans ADR-001. | ADR-001 complété d'une section « Niveau assumé S : justification » (4 arguments : périmètre docs, rollback trivial, aucune règle antérieure à défendre, auto-application impossible). Nouvelle règle §15.0-bis introduite dans `CODING_RULES.md` : toute évolution ultérieure du framework est de niveau **C**. |
 | 7 | Contradiction §13.4 (test requis) vs. absence de runner (aucune tâche ne peut être VALIDÉ). | Clause transitoire : test manuel ▶️ documenté vaut preuve. | `CODING_RULES.md §13.4-bis` ajoutée, cesse de s'appliquer dès `TEST_PLAN.md → J1`. |
 
 ### 🟡 Défauts mineurs
@@ -46,12 +46,12 @@ l'audit.
 ## Suites
 
 - **Version du framework** : 1.0.0 → **1.0.1** (voir `manifest.changelog`).
-- **Preuve d'exécution requise** pour clôture VALIDÉ de B-000 v1.1 :
+- **Preuve d'exécution requise** pour clôture VALIDÉ de T-000 v1.1 :
   ```
   npm run ai:check   →   9 OK · 0 warn · 0 fail · exit 0
   ```
   Résultat obtenu 🔨 avant commit final, consigné dans `TRACEABILITY.md`.
-- **Prochaine itération** : B-001 (`JWT_SECRET` obligatoire au boot,
+- **Prochaine itération** : T-001 (`JWT_SECRET` obligatoire au boot,
   niveau **C**), premier vrai déclenchement du cycle complet (analyse
   d'impact + conception + débat 11 rôles + double validation).
 

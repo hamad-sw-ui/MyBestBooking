@@ -11,8 +11,8 @@
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
 - **Dernier commit connu** : à mettre à jour en fin de session en cours (voir `git rev-parse --short HEAD` avant clôture)
-- **Dernier commit stable référencé** : `455c121` (feat(.ai): ajoute la couche gouvernance AI-DOS Web v1.0.0)
-- **Version du Framework** : 1.0.1 (AI-DOS Web, hybride — voir `PROCESS_IMPROVEMENTS.md` pour le journal des règles)
+- **Dernier commit stable référencé** : `cbb3b2e` (feat(.ai): auto-audit + framework v1.0.1)
+- **Version du Framework** : 1.0.2 (AI-DOS Web, hybride — voir `PROCESS_IMPROVEMENTS.md` pour le journal des règles)
 
 ## 🛠️ État Technique
 
@@ -35,19 +35,23 @@
 
 ## 📋 Progression
 
-- **Dernière tâche terminée** : B-000 v1 — Mise en place initiale du
-  framework de gouvernance hybride v1.0.0 (commits `4ad8884` couche contenu
-  + `455c121` couche gouvernance).
-- **Tâche en cours** : B-000 v1.1 — auto-audit + ajustements du framework
-  (voir `CURRENT_TASK.md`).
-- **Prochaine tâche prévue** : sécurisation P1 (JWT_SECRET obligatoire au
-  boot + protection de `/api/seed`) — voir `BACKLOG.md` → B-001.
+- **Dernières tâches terminées** :
+  - T-000 v1 — Mise en place initiale framework v1.0.0 (`4ad8884` + `455c121`) — **VALIDÉ**
+  - T-000 v1.1 — Auto-audit tour 1 + framework v1.0.1 (`cbb3b2e`) — **VALIDÉ**
+  - T-000 v1.2 — Auto-audit tour 2 + framework v1.0.2 (commit de session en cours) — **INSPECTION**, attente validation responsable
+- **Tâche en cours** : voir `CURRENT_TASK.md` — **T-001** (JWT_SECRET obligatoire au boot, niveau **C**).
+- **Prochaines tâches prévues** :
+  - T-002 : protection de `/api/seed` (BUG-002, niveau C)
+  - T-003 : middleware.ts de protection (BUG-005, niveau S)
+  - Session 4 : traitement des jaunes C-J reportés (voir `PROCESS_IMPROVEMENTS.md`)
 
 ## 🐞 Bugs & Défauts
 
-- **Bugs Ouverts** : B-001 → B-015 (voir `BUGS.md`)
+- **Bugs Ouverts** : BUG-001 → BUG-015 (voir `BUGS.md`)
 - **Bugs Corrigés (VALIDÉ)** : —
 - **Bugs en `CORRIGÉ (INSPECTION)`** : —
+- **Tâches VALIDÉ** : T-000 v1, T-000 v1.1
+- **Tâches INSPECTION** : T-000 v1.2 (attente validation responsable)
 
 ## 🏛️ Décisions & Risques
 
@@ -69,8 +73,8 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20 (Session 3 — auto-audit)
+- **Date** : 2026-08-20 (Session 3 — auto-audit tour 2, framework v1.0.2)
 - **Agent** : Arena Agent Mode
 - **Prochaine mise à jour attendue** : à chaque fin de session — obligatoire
   §11. La règle de mise à jour est **vérifiée mécaniquement** par
-  `npm run ai:check` (voir `scripts/check-ai.mjs`).
+  `npm run ai:check` (voir `scripts/check-ai.mjs`, règles R2 R7 R10 R11 R12 R13).

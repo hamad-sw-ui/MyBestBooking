@@ -82,6 +82,21 @@ En cas de conflit :
 - Format recommandé : `<type>(<scope>): <résumé>` où type ∈ `feat`, `fix`,
   `docs`, `refactor`, `chore`, `test`, `perf`, `sec`.
 
+### §8.1 Convention d'identifiants
+
+Deux séries strictement séparées, préfixes obligatoires :
+
+- **`BUG-xxx`** — bugs et régressions. Vivent dans `BUGS.md`, référencés
+  par `KNOWN_LIMITATIONS.md`, `CHECKLISTS/avant_release.md`, les
+  rapports et ADR.
+- **`T-xxx`** — tâches (features, refactors, chantiers de framework).
+  Vivent dans `CURRENT_TASK.md`, `BACKLOG.md`, `STATE.md`, `PROGRESS.md`,
+  `TRACEABILITY.md`.
+
+Un même identifiant ne peut **jamais** appartenir aux deux séries.
+Vérifié mécaniquement par **R10** de `scripts/check-ai.mjs`. La
+numérotation est **jamais réutilisée** (on ne recycle pas un ID libéré).
+
 ## §9 Dépendances
 
 - Toute nouvelle dépendance runtime justifie sa présence par écrit dans
@@ -200,7 +215,7 @@ La profondeur des rituels **suit l'impact, pas la taille du diff** :
 ### §15.0-bis Évolution du framework lui-même
 
 Toute **modification du framework `.ai/`** au-delà de la mise en place
-initiale (v1.0.0, tâche B-000, ADR-001) est de niveau **C** par défaut :
+initiale (v1.0.0, tâche T-000, ADR-001) est de niveau **C** par défaut :
 
 - Ajout/retrait d'un document `mandatory_documents`.
 - Modification d'une règle §1–§22 de `CODING_RULES.md`.

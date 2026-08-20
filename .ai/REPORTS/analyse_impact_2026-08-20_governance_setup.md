@@ -1,7 +1,7 @@
 # Analyse d'impact — Mise en place du framework de gouvernance `.ai/` v1.0.0
 
 - **Date** : 2026-08-20
-- **Tâche** : B-000
+- **Tâche** : T-000
 - **Niveau** : S
 - **Auteur** : Arena Agent Mode
 - **Référence** : `CODING_RULES.md` §14 (9 questions)
@@ -154,8 +154,8 @@ version applicative.
 Impact sécurité **positif indirect** :
 
 - La checklist `avant_release.md` **bloque un déploiement** si
-  `JWT_SECRET` fallback n'a pas été retiré (B-001) et si `/api/seed` reste
-  publique (B-002). Le framework rend explicitement visible ce qui était
+  `JWT_SECRET` fallback n'a pas été retiré (BUG-001) et si `/api/seed` reste
+  publique (BUG-002). Le framework rend explicitement visible ce qui était
   auparavant seulement dans `BUGS.md`.
 - Le §14 point 7 (« Sécurité ») impose désormais une revue sécurité pour
   toute tâche S/C.

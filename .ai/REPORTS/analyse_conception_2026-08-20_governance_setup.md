@@ -1,7 +1,7 @@
 # Analyse de conception — Framework de gouvernance `.ai/` v1.0.0
 
 - **Date** : 2026-08-20
-- **Tâche** : B-000
+- **Tâche** : T-000
 - **Niveau** : S
 - **Auteur** : Arena Agent Mode
 - **Référence** : `CODING_RULES.md` §15.1

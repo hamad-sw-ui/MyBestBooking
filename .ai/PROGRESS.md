@@ -9,18 +9,127 @@
 
 ---
 
+## 2026-08-20 — Session 3, second tour : audit v1.0.1 → framework v1.0.2
+
+**Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
+· **Agent** : Arena Agent Mode
+
+### Livré (T-000 v1.2, niveau **S** exception §15.0-bis maintenance)
+
+- **Second tour d'audit** — 10 nouveaux défauts détectés :
+  - 🔴 A : collision d'ID `B-001` (bug + tâche).
+  - 🔴 B : 6 blocking_rules sur 7 non implémentées par le script.
+  - 🟠 C/D/E : TEST_PLAN sans §13.4-bis, chevauchement RULES/STYLE,
+    ROADMAP sans date.
+  - 🟡 F-J : PROGRESS non vérifié, INDEX confus, DEVLOG/PROGRESS
+    chevauchement, refs commit en dur, R9 partiel.
+- **Décisions responsable** par `ask_user` : A → préfixes distincts,
+  B → hybride (implémenter R10-R13 + `implemented: false` pour les autres),
+  C-J → reporter Session 4.
+- **§8.1 formalisée** dans `CODING_RULES.md` — convention `BUG-xxx`
+  (bugs) / `T-xxx` (tâches).
+- **66 occurrences renommées** dans 16 fichiers via script Python
+  contrôlé, 0 résidu vérifié.
+- **`framework.manifest.json → blocking_rules`** enrichies : passent de
+  `bool` à `{blocking, implemented, verified_by?, note?}`. 5 règles
+  `implemented: true`, 2 explicitement `implemented: false`
+  (aspirationnelles avec note).
+- **4 nouvelles règles au script check-ai** :
+  - **R10** — branche Git = `arena/01a01eee-mybestbooking` (§8).
+  - **R11** — 0 résidu `B-xxx`, warning sur numéros partagés BUG-/T-.
+  - **R12** — CURRENT_TASK S/C exige rapports impact+conception (ou
+    audit §15.0-bis).
+  - **R13** — items VALIDÉ dans TRACEABILITY portent ≥ 1 preuve
+    🔨/🧪/▶️.
+- **T-000 v1 et v1.1** passés à **CORRIGÉ (VALIDÉ)** dans
+  `TRACEABILITY.md` avec preuves consolidées.
+- **T-000 v1.2** en **CORRIGÉ (INSPECTION)** — preuve mécanique posée,
+  validation responsable attendue.
+- **Rapport complet** : `REPORTS/audit_2026-08-20_framework_v1.0.1_tour2.md`.
+- **CURRENT_TASK.md** basculé sur **T-001** (JWT_SECRET, niveau **C**)
+  — première vraie tâche de code, premier déclenchement du cycle
+  complet §14 + §15.1 + §15.2 (11 rôles) + §13.5 (double validation).
+- **PROCESS_IMPROVEMENTS.md** enrichi de la rétro Session 3 tour 2 +
+  8 nouvelles lignes dans « Historique des règles ».
+- **STATE.md** reflète la nouvelle réalité : 2 tâches VALIDÉ, 1
+  INSPECTION, framework en v1.0.2.
+
+### Fichiers modifiés
+
+```
+M .ai/framework.manifest.json  (v1.0.1 → v1.0.2, blocking_rules enrichies, changelog)
+M .ai/CODING_RULES.md          (§8.1 convention IDs)
+M .ai/BUGS.md                  (B- → BUG-)
+M .ai/KNOWN_LIMITATIONS.md     (B- → BUG-)
+M .ai/CHECKLISTS/avant_release.md (B- → BUG-)
+M .ai/CURRENT_TASK.md          (basculé vers T-001)
+M .ai/TRACEABILITY.md          (T-000 v1/v1.1 VALIDÉ, v1.2 INSPECTION, +2 audits)
+M .ai/PROCESS_IMPROVEMENTS.md  (rétro tour 2, 8 nouvelles règles historiées)
+M .ai/CODING_RULES.md          (aucune règle §1-§22 modifiée, §8.1 ajoutée)
+M .ai/ADR/ADR-001_Framework_de_gouvernance.md (B- → T-)
+M .ai/ADR/ADR-002_Automatisation_hors_dossier_ai.md (B- → T-)
+M .ai/ADR/README.md
+M .ai/REPORTS/README.md
+M .ai/REPORTS/analyse_conception_2026-08-20_governance_setup.md
+M .ai/REPORTS/analyse_impact_2026-08-20_governance_setup.md
+M .ai/REPORTS/audit_2026-08-20_framework_v1.0.0.md
+A .ai/REPORTS/audit_2026-08-20_framework_v1.0.1_tour2.md
+M .ai/STATE.md
+M .ai/PROGRESS.md              (cette entrée)
+M scripts/check-ai.mjs         (+R10, +R11, +R12, +R13)
+```
+
+### Tests exécutés
+
+- ▶️ **`npm run ai:check`** post-corrections :
+  **11 OK · 2 warn · 0 fail · exit 0**
+  - Warnings tolérés et documentés : R7 (motif « à mettre à jour en fin
+    de session ») et R11 (numéro 001 partagé BUG-/T-, informationnel).
+- ▶️ `grep -oE "\bB-[0-9]+" .ai/*.md .ai/*/*.md` → **0 résidu**.
+- ❓ `npm run typecheck` / `build` non exécutés — cette tâche n'a pas
+  touché `src/`.
+
+### Problèmes rencontrés
+
+- Le manifest v1.0.0 promettait 7 `blocking_rules` sans en implémenter
+  vraiment aucune au-delà de R2. Défaut structurel du framework
+  original : promettre sans vérifier. Corrigé par le format enrichi
+  `{blocking, implemented}` : soit une règle est mécaniquement
+  vérifiée, soit elle est explicitement marquée aspirationnelle.
+- La migration `B-xxx` → `BUG-xxx`/`T-xxx` sur 16 fichiers aurait été
+  risquée à la main. Script Python contrôlé + vérification `grep` post
+  = 0 résidu, 0 erreur de contexte.
+
+### Statut
+
+- **T-000 v1 et T-000 v1.1** : basculées `CORRIGÉ (VALIDÉ)` dans
+  TRACEABILITY (preuves acquises).
+- **T-000 v1.2** : **CORRIGÉ (INSPECTION)** — attente validation
+  responsable.
+- **T-001** ouverte dans `CURRENT_TASK.md`.
+
+### Étape suivante
+
+- Le responsable rejoue `npm run ai:check` pour audit §22.
+- Si validé → attaque T-001 (JWT_SECRET, niveau **C**). Cycle complet
+  attendu : analyse d'impact §14 + conception §15.1 + débat 11 rôles
+  §15.2 + double validation §13.5. Premier commit de code applicatif
+  du projet.
+
+---
+
 ## 2026-08-20 — Session 3 : auto-audit + framework v1.0.1
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
 · **Agent** : Arena Agent Mode
 
-### Livré (tâche B-000 v1.1, niveau **S** exception §15.0-bis maintenance)
+### Livré (tâche T-000 v1.1, niveau **S** exception §15.0-bis maintenance)
 
 - **Auto-audit** complet du framework v1.0.0 → 10 défauts détectés,
   consignés dans `REPORTS/audit_2026-08-20_framework_v1.0.0.md`.
 - **Décisions du responsable** pour les 10 défauts (via `ask_user`) :
   - 🔴 défauts 1-4 (contradictions internes) → **corriger tout**.
-  - 🟠 défaut 6 (niveau B-000 S vs. C) → **assumer S**, documenter dans
+  - 🟠 défaut 6 (niveau T-000 S vs. C) → **assumer S**, documenter dans
     ADR-001.
   - 🟠 défaut 7 (contradiction §13.4 vs. tests inexistants) → **clause
     transitoire** : test manuel ▶️ documenté vaut preuve.
@@ -39,7 +148,7 @@
   - `CODING_RULES.md §13.4-bis` — clause transitoire test manuel.
   - `CODING_RULES.md §15.0-bis` — toute évolution du framework = niveau
     **C** (sauf maintenance = S).
-- **Justification du niveau S de B-000 initial** ajoutée à ADR-001
+- **Justification du niveau S de T-000 initial** ajoutée à ADR-001
   (section « Niveau assumé S : justification », 4 arguments).
 - **ADR-002** créé — le framework peut produire du code hors `.ai/`.
 - **`scripts/check-ai.mjs`** créé (Node stdlib, ~250 lignes, 9 règles
@@ -49,7 +158,7 @@
 - **`framework.manifest.json → changelog`** ajouté, version 1.0.0 → 1.0.1.
 - **`PROCESS_IMPROVEMENTS.md`** : entrée Session 3 + 4 nouvelles lignes
   dans « Historique des règles ».
-- **`TRACEABILITY.md`** : B-000 scindé en v1 et v1.1, preuve ▶️ posée.
+- **`TRACEABILITY.md`** : T-000 scindé en v1 et v1.1, preuve ▶️ posée.
 
 ### Fichiers modifiés
 
@@ -99,7 +208,7 @@ passage à `VALIDÉ`. La preuve mécanique ▶️ est acquise, l'audit externe
 ### Étape suivante
 
 - Le responsable rejoue `npm run ai:check` s'il souhaite auditer §22.
-- Si validé → passage à **B-001** (`JWT_SECRET` obligatoire, niveau **C**)
+- Si validé → passage à **T-001** (`JWT_SECRET` obligatoire, niveau **C**)
   qui déclenchera le cycle complet : analyse d'impact §14 + conception
   §15.1 + débat multi-rôles 11 rôles §15.2 + double validation §13.5.
 
@@ -110,7 +219,7 @@ passage à `VALIDÉ`. La preuve mécanique ▶️ est acquise, l'audit externe
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
 · **Agent** : Arena Agent Mode
 
-### Livré (tâche B-000, niveau **S**)
+### Livré (tâche T-000, niveau **S**)
 
 - Couche gouvernance ajoutée par-dessus la couche contenu déjà en place :
   - `MISSION.md` — mandat permanent réécrit pour Next.js
@@ -119,7 +228,7 @@ passage à `VALIDÉ`. La preuve mécanique ▶️ est acquise, l'audit externe
   - `CURRENT_TASK.md` — mécanisme de tâche unique
   - `CODING_RULES.md` — §1–§17 + §22 (proportionnalité, impact, conception,
     débat, honnêteté, rétrospective, audit)
-  - `TRACEABILITY.md` — matrice preuves ↔ tâches, ouverte avec B-000
+  - `TRACEABILITY.md` — matrice preuves ↔ tâches, ouverte avec T-000
   - `TEST_PLAN.md` — stratégie de tests (Vitest + Playwright, aujourd'hui à 0 %)
   - `KNOWN_LIMITATIONS.md` — limites assumées non-bugs
   - `PROCESS_IMPROVEMENTS.md` — journal de rétros
@@ -197,7 +306,7 @@ Aucun test de code (tâche 100 % documentation).
 ### Étape suivante
 
 Attendre la clôture par le responsable, puis mettre à jour `CURRENT_TASK.md`
-avec la tâche suivante — probablement **B-001** (`JWT_SECRET` obligatoire au
+avec la tâche suivante — probablement **T-001** (`JWT_SECRET` obligatoire au
 boot, niveau **C**), qui déclenchera :
 
 - analyse d'impact §14 (9 questions)

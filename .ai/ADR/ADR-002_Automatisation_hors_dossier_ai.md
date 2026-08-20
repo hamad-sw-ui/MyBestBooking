@@ -3,7 +3,7 @@
 - **Date** : 2026-08-20
 - **Statut** : accepté
 - **Niveau** : S
-- **Tâche associée** : B-000 v1.1
+- **Tâche associée** : T-000 v1.1
 - **Rapports liés** :
   - `REPORTS/audit_2026-08-20_framework_v1.0.0.md`
   - `PROCESS_IMPROVEMENTS.md` → Session 3
@@ -95,7 +95,7 @@ Concrètement, cela autorise :
 - 🔍 `scripts/check-ai.mjs` existe (à confirmer post-commit).
 - 🔍 `package.json → scripts.ai:check` existe.
 - ▶️ `npm run ai:check` retourne code 0 sur le HEAD courant — **preuve
-  requise pour la clôture VALIDÉ de B-000 v1.1**, consignée dans
+  requise pour la clôture VALIDÉ de T-000 v1.1**, consignée dans
   `TRACEABILITY.md`.
 
 ## Signatures

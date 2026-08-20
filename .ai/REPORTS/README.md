@@ -39,5 +39,5 @@ missing_impact_analysis_for_S_or_C`).
 
 | Date | Type | Sujet | Tâche |
 |---|---|---|---|
-| 2026-08-20 | analyse_impact | governance_setup | B-000 |
-| 2026-08-20 | analyse_conception | governance_setup | B-000 |
+| 2026-08-20 | analyse_impact | governance_setup | T-000 |
+| 2026-08-20 | analyse_conception | governance_setup | T-000 |

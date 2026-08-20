@@ -9,9 +9,9 @@ doit être rollback.
 - [ ] `JWT_SECRET` défini en prod, ≥ 32 caractères aléatoires
       (`openssl rand -hex 32`)
 - [ ] Le fallback hard-codé de `JWT_SECRET` a été retiré du code
-      (B-001) — sinon, refus du release
+      (BUG-001) — sinon, refus du release
 - [ ] `POST /api/seed` **supprimée ou protégée** derrière
-      `NODE_ENV !== 'production'` + token admin (B-002)
+      `NODE_ENV !== 'production'` + token admin (BUG-002)
 - [ ] Cookie `session` bien `Secure` en prod (implicite via `NODE_ENV=production`)
 - [ ] Aucune clé/token committée — audit `git log -p | grep -Ei 'secret|password|token|key'`
 - [ ] Headers de sécurité configurés dans `next.config.ts`
