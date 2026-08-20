@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate, getRatingLabel } from "@/lib/utils";
 import { Star, MessageSquare, ThumbsUp, Flag } from "lucide-react";
+import { HostReplyForm } from "@/components/host-reply-form";
 
 async function getReviews(userId: string, isAdmin: boolean) {
   if (isAdmin) {
@@ -219,13 +220,10 @@ export default async function ReviewsPage() {
                     </div>
                   )}
 
-                  {/* Actions */}
-                  {!review.hostReply && !isAdmin && (
+                  {/* Actions — T-016 : formulaire branché */}
+                  {!isAdmin && (
                     <div className="mt-4">
-                      <button className="text-sm text-[#1B3A6B] font-medium hover:underline flex items-center gap-1">
-                        <MessageSquare className="w-4 h-4" />
-                        Répondre
-                      </button>
+                      <HostReplyForm reviewId={review.id} initialReply={review.hostReply} />
                     </div>
                   )}
                 </div>

@@ -11,6 +11,8 @@ import {
   Shield, Bell, LogOut, Trash2, ChevronRight 
 } from "lucide-react";
 import Link from "next/link";
+import { ProfileForm } from "@/components/profile-form";
+import { ChangePasswordForm } from "@/components/change-password-form";
 
 interface UserData {
   id: string;
@@ -148,64 +150,20 @@ export default function MyAccountPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Prénom"
-                        value={user.firstName}
-                        onChange={() => {}}
-                        icon={<User className="w-4 h-4" />}
-                      />
-                      <Input
-                        label="Nom"
-                        value={user.lastName}
-                        onChange={() => {}}
-                      />
-                      <Input
-                        label="Email"
-                        value={user.email}
-                        onChange={() => {}}
-                        icon={<Mail className="w-4 h-4" />}
-                        disabled
-                      />
-                      <Input
-                        label="Téléphone"
-                        value={user.phone || ""}
-                        onChange={() => {}}
-                        placeholder="+33 6 00 00 00 00"
-                        icon={<Phone className="w-4 h-4" />}
-                      />
+                    <div className="mb-2 text-sm text-gray-600">
+                      Email : <strong>{user.email}</strong>{" "}
+                      <span className="text-xs text-gray-500">
+                        (non modifiable ici — contact support si besoin)
+                      </span>
                     </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button loading={saving}>Enregistrer les modifications</Button>
-                  </CardFooter>
-                </Card>
-
-                {/* Preferences */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Préférences</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Langue</label>
-                        <select className="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
-                          <option value="fr">🇫🇷 Français</option>
-                          <option value="en">🇬🇧 English</option>
-                          <option value="ar">🇸🇦 العربية</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
-                        <select className="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
-                          <option value="EUR">€ EUR</option>
-                          <option value="USD">$ USD</option>
-                          <option value="MAD">MAD</option>
-                          <option value="TND">TND</option>
-                        </select>
-                      </div>
-                    </div>
+                    <ProfileForm initial={{
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      phone: user.phone,
+                      country: null,
+                      language: user.language ?? null,
+                      currency: user.currency ?? null,
+                    }} />
                   </CardContent>
                 </Card>
               </>
@@ -319,26 +277,9 @@ export default function MyAccountPage() {
                   <CardHeader>
                     <CardTitle>Mot de passe</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Input
-                      type="password"
-                      label="Mot de passe actuel"
-                      placeholder="••••••••"
-                    />
-                    <Input
-                      type="password"
-                      label="Nouveau mot de passe"
-                      placeholder="Min. 8 caractères"
-                    />
-                    <Input
-                      type="password"
-                      label="Confirmer le nouveau mot de passe"
-                      placeholder="••••••••"
-                    />
+                  <CardContent>
+                    <ChangePasswordForm />
                   </CardContent>
-                  <CardFooter>
-                    <Button>Modifier le mot de passe</Button>
-                  </CardFooter>
                 </Card>
 
                 <Card>

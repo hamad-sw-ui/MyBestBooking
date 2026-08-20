@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, formatDate } from "@/lib/utils";
 import { Tag, Plus, Percent, Calendar, Users, Edit, Trash2, Copy } from "lucide-react";
+import Link from "next/link";
 
 async function getPromotions() {
   return db
@@ -44,10 +45,12 @@ export default async function PromotionsPage() {
             Gérez les codes promo et offres spéciales
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Nouvelle promotion
-        </Button>
+        <Link href="/dashboard/promotions/new">
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Nouvelle promotion
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}

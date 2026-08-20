@@ -4,6 +4,7 @@ import { bookings, properties, rooms, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { computeCancellationFee, daysUntil, type CancellationPolicy } from "@/lib/cancellation";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
@@ -122,6 +123,13 @@ export async function PUT(
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
     if (data.status === "cancelled") {
       updateData.cancelledAt = new Date();
+      // T-016 : calcule le cancellationFee selon la policy de la property
+      // et le nombre de jours avant check-in.
+      const policy = (existingBooking.property?.cancellationPolicy ?? "flexible") as CancellationPolicy;
+      const total = parseFloat(existingBooking.booking.total);
+      const days = daysUntil(existingBooking.booking.checkIn);
+      const fee = computeCancellationFee(policy, total, days);
+      updateData.cancellationFee = fee.toFixed(2);
     }
 
     const [updatedBooking] = await db

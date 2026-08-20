@@ -2,6 +2,7 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PromoCodeInput } from "@/components/promo-code-input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
@@ -49,6 +50,7 @@ function ReservationPageInner() {
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [room, setRoom] = useState<RoomData | null>(null);
   const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string } | null>(null);
+  const [promo, setPromo] = useState<{ code: string; discount: number; finalTotal: number } | null>(null);
 
   const [formData, setFormData] = useState({
     checkIn: searchParams.get("checkIn") || "",
@@ -75,7 +77,8 @@ function ReservationPageInner() {
     : 0;
   const subtotal = pricePerNight * numNights;
   const taxes = subtotal * 0.1;
-  const total = subtotal + taxes;
+  const totalBeforePromo = subtotal + taxes;
+  const total = promo ? promo.finalTotal : totalBeforePromo;
 
   useEffect(() => {
     if (!propertyId || !roomId) return;
@@ -138,6 +141,7 @@ function ReservationPageInner() {
           tripPurpose: formData.tripPurpose || undefined,
           specialRequests: formData.specialRequests || undefined,
           estimatedArrival: formData.estimatedArrival || undefined,
+          promoCode: promo?.code || undefined,
         }),
       });
 
@@ -549,6 +553,15 @@ function ReservationPageInner() {
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-600">Taxes et frais</span>
                         <span>€{taxes.toFixed(2)}</span>
+                      </div>
+                      {promo && (
+                        <div className="flex justify-between text-sm mb-2 text-green-700">
+                          <span>Code {promo.code}</span>
+                          <span>−€{promo.discount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="my-3">
+                        <PromoCodeInput amount={totalBeforePromo} onApplied={setPromo} />
                       </div>
                       <hr className="my-3" />
                       <div className="flex justify-between font-bold text-lg">

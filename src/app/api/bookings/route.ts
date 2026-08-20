@@ -6,6 +6,8 @@ import { generateBookingReference, calculateNights } from "@/lib/utils";
 import { eq, and, or, desc, lt, gt, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getMailer, templates } from "@/lib/mail";
+import { promotions } from "@/db/schema";
+import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
 
 const bookingSchema = z
   .object({
@@ -23,6 +25,7 @@ const bookingSchema = z
     tripPurpose: z.enum(["leisure", "business"]).optional(),
     specialRequests: z.string().optional(),
     estimatedArrival: z.string().optional(),
+    promoCode: z.string().max(50).optional(),
   })
   // T-006 (BUG-011) : validation métier avant d'atteindre la contrainte
   // SQL, message utilisateur plus clair.
@@ -155,7 +158,43 @@ export async function POST(request: NextRequest) {
     const numNights = calculateNights(data.checkIn, data.checkOut);
     const subtotal = parseFloat(room.basePrice) * numNights;
     const taxes = subtotal * 0.1; // 10% taxes
-    const total = subtotal + taxes;
+    let discount = 0;
+    let appliedPromoId: string | null = null;
+    let promoErrorMsg: string | null = null;
+    let total = subtotal + taxes;
+
+    // T-016 : application d'un code promo si fourni.
+    if (data.promoCode) {
+      const [promo] = await db
+        .select()
+        .from(promotions)
+        .where(eq(promotions.code, data.promoCode.toUpperCase()))
+        .limit(1);
+      if (!promo) {
+        promoErrorMsg = "Code promo inconnu";
+      } else {
+        const usable = isPromoUsable(promo);
+        if (usable !== true) {
+          promoErrorMsg = usable;
+        } else {
+          const res = applyPromoToTotal(promo, total);
+          if ("error" in res) {
+            promoErrorMsg = res.error;
+          } else {
+            discount = res.discount;
+            total = res.finalTotal;
+            appliedPromoId = promo.id;
+          }
+        }
+      }
+      if (promoErrorMsg) {
+        return NextResponse.json(
+          { error: `Code promo : ${promoErrorMsg}` },
+          { status: 400 },
+        );
+      }
+    }
+
     const commissionRate = parseFloat(property.commissionRate || "15");
     const commissionAmount = total * (commissionRate / 100);
     const netToHost = total - commissionAmount;
@@ -211,6 +250,7 @@ export async function POST(request: NextRequest) {
             specialRequests: data.specialRequests,
             subtotal: subtotal.toFixed(2),
             taxes: taxes.toFixed(2),
+            discount: discount.toFixed(2),
             total: total.toFixed(2),
             currency: room.currency || "EUR",
             paymentStatus: "paid",
@@ -220,6 +260,14 @@ export async function POST(request: NextRequest) {
             netToHost: netToHost.toFixed(2),
           })
           .returning();
+
+        // T-016 : consume promo (atomique dans la même transaction)
+        if (appliedPromoId) {
+          await tx
+            .update(promotions)
+            .set({ currentUses: sql`${promotions.currentUses} + 1` })
+            .where(eq(promotions.id, appliedPromoId));
+        }
         return inserted;
       });
     } catch (e) {

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, getPropertyTypeLabel, getStatusBadgeColor } from "@/lib/utils";
 import { Building2, Plus, MapPin, Star, MoreVertical, Pencil, Eye, Trash2 } from "lucide-react";
+import { PropertyValidateActions } from "@/components/property-validate-actions";
 import Link from "next/link";
 
 async function getProperties(userId: string, isAdmin: boolean) {
@@ -195,13 +196,11 @@ export default async function PropertiesPage() {
                         >
                           <Pencil className="w-4 h-4 text-gray-500" />
                         </Link>
-                        {isAdmin && property.status === "pending" && (
-                          <Link
-                            href={`/dashboard/properties/${property.id}?action=validate`}
-                            className="px-3 py-1 text-xs bg-green-100 text-green-700 rounded-lg hover:bg-green-200"
-                          >
-                            Valider
-                          </Link>
+                        {isAdmin && (
+                          <PropertyValidateActions
+                            propertyId={property.id}
+                            currentStatus={property.status ?? "pending"}
+                          />
                         )}
                       </div>
                     </td>
