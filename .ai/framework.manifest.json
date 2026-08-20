@@ -1,35 +1,14 @@
 {
-  "version": "1.0.3",
+  "version": "1.1.0",
   "name": "MyBestBooking AI Development Operating System (AI-DOS Web)",
-  "description": "Framework de gouvernance hybride pour un projet Next.js/PostgreSQL/Drizzle : traçabilité des preuves, proportionnalité T/L/S/C, checklists bloquantes, honnêteté technique.",
-  "derived_from": "AI-DOS 3.0 (MobileCaisse) — philosophie conservée, contenu réécrit pour le web",
+  "description": "Framework de gouvernance hybride pour un projet Next.js/PostgreSQL/Drizzle : discipline de processus (impact, conception, preuve, audit, honnêteté) ET complétude produit (FEATURES vs implémentation).",
+  "derived_from": "AI-DOS 3.0 (MobileCaisse) — philosophie conservée, contenu et portée réécrits pour le web",
   "changelog": [
-    {
-      "version": "1.0.0",
-      "date": "2026-08-20",
-      "session": "Session 2",
-      "commit": "455c121",
-      "changes": "Mise en place initiale du framework hybride."
-    },
-    {
-      "version": "1.0.1",
-      "date": "2026-08-20",
-      "session": "Session 3",
-      "commit": "cbb3b2e",
-      "changes": "Auto-audit : correction de 4 défauts rouges (STATE.md HEAD, reading_order aligné, libellé rôle sécurité uniformisé, README.md ajouté aux mandatory_documents), clause transitoire §13.4 (test manuel documenté vaut preuve tant que TEST_PLAN J1 n'est pas livré), ajout du script scripts/check-ai.mjs tranché par ADR-002."
-    },
-    {
-      "version": "1.0.2",
-      "date": "2026-08-20",
-      "session": "Session 3 (second tour)",
-      "changes": "Second tour d'audit : convention d'IDs BUG-xxx (bugs) / T-xxx (tâches) formalisée §8.1 (défaut A), blocking_rules enrichies d'un flag 'implemented' et étendues (défaut B), 4 règles ajoutées au script : R10 branche Git, R11 collision d'IDs BUG/T, R12 rapports d'impact/conception présents pour tâche S/C, R13 items TRACEABILITY 'VALIDÉ' portent au moins une preuve 🔨/🧪/▶️. Jaunes C-J reportés à Session 4 (voir PROCESS_IMPROVEMENTS.md)."
-    },
-    {
-      "version": "1.0.3",
-      "date": "2026-08-20",
-      "session": "Session 4",
-      "changes": "Vitest installé (T-001 = J1 TEST_PLAN), clause transitoire §13.4-bis retirée de CODING_RULES.md (les tests automatisés sont désormais exigibles). 10 bugs applicatifs corrigés en Session 4 (T-001 à T-010 : JWT_SECRET, seed protection, middleware, N+1, Suspense, contraintes DB, race averageRating, next/image + headers sécurité, rate-limit, lucide-react vérifié). CI GitHub Actions ajoutée (.github/workflows/ci.yml). README.md racine créé. drizzle.config.json migré en drizzle.config.ts (lit DATABASE_URL depuis env)."
-    }
+    { "version": "1.0.0", "date": "2026-08-20", "session": "Session 2", "commit": "455c121", "changes": "Mise en place initiale du framework hybride." },
+    { "version": "1.0.1", "date": "2026-08-20", "session": "Session 3", "commit": "cbb3b2e", "changes": "Auto-audit tour 1 : 4 défauts rouges + clause §13.4-bis + scripts/check-ai.mjs (R1-R9) + ADR-002." },
+    { "version": "1.0.2", "date": "2026-08-20", "session": "Session 3 (tour 2)", "changes": "Auto-audit tour 2 : convention §8.1 BUG-/T-, blocking_rules enrichies, R10-R13 ajoutées." },
+    { "version": "1.0.3", "date": "2026-08-20", "session": "Session 4", "changes": "Vitest installé (J1 TEST_PLAN), §13.4-bis retirée, 10 T-001→T-010 (14 bugs), README + CI docs + drizzle.config.ts." },
+    { "version": "1.1.0", "date": "2026-08-20", "session": "Session 5", "changes": "Élargissement à la complétude produit (ADR-006) : FEATURES.md + PRODUCT_ACCEPTANCE.md + R14 (schéma↔API) + R15 (UI↔API) + R16 (hygiène BACKLOG) + R17 (fraîcheur FEATURES/PROGRESS) + tag §16 🎯 PROMISED + rituel audit produit (compteur STATE) + Playwright installé (dev-dep, Chromium seul) + BACKLOG.md réécrit + KNOWN_LIMITATIONS nettoyé." }
   ],
   "mandatory_documents": [
     "README.md",
@@ -49,7 +28,9 @@
     "CURRENT_TASK.md",
     "TRACEABILITY.md",
     "PROGRESS.md",
-    "TEST_PLAN.md"
+    "TEST_PLAN.md",
+    "FEATURES.md",
+    "PRODUCT_ACCEPTANCE.md"
   ],
   "optional_documents": [
     "UI.md",
@@ -65,6 +46,7 @@
     "framework.manifest.json",
     "MISSION.md",
     "CURRENT_TASK.md",
+    "FEATURES.md",
     "PROJECT.md",
     "ARCHITECTURE.md",
     "CODING_RULES.md"
@@ -75,6 +57,8 @@
     "DATABASE.md",
     "CODING_RULES.md",
     "TRACEABILITY.md",
+    "FEATURES.md",
+    "PRODUCT_ACCEPTANCE.md",
     "ADR/"
   ],
   "blocking_rules": {
@@ -83,54 +67,27 @@
     "id_collision_bug_task":              { "blocking": true,  "implemented": true,  "verified_by": "R11 id_collision" },
     "missing_impact_analysis_for_S_or_C": { "blocking": true,  "implemented": true,  "verified_by": "R12 impact_reports_for_S_or_C" },
     "closure_without_evidence":           { "blocking": true,  "implemented": true,  "verified_by": "R13 validated_items_have_evidence" },
-    "obsolete_roadmap":                   { "blocking": true,  "implemented": false, "note": "Aspirational : aucun critère mesurable dans ROADMAP.md aujourd'hui. Voir Session 4." },
-    "unchecked_pre_commit_checklist":     { "blocking": true,  "implemented": false, "note": "Aspirational : nécessite un hook Git ; contournable via --no-verify. Voir Session 4." },
-    "unresolved_critical_bugs":           { "blocking": false, "implemented": false, "note": "Désactivé volontairement pour ne pas bloquer les évolutions de framework quand des bugs applicatifs P1 restent ouverts." }
+    "schema_without_endpoint":            { "blocking": false, "implemented": true,  "verified_by": "R14 db_api_coverage", "note": "Warning informatif : les tables métier doivent avoir au moins un endpoint API." },
+    "ui_action_without_backend":          { "blocking": false, "implemented": true,  "verified_by": "R15 ui_api_coverage", "note": "Warning : boutons d'action visibles sans fetch ou Server Action associée." },
+    "stale_backlog":                      { "blocking": false, "implemented": true,  "verified_by": "R16 backlog_hygiene", "note": "Warning : items 🔴/🟠 du backlog déjà présents dans BUGS Corrigés, ou références BUG-xxx orphelines." },
+    "stale_features_or_progress":         { "blocking": false, "implemented": true,  "verified_by": "R17 freshness", "note": "Warning : FEATURES.md pas touché depuis > 30 commits API/schema, PROGRESS.md pas touché depuis > 5 commits." },
+    "obsolete_roadmap":                   { "blocking": true,  "implemented": false, "note": "Aspirational : ROADMAP.md sans date/version rend cette règle sans critère mesurable." },
+    "unchecked_pre_commit_checklist":     { "blocking": true,  "implemented": false, "note": "Aspirational : nécessite un hook Git, contournable via --no-verify." },
+    "periodic_product_audit":             { "blocking": false, "implemented": true,  "verified_by": "R17 (compteur sessions_since_last_product_audit dans STATE.md)", "note": "Warning si > 5 sessions sans audit produit (rituel humain)." },
+    "unresolved_critical_bugs":           { "blocking": false, "implemented": false, "note": "Désactivé pour ne pas bloquer les évolutions de framework quand des bugs P1 restent." }
   },
   "proportionality_levels": {
-    "T": {
-      "label": "Trivial",
-      "examples": ["typo", "commentaire", "renommage local sans appelant externe"],
-      "impact_analysis": false,
-      "design_doc": false,
-      "multi_role_debate": false,
-      "opportunities_report": false,
-      "adr": false
-    },
-    "L": {
-      "label": "Local",
-      "examples": ["refactor interne d'une fonction", "ajout d'un test unitaire", "correction d'un bug sans impact API"],
-      "impact_analysis": "light",
-      "design_doc": false,
-      "multi_role_debate": false,
-      "opportunities_report": false,
-      "adr": false
-    },
-    "S": {
-      "label": "Structurant",
-      "examples": ["nouvelle route API", "nouvelle page", "modification d'une signature exportée", "nouveau champ DB"],
-      "impact_analysis": true,
-      "design_doc": true,
-      "multi_role_debate": "if_disagreement",
-      "opportunities_report": true,
-      "adr": true
-    },
-    "C": {
-      "label": "Critique",
-      "examples": ["auth", "paiement", "migration DB destructive", "changement de schéma sur users/bookings", "modification cryptographique"],
-      "impact_analysis": true,
-      "design_doc": true,
-      "multi_role_debate": true,
-      "opportunities_report": true,
-      "adr": true,
-      "double_validation": true
-    }
+    "T": { "label": "Trivial", "examples": ["typo", "commentaire"], "impact_analysis": false, "design_doc": false, "multi_role_debate": false, "opportunities_report": false, "adr": false },
+    "L": { "label": "Local", "examples": ["refactor interne", "ajout test unitaire", "correction bug sans impact API"], "impact_analysis": "light", "design_doc": false, "multi_role_debate": false, "opportunities_report": false, "adr": false },
+    "S": { "label": "Structurant", "examples": ["nouvelle route API", "nouvelle page", "signature exportée modifiée", "nouveau champ DB"], "impact_analysis": true, "design_doc": true, "multi_role_debate": "if_disagreement", "opportunities_report": true, "adr": true },
+    "C": { "label": "Critique", "examples": ["auth", "paiement", "migration DB destructive", "changement de schéma users/bookings", "cryptographie", "évolution des règles §1-§22 du framework"], "impact_analysis": true, "design_doc": true, "multi_role_debate": true, "opportunities_report": true, "adr": true, "double_validation": true }
   },
   "evidence_tags": {
     "OBSERVED": "🔍 constaté dans le code",
     "COMPILED": "🔨 typecheck ou build a réussi",
     "TESTED": "🧪 test automatisé passe",
-    "EXECUTED": "▶️ exécuté à la main (dev server, curl)",
+    "EXECUTED": "▶️ exécuté à la main (dev server, curl, clic UI)",
+    "PROMISED": "🎯 promis dans FEATURES.md, non encore livré",
     "DEDUCED": "🧠 déduit logiquement, non vérifié",
     "HYPOTHESIS": "❓ hypothèse à confirmer"
   },
@@ -146,5 +103,32 @@
     "DevOps / SRE",
     "Expert UX / a11y",
     "Relecteur (advocatus diaboli)"
-  ]
+  ],
+  "product_coverage": {
+    "features_document": "FEATURES.md",
+    "expected_endpoint_tables": [
+      "users",
+      "properties",
+      "rooms",
+      "rate_plans",
+      "room_availability",
+      "bookings",
+      "reviews",
+      "wishlists",
+      "wishlist_items",
+      "conversations",
+      "messages",
+      "promotions"
+    ],
+    "exempted_tables": ["sessions"],
+    "ui_action_labels": [
+      "Envoyer", "Répondre", "Publier", "Annuler", "Valider",
+      "Supprimer", "Uploader", "Enregistrer", "Sauvegarder",
+      "Confirmer", "Créer", "Modifier", "Approuver", "Rejeter",
+      "Suspendre"
+    ],
+    "max_commits_without_features_update": 30,
+    "max_commits_without_progress_update": 5,
+    "max_sessions_without_product_audit": 5
+  }
 }

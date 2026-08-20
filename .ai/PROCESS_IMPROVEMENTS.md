@@ -180,6 +180,64 @@ est explicitement candidate à la suppression.
 
 ---
 
+---
+
+## 2026-08-20 — Session 5 : élargissement portée framework (v1.1.0, ADR-006)
+
+**Tâche** : T-011 (framework v1.0.3 → v1.1.0, niveau C §15.0-bis).
+
+### Ce qui a bien marché
+
+- L'introspection à froid demandée par le responsable a révélé un
+  défaut structurel majeur (aveuglement à la complétude produit). C'est
+  la 3e fois que la question du responsable trouve ce que le framework
+  n'attrape pas — signal fort que **l'audit externe humain reste
+  indispensable**, même avec 17 règles automatisées.
+- La distinction claire entre `FEATURES.md` (ambition) et `BACKLOG.md`
+  (actions à faire) évite le mélange que craignait l'Architecte.
+- Le tag 🎯 PROMISED permet d'être honnête sur les 45 features
+  planifiées mais non livrées, sans mentir en les marquant ✅.
+- La proportionnalité T/L/S/C a permis de traiter cet élargissement en
+  **C** (niveau juste), avec débat 11 rôles complet.
+
+### Ce qui a mal marché
+
+- **v1.0.3 se déclarait irréprochable** (11 OK / 0 fail). C'était vrai
+  dans sa portée initiale mais faux dans une portée honnête. Leçon : la
+  portée d'un framework est **une décision politique**, pas seulement
+  technique. À rediscuter périodiquement.
+- Le premier jet de R16 était trop laxiste (matching par mots-clés). A
+  causé un faux positif sur T-018 qui mentionne « room_availability ».
+  Raffiné en matching par référence BUG-xxx explicite. Leçon : les
+  règles automatisées doivent être **conservatrices** — mieux vaut un
+  faux négatif qu'un cri au loup.
+- **Playwright ne s'installe pas dans sandbox** (CDN Google/Playwright
+  inaccessible). Solution acceptée : Playwright uniquement en CI et
+  local dev, Vitest reste le socle. Documenté.
+
+### Propositions
+
+1. 🟢 **R18 futur** — chaque `PAR-xxx` de `PRODUCT_ACCEPTANCE.md` doit
+   avoir un test Playwright `tests/e2e/par-xxx-*.spec.ts`. Activable
+   dès qu'un environnement avec Chromium est utilisé (CI).
+2. 🟢 **R19 futur** — chaque nouveau endpoint API (mutation) doit avoir
+   un test d'intégration Vitest dans le même commit. Aujourd'hui,
+   plusieurs POST/PUT n'ont pas de test dédié.
+3. 🟢 **Test dédié** (via Vitest) qui vérifie que
+   `manifest.product_coverage.expected_endpoint_tables` reste aligné
+   avec les `pgTable(…)` de `src/db/schema.ts`. Détecterait
+   automatiquement l'ajout d'une nouvelle table oubliée dans le manifest.
+4. 🟡 **Audit produit rituel** : le compteur
+   `sessions_since_last_product_audit` dans STATE demande d'être
+   incrémenté à chaque session. C'est encore manuel. Envisager de
+   l'intégrer à un futur hook Git post-commit.
+
+### Décisions
+
+- Propositions 1, 2, 3, 4 : **notées pour Session 6+**.
+
+---
+
 ## Historique des règles
 
 Ce sous-registre enregistre les **modifications du framework lui-même** —
@@ -200,3 +258,9 @@ telle règle existe.
 | 2026-08-20 | R11 id_collision | **Ajoutée** (v1.0.2) | Vérifie qu'aucun `B-xxx` résiduel ne subsiste dans `.ai/` (post-§8.1) et signale (warning informationnel) les numéros partagés BUG-/T-. |
 | 2026-08-20 | R12 impact_reports_for_S_or_C | **Ajoutée** (v1.0.2) | Vérifie que `REPORTS/analyse_impact_*.md` et `REPORTS/analyse_conception_*.md` (ou `audit_*.md` par §15.0-bis) existent quand `CURRENT_TASK.md` est de niveau S ou C. Implémente `missing_impact_analysis_for_S_or_C`. |
 | 2026-08-20 | R13 validated_items_have_evidence | **Ajoutée** (v1.0.2) | Vérifie que chaque item `CORRIGÉ (VALIDÉ)` dans `TRACEABILITY.md` porte au moins un tag de preuve exécutée 🔨/🧪/▶️. Implémente `closure_without_evidence`. |
+| 2026-08-20 | **Portée « complétude produit »** | **Élargie** (v1.1.0, ADR-006) | Le framework surveille désormais la complétude produit en plus de la discipline de processus. 2 nouveaux documents obligatoires (`FEATURES.md`, `PRODUCT_ACCEPTANCE.md`), 4 nouvelles règles R14-R17, tag §16 🎯 PROMISED. Motif : Session 5 a révélé ~40 manques produit invisibles à la v1.0.3. |
+| 2026-08-20 | R14 db_api_coverage | **Ajoutée** (v1.1.0) | Chaque table métier de `manifest.product_coverage.expected_endpoint_tables` doit avoir un endpoint dédié sous `src/app/api/`. Warning informatif si manquant (défaut nouvelle roadmap, pas un fail). |
+| 2026-08-20 | R15 ui_api_coverage | **Ajoutée** (v1.1.0) | Chaque composant `.tsx` contenant un `<button>` avec un label d'action métier doit contenir un `fetch("/api/…")` ou une Server Action. Warning informatif. |
+| 2026-08-20 | R16 backlog_hygiene | **Ajoutée** (v1.1.0) | Détecte les items 🔴/🟠 de `BACKLOG.md` référençant un BUG-<numéro> déjà corrigé (warning), et les références BUG-<numéro> orphelines dans les .md (fail). Exemples volontairement écrits sans tiret pour ne pas déclencher R16 dans ce tableau. |
+| 2026-08-20 | R17 freshness | **Ajoutée** (v1.1.0) | `FEATURES.md` doit être touché dans les 30 derniers commits API/schema. `PROGRESS.md` dans les 5 derniers commits src/. Compteur `sessions_since_last_product_audit` dans STATE ≤ 5. |
+| 2026-08-20 | Tag §16 🎯 PROMISED | **Ajouté** (v1.1.0) | Nouveau tag de preuve pour tracer honnêtement les features **promises** dans `FEATURES.md` mais non encore livrées. Interdit de marquer ✅ sans livrer. |

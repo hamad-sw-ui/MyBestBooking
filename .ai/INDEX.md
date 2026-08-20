@@ -8,12 +8,17 @@ MyBestBooking et prescrit l'ordre de lecture.
 
 1. **[STATE.md](STATE.md)** — mémoire officielle courante
 2. **[INDEX.md](INDEX.md)** — ce document
-3. **[framework.manifest.json](framework.manifest.json)** — règles machine-lisibles
+3. **[framework.manifest.json](framework.manifest.json)** — règles
+   machine-lisibles. Pour un aperçu lisible, `npm run ai:check` affiche
+   les règles actives.
 4. **[MISSION.md](MISSION.md)** — mandat permanent
 5. **[CURRENT_TASK.md](CURRENT_TASK.md)** — la seule tâche autorisée en cours
-6. **[PROJECT.md](PROJECT.md)** — contexte métier
-7. **[ARCHITECTURE.md](ARCHITECTURE.md)** — architecture réelle du code
-8. **[CODING_RULES.md](CODING_RULES.md)** — règles non négociables (§13, §14, §16, §22)
+6. **[FEATURES.md](FEATURES.md)** — inventaire de complétude produit
+   (v1.1.0, ADR-006)
+7. **[PROJECT.md](PROJECT.md)** — contexte métier
+8. **[ARCHITECTURE.md](ARCHITECTURE.md)** — architecture réelle du code
+9. **[CODING_RULES.md](CODING_RULES.md)** — règles non négociables
+   (§13, §14, §15.0-bis, §16, §22)
 
 Cet ordre est prescriptif : sauter une étape est une violation du framework
 (voir `framework.manifest.json → blocking_rules`).
@@ -23,16 +28,22 @@ Cet ordre est prescriptif : sauter une étape est une violation du framework
 - **[STATE.md](STATE.md)** — État courant du projet (Source de Vérité n°1)
 - **[MISSION.md](MISSION.md)** — Objectifs globaux et périmètre d'intervention
 - **[PROJECT.md](PROJECT.md)** — Identité, périmètre métier, glossaire
+- **[FEATURES.md](FEATURES.md)** — Inventaire de complétude produit
+  (✅/🚧/🎯/❌ par capacité) — v1.1.0, ADR-006
+- **[PRODUCT_ACCEPTANCE.md](PRODUCT_ACCEPTANCE.md)** — Parcours utilisateur
+  critiques (PAR-xxx) — v1.1.0, ADR-006
 - **[ARCHITECTURE.md](ARCHITECTURE.md)** — Architecture réellement constatée dans le code
 - **[DATABASE.md](DATABASE.md)** — Schéma Drizzle, tables, index, migrations
 - **[API.md](API.md)** — Endpoints REST, contrats d'entrée/sortie, auth
 - **[SECURITY.md](SECURITY.md)** — Modèle d'auth, cookies, hachage, headers
-- **[CODING_RULES.md](CODING_RULES.md)** — Règles de développement, §13 clôture, §14 impact, §15 conception, §16 honnêteté, §17 rétro, §22 audit des preuves
+- **[CODING_RULES.md](CODING_RULES.md)** — Règles §1-§22 (clôture,
+  impact, conception, §15.0-bis évolution framework, honnêteté, rétro,
+  audit)
 - **[CODING_STYLE.md](CODING_STYLE.md)** — Conventions TS/React/Drizzle/Tailwind
 - **[ROADMAP.md](ROADMAP.md)** — Planification des jalons
-- **[BACKLOG.md](BACKLOG.md)** — Liste exhaustive des tâches (B-xxx)
-- **[BUGS.md](BUGS.md)** — Registre des défauts et statuts
-- **[CURRENT_TASK.md](CURRENT_TASK.md)** — Tâche en cours (une seule)
+- **[BACKLOG.md](BACKLOG.md)** — Actions à faire par domaine (v1.1.0 réécrit)
+- **[BUGS.md](BUGS.md)** — Registre des défauts (BUG-xxx) et statuts
+- **[CURRENT_TASK.md](CURRENT_TASK.md)** — Tâche en cours (une seule, T-xxx)
 - **[TRACEABILITY.md](TRACEABILITY.md)** — Matrice Bug/Tâche ↔ Preuve
 - **[TEST_PLAN.md](TEST_PLAN.md)** — Stratégie et couverture de tests
 - **[PROGRESS.md](PROGRESS.md)** — Journal horodaté des sessions

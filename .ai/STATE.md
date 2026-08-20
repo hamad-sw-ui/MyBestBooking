@@ -95,10 +95,16 @@
   - Fallback JWT_SECRET → forge de session admin possible en cas d'oubli
     d'env var en prod.
 
+## 📈 Compteurs framework (§17, ADR-006)
+
+- **sessions_since_last_product_audit** : `0`
+  (dernier audit produit : Session 5 — a produit `FEATURES.md`,
+  `PRODUCT_ACCEPTANCE.md`, et déclenché T-011)
+
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20 (Session 3 — auto-audit tour 2, framework v1.0.2)
+- **Date** : 2026-08-20 (Session 5 — framework v1.1.0, complétude produit)
 - **Agent** : Arena Agent Mode
 - **Prochaine mise à jour attendue** : à chaque fin de session — obligatoire
   §11. La règle de mise à jour est **vérifiée mécaniquement** par
-  `npm run ai:check` (voir `scripts/check-ai.mjs`, règles R2 R7 R10 R11 R12 R13).
+  `npm run ai:check` (règles R2, R7, R10, R11, R12, R13, R14, R15, R16, R17).

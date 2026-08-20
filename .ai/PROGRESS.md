@@ -9,6 +9,114 @@
 
 ---
 
+## 2026-08-20 — Session 5 : élargissement du framework à la complétude produit (v1.1.0)
+
+**Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
+· **Agent** : Arena Agent Mode · **Trigger** : question responsable
+« pourquoi le framework n'a pas trouvé les manques ? » (Session 5, tour 1)
+
+### Introspection déclenchante
+
+Après Session 4 (13 tâches VALIDÉ, 14 bugs corrigés, `ai:check` 11 OK),
+une simple demande d'analyse produit a révélé **~40 manques** que le
+framework n'avait pas signalés : endpoints absents (messages/send,
+reviews/reply, promotions CRUD, room_availability, rate_plans), emails
+inexistants, upload d'images absent, validation admin manquante,
+paiement mocké, etc.
+
+**Diagnostic** : le framework AI-DOS Web v1.0.3 surveillait la
+**discipline de processus** (impact, conception, preuve, audit) mais
+pas la **complétude produit** (est-ce que le produit fait vraiment ce
+qu'il promet ?). Les 13 règles R1-R13 vérifiaient des cohérences
+internes entre documents `.ai/`, aveugles aux manques externes.
+
+### Vague 1 livrée (T-011, niveau C, §15.0-bis)
+
+Framework v1.0.3 → **v1.1.0**. Détails complets dans
+`REPORTS/analyse_impact_2026-08-20_framework_v1.1.0.md`,
+`analyse_conception_...`, `debat_technique_...` et `ADR-006`.
+
+**Nouveaux artefacts** :
+- `.ai/FEATURES.md` : inventaire de ~122 features produit avec statut
+  ✅/🚧/🎯/❌ regroupées par 15 domaines (Auth, Recherche,
+  Réservation, Avis, Wishlists, Messagerie, BestRewards, Hôte, Admin,
+  Emails, Uploads, SEO, a11y, i18n, Sécurité, Tests, Observabilité, UX)
+- `.ai/PRODUCT_ACCEPTANCE.md` : 20 parcours utilisateur PAR-xxx
+  (10 P1 dont 4 ✅, 9 P2 dont 0 ✅, 1 P3)
+- `ADR/ADR-006_Portee_Framework_Completude_Produit.md`
+- 3 rapports formels (impact, conception, débat 11 rôles)
+- `playwright.config.ts` + `tests/e2e/smoke.spec.ts` (6 tests)
+
+**Framework** :
+- v1.0.3 → **v1.1.0** (bump mineur car nouveau scope)
+- 2 nouveaux documents obligatoires (FEATURES, PRODUCT_ACCEPTANCE)
+- Nouveau tag §16 : 🎯 **PROMISED** (feature promise mais non livrée)
+- Section `product_coverage` dans le manifest (tables attendues,
+  labels UI, seuils de fraîcheur)
+- 4 nouvelles règles automatisées :
+  - **R14 db_api_coverage** — chaque table métier a un endpoint
+  - **R15 ui_api_coverage** — chaque bouton d'action a un fetch/action
+  - **R16 backlog_hygiene** — pas d'items obsolètes ni de références
+    BUG-xxx orphelines
+  - **R17 freshness** — FEATURES + PROGRESS + compteur audit produit
+- Compteur `sessions_since_last_product_audit` dans `STATE.md`
+- Playwright installé (Chromium à télécharger côté CI/local, sandbox
+  n'a pas d'accès au CDN Google)
+- `BACKLOG.md` **complètement réécrit** (retiré les 🔴 corrigés
+  Sessions 3-4, planifié T-012 → T-020 selon FEATURES)
+
+### Preuves (§16)
+
+- 🔨 `npm run typecheck` → 0 erreur
+- 🧪 `npm test` → **43 passed / 43** (aucune régression Vitest)
+- ▶️ **`npm run ai:check` → 13 OK · 4 warn · 0 fail**
+  - 4 warns attendus et documentés :
+    - R7 (motif toléré « à mettre à jour en fin de session »)
+    - R11 (numéros partagés BUG-/T- 001-015, informationnel)
+    - **R14** : 5 tables sans endpoint (rate_plans, room_availability,
+      wishlist_items, conversations, messages) — devient la roadmap
+      T-015/T-018
+    - **R15** : 2 boutons UI orphelins (dashboard/reviews « Répondre »,
+      dashboard/settings « Enregistrer ») — devient T-015/T-016
+
+### Ce que le framework attrape MAINTENANT et n'attrapait PAS avant
+
+| Défaut réel | Avant v1.1.0 | Après v1.1.0 |
+|---|---|---|
+| Table `conversations` sans `/api/conversations` | Silence | ⚠️ R14 |
+| Table `messages` sans endpoint | Silence | ⚠️ R14 |
+| Table `rate_plans` sans endpoint | Silence | ⚠️ R14 |
+| Table `room_availability` sans endpoint | Silence | ⚠️ R14 |
+| Bouton « Répondre » sans fetch | Silence | ⚠️ R15 |
+| Bouton « Enregistrer » (settings) sans persist | Silence | ⚠️ R15 |
+| Item BACKLOG « JWT_SECRET obligatoire » référençant BUG-001 corrigé | Silence | ⚠️ R16 (si référence explicite) |
+| Référence `BUG-<num>` inconnue dans un rapport | Silence | ❌ R16 (fail) |
+| FEATURES pas touché depuis 30 commits API | N'existait pas | ⚠️ R17 |
+
+### Problèmes rencontrés
+
+- **Playwright ne s'installe pas dans le sandbox** : le téléchargement
+  de Chromium échoue (pas d'accès aux CDN Google/Playwright). Décision :
+  garder Playwright installé (typage TS OK), tests E2E créés mais
+  exécutables uniquement en CI ou dev local. Documenté dans
+  `playwright.config.ts` et `TEST_PLAN.md`.
+- **Premier draft R16 trop laxiste** : matching par mots-clés
+  (« room_availability ») donnait des faux positifs sur les tâches
+  T-018 futures qui **mentionnent** le sujet à traiter. Raffiné en
+  matching strict par référence BUG-xxx explicite.
+
+### Statut
+
+**T-011 CORRIGÉ (INSPECTION)** — Vague 1 livrée. Prochaines vagues
+T-012 → T-020 s'appuient sur ce framework élargi.
+
+### Étape suivante
+
+Vague 2 : **T-012** (disponibilité + chevauchement bookings, S)
+— dès que Vague 1 est validée.
+
+---
+
 ## 2026-08-20 — Session 4 : traitement complet du BACKLOG applicatif
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`

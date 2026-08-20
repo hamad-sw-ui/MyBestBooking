@@ -2,81 +2,84 @@
 
 ## Identifiant
 
-- **ID** : T-000 v1.3 (clôture de Session 4)
-- **Titre** : Retrait §13.4-bis + README + CI + bump framework v1.0.3
-- **Niveau** : **S** (§15.0-bis exception maintenance)
-- **Ouverte le** : 2026-08-20 (Session 4, phase finale)
+- **ID** : T-011
+- **Titre** : Framework v1.1.0 — élargissement à la complétude produit
+- **Niveau** : **C** (§15.0-bis — modifie les règles opposables §1-§22 :
+  ajoute R14-R17, tag 🎯 PROMISED, 2 documents obligatoires)
+- **Ouverte le** : 2026-08-20 (Session 5)
+- **Prédécesseur** : Session 4 clôturée (T-000 v1.3, 14 bugs corrigés)
 
 ## Contexte
 
-La Session 4 a livré 10 tâches applicatives (T-001 à T-010) qui ont
-corrigé 14 bugs (BUG-001 → BUG-015 sauf BUG-003 déplacé en
-KNOWN_LIMITATIONS). Cette tâche T-000 v1.3 consolide :
+À la question du responsable « pourquoi le framework n'a pas trouvé les
+manques ? » (Session 5, tour 2 d'introspection), la réponse a mis en
+évidence un défaut structurel : le framework surveillait la **discipline
+de processus** mais pas la **complétude produit**.
 
-1. Retrait de la clause **§13.4-bis** (test manuel = preuve), désormais
-   inutile puisque Vitest est installé (J1 TEST_PLAN livré par T-001).
-2. Ajout du **README.md** racine (absent jusqu'ici).
-3. Ajout d'une **CI GitHub Actions** (`.github/workflows/ci.yml`) qui
-   exécute lint + typecheck + test + build + ai:check à chaque push.
-4. Migration `drizzle.config.json` → `drizzle.config.ts` (lecture
-   DATABASE_URL depuis env) pour supporter CI.
-5. Bump framework `v1.0.2` → `v1.0.3` avec changelog complété.
-6. Mise à jour de STATE, PROGRESS, TRACEABILITY, PROCESS_IMPROVEMENTS.
+## Décision — ADR-006
 
-## Critères d'acceptation
+Le framework passe de « surveillant de processus » à « surveillant
+de processus **ET** de complétude produit ». Voir
+`ADR/ADR-006_Portee_Framework_Completude_Produit.md`.
 
-- [x] 🔍 §13.4-bis retirée de CODING_RULES.md avec note explicative
-- [x] 🔍 `framework.manifest.json → version = 1.0.3` + entrée changelog
-- [x] 🔍 `README.md` racine créé, mentionne setup, comptes démo,
-  scripts, docs `.ai/`
-- [x] 🔍 `.github/workflows/ci.yml` créé (Node 22, PostgreSQL 16
-  service, npm ci → db:push → ai:check → lint → typecheck → test → build)
-- [x] 🔍 `drizzle.config.json` supprimé, `drizzle.config.ts` créé et
-  lit DATABASE_URL depuis env
-- [x] 🔍 `package.json` scripts db:* utilisent la nouvelle config
-- [x] 🔨 `npm run typecheck` OK
-- [x] 🔨 `npm run build` OK
-- [x] 🧪 `npm test` → **43/43 passent**
-- [x] ▶️ `npm run ai:check` → **11 OK · 2 warn · 0 fail**
-- [x] ▶️ E2E manuel réussi : register → login → recherche → réservation
-  (référence `MBB-2026-C5Y3VY` obtenue) → logout → 401 sur /me
-- [x] ▶️ Toutes les URL publiques + 4 URL authentifiées répondent 200
+## Livrables
+
+### Vague 1 — Framework v1.1.0 (ce commit)
+
+- [x] 🔍 ADR-006 acté (contexte + décision + 4 alternatives évaluées + conséquences)
+- [x] 🔍 Analyse d'impact §14 (9 questions)
+- [x] 🔍 Analyse de conception §15.1 (4 options A/B/C/D)
+- [x] 🔍 Débat multi-rôles §15.2 (11 rôles, 4 objections résolues)
+- [x] 🔍 `framework.manifest.json` v1.0.3 → v1.1.0 avec :
+  - 2 nouveaux documents obligatoires (`FEATURES.md`, `PRODUCT_ACCEPTANCE.md`)
+  - nouveau tag §16 `🎯 PROMISED`
+  - section `product_coverage` (tables, labels UI, seuils)
+  - 4 nouvelles blocking_rules (dont 3 warnings, 1 aspirationnelle)
+- [x] 🔍 `.ai/FEATURES.md` peuplé exhaustivement (~122 features tracées :
+  ✅ ~34, 🚧 ~18, 🎯 ~45, ❌ ~25 → couverture 28 %)
+- [x] 🔍 `.ai/PRODUCT_ACCEPTANCE.md` avec 20 parcours PAR-xxx (P1/P2/P3)
+- [x] 🔍 `scripts/check-ai.mjs` étendu de 13 à 17 règles :
+  - R14 db_api_coverage
+  - R15 ui_api_coverage
+  - R16 backlog_hygiene (raffiné : matching par BUG-xxx explicite)
+  - R17 freshness (compteur audit produit + FEATURES + PROGRESS)
+- [x] 🔍 `.ai/CODING_RULES.md §16` ajoute le tag 🎯 PROMISED
+- [x] 🔍 `.ai/INDEX.md` : `FEATURES` et `PRODUCT_ACCEPTANCE` insérés dans
+  l'ordre de lecture prescrit
+- [x] 🔍 `.ai/STATE.md` : compteur `sessions_since_last_product_audit: 0`
+- [x] 🔍 `.ai/BACKLOG.md` **complètement réécrit** (nettoyage des items
+  déjà corrigés Sessions 3-4, planification T-012 → T-020 selon FEATURES)
+- [x] 🔍 Playwright installé (`@playwright/test`), `playwright.config.ts`,
+  6 smoke tests dans `tests/e2e/smoke.spec.ts`, scripts `e2e` + `e2e:ui`
+- [x] 🔨 `npm run typecheck` → 0 erreur
+- [x] 🧪 `npm test` → **43/43 passent** (aucune régression Vitest)
+- [x] ▶️ `npm run ai:check` → **13 OK · 4 warn · 0 fail** (les warns
+  R14/R15 révèlent la nouvelle roadmap : 5 tables sans endpoint,
+  2 boutons UI orphelins)
 
 ## Statut
 
-**CORRIGÉ (INSPECTION)** — sera basculé VALIDÉ dès la validation
-finale du responsable après ce dernier commit.
+**CORRIGÉ (INSPECTION)** — la Vague 1 est livrée. Les Vagues 2 et 3
+(T-012 à T-020) s'appuient sur ce framework élargi pour combler les
+manques produit détectés.
 
-## Bilan Session 4
+Passage à **VALIDÉ** après :
+- Validation responsable
+- Fin de Vague 3 (T-020 Stripe test-mode livré) → dernière tâche de la
+  campagne de complétude
 
-- **13 tâches livrées** (T-000 v1.2 + v1.3 + T-001 à T-010) toutes
-  passées en VALIDÉ (sauf v1.3 en INSPECTION en attente).
-- **14 bugs corrigés** (BUG-001, 002, 004-015 ; BUG-003 déplacé en
-  KNOWN_LIMITATIONS).
-- **1 bug ouvert** en réalité : BUG-003 (paiement), déplacé
-  légitimement.
-- **43 tests automatisés** existent maintenant, tous verts.
-- **Framework passe 3 versions** : v1.0.0 → v1.0.1 → v1.0.2 → v1.0.3.
-- **6 commits** dans la session : `2c37021` (setup) → `8344fbf` (T-001)
-  → `8555ee7` (T-002) → `a4d3acf` (T-003) → `3bc5d3a` (T-004→T-007)
-  → `541658c` (T-008→T-010) → ce commit (T-000 v1.3).
+## Vagues suivantes (à venir dans cette session)
 
-Le projet a atteint un état où :
+### Vague 2 — API mutations manquantes (T-012 à T-015)
+- T-012 disponibilité + chevauchement bookings (S)
+- T-013 emails transactionnels (S)
+- T-014 uploads d'images (S)
+- T-015 endpoints manquants (messages, reply, promo, wishlist share, admin)
 
-- ✅ **Aucun bug applicatif ouvert** hors dépendance externe
-  (Stripe test key pour paiement).
-- ✅ **Sécurité P1/P2 traitée** (JWT, seed, middleware, rate-limit,
-  headers).
-- ✅ **Base de données intégre** (contraintes CHECK et UNIQUE en place,
-  migrations versionnées).
-- ✅ **Tests automatisés** couvrant les invariants critiques (auth,
-  rate-limit, seed protection, proxy, utils).
-- ✅ **CI prête** à valider chaque commit.
-- ✅ **Framework de gouvernance solide** avec 13 règles automatisées.
+### Vague 3 — Paiement & tests (T-019, T-020)
+- T-019 tests d'intégration API + Playwright E2E (S)
+- T-020 Stripe test-mode + webhook (C)
 
-## Prochaine session
+## Prochaine tâche
 
-- **T-011** : intégration paiement (Stripe test) — dès que credentials
-  disponibles. Cycle complet niveau C attendu.
-- **Chantiers fonctionnels** : voir `BACKLOG.md` (éditeur calendrier
-  hôte, i18n EN, dark mode, analytics réelles, etc.).
+Après commit Vague 1 : basculer sur **T-012** (disponibilité bookings).

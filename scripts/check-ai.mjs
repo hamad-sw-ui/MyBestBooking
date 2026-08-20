@@ -27,6 +27,24 @@
 //   R13 Chaque item de TRACEABILITY.md marqué "CORRIGÉ (VALIDÉ)" porte
 //       au moins une preuve 🔨, 🧪 ou ▶️ (§16, §22).
 //
+// v1.1.0 (ADR-006) — RÈGLES DE COMPLÉTUDE PRODUIT :
+//   R14 Chaque table de manifest.product_coverage.expected_endpoint_tables
+//       (hors sessions et exempted_tables) a au moins un endpoint dédié
+//       sous src/app/api/, ou est explicitement mentionnée dans un
+//       endpoint existant.
+//   R15 Chaque composant .tsx qui contient un <button> avec un label
+//       d'action (Envoyer, Répondre, Publier, Annuler, Valider,
+//       Supprimer, Uploader, Enregistrer, Confirmer, Créer, Modifier,
+//       Approuver, Rejeter, Suspendre) doit aussi contenir un
+//       fetch("/api/…") ou une Server Action.
+//   R16 Hygiène BACKLOG / BUGS : les items 🔴/🟠 de BACKLOG.md ne
+//       doivent pas dupliquer des BUG déjà présents en Corrigés.
+//       Les références BUG-\d+ dans les .md doivent exister dans BUGS.md.
+//   R17 Fraîcheur : FEATURES.md pas touché depuis > 30 commits
+//       API/schema, PROGRESS.md pas touché depuis > 5 commits src/,
+//       compteur sessions_since_last_product_audit dans STATE.md
+//       ≤ max_sessions_without_product_audit (défaut 5).
+//
 // Sortie : code 0 si tout passe, code non nul et rapport détaillé sinon.
 // Ne modifie aucun fichier.
 
@@ -425,6 +443,243 @@ if (existsSync(traceabilityPath)) {
   }
 } else {
   record("R13 validated_items_have_evidence", "warn", "TRACEABILITY.md introuvable");
+}
+
+// ═══════════════════════════════════════════════════════════════
+// v1.1.0 — RÈGLES DE COMPLÉTUDE PRODUIT (ADR-006)
+// ═══════════════════════════════════════════════════════════════
+
+const productCoverage = manifest.product_coverage ?? {};
+
+// ─────────────────────────────────────────────────────────────
+// Règle 14 : couverture schéma DB ↔ API
+// Pour chaque table de expected_endpoint_tables, un fichier
+// src/app/api/<table>/route.ts (ou variante) doit exister.
+// ─────────────────────────────────────────────────────────────
+{
+  const expected = productCoverage.expected_endpoint_tables ?? [];
+  const apiDir = join(REPO_ROOT, "src", "app", "api");
+  const missing = [];
+  const partial = [];
+
+  const listApiFiles = () => {
+    if (!existsSync(apiDir)) return [];
+    try {
+      return execSync(`find "${apiDir}" -name 'route.ts'`, { encoding: "utf8" })
+        .split("\n").filter(Boolean);
+    } catch { return []; }
+  };
+  const apiFiles = listApiFiles();
+
+  for (const rawTable of expected) {
+    // Normaliser : "rate_plans" → dossier possible "rate-plans" ou "rate_plans"
+    const candidates = [rawTable, rawTable.replace(/_/g, "-")];
+    // Chemin exact
+    const found = candidates.some((c) =>
+      apiFiles.some((f) => f.includes(`/api/${c}/`) || f.endsWith(`/api/${c}/route.ts`))
+    );
+    // Sinon, regarder si le mot apparaît dans un fichier route.ts existant
+    // (ex: users est couvert par /api/auth/*)
+    let mentioned = false;
+    if (!found) {
+      for (const f of apiFiles) {
+        try {
+          const text = readFileSync(f, "utf8");
+          if (text.includes(rawTable)) { mentioned = true; break; }
+        } catch {}
+      }
+    }
+    if (found) continue;
+    if (mentioned) partial.push(rawTable);
+    else missing.push(rawTable);
+  }
+
+  const msgs = [];
+  if (missing.length) msgs.push(`Aucun endpoint pour : ${missing.join(", ")}`);
+  if (partial.length) msgs.push(`Mention seulement (pas de route dédiée) : ${partial.join(", ")}`);
+  if (msgs.length === 0) {
+    record("R14 db_api_coverage", "ok", `${expected.length} tables métier ont au moins un endpoint dédié`);
+  } else {
+    record("R14 db_api_coverage", "warn", msgs.join(" | "));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Règle 15 : couverture UI ↔ API
+// Cherche dans src/app/**/*.tsx les labels d'action et vérifie
+// qu'un fetch("/api/") ou une Server Action est présent dans le
+// même fichier.
+// ─────────────────────────────────────────────────────────────
+{
+  const labels = productCoverage.ui_action_labels ?? [];
+  const labelRe = new RegExp(`>\\s*(${labels.join("|")})\\s*<`, "i");
+  const fetchOrActionRe = /fetch\(["'`]\/api\/|action=\{|"use server"|useTransition|<form\s+action=/;
+  const appDir = join(REPO_ROOT, "src", "app");
+  const tsxFiles = execSync(`find "${appDir}" -name '*.tsx'`, { encoding: "utf8" })
+    .split("\n").filter(Boolean);
+
+  const suspicious = [];
+  for (const f of tsxFiles) {
+    let text;
+    try { text = readFileSync(f, "utf8"); } catch { continue; }
+    // Exclut les tests
+    if (f.endsWith(".test.tsx")) continue;
+    // Doit contenir un bouton avec un label d'action
+    if (!labelRe.test(text)) continue;
+    // Doit contenir un appel API OU une Server Action
+    if (fetchOrActionRe.test(text)) continue;
+    // Fichier suspect
+    const matched = text.match(labelRe);
+    suspicious.push(`${relative(REPO_ROOT, f)} (bouton "${matched?.[1]}")`);
+  }
+
+  if (suspicious.length === 0) {
+    record("R15 ui_api_coverage", "ok", "aucun bouton d'action visible sans fetch/action associé");
+  } else {
+    record("R15 ui_api_coverage", "warn", `${suspicious.length} composant(s) suspect(s) :\n    - ${suspicious.slice(0, 10).join("\n    - ")}${suspicious.length > 10 ? `\n    - ... (+${suspicious.length - 10} autres)` : ""}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Règle 16 : hygiène BACKLOG / BUGS
+// - Items 🔴 ou 🟠 dans BACKLOG dont un mot-clé est déjà dans
+//   BUGS Corrigés → warn (à retirer).
+// - Références BUG-\d+ dans les docs qui n'existent ni dans
+//   Ouverts ni dans Corrigés → fail (référence orpheline).
+// ─────────────────────────────────────────────────────────────
+{
+  const backlogPath = join(AI_DIR, "BACKLOG.md");
+  const bugsPath = join(AI_DIR, "BUGS.md");
+  const warnings = [];
+  const fails = [];
+
+  // 1. Extraire les BUG-IDs valides depuis BUGS.md
+  const validBugIds = new Set();
+  if (existsSync(bugsPath)) {
+    const bugs = readFileSync(bugsPath, "utf8");
+    for (const m of bugs.matchAll(/\bBUG-\d{3,}\b/g)) validBugIds.add(m[0]);
+  }
+
+  // 2. Chercher les BUG-IDs orphelins ailleurs
+  const allDocs = execSync(`find "${AI_DIR}" -name '*.md'`, { encoding: "utf8" })
+    .split("\n").filter(Boolean);
+  const orphanRefs = new Map(); // BUG-xxx → [fichiers]
+  for (const f of allDocs) {
+    if (f.endsWith("BUGS.md")) continue;
+    let text;
+    try { text = readFileSync(f, "utf8"); } catch { continue; }
+    for (const m of text.matchAll(/\bBUG-\d{3,}\b/g)) {
+      const id = m[0];
+      if (!validBugIds.has(id)) {
+        if (!orphanRefs.has(id)) orphanRefs.set(id, []);
+        orphanRefs.get(id).push(relative(REPO_ROOT, f));
+      }
+    }
+  }
+  if (orphanRefs.size > 0) {
+    fails.push(`${orphanRefs.size} référence(s) BUG-xxx orpheline(s) : ${[...orphanRefs.entries()].slice(0, 3).map(([id, fs]) => `${id} (${fs[0]})`).join(", ")}${orphanRefs.size > 3 ? "..." : ""}`);
+  }
+
+  // 3. Doublons BACKLOG vs. BUGS Corrigés — match strict par
+  // référence explicite (BUG-xxx ou T-xxx) uniquement. Le matching
+  // par mots-clés donnait trop de faux positifs (une future tâche
+  // qui *mentionne* room_availability ≠ un bug corrigé sur ce sujet).
+  if (existsSync(backlogPath) && existsSync(bugsPath)) {
+    const backlog = readFileSync(backlogPath, "utf8");
+    const bugs = readFileSync(bugsPath, "utf8");
+    const correctedSection = bugs.split(/^##\s+Corrig[eé]s/im)[1] ?? "";
+    const correctedBugIds = new Set(
+      [...correctedSection.matchAll(/\bBUG-\d{3,}\b/g)].map((m) => m[0])
+    );
+    // Chercher dans les items 🔴/🟠 du backlog une référence à un
+    // BUG-xxx corrigé (« résout BUG-001 » alors que BUG-001 est
+    // corrigé = à retirer du backlog).
+    const items = [...backlog.matchAll(/^-\s+(?:🔴|🟠)\s+(.+?)$/gm)].map((m) => m[1]);
+    const duplicates = [];
+    for (const item of items) {
+      const refs = [...item.matchAll(/\bBUG-\d{3,}\b/g)].map((m) => m[0]);
+      for (const ref of refs) {
+        if (correctedBugIds.has(ref)) {
+          duplicates.push(`"${item.substring(0, 70)}${item.length > 70 ? "…" : ""}" référence ${ref} déjà corrigé`);
+          break;
+        }
+      }
+    }
+    if (duplicates.length) {
+      warnings.push(`${duplicates.length} item(s) BACKLOG référencent des BUG- corrigés : ${duplicates.slice(0, 3).join(" ; ")}${duplicates.length > 3 ? "…" : ""}`);
+    }
+  }
+
+  if (fails.length) {
+    record("R16 backlog_hygiene", "fail", fails.join(" | "));
+  } else if (warnings.length) {
+    record("R16 backlog_hygiene", "warn", warnings.join(" | "));
+  } else {
+    record("R16 backlog_hygiene", "ok", "BACKLOG et BUGS cohérents");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Règle 17 : fraîcheur FEATURES.md, PROGRESS.md, audit produit
+// ─────────────────────────────────────────────────────────────
+{
+  const maxFeat = productCoverage.max_commits_without_features_update ?? 30;
+  const maxProg = productCoverage.max_commits_without_progress_update ?? 5;
+  const maxAudit = productCoverage.max_sessions_without_product_audit ?? 5;
+  const warnings = [];
+
+  const countCommitsSinceTouched = (fileRel, filterPathspec) => {
+    try {
+      const lastTouch = execSync(
+        `git log -1 --format=%H -- "${fileRel}"`,
+        { cwd: REPO_ROOT, encoding: "utf8" }
+      ).trim();
+      if (!lastTouch) return null;
+      const range = filterPathspec
+        ? `${lastTouch}..HEAD -- ${filterPathspec}`
+        : `${lastTouch}..HEAD`;
+      const out = execSync(`git rev-list ${range}`, { cwd: REPO_ROOT, encoding: "utf8" }).trim();
+      return out ? out.split("\n").length : 0;
+    } catch {
+      return null;
+    }
+  };
+
+  // FEATURES.md vs. commits API/schema
+  if (existsSync(join(AI_DIR, "FEATURES.md"))) {
+    const n = countCommitsSinceTouched(".ai/FEATURES.md", "src/app/api src/db/schema.ts");
+    if (n !== null && n > maxFeat) {
+      warnings.push(`FEATURES.md pas touché depuis ${n} commits API/schema (max ${maxFeat})`);
+    }
+  } else {
+    warnings.push("FEATURES.md manquant (obligatoire depuis v1.1.0)");
+  }
+
+  // PROGRESS.md vs. commits src/
+  if (existsSync(join(AI_DIR, "PROGRESS.md"))) {
+    const n = countCommitsSinceTouched(".ai/PROGRESS.md", "src");
+    if (n !== null && n > maxProg) {
+      warnings.push(`PROGRESS.md pas touché depuis ${n} commits src/ (max ${maxProg})`);
+    }
+  }
+
+  // Compteur d'audit produit dans STATE.md
+  if (existsSync(statePath)) {
+    const state = readFileSync(statePath, "utf8");
+    const m = state.match(/sessions_since_last_product_audit\s*[:=]\s*(\d+)/i);
+    if (m) {
+      const n = parseInt(m[1], 10);
+      if (n > maxAudit) {
+        warnings.push(`Audit produit trop ancien : ${n} sessions (max ${maxAudit}) — voir ADR-006`);
+      }
+    }
+  }
+
+  if (warnings.length === 0) {
+    record("R17 freshness", "ok", "FEATURES, PROGRESS et compteur audit à jour");
+  } else {
+    record("R17 freshness", "warn", warnings.join(" | "));
+  }
 }
 
 // ─────────────────────────────────────────────────────────────

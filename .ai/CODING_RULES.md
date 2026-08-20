@@ -264,6 +264,7 @@ Toute affirmation factuelle dans un rapport, un commentaire de PR ou
 | 🔨 **COMPILED** | `npm run typecheck` / `npm run build` a réussi |
 | 🧪 **TESTED** | Un test automatisé passe |
 | ▶️ **EXECUTED** | J'ai lancé la commande / cliqué sur le bouton |
+| 🎯 **PROMISED** | La feature est promise dans `FEATURES.md` mais non encore livrée (v1.1.0, ADR-006) |
 | 🧠 **DEDUCED** | Raisonnement plausible non vérifié |
 | ❓ **HYPOTHESIS** | Supposition à confirmer |
 
@@ -273,6 +274,8 @@ Toute affirmation factuelle dans un rapport, un commentaire de PR ou
 - Marquer un item `CORRIGÉ (VALIDÉ)` avec seulement des 🧠 ou ❓.
 - Cacher une impossibilité de vérification : préférer « ❓ non testé,
   environnement Docker indisponible » à un silence.
+- Marquer une feature 🎯 PROMISED comme ✅ dans `FEATURES.md` sans
+  qu'elle soit vraiment livrée + testée.
 
 ## §17 Rétrospective de session
 
