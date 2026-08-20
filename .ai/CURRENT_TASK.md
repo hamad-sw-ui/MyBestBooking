@@ -2,91 +2,71 @@
 
 ## Identifiant
 
-- **ID** : T-022
-- **Titre** : Câblage du mode maintenance
+- **ID** : T-023
+- **Titre** : Modération d'avis admin (endpoint + UI)
 - **Niveau** : **S**
 - **Ouverte le** : 2026-08-20 (Session 7, suite)
 - **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Contexte
 
-T-021 a livré un paramètre `security.maintenanceMode` enregistrable par
-un admin depuis `/dashboard/settings` — mais **aucun code ne le lisait**.
-Cette tâche rend le paramètre effectif : quand il est activé, les
-non-admins sont renvoyés sur une page `/maintenance` et les endpoints
-API métier critiques répondent `503 Service Unavailable`. Les admins
-gardent un accès complet pour pouvoir désactiver le mode.
+`reviews.status` existait dans le schéma mais aucun endpoint ne
+l'écrivait après création, aucune UI ne l'affichait ni ne le modifiait.
+La feature « Modération d'avis » restait ❌ dans FEATURES.md
+(obligation légale DSA, défense marque).
 
 ## Livrables
 
-1. **Module `src/lib/maintenance.ts`** :
-   - `isMaintenanceActive()` lit `getSetting("security").maintenanceMode`.
-   - `assertNotMaintenance(user)` throw `MaintenanceError` si actif et
-     user non admin.
-   - `maintenanceResponse()` réponse HTTP 503 + `Retry-After: 60`.
-   - `shouldBypassMaintenance(pathname)` — whitelist déterministe
-     anti-lockout admin (jamais bloquée : `/api/auth/*`, `/api/admin/*`,
-     `/connexion`, `/inscription`, `/maintenance`, assets Next).
-2. **`src/lib/maintenance.test.ts`** — 11 tests unitaires.
-3. **Page `/maintenance`** — RSC, `noindex`, message français, bouton
-   « Réessayer » + accès `/connexion` pour anonymes.
-4. **Guards RSC** :
-   - `src/app/page.tsx` — home hors du groupe (main) : guard ajouté.
-   - `src/app/(main)/layout.tsx` — force-dynamic + guard.
-   - `src/app/dashboard/layout.tsx` — non-admin → `/maintenance`.
-5. **Guards API métier** (503 + `Retry-After`) :
-   - `POST /api/bookings`
-   - `PUT /api/bookings/[id]`
-   - `POST /api/uploads`
-   - `POST /api/reviews`
-   - `GET /api/promotions/apply`
-6. **Rapports** :
-   - `REPORTS/analyse_impact_2026-08-20_maintenance_mode.md`
-   - `REPORTS/analyse_conception_2026-08-20_maintenance_mode.md`
+1. **Endpoint** `PATCH /api/reviews/[id]/moderate` — admin-only, Zod
+   strict (whitelist status ∈ {approved, pending, hidden, rejected}),
+   rate-limit 60/min. Transaction : update status + recalcul atomique
+   `properties.averageRating` et `totalReviews` avec exactement la
+   même expression SQL que `POST /api/reviews` (T-007) → cohérence
+   garantie.
+2. **Composant client** `<ReviewModerateActions>` : 4 boutons
+   contextuels (Approuver / Masquer / En attente / Rejeter),
+   confirmation navigateur, `router.refresh()`.
+3. **Intégration** dans `/dashboard/reviews/page.tsx` : bloc admin
+   sous chaque avis, badge de statut.
+4. **Test intégration** DB-backed `src/app/api/reviews/[id]/moderate/route.test.ts`
+   (5 cas : 403 non-admin, 404 inconnue, 400 Zod, approved→hidden
+   recalcul, hidden→approved remontée).
 
 ## Preuves (§16)
 
-- 🔍 Impact §14 et conception §15.1 rédigés avant implémentation.
+- 🔍 `REPORTS/analyse_impact_2026-08-20_moderation_reviews.md`
+  (9 questions §14).
+- 🔍 `REPORTS/analyse_conception_2026-08-20_moderation_reviews.md`
+  (§15.1, 3 options comparées).
 - 🔨 `npm run typecheck` ✅ 0 erreur.
-- 🔨 `npm run build` ✅ succès (`/maintenance` listé).
+- 🔨 `npm run build` ✅ succès (`/api/reviews/[id]/moderate` listé).
 - 🔨 `npm run lint` ✅ 0 error.
-- 🧪 `npm test` : **134 passed / 134** (+11 tests
-  `src/lib/maintenance.test.ts` : bypass whitelist, assertion selon
-  rôle, code + retryAfter, isActive reflète settings).
-- ▶️ Activer maintenance → customer `/` retourne HTML avec
-  `NEXT_REDIRECT;replace;/maintenance;307` (navigateur suit
-  automatiquement via meta refresh).
-- ▶️ Anonyme `/` → même redirect.
-- ▶️ Admin `/` → **aucun redirect** (comptage grep = 0).
-- ▶️ Anonyme `/api/auth/login` → **200** (whitelist respectée).
-- ▶️ Anonyme `/connexion` → **200** (whitelist).
-- ▶️ Admin `/dashboard/settings` → **200** (peut désactiver).
-- ▶️ Customer `POST /api/bookings` → **503** + `Retry-After: 60` +
-  body `{"error":"Service momentanément en maintenance","code":"MAINTENANCE_MODE"}`.
-- ▶️ Admin `POST /api/bookings` en maintenance → **201** (bypass admin).
-- ▶️ Désactivation → customer récupère un booking `201` immédiatement,
-  redirect disparaît après invalidation cache 60 s.
-- ▶️ Cache : après TTL 60 s, tous les visiteurs voient à nouveau la
-  plate-forme normale (grep NEXT_REDIRECT = 0).
+- 🧪 `npm test` : **139 passed / 139** (+5 tests intégration DB-backed).
+- 🧪 `npm run ai:check` : 15 OK · 2 warn attendus · 0 fail.
+- ▶️ Setup : property `dar-el-medina`, 3 avis approved, avg 8.3.
+  - Customer PATCH → **403** (Accès admin requis).
+  - Admin PATCH `hidden` → 200, JSON `{review:{status:"hidden"}}`,
+    property recalculée → **avg 8.2, total 2** (l'avis masqué n'est
+    plus compté).
+  - `GET /api/reviews?propertyId=X` public → **l'avis hidden n'apparaît
+    pas** (0 occurrence).
+  - Admin PATCH `approved` → property remonte → **avg 8.3, total 3**.
+  - Zod refuse `status:"nonsense"` → **400**.
+  - Log serveur : `[reviews] admin=admin@... review=... status=approved→hidden`.
+- ▶️ `/dashboard/reviews` admin affiche « Modération », badges
+  « Approuvé / En attente / Masqué / Rejeté » + boutons contextuels.
 
 ## Non-régression
 
-- Les 12 URL non modifiées (mode maintenance désactivé) répondent 200
-  comme avant.
-- Les 123 tests existants passent sans modification, plus les 11 nouveaux
-  tests maintenance (**134 / 134**).
-- La page `/maintenance` redirige vers `/` si l'admin est identifié
-  ou si le mode a été désactivé, évitant les boucles.
-
-## Impact sur le code
-
-- **Nouveaux** : `src/lib/maintenance.ts`, `src/lib/maintenance.test.ts`,
-  `src/app/maintenance/page.tsx`, 2 rapports.
-- **Modifiés** : `src/app/page.tsx`, `src/app/(main)/layout.tsx`,
-  `src/app/dashboard/layout.tsx`, 5 handlers API critiques.
+- 10 tests `computeCancellationFee`, 11 tests maintenance, 9 tests
+  settings, 21 promotions/cancellation — tous passent inchangés.
+- Fiche property publique continue de n'afficher que les avis
+  `status='approved'` (comportement historique).
+- Recalcul averageRating utilise la même expression SQL que
+  `POST /api/reviews` → aucune divergence possible.
 
 ## Étape suivante
 
-Attente instructions utilisateur. Le paramètre `security.maintenanceMode`
-est désormais complètement câblé. Reste au backlog : T-023 (modération
-avis), T-024 (audit_log global), T-025 (templates emails éditables).
+Audit produit §17 (compteur `sessions_since_last_product_audit` était
+à 2/5, remis à 0 après cet audit). Backlog restant : T-024
+(audit_log global), T-025 (templates emails éditables).

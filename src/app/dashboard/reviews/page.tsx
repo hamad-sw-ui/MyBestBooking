@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { formatDate, getRatingLabel } from "@/lib/utils";
 import { Star, MessageSquare, ThumbsUp, Flag } from "lucide-react";
 import { HostReplyForm } from "@/components/host-reply-form";
+import { ReviewModerateActions } from "@/components/admin/review-moderate-actions";
 
 async function getReviews(userId: string, isAdmin: boolean) {
   if (isAdmin) {
@@ -220,11 +221,19 @@ export default async function ReviewsPage() {
                     </div>
                   )}
 
-                  {/* Actions — T-016 : formulaire branché */}
+                  {/* Actions — T-016 : formulaire hôte branché */}
                   {!isAdmin && (
                     <div className="mt-4">
                       <HostReplyForm reviewId={review.id} initialReply={review.hostReply} />
                     </div>
+                  )}
+
+                  {/* T-023 : modération admin */}
+                  {isAdmin && (
+                    <ReviewModerateActions
+                      reviewId={review.id}
+                      currentStatus={review.status}
+                    />
                   )}
                 </div>
               );

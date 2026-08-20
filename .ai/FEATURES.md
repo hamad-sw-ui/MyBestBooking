@@ -73,7 +73,7 @@ modification de code.
 | Lecture des avis d'une property | ✅ | `GET /api/reviews?propertyId=` | initial |
 | Recalcul atomique `averageRating` | ✅ | `UPDATE...FROM(SELECT AVG…)` | T-007 |
 | **Réponse hôte à un avis** | ✅ | `POST /api/reviews/[id]/reply` (T-015) + `<HostReplyForm>` branchée (T-016) | T-016 |
-| **Modération admin** (approuver/rejeter) | ❌ | `status` en DB, aucun endpoint | 🎯 T-015 |
+| **Modération admin** (approuver, masquer, rejeter, en attente) | ✅ | `PATCH /api/reviews/[id]/moderate` + `<ReviewModerateActions>` dans /dashboard/reviews (T-023). Recalcul atomique averageRating. 5 tests DB-backed | T-023 |
 | Marquer un avis comme utile (`helpfulCount`) | ❌ | Champ en DB seulement | 🎯 backlog |
 
 ## Favoris (wishlists)
@@ -134,7 +134,7 @@ modification de code.
 |---|---|---|---|
 | Liste des utilisateurs | ✅ | Page `/dashboard/users` + colonne Actions + bouton `<UserSuspendActions>` (T-021) | T-016 endpoint, T-021 UI |
 | **Validation d'une property (`pending`→`active`)** | ✅ | Endpoint T-015 + `<PropertyValidateActions>` branchée dans /dashboard/properties (T-016) | T-016 |
-| **Modération d'avis** (approuver, cacher) | ❌ | Voir Avis | 🎯 T-015 |
+| **Modération d'avis** (approuver, masquer, rejeter, en attente) | ✅ | `PATCH /api/reviews/[id]/moderate` (admin only, Zod, rate-limit 60/min, recalcul atomique averageRating/totalReviews) + `<ReviewModerateActions>` branché dans `/dashboard/reviews` (T-023). 5 tests intégration DB-backed. ▶️ Masquer un avis 9/10 sur property à 3 avis → moyenne recalculée immédiatement, l'avis n'apparaît plus publiquement | T-023 |
 | **CRUD codes promo** | ✅ | GET/POST `/api/promotions` + PATCH/DELETE `/api/promotions/[id]` (T-015). Application au checkout reste 🎯 T-016. | T-015 |
 | Journal d'actions admin | 🚧 | `updated_by`/`updated_at` sur `app_settings` (T-021), pas encore de table `audit_log` globale | T-021 partiel |
 | Suspendre / réactiver un utilisateur | ✅ | `PATCH /api/users/[id]/suspend` (T-016) + bouton `<UserSuspendActions>` dans `/dashboard/users` (T-021) — testé ▶️ suspend/login 401/reactivate/login 200 | T-021 |
@@ -255,18 +255,20 @@ modification de code.
 
 ## 📊 Bilan de complétude
 
-Recalculé après **T-021** (fin Session 7, 20 août 2026) :
+Recalculé après **T-023 + audit produit** (fin Session 7, 20 août 2026) :
 
 | État | Nombre |
 |---|---|
-| ✅ Livré + testé | ~80 |
-| 🚧 Partiel (bien tracé) | ~21 |
+| ✅ Livré + testé | ~82 |
+| 🚧 Partiel (bien tracé) | ~19 |
 | 🎯 PROMISED | ~6 |
 | ❌ Absent | ~15 |
 | **Total tracé** | **~122** |
 
-**Couverture ✅ ≈ 66 %.** Progression : 28 % (fin S4) → 48 % (T-015) →
-64 % (T-020) → **66 % (T-021, panel admin + suspend UI)**. Reste
-principalement : dark mode, i18n EN, 2FA, wallet BestRewards utilisable,
-comparateur, carte géographique — tous non-bloquants pour un lancement
-V1 francophone.
+**Couverture ✅ ≈ 67 %.** Progression : 28 % (fin S4) → 48 % (T-015) →
+64 % (T-020) → 66 % (T-021) → 66 % (T-022) → **67 % (T-023, modération
+avis)**. Reste principalement : dark mode, i18n EN, 2FA, wallet
+BestRewards utilisable, comparateur, carte géographique — tous
+non-bloquants pour un lancement V1 francophone. Voir
+`REPORTS/audit_produit_2026-08-20_session_7.md` pour l'inventaire
+détaillé de fin d'audit.

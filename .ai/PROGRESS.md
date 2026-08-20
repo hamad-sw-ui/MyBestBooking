@@ -9,6 +9,50 @@
 
 ---
 
+## 2026-08-20 — Session 7 (suite) : T-023 (modération d'avis admin) + audit produit §17
+
+**Trigger** : « faites l'enchaîner T-023 sur votre feu vert, et passer
+en mode audit produit ».
+
+### Livré
+
+**T-023 (S)** — Modération d'avis admin
+(`REPORTS/analyse_impact_2026-08-20_moderation_reviews.md`,
+`REPORTS/analyse_conception_2026-08-20_moderation_reviews.md`) :
+
+- Endpoint `PATCH /api/reviews/[id]/moderate` (admin only, Zod
+  whitelist status ∈ {approved, pending, hidden, rejected},
+  rate-limit 60/min, transaction avec recalcul atomique
+  `averageRating`/`totalReviews` réutilisant la même expression
+  SQL que POST /api/reviews T-007).
+- Composant `<ReviewModerateActions>` (4 boutons contextuels
+  + badge de statut + router.refresh).
+- Insertion dans `/dashboard/reviews/page.tsx` côté admin uniquement.
+- Test d'intégration DB-backed 5 cas (403, 404, 400 Zod,
+  approved→hidden, hidden→approved).
+
+**Audit produit §17** — `REPORTS/audit_produit_2026-08-20_session_7.md` :
+inventaire complet FEATURES vs implémentation, checklist reprise, plan
+d'action priorisé. Compteur `sessions_since_last_product_audit` remis
+à 0.
+
+### Preuves (§16)
+
+- 🔨 typecheck OK, build OK, lint 0 error.
+- 🧪 `npm test` : **139 passed / 139** (+5 tests moderate).
+- 🧪 `npm run ai:check` : 15 OK · 2 warn attendus · 0 fail.
+- ▶️ Customer PATCH → 403. Admin PATCH hidden sur avis 8.3/3 →
+  property recalculée à 8.2/2, avis n'apparaît plus dans le GET
+  public. PATCH approved → remonte à 8.3/3. Zod refuse status
+  invalide (400).
+
+### Étape suivante
+
+Attente instructions. Backlog restant : T-024 (audit_log global),
+T-025 (templates emails éditables).
+
+---
+
 ## 2026-08-20 — Session 7 (suite) : T-022 (câblage mode maintenance)
 
 **Trigger** : « continuez si vous n'avez pas fini ».

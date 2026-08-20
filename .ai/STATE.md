@@ -10,8 +10,8 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `1f8f97d` (T-022 câblage maintenance)
-- **Dernier commit stable référencé** : `1f8f97d` (T-022, Session 7)
+- **Dernier commit connu** : à mettre à jour en fin de session en cours
+- **Dernier commit stable référencé** : `cff3d2d` (post-T-022, Session 7)
 - **Version du Framework** : **1.1.0** (AI-DOS Web, hybride + complétude
   produit — voir `PROCESS_IMPROVEMENTS.md`)
 
@@ -19,16 +19,17 @@
 
 - **Dernier `npm run typecheck`** : ✅ 0 erreur
 - **Dernier `npm run build`** : ✅ succès
-- **Dernier `npm test`** : ✅ **134 passed / 134** (0 skipped avec DB
+- **Dernier `npm test`** : ✅ **139 passed / 139** (0 skipped avec DB
   embarquée démarrée)
-- **Dernier `npm run ai:check`** : ✅ 14 OK · 2 warn attendus · 0 fail
-- **Couverture** : ~81 features ✅ / ~20 partielles / ~6 planifiées /
-  ~15 backlog (**FEATURES.md ✅ ≈ 66 %**)
+- **Dernier `npm run ai:check`** : ✅ 15 OK · 2 warn attendus · 0 fail
+- **Couverture** : ~82 features ✅ / ~19 partielles / ~6 planifiées /
+  ~15 backlog (**FEATURES.md ✅ ≈ 67 %**)
 
 ## 📈 Compteurs framework (§17, ADR-006)
 
-- **sessions_since_last_product_audit** : `2` (dernier : Session 5).
-  Sessions 6 puis 7 = livraisons. Audit dû dans ≤ 3 sessions.
+- **sessions_since_last_product_audit** : `0` (dernier : Session 7,
+  après T-023 — voir `REPORTS/audit_produit_2026-08-20_session_7.md`).
+  Prochain audit dû ≤ 5 sessions.
 
 ## 📋 Sessions
 
@@ -56,6 +57,11 @@
     `src/lib/maintenance.ts`, page `/maintenance`, guards RSC dans
     3 layouts + guards 503 dans 5 handlers API métier critiques,
     whitelist anti-lockout admin, 11 tests unitaires)
+  - T-023 (modération d'avis admin : endpoint `PATCH /api/reviews/[id]/moderate`,
+    composant `<ReviewModerateActions>`, recalcul atomique
+    averageRating/totalReviews, 5 tests intégration DB-backed)
+  - **Audit produit §17** : `REPORTS/audit_produit_2026-08-20_session_7.md`
+    (compteur remis à 0)
 
 ## 🐞 Bugs & Défauts
 
@@ -64,7 +70,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-022 (22 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-023 (23 tâches)
 
 ## 🏛️ Décisions & ADR
 
@@ -78,10 +84,10 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20 (Session 7 — T-021 + T-022 livrés : panel admin
-  configurable branché, TVA/BestRewards/cancellation pilotables sans
-  redéploiement, bouton suspend user en UI, mode maintenance
-  effectivement câblé côté RSC + API)
+- **Date** : 2026-08-20 (Session 7 — T-021, T-022, T-023 livrés :
+  panel admin configurable branché, mode maintenance câblé,
+  modération d'avis avec recalcul atomique averageRating. Audit
+  produit §17 exécuté, compteur remis à 0)
 - **Agent** : Arena Agent Mode
 - **Prochaine mise à jour attendue** : à chaque fin de session — obligatoire
   §11. La règle de mise à jour est vérifiée mécaniquement par

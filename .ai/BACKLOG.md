@@ -33,14 +33,17 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 - ✅ **T-021** Panel d'administration configurable + UI suspend user
   (Session 7, ADR-007)
 - ✅ **T-022** Câblage effectif du mode maintenance (Session 7)
+- ✅ **T-023** Modération d'avis admin (endpoint + UI, recalcul
+  atomique averageRating) (Session 7)
 
 ### Chantiers restants proposés
 
-- 🟠 **T-023** Modération d'avis admin (approuver/cacher/rejeter) via
-  endpoints + UI.
-- 🟠 **T-024** Table `audit_log` globale (au-delà d'`app_settings.updated_by`).
+- 🟠 **T-024** Table `audit_log` globale (au-delà de
+  `app_settings.updated_by` et des `console.info` locaux).
 - 🟢 **T-025** Templates emails éditables via `app_settings` (exige un
   moteur de templating minimaliste).
+- Backlog V1 non bloquant (voir audit produit) : dark mode, i18n EN,
+  2FA, wallet BestRewards, comparateur, carte géographique.
 
 ---
 
