@@ -11,6 +11,7 @@ interface Props {
     country: string | null;
     language: string | null;
     currency: string | null;
+    timezone?: string | null;
   };
 }
 
@@ -27,6 +28,7 @@ export function ProfileForm({ initial }: Props) {
     country: initial.country ?? "",
     language: initial.language ?? "fr",
     currency: initial.currency ?? "EUR",
+    timezone: initial.timezone ?? "UTC",
   });
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -48,6 +50,7 @@ export function ProfileForm({ initial }: Props) {
         phone: form.phone || null,
         language: form.language,
         currency: form.currency,
+        timezone: form.timezone,
       };
       if (form.country) body.country = form.country;
       const res = await fetch("/api/users/me", {
@@ -100,6 +103,22 @@ export function ProfileForm({ initial }: Props) {
             <option value="GBP">GBP</option>
             <option value="CHF">CHF</option>
             <option value="MAD">MAD</option>
+            <option value="XAF">XAF (FCFA)</option>
+          </select>
+        </div>
+        <div>
+          <label htmlFor="pf-tz" className="block text-sm font-medium text-gray-700 mb-1">Fuseau horaire</label>
+          <select id="pf-tz" value={form.timezone} onChange={(e) => set("timezone", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]">
+            <option value="UTC">UTC</option>
+            <option value="Europe/Paris">Europe/Paris</option>
+            <option value="Europe/London">Europe/London</option>
+            <option value="Africa/Douala">Africa/Douala (Yaoundé)</option>
+            <option value="Africa/Casablanca">Africa/Casablanca</option>
+            <option value="Africa/Tunis">Africa/Tunis</option>
+            <option value="Africa/Dakar">Africa/Dakar</option>
+            <option value="America/New_York">America/New_York</option>
+            <option value="America/Los_Angeles">America/Los_Angeles</option>
+            <option value="Asia/Dubai">Asia/Dubai</option>
           </select>
         </div>
       </div>

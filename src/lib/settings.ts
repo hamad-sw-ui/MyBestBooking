@@ -28,6 +28,7 @@ export const SETTING_KEYS = [
   "cancellation",
   "notifications",
   "security",
+  "emailTemplates",
 ] as const;
 export type SettingKey = (typeof SETTING_KEYS)[number];
 
@@ -97,6 +98,24 @@ export const securitySchema = z.object({
   maintenanceMode: z.boolean(),
 });
 
+// T-025 — Templates emails. Placeholders supportés via {name} :
+//   emailVerification / passwordReset  : firstName, url
+//   bookingConfirmation                : firstName, bookingReference,
+//     propertyName, city, checkIn, checkOut, total, currency
+//   bookingHostNotification            : hostFirstName, bookingReference,
+//     propertyName, guestName, checkIn, checkOut, dashboardUrl
+const templateBlockSchema = z.object({
+  subject: z.string().min(1).max(200),
+  body: z.string().min(1).max(5000),
+});
+export const emailTemplatesSchema = z.object({
+  emailVerification: templateBlockSchema,
+  passwordReset: templateBlockSchema,
+  bookingConfirmation: templateBlockSchema,
+  bookingHostNotification: templateBlockSchema,
+});
+export type EmailTemplateBlock = z.infer<typeof templateBlockSchema>;
+
 export const settingSchemas = {
   general: generalSchema,
   billing: billingSchema,
@@ -104,6 +123,7 @@ export const settingSchemas = {
   cancellation: cancellationSchema,
   notifications: notificationsSchema,
   security: securitySchema,
+  emailTemplates: emailTemplatesSchema,
 } as const satisfies Record<SettingKey, z.ZodTypeAny>;
 
 export type SettingValue<K extends SettingKey> = z.infer<
@@ -160,6 +180,35 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     sessionDays: 30,
     twoFactorRequiredHosts: false,
     maintenanceMode: false,
+  },
+  emailTemplates: {
+    emailVerification: {
+      subject: "Vérifiez votre email — MyBestBooking",
+      body:
+        "Bienvenue {firstName} 👋\n\n" +
+        "Merci d'avoir créé votre compte MyBestBooking. Il ne reste qu'à confirmer votre adresse email pour commencer à réserver.\n\n" +
+        "Ce lien expire dans 24 heures.",
+    },
+    passwordReset: {
+      subject: "Réinitialiser votre mot de passe — MyBestBooking",
+      body:
+        "Bonjour {firstName},\n\n" +
+        "Vous avez demandé à réinitialiser votre mot de passe.\n\n" +
+        "Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.",
+    },
+    bookingConfirmation: {
+      subject: "Réservation confirmée {bookingReference}",
+      body:
+        "Bonjour {firstName},\n\n" +
+        "Votre réservation est confirmée. Retrouvez le récapitulatif ci-dessous.\n\n" +
+        "Bon voyage !",
+    },
+    bookingHostNotification: {
+      subject: "Nouvelle réservation {bookingReference}",
+      body:
+        "Bonjour {hostFirstName},\n\n" +
+        "Une nouvelle réservation vient d'être confirmée sur votre hébergement.",
+    },
   },
 };
 

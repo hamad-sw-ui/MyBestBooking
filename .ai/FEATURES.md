@@ -74,7 +74,7 @@ modification de code.
 | Recalcul atomique `averageRating` | ✅ | `UPDATE...FROM(SELECT AVG…)` | T-007 |
 | **Réponse hôte à un avis** | ✅ | `POST /api/reviews/[id]/reply` (T-015) + `<HostReplyForm>` branchée (T-016) | T-016 |
 | **Modération admin** (approuver, masquer, rejeter, en attente) | ✅ | `PATCH /api/reviews/[id]/moderate` + `<ReviewModerateActions>` dans /dashboard/reviews (T-023). Recalcul atomique averageRating. 5 tests DB-backed | T-023 |
-| Marquer un avis comme utile (`helpfulCount`) | ❌ | Champ en DB seulement | 🎯 backlog |
+| Marquer un avis comme utile (`helpfulCount`) | ✅ | `POST /api/reviews/[id]/helpful` (auth, rate-limit 1/24h par user+review, incrément atomique) — T-025 suivi audit | T-025 |
 
 ## Favoris (wishlists)
 
@@ -136,7 +136,7 @@ modification de code.
 | **Validation d'une property (`pending`→`active`)** | ✅ | Endpoint T-015 + `<PropertyValidateActions>` branchée dans /dashboard/properties (T-016) | T-016 |
 | **Modération d'avis** (approuver, masquer, rejeter, en attente) | ✅ | `PATCH /api/reviews/[id]/moderate` (admin only, Zod, rate-limit 60/min, recalcul atomique averageRating/totalReviews) + `<ReviewModerateActions>` branché dans `/dashboard/reviews` (T-023). 5 tests intégration DB-backed. ▶️ Masquer un avis 9/10 sur property à 3 avis → moyenne recalculée immédiatement, l'avis n'apparaît plus publiquement | T-023 |
 | **CRUD codes promo** | ✅ | GET/POST `/api/promotions` + PATCH/DELETE `/api/promotions/[id]` (T-015). Application au checkout reste 🎯 T-016. | T-015 |
-| Journal d'actions admin | 🚧 | `updated_by`/`updated_at` sur `app_settings` (T-021), pas encore de table `audit_log` globale | T-021 partiel |
+| Journal d'actions admin (audit_log global) | ✅ | Table `audit_log` (migration 0006), `src/lib/audit.ts`, hooks dans 4 handlers (setting.update, review.moderate, user.suspend/reactivate, property.validate/reject/suspend), `GET /api/admin/audit`, page `/dashboard/audit` (T-024). 5 tests unitaires | T-024 |
 | Suspendre / réactiver un utilisateur | ✅ | `PATCH /api/users/[id]/suspend` (T-016) + bouton `<UserSuspendActions>` dans `/dashboard/users` (T-021) — testé ▶️ suspend/login 401/reactivate/login 200 | T-021 |
 | **Panel de configuration runtime (TVA, commissions, seuils BestRewards, grille annulation, notifications, sécurité, providers)** | ✅ | Table `app_settings` + `src/lib/settings.ts` + endpoints `/api/admin/settings` + `<SettingsPanel>` dans `/dashboard/settings` (T-021, ADR-007). 9 tests unitaires settings + 3 tests grille custom cancellation. ▶️ PATCH billing → TVA appliquée immédiatement à `POST /api/bookings` | T-021 |
 | **Mode maintenance (activable par admin, redirige non-admins vers /maintenance, API métier → 503)** | ✅ | `src/lib/maintenance.ts` + page `/maintenance` + guards RSC dans 3 layouts + guards 503 dans POST /api/bookings, PUT /api/bookings/[id], POST /api/uploads, POST /api/reviews, GET /api/promotions/apply (T-022). Whitelist déterministe anti-lockout admin. 11 tests unitaires. ▶️ Customer POST /api/bookings → 503 + `Retry-After: 60`, admin → 201 (bypass) | T-022 |
@@ -153,6 +153,7 @@ modification de code.
 | Email annulation booking | ❌ | — | 🎯 T-015 |
 | Email nouveau message | ❌ | — | 🎯 T-015 (après endpoints messagerie) |
 | Templates HTML/text | ✅ | `src/lib/mail/templates.ts` : 4 templates (verification, reset, booking-confirm, host-notif) | T-013 |
+| **Templates emails éditables via `app_settings`** | ✅ | Section `emailTemplates` (settings.ts) + `src/lib/mail/render.ts` avec escape XSS + section UI dans `<SettingsPanel>`. Subject + body éditables par template, placeholders `{name}` substitués côté serveur (T-025). 10 tests + 1 test XSS | T-025 |
 
 ## Uploads & stockage
 
@@ -255,20 +256,21 @@ modification de code.
 
 ## 📊 Bilan de complétude
 
-Recalculé après **T-023 + audit produit** (fin Session 7, 20 août 2026) :
+Recalculé après **T-025 + suivi audit produit** (fin Session 7, 20
+août 2026) :
 
 | État | Nombre |
 |---|---|
-| ✅ Livré + testé | ~82 |
-| 🚧 Partiel (bien tracé) | ~19 |
-| 🎯 PROMISED | ~6 |
+| ✅ Livré + testé | ~86 |
+| 🚧 Partiel (bien tracé) | ~17 |
+| 🎯 PROMISED | ~4 |
 | ❌ Absent | ~15 |
 | **Total tracé** | **~122** |
 
-**Couverture ✅ ≈ 67 %.** Progression : 28 % (fin S4) → 48 % (T-015) →
-64 % (T-020) → 66 % (T-021) → 66 % (T-022) → **67 % (T-023, modération
-avis)**. Reste principalement : dark mode, i18n EN, 2FA, wallet
-BestRewards utilisable, comparateur, carte géographique — tous
+**Couverture ✅ ≈ 70 %.** Progression : 28 % (fin S4) → 48 % (T-015) →
+64 % (T-020) → 66 % (T-021/22) → 67 % (T-023) → **70 % (T-024/25 +
+suivi audit)**. Reste principalement : dark mode, i18n EN, 2FA TOTP,
+wallet BestRewards utilisable, comparateur, carte géographique — tous
 non-bloquants pour un lancement V1 francophone. Voir
 `REPORTS/audit_produit_2026-08-20_session_7.md` pour l'inventaire
-détaillé de fin d'audit.
+détaillé.

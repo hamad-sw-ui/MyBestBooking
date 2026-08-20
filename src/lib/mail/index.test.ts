@@ -1,4 +1,18 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// T-025 : les templates lisent app_settings, mais les tests unitaires
+// doivent être déterministes → on mocke getSetting pour toujours
+// renvoyer les DEFAULTS.
+vi.mock("@/lib/settings", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/settings")>("@/lib/settings");
+  return {
+    ...actual,
+    getSetting: async <K extends string>(key: K) => {
+      // @ts-expect-error accès dynamique DEFAULTS
+      return actual.DEFAULTS[key];
+    },
+  };
+});
 import { readFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -40,9 +54,9 @@ describe("ConsoleMailer (T-013, §13.5)", () => {
   });
 });
 
-describe("templates", () => {
-  it("emailVerification produit subject + html + text", () => {
-    const t = templates.emailVerification({ firstName: "Jean", url: "https://x/verify?token=abc" });
+describe("templates (T-013 + T-025)", () => {
+  it("emailVerification produit subject + html + text (async)", async () => {
+    const t = await templates.emailVerification({ firstName: "Jean", url: "https://x/verify?token=abc" });
     expect(t.subject).toMatch(/Vérifiez/);
     expect(t.html).toContain("Jean");
     expect(t.html).toContain("https://x/verify?token=abc");
@@ -50,13 +64,13 @@ describe("templates", () => {
     expect(t.text).not.toContain("<");
   });
 
-  it("passwordReset mentionne 1 heure d'expiration", () => {
-    const t = templates.passwordReset({ firstName: "Jean", url: "https://x/reset?token=abc" });
+  it("passwordReset mentionne 1 heure d'expiration", async () => {
+    const t = await templates.passwordReset({ firstName: "Jean", url: "https://x/reset?token=abc" });
     expect(t.text).toMatch(/1 heure/);
   });
 
-  it("bookingConfirmation contient la référence et le total", () => {
-    const t = templates.bookingConfirmation({
+  it("bookingConfirmation contient la référence et le total", async () => {
+    const t = await templates.bookingConfirmation({
       firstName: "Jean", bookingReference: "MBB-TEST", propertyName: "Hôtel X",
       city: "Paris", checkIn: "2026-09-01", checkOut: "2026-09-03",
       total: "200.00", currency: "EUR",
@@ -64,6 +78,15 @@ describe("templates", () => {
     expect(t.subject).toContain("MBB-TEST");
     expect(t.html).toContain("Hôtel X");
     expect(t.text).toContain("200.00 EUR");
+  });
+
+  it("T-025 : substitution + escapeHtml sur les variables (anti-XSS)", async () => {
+    const t = await templates.emailVerification({
+      firstName: "<script>alert(1)</script>",
+      url: "https://x/verify?token=abc",
+    });
+    expect(t.html).not.toContain("<script>alert(1)</script>");
+    expect(t.html).toContain("&lt;script&gt;alert(1)&lt;/script&gt;");
   });
 
   it("stripHtml enlève les balises et décode les entités", () => {

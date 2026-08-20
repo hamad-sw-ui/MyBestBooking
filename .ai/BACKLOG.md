@@ -35,15 +35,24 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 - ✅ **T-022** Câblage effectif du mode maintenance (Session 7)
 - ✅ **T-023** Modération d'avis admin (endpoint + UI, recalcul
   atomique averageRating) (Session 7)
+- ✅ **T-024** Table `audit_log` globale + endpoint + page + hooks
+  4 handlers admin (Session 7)
+- ✅ **T-025** Templates emails éditables via `app_settings` +
+  moteur `renderTemplate` avec escape XSS (Session 7)
+- ✅ **Suivi audit produit** : helpfulCount endpoint, select timezone
+  dans ProfileForm, commissionRate admin-only par property (Session 7)
 
-### Chantiers restants proposés
+### Chantiers restants (V1 non bloquant)
 
-- 🟠 **T-024** Table `audit_log` globale (au-delà de
-  `app_settings.updated_by` et des `console.info` locaux).
-- 🟢 **T-025** Templates emails éditables via `app_settings` (exige un
-  moteur de templating minimaliste).
-- Backlog V1 non bloquant (voir audit produit) : dark mode, i18n EN,
-  2FA, wallet BestRewards, comparateur, carte géographique.
+- 🟢 Dark mode + toggle.
+- 🟢 i18n EN (schéma DB déjà prêt : `descriptionEn`, `users.language`).
+- 🟢 2FA TOTP.
+- 🟢 Wallet BestRewards utilisable au checkout.
+- 🟢 Comparateur d'hébergements.
+- 🟢 Carte géographique (lat/lng en DB).
+- 🟢 Rate-limit Redis (multi-instance).
+- 🟢 CI GitHub Actions à installer manuellement
+  (`REPORTS/ci_workflow_a_ajouter.md`).
 
 ---
 

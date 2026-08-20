@@ -1,7 +1,15 @@
 /**
  * Templates d'emails MyBestBooking (T-013).
- * HTML minimal sans framework. Version texte générée par stripHtml.
+ * T-025 : le sujet et le paragraphe principal (`body`) de chaque
+ * template sont éditables via `app_settings.emailTemplates`. Le
+ * layout HTML (branding, boutons, disclaimer) reste figé.
+ *
+ * Placeholders `{name}` supportés — voir DEFAULTS dans
+ * `src/lib/settings.ts` pour la liste par template.
  */
+
+import { getSetting } from "@/lib/settings";
+import { renderTemplate, escapeHtml } from "./render";
 
 export function stripHtml(html: string): string {
   return html
@@ -11,6 +19,8 @@ export function stripHtml(html: string): string {
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
     .replace(/\n\s*\n\s*\n/g, "\n\n")
     .trim();
 }
@@ -38,70 +48,86 @@ function layout(inner: string): string {
 }
 
 function button(url: string, label: string): string {
-  return `<a href="${url}" style="display:inline-block;padding:12px 24px;background:${brand.secondary};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">${label}</a>`;
+  return `<a href="${escapeHtml(url)}" style="display:inline-block;padding:12px 24px;background:${brand.secondary};color:#fff;text-decoration:none;border-radius:8px;font-weight:600;">${escapeHtml(label)}</a>`;
+}
+
+/** Convertit le paragraphe body (multi-lignes) en HTML avec <p>. */
+function bodyToHtml(body: string): string {
+  return body
+    .split(/\n\n+/)
+    .map((p) => `<p>${p.replace(/\n/g, "<br>")}</p>`)
+    .join("\n");
 }
 
 export const templates = {
-  emailVerification({ firstName, url }: { firstName: string; url: string }) {
+  async emailVerification({ firstName, url }: { firstName: string; url: string }) {
+    const tpl = (await getSetting("emailTemplates")).emailVerification;
+    const subject = renderTemplate(tpl.subject, { firstName, url });
+    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), { firstName, url });
     const html = layout(`
-      <h1 style="margin:0 0 16px 0;font-size:22px;">Bienvenue ${firstName} 👋</h1>
-      <p>Merci d'avoir créé votre compte MyBestBooking. Il ne reste qu'à confirmer votre adresse email pour commencer à réserver.</p>
+      ${bodyRendered}
       <p style="margin:24px 0;">${button(url, "Vérifier mon email")}</p>
-      <p style="font-size:13px;color:#666;">Ou copiez-collez ce lien dans votre navigateur :<br><span style="word-break:break-all;">${url}</span></p>
-      <p style="font-size:13px;color:#666;">Ce lien expire dans 24 heures.</p>
+      <p style="font-size:13px;color:#666;">Ou copiez-collez ce lien dans votre navigateur :<br><span style="word-break:break-all;">${escapeHtml(url)}</span></p>
     `);
-    return { subject: "Vérifiez votre email — MyBestBooking", html, text: stripHtml(html) };
+    return { subject, html, text: stripHtml(html) };
   },
 
-  passwordReset({ firstName, url }: { firstName: string; url: string }) {
+  async passwordReset({ firstName, url }: { firstName: string; url: string }) {
+    const tpl = (await getSetting("emailTemplates")).passwordReset;
+    const subject = renderTemplate(tpl.subject, { firstName, url });
+    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), { firstName, url });
     const html = layout(`
-      <h1 style="margin:0 0 16px 0;font-size:22px;">Réinitialisation du mot de passe</h1>
-      <p>Bonjour ${firstName}, vous avez demandé à réinitialiser votre mot de passe.</p>
+      ${bodyRendered}
       <p style="margin:24px 0;">${button(url, "Choisir un nouveau mot de passe")}</p>
-      <p style="font-size:13px;color:#666;">Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.</p>
     `);
-    return { subject: "Réinitialiser votre mot de passe — MyBestBooking", html, text: stripHtml(html) };
+    return { subject, html, text: stripHtml(html) };
   },
 
-  bookingConfirmation({
+  async bookingConfirmation({
     firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency,
   }: {
     firstName: string; bookingReference: string; propertyName: string;
     city: string; checkIn: string; checkOut: string; total: string; currency: string;
   }) {
+    const vars = { firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency };
+    const tpl = (await getSetting("emailTemplates")).bookingConfirmation;
+    const subject = renderTemplate(tpl.subject, vars);
+    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
     const html = layout(`
-      <h1 style="margin:0 0 16px 0;font-size:22px;">Réservation confirmée ✅</h1>
-      <p>Bonjour ${firstName}, votre réservation est confirmée.</p>
+      ${bodyRendered}
       <table style="width:100%;margin:24px 0;border-collapse:collapse;">
-        <tr><td style="padding:8px 0;color:#666;">Référence</td><td style="padding:8px 0;text-align:right;font-weight:600;">${bookingReference}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Hébergement</td><td style="padding:8px 0;text-align:right;">${propertyName}, ${city}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Arrivée</td><td style="padding:8px 0;text-align:right;">${checkIn}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Départ</td><td style="padding:8px 0;text-align:right;">${checkOut}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Total</td><td style="padding:8px 0;text-align:right;font-weight:600;">${total} ${currency}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Référence</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Hébergement</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}, ${escapeHtml(city)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Arrivée</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Départ</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Total</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(total)} ${escapeHtml(currency)}</td></tr>
       </table>
-      <p>Bon voyage !</p>
     `);
-    return { subject: `Réservation confirmée ${bookingReference}`, html, text: stripHtml(html) };
+    return { subject, html, text: stripHtml(html) };
   },
 
-  bookingHostNotification({
+  async bookingHostNotification({
     hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut,
   }: {
     hostFirstName: string; bookingReference: string; propertyName: string;
     guestName: string; checkIn: string; checkOut: string;
   }) {
+    const vars = { hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut };
+    const tpl = (await getSetting("emailTemplates")).bookingHostNotification;
+    const subject = renderTemplate(tpl.subject, vars);
+    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
+    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
     const html = layout(`
-      <h1 style="margin:0 0 16px 0;font-size:22px;">Nouvelle réservation 🎉</h1>
-      <p>Bonjour ${hostFirstName}, une nouvelle réservation vient d'être confirmée sur votre hébergement.</p>
+      ${bodyRendered}
       <table style="width:100%;margin:24px 0;border-collapse:collapse;">
-        <tr><td style="padding:8px 0;color:#666;">Référence</td><td style="padding:8px 0;text-align:right;font-weight:600;">${bookingReference}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Hébergement</td><td style="padding:8px 0;text-align:right;">${propertyName}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Voyageur</td><td style="padding:8px 0;text-align:right;">${guestName}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Arrivée</td><td style="padding:8px 0;text-align:right;">${checkIn}</td></tr>
-        <tr><td style="padding:8px 0;color:#666;">Départ</td><td style="padding:8px 0;text-align:right;">${checkOut}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Référence</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Hébergement</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Voyageur</td><td style="padding:8px 0;text-align:right;">${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Arrivée</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">Départ</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
       </table>
-      <p>Consultez le détail dans votre <a href="${process.env.NEXT_PUBLIC_APP_URL ?? ""}/dashboard/bookings">dashboard</a>.</p>
+      <p>Consultez le détail dans votre <a href="${escapeHtml(dashboardUrl)}/dashboard/bookings">dashboard</a>.</p>
     `);
-    return { subject: `Nouvelle réservation ${bookingReference}`, html, text: stripHtml(html) };
+    return { subject, html, text: stripHtml(html) };
   },
 };

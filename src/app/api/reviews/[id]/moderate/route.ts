@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
+import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq, sql } from "drizzle-orm";
 
 const schema = z.object({
@@ -88,9 +89,15 @@ export async function PATCH(
       return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
     }
 
-    console.info(
-      `[reviews] admin=${user.email} review=${id} status=${result.previousStatus}→${status}`,
-    );
+    // T-024 : audit log
+    await recordAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: AUDIT_ACTIONS.reviewModerate,
+      entityType: "review",
+      entityId: id,
+      metadata: { from: result.previousStatus, to: status },
+    });
     return NextResponse.json({ review: result.review });
   } catch (error) {
     if (error instanceof z.ZodError) {

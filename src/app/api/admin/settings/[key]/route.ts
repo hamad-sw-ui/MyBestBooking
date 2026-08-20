@@ -8,6 +8,7 @@ import {
   setSetting,
 } from "@/lib/settings";
 import { rateLimit } from "@/lib/rate-limit";
+import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 
 function isValidKey(k: string): k is SettingKey {
   return (SETTING_KEYS as readonly string[]).includes(k);
@@ -81,10 +82,17 @@ export async function PATCH(
   }
 
   try {
+    const previous = await getSetting(key);
     const value = await setSetting(key, body, user.id);
-    console.info(
-      `[settings] admin=${user.email} key=${key} updated at ${new Date().toISOString()}`,
-    );
+    // T-024 : audit log
+    await recordAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: AUDIT_ACTIONS.settingUpdate,
+      entityType: "setting",
+      entityId: key,
+      metadata: { before: previous, after: value },
+    });
     return NextResponse.json({ key, value });
   } catch (error) {
     if (error instanceof z.ZodError) {

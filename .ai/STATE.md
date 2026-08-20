@@ -10,8 +10,8 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `95f06aa` (T-023 + audit produit)
-- **Dernier commit stable référencé** : `95f06aa` (T-023, Session 7)
+- **Dernier commit connu** : à mettre à jour en fin de session en cours
+- **Dernier commit stable référencé** : `9c2a292` (post-T-023, Session 7)
 - **Version du Framework** : **1.1.0** (AI-DOS Web, hybride + complétude
   produit — voir `PROCESS_IMPROVEMENTS.md`)
 
@@ -19,11 +19,11 @@
 
 - **Dernier `npm run typecheck`** : ✅ 0 erreur
 - **Dernier `npm run build`** : ✅ succès
-- **Dernier `npm test`** : ✅ **139 passed / 139** (0 skipped avec DB
+- **Dernier `npm test`** : ✅ **155 passed / 155** (0 skipped avec DB
   embarquée démarrée)
 - **Dernier `npm run ai:check`** : ✅ 15 OK · 2 warn attendus · 0 fail
-- **Couverture** : ~82 features ✅ / ~19 partielles / ~6 planifiées /
-  ~15 backlog (**FEATURES.md ✅ ≈ 67 %**)
+- **Couverture** : ~86 features ✅ / ~17 partielles / ~4 planifiées /
+  ~15 backlog (**FEATURES.md ✅ ≈ 70 %**)
 
 ## 📈 Compteurs framework (§17, ADR-006)
 
@@ -62,6 +62,18 @@
     averageRating/totalReviews, 5 tests intégration DB-backed)
   - **Audit produit §17** : `REPORTS/audit_produit_2026-08-20_session_7.md`
     (compteur remis à 0)
+  - T-024 (audit log global : table `audit_log` migration 0006,
+    `src/lib/audit.ts` best-effort, endpoint `GET /api/admin/audit`,
+    page `/dashboard/audit`, hooks dans 4 handlers settings/moderate/
+    suspend/validate, 5 tests unitaires)
+  - T-025 (templates emails éditables : section `emailTemplates` dans
+    settings, `src/lib/mail/render.ts` avec escape XSS, refactor des
+    4 templates en async, section UI dans `<SettingsPanel>`,
+    10 tests unitaires + 1 test XSS)
+  - **3 écarts audit corrigés** : `POST /api/reviews/[id]/helpful`
+    (endpoint + rate-limit anti-double-clic), select timezone dans
+    `<ProfileForm>`, admin peut modifier `commissionRate` par property
+    via `PUT /api/properties/[id]` (host reste bloqué 403)
 
 ## 🐞 Bugs & Défauts
 
@@ -70,7 +82,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-023 (23 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-025 (25 tâches)
 
 ## 🏛️ Décisions & ADR
 
@@ -84,10 +96,11 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20 (Session 7 — T-021, T-022, T-023 livrés :
-  panel admin configurable branché, mode maintenance câblé,
-  modération d'avis avec recalcul atomique averageRating. Audit
-  produit §17 exécuté, compteur remis à 0)
+- **Date** : 2026-08-20 (Session 7 finale — T-021 à T-025 livrés + audit
+  produit §17 + 3 écarts corrigés : panel admin configurable + mode
+  maintenance + modération d'avis + audit log global + templates
+  emails éditables + helpfulCount + timezone user + commissionRate
+  admin. 155/155 tests, 0 régression)
 - **Agent** : Arena Agent Mode
 - **Prochaine mise à jour attendue** : à chaque fin de session — obligatoire
   §11. La règle de mise à jour est vérifiée mécaniquement par

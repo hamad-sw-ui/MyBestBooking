@@ -9,6 +9,105 @@
 
 ---
 
+## 2026-08-20 — Session 7 (finale) : T-024 + T-025 + 3 écarts audit produit
+
+**Trigger** : « continuez si vous n'avez pas fini, ne vous arrêtez que
+si tout ce qui reste est implémenté et testé avec succès, et
+assurez-vous que tout fonctionne aussi avant de vous arrêter ».
+
+### Livré
+
+**T-024 (S)** — Audit log global
+(`REPORTS/analyse_impact_2026-08-20_audit_log.md`,
+`REPORTS/analyse_conception_2026-08-20_audit_log.md`) :
+
+- Table `audit_log` (migration 0006) : actor_id nullable, actor_email
+  copié, action varchar, entity_type/id, metadata jsonb, 2 index.
+- `src/lib/audit.ts` : `recordAudit` best-effort (jamais throw) +
+  whitelist `AUDIT_ACTIONS`.
+- Hooks dans 4 handlers : setting.update, review.moderate,
+  user.suspend/reactivate, property.validate/reject/suspend.
+- `GET /api/admin/audit` avec filtres action/since/limit/offset.
+- Page `/dashboard/audit` + lien sidebar admin.
+- 5 tests unitaires (insertion, actor null, fallback DB down, whitelist).
+
+**T-025 (S)** — Templates emails éditables
+(`REPORTS/analyse_impact_2026-08-20_email_templates.md`,
+`REPORTS/analyse_conception_2026-08-20_email_templates.md`) :
+
+- Section `emailTemplates` dans settings (Zod strict, DEFAULTS =
+  comportement d'origine, 4 templates : verification, reset, booking
+  confirmation, host notification).
+- `src/lib/mail/render.ts` : `renderTemplate({name})` +
+  `escapeHtml()` anti-XSS.
+- Refactor `templates.ts` : les 4 templates deviennent async, lisent
+  settings avec fallback DEFAULTS, échappent HTML strictement.
+- 3 callers mis à jour (register, forgot-password, bookings POST).
+- Section « Templates emails » dans `<SettingsPanel>` : subject +
+  body éditables + liste variables.
+- 10 tests unitaires render + 1 test XSS.
+
+**3 écarts audit corrigés** :
+
+- Nouveau endpoint `POST /api/reviews/[id]/helpful` (auth + rate-limit
+  1/24h par user+review).
+- Select fuseau horaire dans `<ProfileForm>` (déjà accepté par
+  `PATCH /api/users/me`, l'UI manquait).
+- Autorisation admin sur `commissionRate` par property via
+  `PUT /api/properties/[id]` (schéma Zod étendu, garde admin-only
+  côté handler, host reste 403).
+
+### Preuves (§16)
+
+- 🔨 typecheck OK, build OK (nouveaux endpoints listés :
+  /api/admin/audit, /api/reviews/[id]/helpful, /dashboard/audit).
+- 🔨 lint 0 error.
+- 🧪 `npm test` : **155 passed / 155** (+16 : audit 5, render 10,
+  mail XSS 1).
+- 🧪 `npm run ai:check` : 15 OK · 2 warn attendus · 0 fail.
+- ▶️ Admin PATCH billing → ligne setting.update dans audit log
+  visible via /api/admin/audit et /dashboard/audit.
+- ▶️ PATCH review status → 2 lignes review.moderate.
+- ▶️ Customer sur /api/admin/audit → 403.
+- ▶️ PATCH emailTemplates avec subject vide → 400 Zod.
+- ▶️ Modifier bookingConfirmation.subject à « 🎉 Réservation
+  {bookingReference} confirmée » → POST /api/bookings → mail généré
+  porte le nouveau subject substitué.
+- ▶️ Injection HTML `firstName=<script>` → mail contient
+  `&lt;script&gt;` (échappé, anti-XSS).
+- ▶️ POST helpful : 200, 429 (dédoublonnage), 401 anonyme.
+- ▶️ PATCH users/me timezone=Africa/Douala → 200 + timezone dans réponse.
+- ▶️ Admin PUT property commissionRate=18 → 200, DB reflète 18.00 ;
+  host essaie → 403.
+- ▶️ 14 URL testées (public + dashboard) répondent 200. Zéro régression.
+
+### Fichiers touchés
+
+Nouveaux : `drizzle/0006_audit_log.sql`, `src/lib/audit.ts`,
+`src/lib/audit.test.ts`, `src/lib/mail/render.ts`,
+`src/lib/mail/render.test.ts`, `src/app/api/admin/audit/route.ts`,
+`src/app/api/reviews/[id]/helpful/route.ts`,
+`src/app/dashboard/audit/page.tsx`, 4 rapports.
+
+Modifiés : `src/db/schema.ts` (+ auditLog table), `src/lib/settings.ts`
+(+ emailTemplates), `src/lib/mail/templates.ts` (async + settings),
+`src/lib/mail/index.test.ts` (async + XSS test),
+`src/lib/settings.test.ts` (7 sections), 4 handlers pour hooks audit,
+`src/app/api/properties/[id]/route.ts` (commissionRate),
+`src/app/api/users/me/route.ts` (déjà OK), `src/components/profile-form.tsx`
+(select timezone), `src/components/admin/settings-panel.tsx`
+(section emails), 2 sidebars (lien audit).
+
+### Étape suivante
+
+Aucune tâche bloquante restante. Backlog V1 non urgent : dark mode,
+i18n EN, 2FA TOTP, wallet BestRewards utilisable, comparateur, carte
+géographique. Infra prod : credentials Stripe/Resend/S3 à fournir
+(endpoints admin les affichent en read-only via T-021). CI GitHub
+Actions : workflow prêt (manuel).
+
+---
+
 ## 2026-08-20 — Session 7 (suite) : T-023 (modération d'avis admin) + audit produit §17
 
 **Trigger** : « faites l'enchaîner T-023 sur votre feu vert, et passer

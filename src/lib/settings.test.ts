@@ -125,17 +125,20 @@ describe("settings (T-021)", () => {
     expect(general.defaultCurrency).toBe("EUR");
   });
 
-  it("getAllSettings renvoie les 6 sections avec fallback", async () => {
+  it("getAllSettings renvoie toutes les sections avec fallback", async () => {
     const all = await getAllSettings();
     expect(Object.keys(all).sort()).toEqual([
       "bestrewards",
       "billing",
       "cancellation",
+      "emailTemplates",
       "general",
       "notifications",
       "security",
     ]);
     expect(all.billing.taxRate).toBe(0.1);
+    // T-025 : emailTemplates est bien exposé
+    expect(all.emailTemplates.emailVerification.subject).toContain("Vérifiez");
   });
 
   it("getProviderStatus lit uniquement les env vars, jamais leurs valeurs", () => {

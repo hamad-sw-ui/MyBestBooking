@@ -333,36 +333,32 @@ export async function POST(request: NextRequest) {
     try {
       const mailer = getMailer();
       // Confirmation voyageur
-      await mailer.send({
-        to: data.guestEmail,
-        ...templates.bookingConfirmation({
-          firstName: data.guestFirstName,
-          bookingReference,
-          propertyName: property.name,
-          city: property.city,
-          checkIn: data.checkIn,
-          checkOut: data.checkOut,
-          total: total.toFixed(2),
-          currency: room.currency || "EUR",
-        }),
+      const confirmMail = await templates.bookingConfirmation({
+        firstName: data.guestFirstName,
+        bookingReference,
+        propertyName: property.name,
+        city: property.city,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        total: total.toFixed(2),
+        currency: room.currency || "EUR",
       });
+      await mailer.send({ to: data.guestEmail, ...confirmMail });
       // Notification hôte
       const [host] = await db
         .select({ email: users.email, firstName: users.firstName })
         .from(users)
         .where(eq(users.id, property.hostId));
       if (host) {
-        await mailer.send({
-          to: host.email,
-          ...templates.bookingHostNotification({
-            hostFirstName: host.firstName,
-            bookingReference,
-            propertyName: property.name,
-            guestName: `${data.guestFirstName} ${data.guestLastName}`,
-            checkIn: data.checkIn,
-            checkOut: data.checkOut,
-          }),
+        const hostMail = await templates.bookingHostNotification({
+          hostFirstName: host.firstName,
+          bookingReference,
+          propertyName: property.name,
+          guestName: `${data.guestFirstName} ${data.guestLastName}`,
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
         });
+        await mailer.send({ to: host.email, ...hostMail });
       }
     } catch (mailErr) {
       console.error("[booking] confirmation mail failed:", mailErr);

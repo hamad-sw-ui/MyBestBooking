@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 
 const schema = z.object({
@@ -49,6 +50,16 @@ export async function PATCH(
     if (suspended) {
       await db.delete(sessions).where(eq(sessions.userId, id));
     }
+
+    // T-024 : audit log
+    await recordAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: suspended ? AUDIT_ACTIONS.userSuspend : AUDIT_ACTIONS.userReactivate,
+      entityType: "user",
+      entityId: id,
+      metadata: { targetEmail: updated.email },
+    });
 
     return NextResponse.json({ user: updated });
   } catch (error) {

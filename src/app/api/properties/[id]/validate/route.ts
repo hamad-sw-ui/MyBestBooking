@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 
 const schema = z.object({
@@ -49,6 +50,22 @@ export async function POST(
       .set(updates)
       .where(eq(properties.id, id))
       .returning();
+
+    // T-024 : audit log
+    const auditAction =
+      action === "approve"
+        ? AUDIT_ACTIONS.propertyValidate
+        : action === "reject"
+          ? AUDIT_ACTIONS.propertyReject
+          : AUDIT_ACTIONS.propertySuspend;
+    await recordAudit({
+      actorId: user.id,
+      actorEmail: user.email,
+      action: auditAction,
+      entityType: "property",
+      entityId: id,
+      metadata: { previousStatus: prop.status, newStatus: updated.status },
+    });
 
     return NextResponse.json({ property: updated });
   } catch (error) {

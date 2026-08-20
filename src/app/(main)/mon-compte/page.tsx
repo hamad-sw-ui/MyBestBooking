@@ -163,6 +163,7 @@ export default function MyAccountPage() {
                       country: null,
                       language: user.language ?? null,
                       currency: user.currency ?? null,
+                      timezone: (user as unknown as { timezone?: string | null }).timezone ?? null,
                     }} />
                   </CardContent>
                 </Card>

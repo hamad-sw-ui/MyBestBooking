@@ -19,6 +19,7 @@ import {
   LogOut,
   HelpCircle,
   Tag,
+  ScrollText,
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/db/schema";
@@ -54,6 +55,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     { href: "/dashboard/promotions", icon: Tag, label: "Promotions" },
     { href: "/dashboard/analytics", icon: BarChart3, label: "Statistiques" },
     { href: "/dashboard/billing", icon: CreditCard, label: "Facturation" },
+    { href: "/dashboard/audit", icon: ScrollText, label: "Journal d'audit" },
     { href: "/dashboard/settings", icon: Settings, label: "Paramètres" },
   ];
 

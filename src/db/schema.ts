@@ -336,6 +336,27 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
+// ═══════════════════════════════════════════════
+// AUDIT_LOG (T-024)
+// Journal centralisé des actions admin sensibles (settings, modération
+// d'avis, suspend user, validation property). Écrit en best-effort via
+// `src/lib/audit.ts`. Conservé même si l'acteur est supprimé
+// (actor_email copié + FK ON DELETE SET NULL).
+// ═══════════════════════════════════════════════
+export const auditLog = pgTable("audit_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  actorId: uuid("actor_id"),
+  actorEmail: varchar("actor_email", { length: 255 }),
+  action: varchar("action", { length: 64 }).notNull(),
+  entityType: varchar("entity_type", { length: 32 }),
+  entityId: varchar("entity_id", { length: 64 }),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_audit_log_created").on(table.createdAt),
+  index("idx_audit_log_action").on(table.action, table.createdAt),
+]);
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -349,3 +370,5 @@ export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;
 export type AppSetting = typeof appSettings.$inferSelect;
 export type NewAppSetting = typeof appSettings.$inferInsert;
+export type AuditLog = typeof auditLog.$inferSelect;
+export type NewAuditLog = typeof auditLog.$inferInsert;

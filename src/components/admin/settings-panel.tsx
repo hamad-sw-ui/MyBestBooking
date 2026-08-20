@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Globe, CreditCard, Bell, Shield, Award,
-  Package, CheckCircle2, XCircle, AlertCircle,
+  Package, CheckCircle2, XCircle, AlertCircle, Mail,
 } from "lucide-react";
 import type {
   SettingValue,
@@ -58,6 +58,7 @@ export function SettingsPanel({ initial, providers }: Props) {
       <BestrewardsSection initial={initial.bestrewards} />
       <CancellationSection initial={initial.cancellation} />
       <NotificationsSection initial={initial.notifications} />
+      <EmailTemplatesSection initial={initial.emailTemplates} />
       <SecuritySection initial={initial.security} />
       <ProvidersSection providers={providers} />
     </div>
@@ -540,6 +541,104 @@ function SecuritySection({ initial }: { initial: SettingValue<"security"> }) {
             <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
           </label>
         </div>
+      </CardContent>
+      <CardFooter className="flex items-center gap-3">
+        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
+        <StatusPill status={status} error={error} />
+      </CardFooter>
+    </Card>
+  );
+}
+
+/* ─────────────────────────── EMAIL TEMPLATES (T-025) ─────────────────────────── */
+
+const TEMPLATE_LABELS: Record<keyof SettingValue<"emailTemplates">, { title: string; vars: string }> = {
+  emailVerification: {
+    title: "Vérification email",
+    vars: "{firstName}, {url}",
+  },
+  passwordReset: {
+    title: "Réinitialisation mot de passe",
+    vars: "{firstName}, {url}",
+  },
+  bookingConfirmation: {
+    title: "Confirmation de réservation (voyageur)",
+    vars: "{firstName}, {bookingReference}, {propertyName}, {city}, {checkIn}, {checkOut}, {total}, {currency}",
+  },
+  bookingHostNotification: {
+    title: "Nouvelle réservation (hôte)",
+    vars: "{hostFirstName}, {bookingReference}, {propertyName}, {guestName}, {checkIn}, {checkOut}",
+  },
+};
+
+function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTemplates"> }) {
+  const [v, setV] = useState(initial);
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function save() {
+    setError(null);
+    setStatus("saving");
+    startTransition(async () => {
+      try {
+        await saveSection("emailTemplates", v);
+        setStatus("saved");
+      } catch (e) {
+        setStatus("error");
+        setError(e instanceof Error ? e.message : "Erreur");
+      }
+    });
+  }
+
+  function updateTemplate(
+    key: keyof SettingValue<"emailTemplates">,
+    field: "subject" | "body",
+    value: string,
+  ) {
+    setV({ ...v, [key]: { ...v[key], [field]: value } });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Mail className="w-5 h-5 text-[#1B3A6B]" />
+          <CardTitle>Templates emails</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-gray-600">
+          Éditez le sujet et le paragraphe principal de chaque email
+          transactionnel. Les placeholders <code>{"{name}"}</code> sont
+          remplacés automatiquement (variables listées sous chaque template).
+          Le layout HTML (branding, boutons, tableau récap) reste figé.
+        </p>
+        {(Object.keys(TEMPLATE_LABELS) as (keyof SettingValue<"emailTemplates">)[]).map((key) => {
+          const meta = TEMPLATE_LABELS[key];
+          return (
+            <div key={key} className="border border-gray-200 rounded-lg p-4 space-y-3">
+              <h4 className="font-medium text-gray-900">{meta.title}</h4>
+              <Input
+                label="Sujet"
+                value={v[key].subject}
+                onChange={(e) => updateTemplate(key, "subject", e.target.value)}
+              />
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Corps du message
+                </label>
+                <textarea
+                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B] font-mono text-sm"
+                  rows={4}
+                  value={v[key].body}
+                  onChange={(e) => updateTemplate(key, "body", e.target.value)}
+                />
+              </div>
+              <p className="text-xs text-gray-500 font-mono">Variables : {meta.vars}</p>
+            </div>
+          );
+        })}
       </CardContent>
       <CardFooter className="flex items-center gap-3">
         <Button onClick={save} disabled={isPending}>Enregistrer</Button>

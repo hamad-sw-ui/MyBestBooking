@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
         const { clear } = await issueToken(user.id, "password_reset");
         const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const url = `${base}/reinitialiser?token=${encodeURIComponent(clear)}`;
-        const mail = templates.passwordReset({ firstName: user.firstName, url });
+        const mail = await templates.passwordReset({ firstName: user.firstName, url });
         await getMailer().send({ to: user.email, ...mail });
       } catch (e) {
         console.error("[forgot-password] mail send failed", e);
