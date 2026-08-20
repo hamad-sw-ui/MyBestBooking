@@ -2,8 +2,8 @@
 
 ## Identifiant
 
-- **ID** : Sprint 98% (T-026 → T-029)
-- **Titre** : Convertir tous les 🚧/❌ de FEATURES.md en ✅
+- **ID** : T-029 (Sprint 98%, chapeautant T-026 + T-027 + T-028 + T-029)
+- **Titre** : Sprint 98% — Convertir tous les 🚧/❌ de FEATURES.md en ✅
 - **Niveau** : **S** (nombreux items indépendants, aucun ne touche
   auth/paiement/schéma destructif)
 - **Ouverte le** : 2026-08-20 (Session 8)
