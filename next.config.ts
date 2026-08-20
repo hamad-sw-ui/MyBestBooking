@@ -8,6 +8,9 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },
     ],
+    // T-014 : les uploads locaux (public/uploads/*) sont servis en
+    // static, pas besoin de remotePattern.
+    // Si S3_PUBLIC_BASE_URL est défini, l'ajouter ci-dessus.
   },
 
   // Headers de sécurité (BUG-connexe P2, appliqué en même temps que T-008

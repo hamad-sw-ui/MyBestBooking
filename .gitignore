@@ -41,5 +41,9 @@ coverage/
 .data/
 node-postgres/
 
+# T-014 : uploads locaux (dev only, prod utilise S3)
+public/uploads/*
+!public/uploads/.gitkeep
+
 # Drizzle
 drizzle/meta/_journal.json.bak

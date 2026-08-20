@@ -2,84 +2,70 @@
 
 ## Identifiant
 
-- **ID** : T-011
-- **Titre** : Framework v1.1.0 — élargissement à la complétude produit
-- **Niveau** : **C** (§15.0-bis — modifie les règles opposables §1-§22 :
-  ajoute R14-R17, tag 🎯 PROMISED, 2 documents obligatoires)
-- **Ouverte le** : 2026-08-20 (Session 5)
-- **Prédécesseur** : Session 4 clôturée (T-000 v1.3, 14 bugs corrigés)
+- **ID** : T-015 (dernière de la Session 5) — clôture de session
+- **Titre** : Clôture Session 5 après T-011 → T-015
+- **Niveau** : **S** (§15.0-bis maintenance / mise à jour docs)
+- **Ouverte le** : 2026-08-20 (Session 5, phase finale)
 
 ## Contexte
 
-À la question du responsable « pourquoi le framework n'a pas trouvé les
-manques ? » (Session 5, tour 2 d'introspection), la réponse a mis en
-évidence un défaut structurel : le framework surveillait la **discipline
-de processus** mais pas la **complétude produit**.
+Session 5 a livré 5 tâches majeures qui ont doublé la couverture
+✅ de FEATURES.md (28 % → ~48 %) et ont mécanisé la détection
+des manques via R14-R17. Ce commit consolide.
 
-## Décision — ADR-006
+## Livrables consolidés
 
-Le framework passe de « surveillant de processus » à « surveillant
-de processus **ET** de complétude produit ». Voir
-`ADR/ADR-006_Portee_Framework_Completude_Produit.md`.
+### T-011 — Framework v1.1.0 (C, §15.0-bis)
+Nouveau scope « complétude produit ». ADR-006, FEATURES.md,
+PRODUCT_ACCEPTANCE.md, R14-R17, tag 🎯 PROMISED, Playwright installé,
+BACKLOG réécrit. **17 règles automatisées** (vs 13 avant).
 
-## Livrables
+### T-012 — Disponibilité + chevauchement (S)
+Transaction Drizzle avec SELECT FOR UPDATE dans POST /api/bookings.
+Retourne 409 si `room.quantity` saturé sur les dates. Migration
+0002 avec index dédié. hasOverlap() pur + 7 tests unitaires + 4
+tests intégration DB.
 
-### Vague 1 — Framework v1.1.0 (ce commit)
+### T-013 — Emails transactionnels (S)
+Interface Mailer + 2 adaptateurs (ConsoleMailer dev, ResendMailer
+prod). 4 templates HTML+text. Tokens SHA-256 hashés (24h/1h). 3
+endpoints /api/auth/{verify,forgot-password,reset-password}. 3
+pages front. Câblés dans register + booking. Migration 0003.
+Rate-limits + anti-énumération. 12 nouveaux tests.
 
-- [x] 🔍 ADR-006 acté (contexte + décision + 4 alternatives évaluées + conséquences)
-- [x] 🔍 Analyse d'impact §14 (9 questions)
-- [x] 🔍 Analyse de conception §15.1 (4 options A/B/C/D)
-- [x] 🔍 Débat multi-rôles §15.2 (11 rôles, 4 objections résolues)
-- [x] 🔍 `framework.manifest.json` v1.0.3 → v1.1.0 avec :
-  - 2 nouveaux documents obligatoires (`FEATURES.md`, `PRODUCT_ACCEPTANCE.md`)
-  - nouveau tag §16 `🎯 PROMISED`
-  - section `product_coverage` (tables, labels UI, seuils)
-  - 4 nouvelles blocking_rules (dont 3 warnings, 1 aspirationnelle)
-- [x] 🔍 `.ai/FEATURES.md` peuplé exhaustivement (~122 features tracées :
-  ✅ ~34, 🚧 ~18, 🎯 ~45, ❌ ~25 → couverture 28 %)
-- [x] 🔍 `.ai/PRODUCT_ACCEPTANCE.md` avec 20 parcours PAR-xxx (P1/P2/P3)
-- [x] 🔍 `scripts/check-ai.mjs` étendu de 13 à 17 règles :
-  - R14 db_api_coverage
-  - R15 ui_api_coverage
-  - R16 backlog_hygiene (raffiné : matching par BUG-xxx explicite)
-  - R17 freshness (compteur audit produit + FEATURES + PROGRESS)
-- [x] 🔍 `.ai/CODING_RULES.md §16` ajoute le tag 🎯 PROMISED
-- [x] 🔍 `.ai/INDEX.md` : `FEATURES` et `PRODUCT_ACCEPTANCE` insérés dans
-  l'ordre de lecture prescrit
-- [x] 🔍 `.ai/STATE.md` : compteur `sessions_since_last_product_audit: 0`
-- [x] 🔍 `.ai/BACKLOG.md` **complètement réécrit** (nettoyage des items
-  déjà corrigés Sessions 3-4, planification T-012 → T-020 selon FEATURES)
-- [x] 🔍 Playwright installé (`@playwright/test`), `playwright.config.ts`,
-  6 smoke tests dans `tests/e2e/smoke.spec.ts`, scripts `e2e` + `e2e:ui`
-- [x] 🔨 `npm run typecheck` → 0 erreur
-- [x] 🧪 `npm test` → **43/43 passent** (aucune régression Vitest)
-- [x] ▶️ `npm run ai:check` → **13 OK · 4 warn · 0 fail** (les warns
-  R14/R15 révèlent la nouvelle roadmap : 5 tables sans endpoint,
-  2 boutons UI orphelins)
+### T-014 — Uploads d'images (S)
+Interface Uploader + LocalUploader (public/uploads/) + S3Uploader
+(signature v4 manuelle sans SDK, compat R2/S3/DO/MinIO).
+POST /api/uploads (multipart, MIME whitelist, 5MB, rate-limit 20/h).
+Composant `<ImageUploader>` client. 5 nouveaux tests.
+
+### T-015 — 6 endpoints mutations (S)
+POST /api/conversations, GET+POST /api/messages,
+POST /api/reviews/[id]/reply, POST /api/properties/[id]/validate,
+GET /api/wishlists/shared/[token], GET/POST /api/promotions,
+PATCH/DELETE /api/promotions/[id]. R14 : 5 tables sans endpoint
+→ 3 restantes (2 pour T-018 calendrier, 1 acceptable).
 
 ## Statut
 
-**CORRIGÉ (INSPECTION)** — la Vague 1 est livrée. Les Vagues 2 et 3
-(T-012 à T-020) s'appuient sur ce framework élargi pour combler les
-manques produit détectés.
+**CORRIGÉ (INSPECTION)** — 5 tâches vagues 1+2 livrées et testées.
+Passage à VALIDÉ après validation responsable.
 
-Passage à **VALIDÉ** après :
-- Validation responsable
-- Fin de Vague 3 (T-020 Stripe test-mode livré) → dernière tâche de la
-  campagne de complétude
+## Métrique produit
 
-## Vagues suivantes (à venir dans cette session)
+- FEATURES.md ✅ : 28 % → **~48 %**
+- Bugs applicatifs ouverts : 0 (BUG-003 paiement dans
+  KNOWN_LIMITATIONS)
+- Tests automatisés : 43 → **71** (+65 %)
+- Migrations Drizzle versionnées : 1 → 3
+- Framework : 13 règles → 17 règles
 
-### Vague 2 — API mutations manquantes (T-012 à T-015)
-- T-012 disponibilité + chevauchement bookings (S)
-- T-013 emails transactionnels (S)
-- T-014 uploads d'images (S)
-- T-015 endpoints manquants (messages, reply, promo, wishlist share, admin)
+## Prochaine session
 
-### Vague 3 — Paiement & tests (T-019, T-020)
-- T-019 tests d'intégration API + Playwright E2E (S)
-- T-020 Stripe test-mode + webhook (C)
-
-## Prochaine tâche
-
-Après commit Vague 1 : basculer sur **T-012** (disponibilité bookings).
+- **T-016** (S) : UI qui branche les endpoints T-015 (formulaires,
+  application promo dans le tunnel, page wishlist share, dashboard
+  admin validate, réponse hôte avis)
+- **T-017** (S) : SEO complet + a11y sweep + `next/font`
+- **T-018** (S) : éditeur calendrier hôte (rate_plans + room_availability)
+- **T-019** (S) : tests d'intégration + Playwright E2E des PAR
+- **T-020** (C) : Stripe test-mode — attente credentials

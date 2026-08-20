@@ -72,7 +72,7 @@ modification de code.
 | Créer un avis vérifié après séjour | ✅ | `POST /api/reviews` | initial |
 | Lecture des avis d'une property | ✅ | `GET /api/reviews?propertyId=` | initial |
 | Recalcul atomique `averageRating` | ✅ | `UPDATE...FROM(SELECT AVG…)` | T-007 |
-| **Réponse hôte à un avis** | ❌ | Champ `hostReply` en DB, bouton « Répondre » dans dashboard mais aucun `POST /api/reviews/[id]/reply` | 🎯 T-015 |
+| **Réponse hôte à un avis** | 🚧 | `POST /api/reviews/[id]/reply` (T-015) OK ; UI formulaire à brancher | T-015 endpoint, 🎯 T-016 UI |
 | **Modération admin** (approuver/rejeter) | ❌ | `status` en DB, aucun endpoint | 🎯 T-015 |
 | Marquer un avis comme utile (`helpfulCount`) | ❌ | Champ en DB seulement | 🎯 backlog |
 
@@ -83,7 +83,7 @@ modification de code.
 | Créer une wishlist | ✅ | `POST /api/wishlists` | initial |
 | Ajouter/retirer une property | ✅ | `POST/DELETE /api/wishlists` | initial |
 | Contrainte unicité item | ✅ | `UNIQUE (wishlist_id, property_id)` | T-006 |
-| **Partage public par lien (shareToken)** | 🚧 | `shareToken` généré à la création si `isPublic:true`, aucune route `GET /api/wishlists/shared/[token]` ni page | 🎯 T-015 |
+| **Partage public par lien (shareToken)** | 🚧 | `GET /api/wishlists/shared/[token]` OK (T-015), page publique `/wishlists/share/[token]` à créer | T-015 endpoint, 🎯 T-016 UI |
 | Alertes prix (`priceAlertEnabled`) | ❌ | Champ en DB seulement | 🎯 backlog |
 
 ## Messagerie voyageur ↔ hôte
@@ -91,9 +91,9 @@ modification de code.
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Liste des conversations | 🚧 | Page `/messages` + `/dashboard/messages` lisent la DB, seed n'en crée aucune | 🎯 T-015 |
-| **Créer une conversation** | ❌ | Aucun `POST /api/conversations` | 🎯 T-015 |
-| **Envoyer un message** | ❌ | Aucun `POST /api/messages`, aucun formulaire d'envoi | 🎯 T-015 |
-| **Marquer comme lu** | ❌ | Compteurs `unreadByUser/Host` en DB, jamais mis à jour | 🎯 T-015 |
+| **Créer une conversation** | ✅ | `POST /api/conversations` (T-015) | T-015 |
+| **Envoyer un message** | 🚧 | `POST /api/messages` (T-015) OK ; UI formulaire à brancher | T-015 endpoint, 🎯 T-016 UI |
+| **Marquer comme lu** | ✅ | Reset unread quand `GET /api/messages` par le participant | T-015 |
 | Pièce jointe | ❌ | Champ `attachmentUrl` en DB seulement | 🎯 backlog |
 | Notification email nouveau message | ❌ | Rien | 🎯 T-013 |
 
@@ -114,7 +114,7 @@ modification de code.
 |---|---|---|---|
 | Vue d'ensemble | ✅ | `/dashboard` | initial |
 | Liste properties + création formulaire | 🚧 | `POST /api/properties` OK ; formulaire attend une URL d'image (pas d'upload) | 🎯 T-014 |
-| **Upload d'images (photo hébergement, chambre, avatar)** | ❌ | Aucun endpoint, aucun stockage | 🎯 T-014 |
+| **Upload d'images (photo hébergement, chambre, avatar)** | ✅ | `POST /api/uploads` (multipart, MIME whitelist, 5MB max, rate-limit 20/h) + composant `<ImageUploader>` + adapter LocalUploader (dev) + S3Uploader (prod, R2/S3/DO compat) | T-014 |
 | Édition property | 🚧 | `PATCH /api/properties/[id]` existe, UI incomplète (page détail lit seulement) | 🎯 T-015 |
 | Suppression property | ✅ | `DELETE /api/properties/[id]` | initial |
 | Liste rooms | 🚧 | Page lecture OK, formulaire d'ajout absent côté UI | 🎯 T-015 |
@@ -133,9 +133,9 @@ modification de code.
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Liste des utilisateurs | 🚧 | Page `/dashboard/users` lit la DB, aucune action (suspend, promouvoir…) | 🎯 T-015 |
-| **Validation d'une property (`pending`→`active`)** | ❌ | Champs `validatedAt/By` en DB, workflow inexistant côté UI/API | 🎯 T-015 |
+| **Validation d'une property (`pending`→`active`)** | 🚧 | `POST /api/properties/[id]/validate` OK (T-015, actions approve/reject/suspend), UI admin à brancher | T-015 endpoint, 🎯 T-016 UI |
 | **Modération d'avis** (approuver, cacher) | ❌ | Voir Avis | 🎯 T-015 |
-| **CRUD codes promo** | 🚧 | Page liste, aucun POST/PUT/DELETE endpoint | 🎯 T-015 |
+| **CRUD codes promo** | ✅ | GET/POST `/api/promotions` + PATCH/DELETE `/api/promotions/[id]` (T-015). Application au checkout reste 🎯 T-016. | T-015 |
 | Journal d'actions admin | ❌ | Pas de table `audit_log` | 🎯 backlog |
 | Suspendre un utilisateur | ❌ | `deletedAt` soft delete existe mais aucun endpoint admin | 🎯 backlog |
 
@@ -156,10 +156,10 @@ modification de code.
 
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
-| Adapter stockage (S3/R2/Vercel Blob/local dev) | ❌ | — | 🎯 T-014 |
-| Endpoint `POST /api/uploads` avec validation MIME + taille | ❌ | — | 🎯 T-014 |
-| Composant `<ImageUploader>` | ❌ | — | 🎯 T-014 |
-| Suppression d'un upload | ❌ | — | 🎯 T-014 |
+| Adapter stockage (S3/R2/local dev) | ✅ | `src/lib/storage/` : LocalUploader écrit public/uploads/, S3Uploader signature v4 sans SDK (R2/S3/DO/MinIO compat), factory selon env | T-014 |
+| Endpoint `POST /api/uploads` (auth, MIME, taille) | ✅ | JPEG/PNG/WebP/GIF, ≤ 5 MB, rate-limit 20/h/user | T-014 |
+| Composant `<ImageUploader>` | ✅ | `src/components/ui/image-uploader.tsx` (drag+preview+remove) | T-014 |
+| Suppression d'un upload | ❌ | Client peut retirer l'URL du formulaire, fichier orphelin côté disque | 🎯 backlog |
 
 ## SEO & metadata
 

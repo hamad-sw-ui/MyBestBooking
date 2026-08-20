@@ -46,26 +46,25 @@
 
 ## 📋 Progression
 
-- **Dernières tâches terminées (Session 4)** :
-  - T-000 v1, v1.1, v1.2 — framework v1.0.0 → v1.0.2 — **VALIDÉ**
-  - T-001 — JWT_SECRET obligatoire (BUG-001) — **VALIDÉ** (`8344fbf`)
-  - T-002 — protection /api/seed (BUG-002) — **VALIDÉ** (`8555ee7`)
-  - T-003 — proxy auth (BUG-005) — **VALIDÉ** (`a4d3acf`)
-  - T-004 à T-007 — N+1, Suspense, contraintes DB, race averageRating
-    (BUG-004/007/010/011/012/013/015) — **VALIDÉ** (`3bc5d3a`)
-  - T-008 à T-010 — next/image + headers + rate-limit + lucide-react
-    (BUG-006/008/009/014) — **VALIDÉ** (`541658c`)
-  - **T-000 v1.3** — framework v1.0.3, retrait §13.4-bis + CI + README
-    (commit de session en cours) — **INSPECTION**
-- **Tâche en cours** : voir `CURRENT_TASK.md` — clôture Session 4.
-- **Prochaines tâches prévues** (Session 5) :
-  - T-011 : intégration paiement Stripe (BUG-003, niveau C) — attente
-    de credentials test.
-  - Traitement jaunes C-J reportés (voir `PROCESS_IMPROVEMENTS.md`) :
-    §13.4-bis dans TEST_PLAN (fait en v1.0.3), chevauchement
-    CODING_RULES/STYLE, ROADMAP dated, PROGRESS freshness, etc.
-  - Chantier fonctionnel : éditeur calendrier hôte, analytics réelles,
-    validation admin des properties.
+- **Sessions 4-5 (résumé)** :
+  - Session 4 : T-000 v1/v1.1/v1.2/v1.3 (framework v1.0.0→v1.0.3) +
+    T-001 à T-010 (14 bugs corrigés). VALIDÉ.
+  - Session 5 (courante) :
+    - T-011 (framework v1.1.0 — élargissement complétude produit) VALIDÉ
+    - T-012 (disponibilité + chevauchement bookings) VALIDÉ
+    - T-013 (emails transactionnels : verify + reset + booking) VALIDÉ
+    - T-014 (uploads d'images Local+S3) VALIDÉ
+    - T-015 (6 endpoints mutations : conversations, messages,
+      reviews/reply, properties/validate, wishlists/shared, promotions
+      CRUD) VALIDÉ
+- **Tâche en cours** : clôture Session 5 (voir CURRENT_TASK.md).
+- **Prochaines tâches prévues (Session 6+)** :
+  - T-016 : UI branchement des endpoints T-015 (compte, réponse avis,
+    validation admin, application promo, envoi message)
+  - T-017 : SEO + a11y + `next/font` + `error.tsx` + `not-found.tsx`
+  - T-018 : éditeur calendrier hôte (rate_plans + room_availability)
+  - T-019 : suite de tests d'intégration API + Playwright E2E des PAR
+  - T-020 : intégration paiement Stripe test-mode (C) — attente credentials
 
 ## 🐞 Bugs & Défauts
 
@@ -99,7 +98,8 @@
 
 - **sessions_since_last_product_audit** : `0`
   (dernier audit produit : Session 5 — a produit `FEATURES.md`,
-  `PRODUCT_ACCEPTANCE.md`, et déclenché T-011)
+  `PRODUCT_ACCEPTANCE.md`, déclenché T-011 à T-015 qui ont fait
+  passer la couverture ✅ de 28 % à ~48 %)
 
 ## 🕒 Dernière Mise à jour
 

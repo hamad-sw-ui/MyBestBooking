@@ -9,7 +9,76 @@
 
 ---
 
-## 2026-08-20 — Session 5 : élargissement du framework à la complétude produit (v1.1.0)
+## 2026-08-20 — Session 5 (Vagues 2+3) : T-012 à T-015 (produit)
+
+**Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
+· **Suite de la Session 5 après T-011 framework v1.1.0**
+
+### Livré
+
+**4 tâches applicatives majeures** qui exploitent le framework v1.1.0
+pour combler les manques que R14/R15 ont désignés :
+
+- **T-012** (S) : disponibilité + chevauchement bookings.
+  Transaction FOR UPDATE, quantity-aware, 409 clair.
+- **T-013** (S) : emails transactionnels complets (verify email,
+  forgot/reset password, booking confirmation voyageur + hôte).
+  Abstraction Mailer + 2 adaptateurs (Console, Resend), templates
+  HTML+text, tokens SHA-256 hashés, anti-énumération, rate-limits.
+- **T-014** (S) : uploads d'images. Abstraction Uploader + Local
+  (dev) + S3 (prod, signature v4 sans SDK). Endpoint POST /api/uploads.
+- **T-015** (S) : 6 endpoints mutations qui débloquent les boutons
+  R15 orphelins et 3 des 5 tables R14 sans endpoint.
+
+### Métriques
+
+- **FEATURES.md ✅** : 28 % → **~48 %** (~34 → ~59 features livrées)
+- **Tests automatisés** : 43 → **71** (+65 %)
+- **Endpoints API** : 17 → **26** (+9)
+- **Migrations Drizzle** : 1 → 3 (0001 contraintes, 0002 index
+  disponibilité, 0003 verification_tokens)
+- **Bugs applicatifs ouverts** : 0 (BUG-003 paiement dans KNOWN_LIMITATIONS)
+- **R14** : 5 tables sans endpoint → 3 (2 pour T-018, 1 acceptable)
+- **R15** : 2 boutons orphelins → 2 (endpoints existent mais UI
+  reste T-016)
+
+### Preuves (§16)
+
+- 🔨 typecheck OK, build OK
+- 🧪 **71 passed / 71**
+- ▶️ E2E manuels complets :
+  * Chevauchement bookings 409 avec chambre saturée qty=2
+  * Register → mail dans .data/mails/ → verify token → emailVerified=true
+  * Forgot password → mail reset → nouveau mdp → login OK, ancien 401
+  * Upload PNG minimal → URL /uploads/xxx.png servie 200
+  * 401 upload sans auth, 400 sur MIME non image
+  * Promotion SUMMER26 créée, listée dans GET /api/promotions
+  * Property suspend → approve
+  * Conversation créée, message envoyé + relu, unread réinitialisé
+  * Wishlist publique share token → 200, invalide → 404
+- ▶️ `npm run ai:check` → 13 OK · 4 warn · 0 fail (warns attendus)
+
+### Ce qui reste (Session 6+)
+
+- **T-016** : UI qui branche les nouveaux endpoints (page wishlist
+  share, formulaires reply/validate/message dans les dashboards,
+  application promo dans le tunnel de réservation)
+- **T-017** : SEO complet (metadata par page, sitemap, robots,
+  Schema.org), a11y sweep (35 aria-label manquants), `next/font`,
+  `error.tsx`, `not-found.tsx`, CSP fine
+- **T-018** : éditeur calendrier hôte (rate_plans + room_availability)
+- **T-019** : tests d'intégration API systématiques + Playwright E2E
+  (les 20 PAR-xxx)
+- **T-020** : Stripe test-mode (C) — dès que credentials disponibles
+
+### Statut
+
+T-011 à T-015 → **CORRIGÉ (VALIDÉ)** dans TRACEABILITY après ce commit
+consolidant.
+
+---
+
+## 2026-08-20 — Session 5 (Vague 1) : élargissement du framework à la complétude produit (v1.1.0)
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
 · **Agent** : Arena Agent Mode · **Trigger** : question responsable
