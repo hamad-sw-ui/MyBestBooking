@@ -9,10 +9,6 @@ suivante.
 
 ## Ouverts
 
-- [ ] **BUG-001 — `JWT_SECRET` avec fallback hard-codé** (`src/lib/auth.ts:9`).
-  Risque : forge de JWT admin en prod si la variable n'est pas définie.
-  Fix : remplacer par un `throw` obligatoire au boot.
-
 - [ ] **BUG-002 — `POST /api/seed` accessible publiquement** sans auth ni token.
   Truncate + réinsère toute la base. À protéger ou à retirer avant prod.
 
@@ -71,8 +67,8 @@ suivante.
 
 ## Corrigés
 
-Ajouter ici avec la date quand un item est réglé, exemple :
-
-```
-- [x] 2026-XX-XX — BUG-001 : JWT_SECRET obligatoire au boot (commit abc123).
-```
+- [x] **2026-08-20 — BUG-001** : `JWT_SECRET` obligatoire au boot.
+  `src/lib/auth.ts` throw explicitement si la variable est absente,
+  warn si < 32 caractères. Tâche **T-001** (niveau C), ADR-003,
+  9 tests automatisés dans `src/lib/auth.test.ts`. Voir
+  `TRACEABILITY.md` pour les preuves.

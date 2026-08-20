@@ -47,17 +47,11 @@ serait une seconde ligne de défense simple à ajouter.
 
 ### 🔴 P1 — bloquants
 
-1. **`JWT_SECRET` avec fallback hard-codé** (`src/lib/auth.ts:9`) :
-   ```ts
-   process.env.JWT_SECRET || "mybestbooking-secret-key-2025"
-   ```
-   Si la variable n'est pas définie en production, n'importe qui connaissant
-   le code (public sur GitHub) peut forger un JWT admin. **Remplacer par un
-   `throw` explicite au démarrage** :
-   ```ts
-   const secret = process.env.JWT_SECRET;
-   if (!secret) throw new Error("JWT_SECRET is required");
-   ```
+1. ~~**`JWT_SECRET` avec fallback hard-codé**~~ **CORRIGÉ 2026-08-20 (T-001, BUG-001, ADR-003)**.
+   Le module `src/lib/auth.ts` throw explicitement au chargement si
+   `process.env.JWT_SECRET` est absent ou vide. Un `console.warn` est
+   émis si le secret fait moins de 32 caractères. Un test automatisé
+   (`src/lib/auth.test.ts`, 9 cas) protège contre la régression.
 
 2. **`POST /api/seed` accessible publiquement** (`src/app/api/seed/route.ts`).
    Une simple requête POST anonyme suffit à **truncate + réinsérer** toute la

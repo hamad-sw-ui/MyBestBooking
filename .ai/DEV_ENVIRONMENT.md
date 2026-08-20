@@ -19,10 +19,14 @@ NEXT_PUBLIC_APP_URL="http://localhost:3000"
 
 - `DATABASE_URL` est **obligatoire** : `src/db/index.ts` throw au démarrage
   s'il est absent.
-- `JWT_SECRET` : actuellement facultatif à cause d'un fallback (voir
-  `SECURITY.md`, à corriger). À définir de toute façon.
+- `JWT_SECRET` est **obligatoire depuis 2026-08-20** (T-001, ADR-003) :
+  `src/lib/auth.ts` throw au chargement si absent, warn si < 32 caractères.
+  Générer avec `openssl rand -hex 32`.
 - `NEXT_PUBLIC_APP_URL` : utilisé par la redirection `logout`. Défaut
   `http://localhost:3000` si absent.
+
+Voir aussi le fichier `.env.example` à la racine, qui documente le format
+et les valeurs par défaut.
 
 ## Installation
 

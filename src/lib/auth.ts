@@ -5,9 +5,20 @@ import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "mybestbooking-secret-key-2025"
-);
+const jwtSecretEnv = process.env.JWT_SECRET;
+if (!jwtSecretEnv) {
+  throw new Error(
+    "JWT_SECRET is required. Generate one with `openssl rand -hex 32` " +
+    "and set it in your environment. See .ai/SECURITY.md."
+  );
+}
+if (jwtSecretEnv.length < 32) {
+  console.warn(
+    "[auth] JWT_SECRET is shorter than 32 characters — this is insecure. " +
+    "Regenerate with `openssl rand -hex 32`."
+  );
+}
+const JWT_SECRET = new TextEncoder().encode(jwtSecretEnv);
 
 const SESSION_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
 
