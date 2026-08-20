@@ -1,27 +1,24 @@
-# ADR-XXX : [Titre de la décision]
+# ADR-XXX — <titre court>
+
+- **Date** : YYYY-MM-DD
+- **Statut** : proposé | accepté | remplacé par ADR-YYY | abandonné
 
 ## Contexte
-[Décrire le contexte technique et métier ayant mené à cette décision.]
 
-## Problème
-[Quel était le problème ou le besoin spécifique ?]
+Quel problème essaie-t-on de résoudre ? Quelles contraintes existent ?
+Quelles solutions ont été envisagées ?
 
-## Solutions envisagées
-- **Solution A** : [Description]
-- **Solution B** : [Description]
-- **Solution C** : [Description]
+## Décision
 
-## Solution retenue
-[Indiquer la solution choisie.]
+Ce qu'on a choisi, en une ou deux phrases claires.
 
-## Arguments
-[Justifier le choix par rapport aux alternatives.]
+## Alternatives écartées
+
+- **<Option A>** — pourquoi non ?
+- **<Option B>** — pourquoi non ?
 
 ## Conséquences
-[Impacts sur le code, la maintenance, la performance, la sécurité, etc.]
 
-## Date
-[AAAA-MM-JJ]
-
-## Références
-[Liens vers des issues, commits, rapports d'analyse ou documentation externe.]
+- Positives : ce qu'on gagne.
+- Négatives : ce qu'on accepte de perdre / la dette introduite.
+- À suivre : ce qui pourrait nous faire revenir sur cette décision.
