@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,7 @@ interface RoomData {
   amenities: string[];
 }
 
-export default function ReservationPage() {
+function ReservationPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const propertyId = searchParams.get("property");
@@ -573,5 +573,15 @@ export default function ReservationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// T-005 (BUG-007) : useSearchParams doit être enveloppé dans <Suspense>
+// depuis Next.js 15/16 pour permettre le rendu statique / streaming.
+export default function ReservationPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Chargement…</div>}>
+      <ReservationPageInner />
+    </Suspense>
   );
 }

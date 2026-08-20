@@ -13,17 +13,9 @@ suivante.
   `paymentStatus: 'paid'` et `status: 'confirmed'` sans intégration
   paiement réelle. Toute réservation est gratuite aujourd'hui.
 
-- [ ] **BUG-004 — N+1 sur `GET /api/properties`**. Pour chaque property
-  retournée, un `SELECT` séparé sur `rooms` pour calculer `minPrice`.
-  À remplacer par un `LEFT JOIN` avec `MIN(basePrice)` groupé.
-
 - [ ] **BUG-006 — `<img>` HTML natif** partout au lieu de `next/image`. Pas
   d'optimisation, pas de lazy-loading géré, LCP dégradé. Suppose d'ajouter
   `images.remotePatterns` dans `next.config.ts` (unsplash.com, etc.).
-
-- [ ] **BUG-007 — `useSearchParams()` sans `<Suspense>`** dans
-  `src/app/(main)/reservation/page.tsx`. Next 16 peut refuser le build.
-  Envelopper le composant client dans un `<Suspense fallback={…}>`.
 
 - [ ] **BUG-008 — `emailVerified: true` d'office à l'inscription**
   (`src/app/api/auth/register/route.ts`, commentaire `// For demo purposes`).
@@ -33,31 +25,49 @@ suivante.
   possible. Ajouter un limiteur (par IP, par email, avec Redis ou table
   éphémère).
 
-- [ ] **BUG-010 — Race condition sur `properties.averageRating`**. Le calcul
-  se fait à la main dans `POST /api/reviews` : deux avis simultanés peuvent
-  se marcher dessus. Passer à un `UPDATE ... SET averageRating = (subquery)`
-  atomique, ou à un trigger PostgreSQL, ou à un recalcul planifié.
-
-- [ ] **BUG-011 — Pas de contrainte `checkIn < checkOut`** en base ni dans le
-  schéma Zod de `POST /api/bookings`. Un booking `numNights = 0` ou négatif
-  est théoriquement possible.
-
-- [ ] **BUG-012 — Pas d'unicité `(wishlistId, propertyId)`** sur
-  `wishlist_items` : un même hébergement peut être ajouté deux fois à la même
-  liste.
-
-- [ ] **BUG-013 — Pas d'unicité `(roomId, date)`** sur `room_availability` :
-  attendue en général pour un calendrier.
-
 - [ ] **BUG-014 — `lucide-react` `1.33.0`** : version majeure suspecte (la
   stable est `0.4xx`). Vérifier avec `npm ls lucide-react` que les icônes
   s'affichent bien après un `npm install` propre.
 
-- [ ] **BUG-015 — Aucune migration Drizzle commitée**. `drizzle-kit push`
-  seulement — impossible de rejouer proprement la construction du schéma.
-  Générer les migrations et versionner un dossier `drizzle/`.
-
 ## Corrigés
+
+- [x] **2026-08-20 — BUG-015** : migrations Drizzle versionnées créées
+  et commitées dans `drizzle/` (0000_opposite_gertrude_yorkes.sql
+  initial + 0001_lowly_argent.sql pour contraintes T-006). Tâche
+  incluse dans le setup (commit `2c37021`) et T-006.
+
+- [x] **2026-08-20 — BUG-013** : `uniqueIndex('uniq_room_availability_room_date')`
+  ajouté à `roomAvailability`. Migration `drizzle/0001_lowly_argent.sql`.
+  Tâche **T-006** (S).
+
+- [x] **2026-08-20 — BUG-012** : `uniqueIndex('uniq_wishlist_items_wishlist_property')`
+  ajouté à `wishlistItems`. Migration `drizzle/0001_lowly_argent.sql`.
+  Tâche **T-006** (S). Test manuel ▶️ : 2e ajout du même item retourne
+  `{"error":"Hébergement déjà dans la liste"}`.
+
+- [x] **2026-08-20 — BUG-011** : `check('bookings_dates_check')` +
+  `check('bookings_nights_positive')` ajoutés à `bookings`, et refine
+  Zod dans `POST /api/bookings` qui rejette `checkOut <= checkIn` avec
+  message français clair. Tâche **T-006** (S). Test manuel ▶️ : POST
+  avec dates égales retourne `400 {"error":"La date de départ doit
+  être postérieure à la date d'arrivée"}`.
+
+- [x] **2026-08-20 — BUG-010** : `POST /api/reviews` recalcule
+  `properties.averageRating` et `totalReviews` via un unique `UPDATE
+  ... FROM (SELECT AVG, COUNT ...)` atomique — plus de race entre
+  deux avis concurrents. Tâche **T-007** (S).
+
+- [x] **2026-08-20 — BUG-007** : `useSearchParams` dans
+  `src/app/(main)/reservation/page.tsx` enveloppé dans `<Suspense>`.
+  Le composant a été renommé `ReservationPageInner` et l'export
+  default est un wrapper. Tâche **T-005** (L).
+
+- [x] **2026-08-20 — BUG-004** : `GET /api/properties` utilise
+  désormais un unique `LEFT JOIN rooms + GROUP BY properties.id`
+  avec `MIN(basePrice)` et `COUNT(rooms.id)` agrégés en SQL. Plus de
+  N+1. Tâche **T-004** (S). Test manuel ▶️ : filtres
+  city/type/minPrice/maxPrice/search retournent les mêmes résultats
+  qu'avant.
 
 - [x] **2026-08-20 — BUG-005** : `src/proxy.ts` (Next.js 16 remplace
   `middleware.ts`) redirige vers `/connexion?next=<path>` les accès non

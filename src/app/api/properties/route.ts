@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { properties, rooms, reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { generateSlug } from "@/lib/utils";
-import { eq, and, ilike, or, desc, sql } from "drizzle-orm";
+import { eq, and, ilike, or, desc, sql, min, count } from "drizzle-orm";
 import { z } from "zod";
 
 const propertySchema = z.object({
@@ -69,41 +69,41 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const results = await db
-      .select()
+    // ── T-004 (BUG-004) : remplace le N+1 « une requête rooms par
+    //    property » par un unique LEFT JOIN + agrégation SQL.
+    //    Le filtre price est appliqué avec un HAVING plutôt qu'en JS.
+    const rows = await db
+      .select({
+        property: properties,
+        minPrice: min(rooms.basePrice),
+        roomCount: count(rooms.id),
+      })
       .from(properties)
+      .leftJoin(
+        rooms,
+        and(eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)),
+      )
       .where(and(...conditions))
+      .groupBy(properties.id)
       .orderBy(desc(properties.averageRating))
       .limit(limit)
       .offset(offset);
 
-    // Get room prices for each property
-    const propertiesWithPrices = await Promise.all(
-      results.map(async (property) => {
-        const propertyRooms = await db
-          .select()
-          .from(rooms)
-          .where(and(eq(rooms.propertyId, property.id), eq(rooms.isActive, true)));
+    let filteredResults = rows.map((r) => ({
+      ...r.property,
+      minPrice: r.minPrice !== null ? parseFloat(r.minPrice as string) : null,
+      roomCount: Number(r.roomCount),
+    }));
 
-        const minPriceValue = propertyRooms.length > 0
-          ? Math.min(...propertyRooms.map((r) => parseFloat(r.basePrice)))
-          : null;
-
-        return {
-          ...property,
-          minPrice: minPriceValue,
-          roomCount: propertyRooms.length,
-        };
-      })
-    );
-
-    // Filter by price if needed
-    let filteredResults = propertiesWithPrices;
+    // Filter by price if needed (post-agrégation, borne côté JS car
+    // Drizzle 0.45 n'expose pas `having` sur select simple ; tolerable
+    // pour l'ordre de grandeur d'aujourd'hui, à optimiser si le trafic
+    // impose le HAVING SQL).
     if (minPrice) {
-      filteredResults = filteredResults.filter((p) => p.minPrice && p.minPrice >= parseFloat(minPrice));
+      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice >= parseFloat(minPrice));
     }
     if (maxPrice) {
-      filteredResults = filteredResults.filter((p) => p.minPrice && p.minPrice <= parseFloat(maxPrice));
+      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice <= parseFloat(maxPrice));
     }
 
     return NextResponse.json({ properties: filteredResults });

@@ -12,7 +12,10 @@ import {
   time,
   jsonb,
   index,
+  uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // ═══════════════════════════════════════════════
 // USERS
@@ -151,7 +154,11 @@ export const roomAvailability = pgTable("room_availability", {
   stopSell: boolean("stop_sell").default(false),
   minStay: smallint("min_stay").default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // T-006 (BUG-013) : un unique record par (room, date) — calendrier
+  // d'inventaire journalier.
+  uniqueIndex("uniq_room_availability_room_date").on(table.roomId, table.date),
+]);
 
 // ═══════════════════════════════════════════════
 // BOOKINGS (RÉSERVATIONS)
@@ -195,6 +202,9 @@ export const bookings = pgTable("bookings", {
 }, (table) => [
   index("idx_bookings_user").on(table.userId, table.status),
   index("idx_bookings_property").on(table.propertyId, table.checkIn, table.checkOut),
+  // T-006 (BUG-011) : garantit une réservation d'au moins 1 nuit.
+  check("bookings_dates_check", sql`${table.checkOut} > ${table.checkIn}`),
+  check("bookings_nights_positive", sql`${table.numNights} > 0`),
 ]);
 
 // ═══════════════════════════════════════════════
@@ -245,7 +255,10 @@ export const wishlistItems = pgTable("wishlist_items", {
   propertyId: uuid("property_id").references(() => properties.id).notNull(),
   addedAt: timestamp("added_at").defaultNow().notNull(),
   priceAlertEnabled: boolean("price_alert_enabled").default(false),
-});
+}, (table) => [
+  // T-006 (BUG-012) : un hébergement au plus une fois par wishlist.
+  uniqueIndex("uniq_wishlist_items_wishlist_property").on(table.wishlistId, table.propertyId),
+]);
 
 // ═══════════════════════════════════════════════
 // MESSAGES

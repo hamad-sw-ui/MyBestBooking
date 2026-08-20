@@ -6,22 +6,29 @@ import { generateBookingReference, calculateNights } from "@/lib/utils";
 import { eq, and, or, desc } from "drizzle-orm";
 import { z } from "zod";
 
-const bookingSchema = z.object({
-  propertyId: z.string().uuid(),
-  roomId: z.string().uuid(),
-  checkIn: z.string(),
-  checkOut: z.string(),
-  numAdults: z.number().min(1),
-  numChildren: z.number().min(0).optional(),
-  guestFirstName: z.string().min(2),
-  guestLastName: z.string().min(2),
-  guestEmail: z.string().email(),
-  guestPhone: z.string().optional(),
-  guestCountry: z.string().length(2).optional(),
-  tripPurpose: z.enum(["leisure", "business"]).optional(),
-  specialRequests: z.string().optional(),
-  estimatedArrival: z.string().optional(),
-});
+const bookingSchema = z
+  .object({
+    propertyId: z.string().uuid(),
+    roomId: z.string().uuid(),
+    checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "checkIn doit être au format YYYY-MM-DD"),
+    checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "checkOut doit être au format YYYY-MM-DD"),
+    numAdults: z.number().min(1),
+    numChildren: z.number().min(0).optional(),
+    guestFirstName: z.string().min(2),
+    guestLastName: z.string().min(2),
+    guestEmail: z.string().email(),
+    guestPhone: z.string().optional(),
+    guestCountry: z.string().length(2).optional(),
+    tripPurpose: z.enum(["leisure", "business"]).optional(),
+    specialRequests: z.string().optional(),
+    estimatedArrival: z.string().optional(),
+  })
+  // T-006 (BUG-011) : validation métier avant d'atteindre la contrainte
+  // SQL, message utilisateur plus clair.
+  .refine((d) => new Date(d.checkOut) > new Date(d.checkIn), {
+    message: "La date de départ doit être postérieure à la date d'arrivée",
+    path: ["checkOut"],
+  });
 
 export async function GET(request: NextRequest) {
   try {
