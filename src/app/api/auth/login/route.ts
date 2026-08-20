@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { verifyPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -12,8 +13,24 @@ const loginSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // T-009 (BUG-009) : rate-limit par IP + email (préviens le brute-force
+    // ciblé sur un compte et le brute-force distribué sur beaucoup).
     const body = await request.json();
     const data = loginSchema.parse(body);
+
+    const ip = ipFromRequest(request);
+    const ipLimit = rateLimit(`login:ip:${ip}`, { limit: 20, windowMs: 60_000 });
+    const emailLimit = rateLimit(
+      `login:email:${data.email.toLowerCase()}`,
+      { limit: 5, windowMs: 60_000 },
+    );
+    if (!ipLimit.ok || !emailLimit.ok) {
+      const retryAfter = Math.max(ipLimit.retryAfter, emailLimit.retryAfter);
+      return NextResponse.json(
+        { error: "Trop de tentatives, réessayez plus tard" },
+        { status: 429, headers: { "Retry-After": String(retryAfter) } },
+      );
+    }
 
     // Find user
     const [user] = await db

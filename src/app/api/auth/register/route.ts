@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { hashPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -15,6 +16,17 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // T-009 (BUG-009) : rate-limit inscription par IP (plus permissif
+    // que login car pas de brute-force ciblé possible).
+    const ip = ipFromRequest(request);
+    const ipLimit = rateLimit(`register:ip:${ip}`, { limit: 10, windowMs: 60_000 });
+    if (!ipLimit.ok) {
+      return NextResponse.json(
+        { error: "Trop de créations de compte, réessayez plus tard" },
+        { status: 429, headers: { "Retry-After": String(ipLimit.retryAfter) } },
+      );
+    }
+
     const body = await request.json();
     const data = registerSchema.parse(body);
 
@@ -42,7 +54,12 @@ export async function POST(request: NextRequest) {
         firstName: data.firstName,
         lastName: data.lastName,
         role: data.role,
-        emailVerified: true, // For demo purposes
+        // T-008 (BUG-008) : par défaut, l'email n'est PAS vérifié.
+        // L'utilisateur peut se connecter mais un flux de vérification
+        // (envoi de mail avec lien signé) reste à implémenter — voir
+        // KNOWN_LIMITATIONS.md. Le seed force `emailVerified: true`
+        // pour les comptes de démo, ce qui est explicite et acceptable.
+        emailVerified: false,
       })
       .returning();
 

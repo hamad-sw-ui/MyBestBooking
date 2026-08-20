@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { getCurrentUser } from "@/lib/auth";
@@ -169,10 +170,12 @@ export default async function HomePage() {
                 href={`/recherche?city=${encodeURIComponent(dest.name)}`}
                 className="group relative rounded-xl overflow-hidden aspect-[4/5]"
               >
-                <img
+                <Image
                   src={dest.image}
                   alt={dest.name}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 20vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">

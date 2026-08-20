@@ -61,27 +61,34 @@ serait une seconde ligne de défense simple à ajouter.
    scénarios.
 
 3. **Paiement non implémenté**. `POST /api/bookings` force
-   `paymentStatus: 'paid'` sans aucun débit. Une intégration réelle
-   (Stripe/PayPal/CinetPay…) est indispensable avant d'ouvrir aux vrais
-   clients.
+   `paymentStatus: 'paid'` sans aucun débit. Déplacé dans
+   `KNOWN_LIMITATIONS.md` en attendant des credentials Stripe/CinetPay
+   test. Aucune vraie transaction n'a jamais été réalisée par
+   l'application.
 
 ### 🟠 P2 — importants
 
-4. **Pas de rate-limiting** sur `/api/auth/login` et `/api/auth/register`.
-   Vulnérable au brute-force et à l'énumération de comptes (les messages
-   d'erreur sont heureusement génériques : `"Email ou mot de passe incorrect"`).
-5. **Pas de headers de sécurité** (`next.config.ts` est vide) :
-   `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`,
-   `X-Frame-Options: DENY` (ou `Content-Security-Policy: frame-ancestors 'none'`),
-   `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy`.
+4. ~~**Pas de rate-limiting**~~ **CORRIGÉ 2026-08-20 (T-009, BUG-009)**.
+   `src/lib/rate-limit.ts` applique 20 req/min/IP + 5 req/min/email sur
+   `/api/auth/login`, 10 req/min/IP sur `/api/auth/register`. Retourne
+   429 + Retry-After. Voir `KNOWN_LIMITATIONS.md` pour la limite
+   mono-instance à traiter avec Redis dans un déploiement scaled.
+5. ~~**Pas de headers de sécurité**~~ **CORRIGÉ 2026-08-20 (T-008)**.
+   `next.config.ts → headers()` pose `X-Content-Type-Options: nosniff`,
+   `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy:
+   strict-origin-when-cross-origin`, `Strict-Transport-Security:
+   max-age=31536000; includeSubDomains`, `Permissions-Policy`. La CSP
+   fine reste à définir (voir BACKLOG).
 6. **`NEXT_PUBLIC_APP_URL`** utilisé dans `logout` avec fallback
    `http://localhost:3000` — à définir en prod.
 
 ### 🟡 P3 — nice to have
 
 7. **2FA** : `users.twoFactorEnabled` existe mais aucune logique associée.
-8. **Vérification email** : `users.emailVerified` est mis à `true` d'office à
-   l'inscription (`emailVerified: true, // For demo purposes`).
+8. ~~**Vérification email d'office**~~ **CORRIGÉ 2026-08-20 (T-008,
+   BUG-008)**. `POST /api/auth/register` met désormais
+   `emailVerified: false`. Le flux d'envoi/vérification email reste à
+   implémenter — tracé dans `KNOWN_LIMITATIONS.md`.
 9. **Politique de mot de passe** : ajouter un check contre HaveIBeenPwned ou
    au minimum une règle de complexité.
 10. **CSRF** : le fait que les cookies soient `SameSite=Lax` bloque la plupart

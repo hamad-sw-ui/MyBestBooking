@@ -15,8 +15,28 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 ## Produit
 
 - **Paiement mocké.** `POST /api/bookings` force `paymentStatus: 'paid'`
-  sans débit. Limite assumée le temps du prototype ; devient un bug le jour
-  où le produit est exposé à de vrais utilisateurs (déjà tracé en BUG-003).
+  sans débit. Une vraie intégration Stripe/CinetPay/PayPal est nécessaire
+  avant tout usage réel. Requiert des credentials fournisseur non
+  disponibles dans l'environnement sandbox actuel. Déplacé de BUG-003
+  vers cette liste le 2026-08-20 (session 4). À rouvrir en tâche
+  T-011 dès qu'un compte test est fourni.
+
+- **Vérification d'email non implémentée.** Depuis T-008, l'inscription
+  crée un compte avec `emailVerified: false`, mais aucun mail de
+  vérification n'est envoyé. L'utilisateur peut se connecter sans
+  vérifier. Complet impliquerait : service SMTP (Resend/SendGrid/SES),
+  route `/api/auth/verify?token=...`, table `verification_tokens`,
+  UI dédiée. Voir BACKLOG.md.
+
+- **Rate-limit en mémoire (mono-instance).** `src/lib/rate-limit.ts` de
+  T-009 utilise une Map process-local. En déploiement multi-instance
+  (Vercel, Kubernetes avec réplicas), chaque instance a son propre
+  compteur → limite effective multipliée par le nombre d'instances.
+  Suffisant pour ralentir un attaquant naïf, à remplacer par Redis
+  (Upstash, ioredis) pour un vrai rate-limiting global.
+
+- **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
+  invalide toutes les sessions actives (30 jours par défaut).
 - **Uniquement le français.** Le modèle DB supporte `descriptionEn` et
   `users.language`, mais aucun mécanisme d'i18n n'est en place côté UI.
   Assumé tant que le marché cible est francophone.

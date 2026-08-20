@@ -9,27 +9,41 @@ suivante.
 
 ## Ouverts
 
-- [ ] **BUG-003 — Paiement non implémenté**. `POST /api/bookings` force
-  `paymentStatus: 'paid'` et `status: 'confirmed'` sans intégration
-  paiement réelle. Toute réservation est gratuite aujourd'hui.
-
-- [ ] **BUG-006 — `<img>` HTML natif** partout au lieu de `next/image`. Pas
-  d'optimisation, pas de lazy-loading géré, LCP dégradé. Suppose d'ajouter
-  `images.remotePatterns` dans `next.config.ts` (unsplash.com, etc.).
-
-- [ ] **BUG-008 — `emailVerified: true` d'office à l'inscription**
-  (`src/app/api/auth/register/route.ts`, commentaire `// For demo purposes`).
-  À réactiver via un vrai flux (email de confirmation) avant prod.
-
-- [ ] **BUG-009 — Pas de rate-limiting** sur `/api/auth/login`. Brute-force
-  possible. Ajouter un limiteur (par IP, par email, avec Redis ou table
-  éphémère).
-
-- [ ] **BUG-014 — `lucide-react` `1.33.0`** : version majeure suspecte (la
-  stable est `0.4xx`). Vérifier avec `npm ls lucide-react` que les icônes
-  s'affichent bien après un `npm install` propre.
+_Aucun bug critique ouvert._ Le seul point restant est **BUG-003
+(paiement non implémenté)** qui a été **déplacé dans
+`KNOWN_LIMITATIONS.md`** en attendant qu'un fournisseur de paiement
+(Stripe test key, etc.) soit disponible dans l'environnement.
 
 ## Corrigés
+
+- [x] **2026-08-20 — BUG-014** : `lucide-react@1.33.0` est bien la
+  version majeure v1 officielle (sortie 2025-2026, attributs SVG
+  améliorés `aria-hidden`, `stroke-linecap="round"`, etc.). Vérifié
+  via `npm ls lucide-react` et sortie HTML de `GET /` contenant des
+  `<svg class="lucide lucide-*">` bien rendus. Faux positif dans la
+  doc initiale. Tâche **T-010** (T, trivial).
+
+- [x] **2026-08-20 — BUG-009** : rate-limiter en mémoire (Map,
+  fenêtre glissante) dans `src/lib/rate-limit.ts` appliqué à
+  `POST /api/auth/login` (20 req/min/IP + 5 req/min/email) et
+  `POST /api/auth/register` (10 req/min/IP). Retourne 429 avec
+  `Retry-After`. Tâche **T-009** (S), 5 tests unitaires
+  `src/lib/rate-limit.test.ts`. Test manuel ▶️ : 5 mauvais logins
+  puis un 6e (même bon mdp) retournent tous 429.
+
+- [x] **2026-08-20 — BUG-008** : `POST /api/auth/register` met
+  désormais `emailVerified: false` (au lieu de `true` "for demo").
+  Le flux d'envoi/vérification par email reste à faire — tracé dans
+  `KNOWN_LIMITATIONS.md`. Tâche **T-008** (S, groupée avec T-006/BUG-006).
+
+- [x] **2026-08-20 — BUG-006** : composants critiques (`PropertyCard`,
+  vignettes destinations de l'accueil) migrés vers `next/image` avec
+  attributs `fill` + `sizes`. `next.config.ts → images.remotePatterns`
+  autorise `images.unsplash.com` et `plus.unsplash.com`. Headers de
+  sécurité ajoutés en même temps (X-Content-Type-Options,
+  X-Frame-Options, Referrer-Policy, Strict-Transport-Security,
+  Permissions-Policy). Test manuel ▶️ : `curl -I /` retourne bien tous
+  les headers. Tâche **T-008** (S).
 
 - [x] **2026-08-20 — BUG-015** : migrations Drizzle versionnées créées
   et commitées dans `drizzle/` (0000_opposite_gertrude_yorkes.sql
