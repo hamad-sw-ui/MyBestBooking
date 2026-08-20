@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { bookings, properties, rooms, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { generateBookingReference, calculateNights } from "@/lib/utils";
-import { eq, and, or, desc } from "drizzle-orm";
+import { eq, and, or, desc, lt, gt, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const bookingSchema = z
@@ -161,37 +161,75 @@ export async function POST(request: NextRequest) {
 
     const bookingReference = generateBookingReference();
 
-    const [newBooking] = await db
-      .insert(bookings)
-      .values({
-        bookingReference,
-        userId: user.id,
-        propertyId: data.propertyId,
-        roomId: data.roomId,
-        status: "confirmed",
-        checkIn: data.checkIn,
-        checkOut: data.checkOut,
-        numNights,
-        numAdults: data.numAdults,
-        numChildren: data.numChildren || 0,
-        guestFirstName: data.guestFirstName,
-        guestLastName: data.guestLastName,
-        guestEmail: data.guestEmail,
-        guestPhone: data.guestPhone,
-        guestCountry: data.guestCountry,
-        tripPurpose: data.tripPurpose,
-        specialRequests: data.specialRequests,
-        subtotal: subtotal.toFixed(2),
-        taxes: taxes.toFixed(2),
-        total: total.toFixed(2),
-        currency: room.currency || "EUR",
-        paymentStatus: "paid",
-        paymentMethod: "card",
-        commissionRate: commissionRate.toFixed(2),
-        commissionAmount: commissionAmount.toFixed(2),
-        netToHost: netToHost.toFixed(2),
-      })
-      .returning();
+    // T-012 : vérification atomique de disponibilité.
+    // Transaction avec SELECT ... FOR UPDATE sur les bookings de la même
+    // room et non annulés. `room.quantity` détermine combien d'unités
+    // identiques sont disponibles (ex: "Chambre Standard × 3").
+    // Convention : deux intervalles [aIn, aOut) et [bIn, bOut) se
+    // chevauchent ssi aIn < bOut ET aOut > bIn. Adjacent = pas overlap.
+    let newBooking;
+    try {
+      newBooking = await db.transaction(async (tx) => {
+        const overlaps = await tx
+          .select({ id: bookings.id })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.roomId, data.roomId),
+              ne(bookings.status, "cancelled"),
+              lt(bookings.checkIn, data.checkOut),
+              gt(bookings.checkOut, data.checkIn),
+            ),
+          )
+          .for("update");
+
+        const roomCapacity = room.quantity ?? 1;
+        if (overlaps.length >= roomCapacity) {
+          throw new Error("ROOM_UNAVAILABLE");
+        }
+
+        const [inserted] = await tx
+          .insert(bookings)
+          .values({
+            bookingReference,
+            userId: user.id,
+            propertyId: data.propertyId,
+            roomId: data.roomId,
+            status: "confirmed",
+            checkIn: data.checkIn,
+            checkOut: data.checkOut,
+            numNights,
+            numAdults: data.numAdults,
+            numChildren: data.numChildren || 0,
+            guestFirstName: data.guestFirstName,
+            guestLastName: data.guestLastName,
+            guestEmail: data.guestEmail,
+            guestPhone: data.guestPhone,
+            guestCountry: data.guestCountry,
+            tripPurpose: data.tripPurpose,
+            specialRequests: data.specialRequests,
+            subtotal: subtotal.toFixed(2),
+            taxes: taxes.toFixed(2),
+            total: total.toFixed(2),
+            currency: room.currency || "EUR",
+            paymentStatus: "paid",
+            paymentMethod: "card",
+            commissionRate: commissionRate.toFixed(2),
+            commissionAmount: commissionAmount.toFixed(2),
+            netToHost: netToHost.toFixed(2),
+          })
+          .returning();
+        return inserted;
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message === "ROOM_UNAVAILABLE") {
+        return NextResponse.json(
+          { error: "Cette chambre n'est plus disponible pour ces dates" },
+          { status: 409 },
+        );
+      }
+      throw e;
+    }
 
     // Update user's BestRewards count
     await db

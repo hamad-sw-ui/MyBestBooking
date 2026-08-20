@@ -15,6 +15,13 @@
       "when": 1787230237419,
       "tag": "0001_lowly_argent",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1787232806681,
+      "tag": "0002_brief_cannonball",
+      "breakpoints": true
     }
   ]
 }

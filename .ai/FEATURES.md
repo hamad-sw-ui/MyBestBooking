@@ -52,8 +52,8 @@ modification de code.
 | Tunnel multi-étapes | ✅ | `/reservation` avec `<Suspense>` | T-005 |
 | Calcul commission + net-to-host | ✅ | `POST /api/bookings` calcule | initial |
 | Contraintes dates cohérentes | ✅ | Zod refine + CHECK SQL | T-006 |
-| **Vérification de disponibilité `room_availability`** | ❌ | Rien ne vérifie ni décrémente stock | 🎯 T-012 |
-| **Détection de chevauchement avec bookings existants** | ❌ | Deux voyageurs peuvent réserver la même chambre | 🎯 T-012 |
+| **Vérification de disponibilité `room_availability`** | 🚧 | Vérifie chevauchement bookings vs `room.quantity` (T-012). `room_availability` calendrier hôte pas encore utilisé | 🎯 T-018 |
+| **Détection de chevauchement avec bookings existants** | ✅ | Transaction Drizzle + SELECT FOR UPDATE + comparaison stricte semi-ouverte + retour 409 | T-012 |
 | **Application d'un code promo** | ❌ | Champ `discount` toujours à 0 | 🎯 T-015 |
 | **Application `rate_plans`** (petit-déj, remboursable) | ❌ | Table présente, aucun endpoint ni UI | 🎯 backlog |
 | **Politique d'annulation réelle** | 🚧 | Statut `cancelled` possible via `PUT /api/bookings/[id]`, mais pas de calcul de `cancellationFee` selon `cancellationPolicy` | 🎯 T-015 |

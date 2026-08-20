@@ -202,6 +202,8 @@ export const bookings = pgTable("bookings", {
 }, (table) => [
   index("idx_bookings_user").on(table.userId, table.status),
   index("idx_bookings_property").on(table.propertyId, table.checkIn, table.checkOut),
+  // T-012 : index dédié aux vérifications de disponibilité par chambre.
+  index("idx_bookings_room_dates").on(table.roomId, table.checkIn, table.checkOut),
   // T-006 (BUG-011) : garantit une réservation d'au moins 1 nuit.
   check("bookings_dates_check", sql`${table.checkOut} > ${table.checkIn}`),
   check("bookings_nights_positive", sql`${table.numNights} > 0`),
