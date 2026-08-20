@@ -1,17 +1,31 @@
 # ADR — Architecture Decision Records
 
-On y range les **décisions structurantes** qu'on veut se rappeler plus tard :
-pourquoi on a choisi X plutôt que Y, quels compromis ont été faits, ce qui
-nous ferait revenir sur la décision.
+**Obligatoire pour tout changement de niveau S ou C** (`CODING_RULES.md`
+§15.0, §11). Facultatif pour L (souhaitable si la décision aura un impact
+au-delà d'une seule session). Interdit pour T (pas de valeur).
 
-**Facultatif.** N'écrivez un ADR que si :
+## Convention
 
-- la décision est difficile à défaire,
-- ou plusieurs personnes reviendront probablement dessus,
-- ou vous voulez éviter qu'on la re-débatte inutilement.
+- Nommage : `ADR-NNN_<titre_court>.md` (numérotation continue, jamais
+  réutilisée).
+- Statut : `proposé` → `accepté` → éventuellement `remplacé par ADR-XXX`
+  ou `abandonné`.
+- Un ADR est **immuable** une fois accepté. Pour le corriger, on ouvre un
+  nouvel ADR qui le remplace explicitement.
+- Un ADR référence les tâches (`B-xxx`) et bugs (`B-xxx`) concernés.
 
-Un ADR type suffit : nom (`ADR-XXX_titre.md`), contexte, décision,
-alternatives écartées, conséquences. Le fichier `TEMPLATE.md` vous en donne
-une trame.
+## Liste
 
-Aucun ADR n'est requis pour committer, mettre en prod, ni ouvrir une PR.
+| N° | Titre | Statut | Tâche | Date |
+|---|---|---|---|---|
+| 001 | Framework de gouvernance `.ai/` v1.0.0 | accepté | B-000 | 2026-08-20 |
+
+## Modèle
+
+Voir [`TEMPLATE.md`](TEMPLATE.md). À copier au moment de créer un nouvel ADR.
+
+## Discipline
+
+Un changement structurant qui **contredit** un ADR accepté sans en produire
+un nouveau qui le remplace est **refusé** par le responsable. Cette règle
+existe pour éviter la dérive silencieuse d'une décision architecturale.

@@ -1,0 +1,119 @@
+{
+  "version": "1.0.0",
+  "name": "MyBestBooking AI Development Operating System (AI-DOS Web)",
+  "description": "Framework de gouvernance hybride pour un projet Next.js/PostgreSQL/Drizzle : traçabilité des preuves, proportionnalité T/L/S/C, checklists bloquantes, honnêteté technique.",
+  "derived_from": "AI-DOS 3.0 (MobileCaisse) — philosophie conservée, contenu réécrit pour le web",
+  "mandatory_documents": [
+    "STATE.md",
+    "INDEX.md",
+    "MISSION.md",
+    "PROJECT.md",
+    "ARCHITECTURE.md",
+    "DATABASE.md",
+    "API.md",
+    "SECURITY.md",
+    "CODING_RULES.md",
+    "CODING_STYLE.md",
+    "ROADMAP.md",
+    "BACKLOG.md",
+    "BUGS.md",
+    "CURRENT_TASK.md",
+    "TRACEABILITY.md",
+    "PROGRESS.md",
+    "TEST_PLAN.md"
+  ],
+  "optional_documents": [
+    "UI.md",
+    "DEPENDENCIES.md",
+    "DEV_ENVIRONMENT.md",
+    "DEVLOG.md",
+    "KNOWN_LIMITATIONS.md",
+    "PROCESS_IMPROVEMENTS.md"
+  ],
+  "reading_order": [
+    "STATE.md",
+    "INDEX.md",
+    "MISSION.md",
+    "CURRENT_TASK.md",
+    "PROJECT.md",
+    "ARCHITECTURE.md",
+    "CODING_RULES.md"
+  ],
+  "critical_documents": [
+    "STATE.md",
+    "SECURITY.md",
+    "DATABASE.md",
+    "CODING_RULES.md",
+    "TRACEABILITY.md",
+    "ADR/"
+  ],
+  "blocking_rules": {
+    "missing_mandatory_document": true,
+    "obsolete_roadmap": true,
+    "unresolved_critical_bugs": false,
+    "mismatched_git_state": true,
+    "unchecked_pre_commit_checklist": true,
+    "missing_impact_analysis_for_S_or_C": true,
+    "closure_without_evidence": true
+  },
+  "proportionality_levels": {
+    "T": {
+      "label": "Trivial",
+      "examples": ["typo", "commentaire", "renommage local sans appelant externe"],
+      "impact_analysis": false,
+      "design_doc": false,
+      "multi_role_debate": false,
+      "opportunities_report": false,
+      "adr": false
+    },
+    "L": {
+      "label": "Local",
+      "examples": ["refactor interne d'une fonction", "ajout d'un test unitaire", "correction d'un bug sans impact API"],
+      "impact_analysis": "light",
+      "design_doc": false,
+      "multi_role_debate": false,
+      "opportunities_report": false,
+      "adr": false
+    },
+    "S": {
+      "label": "Structurant",
+      "examples": ["nouvelle route API", "nouvelle page", "modification d'une signature exportée", "nouveau champ DB"],
+      "impact_analysis": true,
+      "design_doc": true,
+      "multi_role_debate": "if_disagreement",
+      "opportunities_report": true,
+      "adr": true
+    },
+    "C": {
+      "label": "Critique",
+      "examples": ["auth", "paiement", "migration DB destructive", "changement de schéma sur users/bookings", "modification cryptographique"],
+      "impact_analysis": true,
+      "design_doc": true,
+      "multi_role_debate": true,
+      "opportunities_report": true,
+      "adr": true,
+      "double_validation": true
+    }
+  },
+  "evidence_tags": {
+    "OBSERVED": "🔍 constaté dans le code",
+    "COMPILED": "🔨 typecheck ou build a réussi",
+    "TESTED": "🧪 test automatisé passe",
+    "EXECUTED": "▶️ exécuté à la main (dev server, curl)",
+    "DEDUCED": "🧠 déduit logiquement, non vérifié",
+    "HYPOTHESIS": "❓ hypothèse à confirmer"
+  },
+  "roles": [
+    "Architecte",
+    "Développeur Next.js senior",
+    "Expert TypeScript",
+    "Expert React (RSC / Client)",
+    "Expert Drizzle / SQL",
+    "Expert PostgreSQL",
+    "Expert sécurité web (auth, cookies, CSP)",
+    "Ingénieur QA",
+    "DevOps / SRE",
+    "Expert UX / a11y",
+    "Relecteur (advocatus diaboli)"
+  ]
+}

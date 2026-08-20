@@ -1,20 +1,43 @@
 # REPORTS
 
-On y range les **analyses ponctuelles** qu'on veut garder : audits sécurité,
-benchmarks perf, rapports d'incidents, études d'options.
+**Obligatoire pour tout changement de niveau S ou C.** Facultatif pour L,
+interdit (pas de valeur) pour T.
 
-**Facultatif.** Aucun rapport n'est requis pour committer ou déployer. On en
-écrit un uniquement s'il apporte de la valeur au relecteur suivant.
+Contenu attendu :
 
-Nommage suggéré : `YYYY-MM-DD_<sujet>.md` (ex :
-`2026-08-20_audit_initial.md`, `2026-09-15_benchmark_recherche.md`).
+- `analyse_impact_<date>_<sujet>.md` — répond aux 9 questions de
+  `CODING_RULES.md` §14.
+- `analyse_conception_<date>_<sujet>.md` — plan de conception §15.1
+  (options, retenu, alternatives écartées, migration).
+- `debat_technique_<date>_<sujet>.md` — débat 11 rôles §15.2 pour tout
+  niveau **C** (ou **S** en cas de désaccord).
+- `opportunites_<date>_<sujet>.md` — opportunités d'amélioration adjacentes
+  identifiées pendant la tâche.
+- `rapport_analyse_<date>_<sujet>.md` — audits ponctuels (perf, sécurité,
+  couverture).
 
-Un rapport contient au minimum :
+## Nommage
 
-- **Contexte** — pourquoi cette analyse ?
-- **Méthode** — comment on s'y est pris, sur quel commit.
-- **Résultats** — chiffres, observations, extraits de code.
-- **Conclusions** — ce qu'on en retient, actions proposées.
+`<type>_<YYYY-MM-DD>_<slug>.md`. La date est celle de rédaction, jamais
+antérieure au commit associé.
 
-Si les actions proposées deviennent des tâches, elles rejoignent
-`BACKLOG.md` ou `BUGS.md`.
+## Discipline
+
+Un rapport est **daté**, **signé** (auteur + éventuellement responsable),
+et référencé depuis :
+
+- `TRACEABILITY.md` (si le rapport prouve la clôture d'un item) ;
+- `PROGRESS.md` (dans l'entrée de la session correspondante) ;
+- l'ADR concerné (si applicable).
+
+Un rapport orphelin (non référencé, non daté) est **supprimé** en
+rétrospective §17. Un rapport de niveau S ou C manquant **bloque** la
+clôture de la tâche (`framework.manifest.json → blocking_rules →
+missing_impact_analysis_for_S_or_C`).
+
+## Registre
+
+| Date | Type | Sujet | Tâche |
+|---|---|---|---|
+| 2026-08-20 | analyse_impact | governance_setup | B-000 |
+| 2026-08-20 | analyse_conception | governance_setup | B-000 |
