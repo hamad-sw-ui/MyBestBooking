@@ -14,36 +14,35 @@
 
 ---
 
-## Session 5 en cours
+## Session courante
 
 Voir `CURRENT_TASK.md` pour la tâche active.
 
-### Chantiers planifiés Session 5+ (issus de FEATURES.md)
+### Chantiers Sessions 5-7 (livrés)
 
-- 🔴 **T-011** Framework v1.1.0 (en cours, ce commit)
-- 🔴 **T-012** Vérification disponibilité + chevauchement bookings
-- 🔴 **T-013** Emails transactionnels (Resend/SMTP dev) : verification,
-  reset password, confirmation booking, notif hôte
-- 🔴 **T-014** Uploads d'images (adapter S3-compatible + interface local
-  pour dev)
-- 🟠 **T-015** Vague API mutations manquantes :
-  - `POST /api/conversations` + `POST /api/messages`
-  - `POST /api/reviews/[id]/reply` (réponse hôte)
-  - `PATCH /api/properties/[id]/validate` (admin)
-  - `GET /api/wishlists/shared/[token]` (partage public)
-  - CRUD `/api/promotions` + application dans `POST /api/bookings`
-  - `PATCH /api/users/me` + `POST /api/auth/change-password`
-  - Endpoints admin `PATCH /api/users/[id]/suspend`
-  - `POST /api/reviews/[id]/moderate` (admin)
-- 🟠 **T-016** UI compte : édition profil, changement mdp branchés
-- 🟠 **T-017** SEO + a11y sweep : metadata par page, sitemap.xml,
-  robots.txt, aria-labels, `next/font`, `error.tsx`, `not-found.tsx`,
-  `loading.tsx`, CSP
-- 🟠 **T-018** Éditeur calendrier hôte (`room_availability` +
-  `rate_plans` UI + endpoints)
-- 🟠 **T-019** Tests : intégration bookings/properties/wishlists/reviews,
-  composants React, coverage mesurée, Playwright E2E des PAR-001…PAR-020
-- 🔴 **T-020** Paiement Stripe test-mode + webhook confirmation
+- ✅ **T-011** Framework v1.1.0 — livré Session 5
+- ✅ **T-012** Vérification disponibilité + chevauchement bookings — livré
+- ✅ **T-013** Emails transactionnels (Resend/SMTP dev) — livré
+- ✅ **T-014** Uploads d'images (adapter S3-compatible + local) — livré
+- ✅ **T-015** Vague API mutations manquantes — livré
+- ✅ **T-016** UI compte + endpoints mineurs — livré
+- ✅ **T-017** SEO + a11y + CSP + BUG-016 — livré
+- ✅ **T-018** Éditeur calendrier hôte — livré
+- ✅ **T-019** Tests intégration + Playwright specs — livré
+- ✅ **T-020** Paiement Stripe test-mode + webhook — livré
+- ✅ **T-021** Panel d'administration configurable + UI suspend user
+  (Session 7, ADR-007)
+
+### Chantiers restants proposés
+
+- 🟠 **T-022** Cabler `security.maintenanceMode` (paramètre déjà
+  enregistrable via T-021) dans le proxy edge pour renvoyer une page
+  maintenance aux non-admins.
+- 🟠 **T-023** Modération d'avis admin (approuver/cacher/rejeter) via
+  endpoints + UI.
+- 🟠 **T-024** Table `audit_log` globale (au-delà d'`app_settings.updated_by`).
+- 🟢 **T-025** Templates emails éditables via `app_settings` (exige un
+  moteur de templating minimaliste).
 
 ---
 

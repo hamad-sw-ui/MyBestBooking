@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { computeCancellationFee, daysUntil } from "./cancellation";
+import {
+  computeCancellationFee,
+  computeCancellationFeeWithGrid,
+  daysUntil,
+} from "./cancellation";
+import type { CancellationGrid } from "./settings";
 
 describe("computeCancellationFee (T-016, §13.5)", () => {
   it("free = 0 quoi qu'il arrive", () => {
@@ -43,6 +48,52 @@ describe("computeCancellationFee (T-016, §13.5)", () => {
   it("arrondi centime + jamais > total", () => {
     expect(computeCancellationFee("strict", 100, 15)).toBe(50);
     expect(computeCancellationFee("strict", 0.99, 0)).toBe(0.99);
+  });
+});
+
+describe("computeCancellationFeeWithGrid (T-021)", () => {
+  it("grille custom : écrase la grille par défaut", () => {
+    const grid: CancellationGrid = {
+      free: [{ days: 0, percent: 0 }],
+      flexible: [
+        { days: 3, percent: 0 },
+        { days: 0, percent: 100 },
+      ],
+      moderate: [{ days: 0, percent: 25 }],
+      strict: [
+        { days: 60, percent: 0 },
+        { days: 0, percent: 100 },
+      ],
+      non_refundable: [{ days: 0, percent: 100 }],
+    };
+    // flexible custom : 100% en dessous de 3 jours
+    expect(computeCancellationFeeWithGrid("flexible", 200, 2, grid)).toBe(200);
+    expect(computeCancellationFeeWithGrid("flexible", 200, 3, grid)).toBe(0);
+    // moderate custom : 25% tout le temps
+    expect(computeCancellationFeeWithGrid("moderate", 200, 100, grid)).toBe(50);
+    // strict custom : jusqu'à 60j pour être à 0
+    expect(computeCancellationFeeWithGrid("strict", 200, 30, grid)).toBe(200);
+    expect(computeCancellationFeeWithGrid("strict", 200, 60, grid)).toBe(0);
+  });
+
+  it("grille null → fallback vers la grille par défaut", () => {
+    expect(computeCancellationFeeWithGrid("strict", 200, 15, null)).toBe(100);
+    expect(computeCancellationFeeWithGrid("flexible", 200, 0, undefined)).toBe(200);
+  });
+
+  it("policy absente de la grille custom → règle sécurisante flexible", () => {
+    const grid: CancellationGrid = {
+      free: [{ days: 0, percent: 0 }],
+      flexible: [
+        { days: 1, percent: 0 },
+        { days: 0, percent: 100 },
+      ],
+      moderate: [{ days: 0, percent: 100 }],
+      strict: [{ days: 0, percent: 100 }],
+      non_refundable: [{ days: 0, percent: 100 }],
+    };
+    expect(computeCancellationFeeWithGrid("unknown", 200, 5, grid)).toBe(0);
+    expect(computeCancellationFeeWithGrid("unknown", 200, 0, grid)).toBe(200);
   });
 });
 

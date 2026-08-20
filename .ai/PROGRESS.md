@@ -9,6 +9,118 @@
 
 ---
 
+## 2026-08-20 — Session 7 : T-021 (panel d'administration configurable)
+
+**Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
+· **Suite Session 6** · **Trigger** : « oui allez-y avec la même rigueur
+imposée, assurez-vous que l'implémentation n'affecte pas ce qui
+fonctionne déjà, et avant de vous arrêter assurez-vous que l'application
+est 100 % testée avec succès ».
+
+### Livré
+
+**T-021 (S)** — Panel d'administration configurable
+(`REPORTS/analyse_impact_2026-08-20_admin_settings.md`,
+`REPORTS/analyse_conception_2026-08-20_admin_settings.md`,
+`ADR-007_Panel_Administration_Configurable.md`) :
+
+- Nouvelle table `app_settings` (clé/valeur JSONB, `updated_by`) +
+  migration `drizzle/0005_app_settings.sql`.
+- Module `src/lib/settings.ts` avec 6 sections typées Zod
+  (general, billing, bestrewards, cancellation, notifications, security),
+  DEFAULTS reproduisant **exactement** le comportement d'origine
+  (0.10 TVA, seuils [5, 15], grille cancellation identique), cache
+  mémoire 60 s invalidé à l'écriture.
+- 2 endpoints admin : `GET /api/admin/settings` (retourne tout +
+  état providers), `GET/PATCH /api/admin/settings/[key]` (Zod strict,
+  rate-limit 30/min, admin only).
+- 3 callers refactorés (0.10 TVA, seuils 5/15 dans `POST /api/bookings`,
+  grille dans `PUT /api/bookings/[id]`), tous descendants-compatibles.
+- `src/lib/cancellation.ts` : nouvelle fonction
+  `computeCancellationFeeWithGrid()` ajoutée ; l'ancienne signature
+  `computeCancellationFee(policy, total, days)` **reste inchangée**
+  → 10 tests existants passent sans modification.
+- Page `/dashboard/settings` refactorée : composant client
+  `<SettingsPanel>` avec formulaire par section, statut Enregistrement/
+  Enregistré/Erreur, valeurs initiales servies par le RSC.
+- Bouton **Suspendre / Réactiver** ajouté dans `/dashboard/users`
+  (endpoint `PATCH /api/users/[id]/suspend` existait depuis T-016
+  mais l'UI manquait).
+- Providers externes (Stripe, Resend, S3) : lecture seule via
+  `getProviderStatus()`, ne divulgue **jamais** les clés — reflète
+  uniquement `configured?` depuis les env vars.
+
+### Preuves (§16)
+
+- 🔍 Impact et conception rédigés avant implémentation, 9 questions §14.
+- 🔨 `npm run typecheck` ✅ 0 erreur.
+- 🔨 `npm run build` ✅ succès (+ endpoints `/api/admin/settings` et
+  `/api/admin/settings/[key]` listés dans le build).
+- 🔨 `npm run lint` ✅ 0 error (15 warnings cosmétiques préexistants).
+- 🧪 `npm test` : **123 passed / 123** (dont **9 nouveaux tests**
+  `src/lib/settings.test.ts` + **3 nouveaux tests** cancellation
+  avec grille custom). Aucun skip : la DB embarquée était démarrée,
+  les 12 tests d'intégration bookings/promotions/wishlists ont tourné.
+- 🧪 Non-régression : 10 tests `computeCancellationFee(...)` passent
+  sans modification (signature préservée).
+- 🧪 `npm run ai:check` : **14 OK · 3 warn · 0 fail** (identique aux
+  sessions précédentes : R7 motif toléré, R11 informationnel,
+  R14 wishlist_items).
+- ▶️ Login admin → `GET /api/admin/settings` → renvoie DEFAULTS.
+- ▶️ `PATCH /api/admin/settings/billing` `{taxRate:0.2}` → 200 →
+  réservation 3 nuits × 89 € = subtotal 267, **taxes 53.40 (20 %)**,
+  total 320.40. Restaure `{taxRate:0.1}` → nouvelle réservation
+  178 €, **taxes 17.80 (10 %)**.
+- ▶️ Grille cancellation custom (`flexible` = 100 % en dessous de
+  365 j) → PUT booking → cancellationFee = 320.40. Grille par défaut
+  restaurée → fee = 0.
+- ▶️ Zod refuse `taxRate=-0.1` (400) et `taxRate=2` (400).
+- ▶️ Endpoint refuse non-admin (403 `Accès admin requis`).
+- ▶️ Rate-limit 30/min : 28 succès puis 429 `Retry-After`.
+- ▶️ Suspend/réactivate customer : login refusé
+  (`Ce compte a été supprimé`) puis à nouveau OK après réactivation.
+- ▶️ Non-régression : /, /recherche, /aide, /bestrewards, /connexion,
+  /inscription, /dashboard, /dashboard/bookings, /dashboard/properties,
+  /dashboard/promotions, /dashboard/messages, /dashboard/analytics
+  répondent **200**.
+
+### Fichiers touchés
+
+Nouveaux :
+- `drizzle/0005_app_settings.sql` (+ snapshot meta)
+- `src/lib/settings.ts` (~290 lignes)
+- `src/lib/settings.test.ts` (~150 lignes)
+- `src/app/api/admin/settings/route.ts`
+- `src/app/api/admin/settings/[key]/route.ts`
+- `src/components/admin/settings-panel.tsx` (~470 lignes)
+- `src/components/admin/user-suspend-actions.tsx`
+- `.ai/REPORTS/analyse_impact_2026-08-20_admin_settings.md`
+- `.ai/REPORTS/analyse_conception_2026-08-20_admin_settings.md`
+- `.ai/ADR/ADR-007_Panel_Administration_Configurable.md`
+
+Modifiés :
+- `src/db/schema.ts` (+ table `appSettings`, types)
+- `src/lib/cancellation.ts` (variant `WithGrid`, signature historique inchangée)
+- `src/lib/cancellation.test.ts` (+3 tests grille custom)
+- `src/app/api/bookings/route.ts` (taxRate + seuils BestRewards depuis settings)
+- `src/app/api/bookings/[id]/route.ts` (grille cancellation depuis settings)
+- `src/app/dashboard/settings/page.tsx` (RSC + `<SettingsPanel>`)
+- `src/app/dashboard/users/page.tsx` (colonne Actions + suspend)
+- `.ai/CURRENT_TASK.md`, `.ai/FEATURES.md`, `.ai/TRACEABILITY.md`,
+  `.ai/STATE.md`, `.ai/BUGS.md`, `.ai/PROGRESS.md`, `.ai/BACKLOG.md`.
+
+### Étape suivante
+
+- Attente instructions utilisateur. Backlog non bloquant (V1) inchangé :
+  dark mode, i18n EN, 2FA, wallet BestRewards utilisable, comparateur,
+  carte géographique.
+- Mode maintenance : paramètre `security.maintenanceMode` enregistrable,
+  câblage du middleware à réaliser dans une T-022 future.
+- Templates emails éditables via settings (reporté, exige moteur de
+  templating).
+
+---
+
 ## 2026-08-20 — Session 6 : T-016 → T-020 (application fonctionnellement complète)
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`

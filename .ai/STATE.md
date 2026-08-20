@@ -19,16 +19,16 @@
 
 - **Dernier `npm run typecheck`** : ✅ 0 erreur
 - **Dernier `npm run build`** : ✅ succès
-- **Dernier `npm test`** : ✅ **111 passed / 111**
+- **Dernier `npm test`** : ✅ **123 passed / 123** (0 skipped avec DB
+  embarquée démarrée)
 - **Dernier `npm run ai:check`** : ✅ 14 OK · 3 warn attendus · 0 fail
-- **Couverture** : ~78 features ✅ / ~22 partielles / ~6 planifiées /
-  ~16 backlog (**FEATURES.md ✅ = 64 %**)
+- **Couverture** : ~80 features ✅ / ~21 partielles / ~6 planifiées /
+  ~15 backlog (**FEATURES.md ✅ ≈ 66 %**)
 
 ## 📈 Compteurs framework (§17, ADR-006)
 
-- **sessions_since_last_product_audit** : `1` (dernier : Session 5).
-  Session 6 = livraison de la roadmap, prochain audit dû < 4 sessions
-  restantes.
+- **sessions_since_last_product_audit** : `2` (dernier : Session 5).
+  Sessions 6 puis 7 = livraisons. Audit dû dans ≤ 3 sessions.
 
 ## 📋 Sessions
 
@@ -40,13 +40,18 @@
 - **Session 5** (2026-08-20) : T-011 (framework v1.1.0 complétude
   produit) + T-012 (disponibilité) + T-013 (emails) + T-014 (uploads)
   + T-015 (6 endpoints). VALIDÉ.
-- **Session 6** (2026-08-20, courante) :
+- **Session 6** (2026-08-20) :
   - T-016 (UI branchée + 4 endpoints mineurs + utilitaires promo/annulation)
   - T-017 (SEO + a11y + next/font + CSP + error/not-found/loading +
     BUG-016 JWT jti collision fix)
   - T-018 (calendrier hôte : rate_plans + room_availability)
   - T-019 (tests intégration + Playwright specs)
   - T-020 (Stripe infrastructure PaymentProvider + webhook)
+- **Session 7** (2026-08-20, courante) :
+  - T-021 (panel d'administration configurable : table `app_settings`,
+    endpoints `/api/admin/settings`, module `src/lib/settings.ts`,
+    refactor callers TVA/BestRewards/cancellation, UI /dashboard/settings,
+    bouton suspend user, ADR-007)
 
 ## 🐞 Bugs & Défauts
 
@@ -55,7 +60,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-020 (20 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-021 (21 tâches)
 
 ## 🏛️ Décisions & ADR
 
@@ -65,12 +70,14 @@
 - **ADR-004** : Protection `/api/seed` en prod (Session 4)
 - **ADR-005** : Proxy edge d'auth (Session 4)
 - **ADR-006** : Framework étendu à la complétude produit (Session 5)
+- **ADR-007** : Panel d'administration configurable — table `app_settings` (Session 7)
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20 (Session 6 — T-020 livré, application
-  fonctionnellement complète)
+- **Date** : 2026-08-20 (Session 7 — T-021 livré, panel admin
+  configurable branché, TVA/BestRewards/cancellation pilotables sans
+  redéploiement, bouton suspend user en UI)
 - **Agent** : Arena Agent Mode
 - **Prochaine mise à jour attendue** : à chaque fin de session — obligatoire
   §11. La règle de mise à jour est vérifiée mécaniquement par
-  `npm run ai:check` (14 règles actives).
+  `npm run ai:check` (17 règles actives).

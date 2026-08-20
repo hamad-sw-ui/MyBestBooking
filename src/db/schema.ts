@@ -321,6 +321,21 @@ export const promotions = pgTable("promotions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ═══════════════════════════════════════════════
+// APP_SETTINGS (T-021, ADR-007)
+// Réglages runtime éditables par un admin sans redéploiement.
+// key = identifiant de section (billing, bestrewards, cancellation, ...)
+// value = objet JSONB validé côté application par un schéma Zod
+//         dans src/lib/settings.ts. La table est délibérément clef/valeur
+//         pour rester agnostique aux évolutions de structure.
+// ═══════════════════════════════════════════════
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key", { length: 64 }).primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -332,3 +347,5 @@ export type Booking = typeof bookings.$inferSelect;
 export type NewBooking = typeof bookings.$inferInsert;
 export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;
+export type AppSetting = typeof appSettings.$inferSelect;
+export type NewAppSetting = typeof appSettings.$inferInsert;

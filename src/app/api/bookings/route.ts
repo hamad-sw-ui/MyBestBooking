@@ -9,6 +9,7 @@ import { getMailer, templates } from "@/lib/mail";
 import { promotions } from "@/db/schema";
 import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
 import { getPaymentProvider } from "@/lib/payment";
+import { getSetting } from "@/lib/settings";
 
 const bookingSchema = z
   .object({
@@ -156,9 +157,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Calculate pricing
+    // T-021 : le taux de TVA est désormais lu depuis app_settings
+    // (défaut 0.10 = comportement d'origine). Idem pour les seuils
+    // BestRewards plus bas.
+    const billing = await getSetting("billing");
     const numNights = calculateNights(data.checkIn, data.checkOut);
     const subtotal = parseFloat(room.basePrice) * numNights;
-    const taxes = subtotal * 0.1; // 10% taxes
+    const taxes = subtotal * billing.taxRate;
     let discount = 0;
     let appliedPromoId: string | null = null;
     let promoErrorMsg: string | null = null;
@@ -300,13 +305,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Update user's BestRewards count
+    // T-021 : seuils lus depuis app_settings (défaut [5, 15]).
+    const br = await getSetting("bestrewards");
+    const newCount = (user.bestrewardsBookingsCount || 0) + 1;
+    const newLevel = newCount >= br.thresholds[1]
+      ? 3
+      : newCount >= br.thresholds[0]
+        ? 2
+        : 1;
     await db
       .update(users)
       .set({
-        bestrewardsBookingsCount: (user.bestrewardsBookingsCount || 0) + 1,
-        bestrewardsLevel:
-          (user.bestrewardsBookingsCount || 0) + 1 >= 15 ? 3 :
-          (user.bestrewardsBookingsCount || 0) + 1 >= 5 ? 2 : 1,
+        bestrewardsBookingsCount: newCount,
+        bestrewardsLevel: newLevel,
       })
       .where(eq(users.id, user.id));
 

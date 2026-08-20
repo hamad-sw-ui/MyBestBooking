@@ -4,7 +4,8 @@ import { bookings, properties, rooms, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
-import { computeCancellationFee, daysUntil, type CancellationPolicy } from "@/lib/cancellation";
+import { computeCancellationFeeWithGrid, daysUntil, type CancellationPolicy } from "@/lib/cancellation";
+import { getSetting } from "@/lib/settings";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
@@ -125,10 +126,12 @@ export async function PUT(
       updateData.cancelledAt = new Date();
       // T-016 : calcule le cancellationFee selon la policy de la property
       // et le nombre de jours avant check-in.
+      // T-021 : la grille est désormais éditable via app_settings.
       const policy = (existingBooking.property?.cancellationPolicy ?? "flexible") as CancellationPolicy;
       const total = parseFloat(existingBooking.booking.total);
       const days = daysUntil(existingBooking.booking.checkIn);
-      const fee = computeCancellationFee(policy, total, days);
+      const grid = await getSetting("cancellation");
+      const fee = computeCancellationFeeWithGrid(policy, total, days, grid);
       updateData.cancellationFee = fee.toFixed(2);
     }
 

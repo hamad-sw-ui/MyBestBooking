@@ -238,6 +238,69 @@ est explicitement candidate à la suppression.
 
 ---
 
+## 2026-08-20 — Session 7 : T-021 panel administration configurable
+
+### Contexte
+
+Réponse à la question utilisateur (« est-ce qu'il y a une page pour
+les configurations du côté admin qui empêche de passer par le code ? »).
+Constat : `/dashboard/settings` était présentationnelle, 3 constantes
+commerciales (TVA 10 %, seuils BestRewards 5/15, grille d'annulation)
+étaient hardcodées, et l'endpoint `PATCH /api/users/[id]/suspend` livré
+par T-016 n'avait aucune UI.
+
+### Ce qui a bien marché
+
+- Le framework a **imposé** la rédaction de l'analyse d'impact (9
+  questions §14) et la conception §15.1 **avant** l'implémentation.
+  Cela a fait apparaître dès le départ le compromis « les DEFAULTS
+  doivent reproduire exactement le comportement d'origine » — pilier
+  de la non-régression, testé automatiquement.
+- La règle §13.6 « zéro régression » a été rendue observable :
+  `computeCancellationFee(policy, total, days)` a gardé sa signature,
+  ses 10 tests existants sont passés sans modification, et une variante
+  `computeCancellationFeeWithGrid(...)` a été ajoutée en additif.
+- Les 123 tests / 123 (dont 12 nouveaux) sont tous verts sans DB
+  optionnelle : la DB embarquée `embedded-postgres` a permis d'exécuter
+  aussi les tests d'intégration bookings/promotions/wishlists.
+- Les 5 preuves ▶️ (PATCH billing → TVA 20 %, restaure → 10 %, grille
+  custom → fee 320.40, suspend/réactivate flow complet, rate-limit 30/min)
+  ont été exécutées via curl → traces reproductibles dans PROGRESS.md.
+- La séparation « refactor callers » vs « ajout endpoint admin » vs
+  « ajout UI client » a limité le risque : chaque étape est reversible
+  indépendamment.
+
+### Ce qui a mal marché
+
+- Les generics Zod v4 (`ZodType<SettingValue<K>>`) ont exigé des casts
+  `as unknown as ZodType<...>` à 3 endroits (compilation stricte). Sans
+  gravité, mais notable pour de futurs modules « clé/valeur typé ».
+- Le check R14 continue de flagger `wishlist_items` en warning (déjà
+  existant), et R11 flagge la collision de numéros BUG-/T- — inchangés
+  depuis Sessions 3-6. Ces warnings sont attendus et documentés.
+
+### Propositions
+
+- **Prop-1 (non urgente)** : introduire un utilitaire `typedKV()` pour
+  les futures tables clé/valeur avec schéma Zod par clé, afin d'éviter
+  la répétition du pattern `mergeDefaults` + cast.
+- **Prop-2 (non urgente)** : réactiver éventuellement R14 pour
+  `wishlist_items` en le déclarant dans `exempted_tables` du manifest,
+  ce qui rendrait la sortie du check plus verte (cosmétique).
+- **Prop-3 (candidate à T-024)** : introduire une vraie table
+  `audit_log` (au-delà de `updated_by`/`updated_at` sur `app_settings`)
+  quand une seconde catégorie de modification par admin apparaîtra.
+- **Prop-4** : câbler `security.maintenanceMode` dans le proxy edge
+  (T-022) pour boucler l'usage du paramètre déjà enregistrable.
+
+### Décision
+
+- Prop-1 à Prop-4 : notées pour Sessions 8+, aucune n'est bloquante.
+- Aucune modification du framework `.ai/` en Session 7 (T-021 est
+  strictement une évolution produit).
+
+---
+
 ## Historique des règles
 
 Ce sous-registre enregistre les **modifications du framework lui-même** —

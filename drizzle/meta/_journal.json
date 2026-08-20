@@ -36,6 +36,13 @@
       "when": 1787235239359,
       "tag": "0004_wild_lockheed",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1787237301651,
+      "tag": "0005_app_settings",
+      "breakpoints": true
     }
   ]
 }

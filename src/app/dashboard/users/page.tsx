@@ -2,11 +2,12 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { desc } from "drizzle-orm";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
-import { Users as UsersIcon, Mail, Calendar, Award } from "lucide-react";
+import { Mail } from "lucide-react";
+import { UserSuspendActions } from "@/components/admin/user-suspend-actions";
 
 async function getUsers() {
   return db
@@ -100,11 +101,14 @@ export default async function UsersPage() {
                 <th className="px-6 py-4 font-medium">BestRewards</th>
                 <th className="px-6 py-4 font-medium">Inscrit le</th>
                 <th className="px-6 py-4 font-medium">Dernière connexion</th>
+                <th className="px-6 py-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {allUsers.map((u) => (
-                <tr key={u.id} className="border-b border-gray-50 hover:bg-gray-50">
+              {allUsers.map((u) => {
+                const suspended = Boolean(u.deletedAt);
+                return (
+                <tr key={u.id} className={`border-b border-gray-50 hover:bg-gray-50 ${suspended ? "opacity-60" : ""}`}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white font-medium">
@@ -151,8 +155,24 @@ export default async function UsersPage() {
                       : "—"
                     }
                   </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex flex-col items-end gap-1">
+                      {suspended && (
+                        <Badge variant="danger">Suspendu</Badge>
+                      )}
+                      <UserSuspendActions
+                        userId={u.id}
+                        suspended={suspended}
+                        disabled={u.id === user.id}
+                      />
+                      {u.id === user.id && (
+                        <span className="text-[10px] text-gray-400">(vous)</span>
+                      )}
+                    </div>
+                  </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

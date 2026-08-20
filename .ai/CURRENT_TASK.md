@@ -2,123 +2,106 @@
 
 ## Identifiant
 
-- **ID** : T-020 (Session 6, clôture)
-- **Titre** : T-016 à T-020 — chantier complet application
-- **Niveau** : **C** (T-020 = paiement, plus haut niveau de la session)
-- **Niveaux détaillés** : T-016 S, T-017 S, T-018 S, T-019 S, T-020 C
-- **Ouverte le** : 2026-08-20 (Session 6)
+- **ID** : T-021
+- **Titre** : Panel d'administration configurable + UI suspend user
+- **Niveau** : **S**
+- **Ouverte le** : 2026-08-20 (Session 7)
+- **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Contexte
 
-Réponse à la demande du responsable « Continuez si vous n'avez pas
-fini et arrêtez-vous seulement si vous avez tout implémenté et testé
-avec succès ». Livraison des 5 dernières tâches de la roadmap
-FEATURES.md pour porter la couverture ✅ de 48 % → 64 %.
+Réponse à la question utilisateur : « est-ce qu'il y a une page pour les
+configurations du côté admin qui empêche de passer par le code ? ».
+Constat : la page `/dashboard/settings` était présentationnelle (bandeau
+info + boutons `disabled`) et aucune valeur runtime — TVA (0.10),
+seuils BestRewards (5, 15), grille d'annulation — n'était modifiable
+sans PR + rebuild + redéploiement. En parallèle, l'endpoint
+`PATCH /api/users/[id]/suspend` (livré par T-016) existait sans UI.
 
 ## Livrables
 
-### T-016 (S) — UI branchée aux endpoints T-015 + endpoints mineurs
+### T-021 (S) — Panel d'administration configurable
 
-- 4 endpoints ajoutés : `PATCH /api/users/me`,
-  `POST /api/auth/change-password`, `PATCH /api/users/[id]/suspend`,
-  `GET /api/promotions/apply`.
-- 2 utilitaires purs testés : `src/lib/promotions.ts` (11 tests) et
-  `src/lib/cancellation.ts` (10 tests).
-- 7 composants client : `HostReplyForm`, `PropertyValidateActions`,
-  `MessageComposer`, `PromoCodeInput`, `PromotionForm`, `ProfileForm`,
-  `ChangePasswordForm`.
-- 4 pages : `/wishlists/share/[token]`, `/messages/[id]`,
-  `/dashboard/messages/[id]`, `/dashboard/promotions/new`.
-- POST /api/bookings accepte `promoCode` et l'applique atomiquement.
-- PUT /api/bookings/[id] calcule `cancellationFee` selon
-  `cancellationPolicy` et jours avant checkIn.
+1. **Schéma & migration** — table `app_settings` (key TEXT PK, value
+   JSONB, `updated_by` uuid, `updated_at`) via `drizzle/0005_app_settings.sql`.
+2. **Module `src/lib/settings.ts`** — 6 sections typées Zod
+   (`general`, `billing`, `bestrewards`, `cancellation`, `notifications`,
+   `security`). Les DEFAULTS reproduisent **exactement** le
+   comportement d'origine → zéro régression. Cache mémoire 60 s
+   invalidé à l'écriture.
+3. **Endpoints admin** :
+   - `GET /api/admin/settings` : renvoie toutes les sections +
+     `getProviderStatus()` (bool par provider, jamais les clés).
+   - `GET /api/admin/settings/[key]` : valeur d'une section.
+   - `PATCH /api/admin/settings/[key]` : validation Zod stricte,
+     rate-limit 30/min par admin, log de modification.
+4. **Callers refactorés** :
+   - `POST /api/bookings` lit `billing.taxRate` et
+     `bestrewards.thresholds` depuis settings.
+   - `PUT /api/bookings/[id]` lit `cancellation` depuis settings et
+     appelle `computeCancellationFeeWithGrid(...)`.
+   - **Signature historique `computeCancellationFee(policy, total, days)`
+     inchangée** → les 10 tests unitaires existants passent sans
+     modification.
+5. **UI** :
+   - `src/components/admin/settings-panel.tsx` : 7 sections (6
+     éditables + Providers read-only), formulaires client contrôlés,
+     bouton Enregistrer + statut par section.
+   - `src/app/dashboard/settings/page.tsx` : RSC qui appelle
+     `getAllSettings()` puis rend `<SettingsPanel>`.
+   - `src/components/admin/user-suspend-actions.tsx` : bouton
+     Suspendre/Réactiver, `router.refresh()` après succès.
+   - `src/app/dashboard/users/page.tsx` : colonne Actions + badge
+     « Suspendu » quand `deletedAt` non nul.
 
-### T-017 (S) — SEO + a11y + next/font + error/not-found + CSP + BUG-016
+## Preuves (§16)
 
-- next/font/google pour Inter + Poppins avec variables CSS.
-- `src/app/sitemap.ts` + `src/app/robots.ts`.
-- `generateMetadata` dynamique fiche property + static /recherche /aide
-  /bestrewards.
-- JSON-LD Schema.org Hotel sur fiche property.
-- `error.tsx` + `not-found.tsx` + `loading.tsx` au niveau root.
-- `aria-label` sur header (user menu, mobile) + PropertyCard heart.
-- CSP dans `next.config.ts` : default-src 'self', script/style
-  'unsafe-inline' 'unsafe-eval' pour Turbopack, frame-ancestors 'none'.
-- **BUG-016** découvert et corrigé : `createSession()` du même user
-  à la même seconde générait des JWT identiques → violation
-  `sessions_token_unique`. Ajout d'un `jti` UUID dans le payload JWT
-  + test de non-régression.
-- Bandeau info + boutons désactivés sur `/dashboard/settings` (page
-  présentationnelle) pour désamorcer R15.
+- 🔍 `REPORTS/analyse_impact_2026-08-20_admin_settings.md` (9
+  questions §14).
+- 🔍 `REPORTS/analyse_conception_2026-08-20_admin_settings.md`
+  (§15.1, 4 options comparées, retenue documentée).
+- 🔍 `ADR/ADR-007_Panel_Administration_Configurable.md`.
+- 🔨 `npm run typecheck` ✅ 0 erreur.
+- 🔨 `npm run build` ✅ succès (endpoints `/api/admin/settings` et
+  `/api/admin/settings/[key]` listés dans le build).
+- 🔨 `npm run lint` ✅ 0 error (15 warnings cosmétiques préexistants).
+- 🧪 `npm test` : **123 passed / 123**, 0 skipped, 0 fail.
+  - **+9 tests** `src/lib/settings.test.ts` (defaults, roundtrip,
+    Zod hors bornes, cache/invalidation, merge legacy, provider
+    status).
+  - **+3 tests** `src/lib/cancellation.test.ts` (grille custom,
+    fallback null, policy inconnue).
+  - Les 10 tests `computeCancellationFee(...)` existants passent
+    sans changement.
+- 🧪 `npm run ai:check` : **14 OK · 3 warn · 0 fail** (R7 motif
+  toléré, R11 informationnel, R14 `wishlist_items` mention seulement
+  — inchangés depuis Session 6).
+- ▶️ Login admin → `GET /api/admin/settings` → DEFAULTS renvoyés.
+- ▶️ `PATCH /api/admin/settings/billing {taxRate:0.2}` → réservation
+  3 nuits × 89 € = subtotal 267, **taxes 53.40 (20 %)**, total 320.40.
+- ▶️ Restaure 0.10 → nouvelle réservation → **taxes = 10 %**.
+- ▶️ Grille cancellation custom (`flexible` = 100 % en dessous de
+  365 j) → `PUT /api/bookings/[id]` → `cancellationFee = 320.40`
+  au lieu de 0.
+- ▶️ Zod refuse `taxRate=-0.1` (400 « Too small ») et `taxRate=2`
+  (400 « Too big »).
+- ▶️ Non-admin (customer) → 403 « Accès admin requis ».
+- ▶️ Rate-limit 30/min : 28 succès puis 429 `Retry-After`.
+- ▶️ Suspend customer → login 401 « Ce compte a été supprimé » ;
+  réactivate → login 200.
+- ▶️ Non-régression : 12 URL non modifiées (/, /recherche, /aide,
+  /bestrewards, /connexion, /inscription, /dashboard, /dashboard/bookings,
+  /dashboard/properties, /dashboard/promotions, /dashboard/messages,
+  /dashboard/analytics) répondent **200**.
 
-### T-018 (S) — Calendrier hôte (rate_plans + room_availability)
+## Impact sur le code
 
-- `GET/PUT /api/rooms/[id]/availability` : batch 90 jours, UPSERT via
-  `onConflictDoUpdate`. Ownership check.
-- `GET/POST /api/rooms/[id]/rate-plans` : plans tarifaires par room.
-- Page `/dashboard/rooms/[id]/calendrier` avec composant
-  `<AvailabilityCalendar>` (grille éditable prix/stock/stop-sell/minStay
-  avec weekend visuel).
-- Lien "Calendrier" ajouté à `/dashboard/rooms`.
+- **Nouveaux** : 10 fichiers (voir `PROGRESS.md` Session 7).
+- **Modifiés** : 7 fichiers, tous en mode additif (defaults =
+  comportement historique).
+- **Docs** : `PROGRESS.md`, `TRACEABILITY.md`, `STATE.md`, `FEATURES.md`,
+  `BACKLOG.md`, `CURRENT_TASK.md`, `ADR-007`.
 
-### T-019 (S) — Tests d'intégration API + Playwright E2E
+## Étape suivante
 
-- `route.test.ts` DB-backed pour `/api/promotions/apply` (6 cas :
-  active, expiré, inactif, montant invalide, code manquant, code inconnu)
-  et `/api/wishlists/shared` (2 cas : token valide/invalide).
-- 5 fichiers spec Playwright : `smoke`, `par-002-search`,
-  `par-003-forgot-password`, `par-005-wishlist-share`, `par-030-security`.
-- Chromium indisponible dans sandbox (CDN Google/Playwright inaccessible)
-  → Playwright s'exécutera en CI / dev local.
-
-### T-020 (C) — Stripe test-mode : infrastructure paiement
-
-- Abstraction `src/lib/payment/` : interface `PaymentProvider` + 2
-  adaptateurs.
-  - `MockPaymentProvider` (défaut dev/sandbox) : succeeded immédiat,
-    rétrocompatible avec le comportement historique "paid".
-  - `StripePaymentProvider` (activé si `STRIPE_SECRET_KEY` +
-    `STRIPE_WEBHOOK_SECRET`) : fetch API Stripe direct sans SDK
-    (~1.5 MB économisés). Signature webhook v4 timing-safe (fenêtre
-    5 min).
-- `bookings.paymentIntentId` (migration 0004).
-- POST /api/bookings crée un payment intent au lieu de "paid" en dur.
-  Retourne `clientSecret` (Stripe) ou null (Mock).
-- POST /api/webhooks/stripe : signature vérifiée, idempotent
-  (`payment_intent.succeeded` reçu 2× ne double pas la mise à jour).
-- 11 tests unitaires PaymentProvider (Mock + Stripe webhook signature
-  + factory selon env).
-- `.env.example` documente `STRIPE_SECRET_KEY`,
-  `STRIPE_WEBHOOK_SECRET`, `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`.
-
-## Statut
-
-**CORRIGÉ (VALIDÉ)** — toutes les tâches livrées, testées et vérifiées.
-
-## Métriques finales
-
-- **Tests** : 43 (fin S4) → 71 (T-015) → 92 (T-016) → 111 (T-020)
-- **Endpoints** : 17 (fin S4) → 26 (T-015) → 32 (T-020)
-- **Migrations** : 1 (fin S4) → 3 (S5) → **4** (T-020)
-- **FEATURES.md ✅** : 28 % → 48 % → **64 %**
-- **ai:check** : 13 OK / 4 warn (S5) → **14 OK / 3 warn / 0 fail** (S6)
-- **Framework** : v1.0.3 → v1.1.0 (Session 5), inchangé S6
-- **Bugs applicatifs ouverts** : 0
-- **ADR** : 5 → 6 (ADR-006 en S5)
-
-## Prochaine étape
-
-L'application est fonctionnellement complète pour un lancement V1
-francophone. Reste à fournir en prod :
-
-1. `JWT_SECRET` ≥ 32 caractères (openssl rand -hex 32)
-2. `DATABASE_URL` (Postgres managed)
-3. `RESEND_API_KEY` + `MAIL_FROM` (Resend ou équivalent SMTP)
-4. `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` +
-   `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` (Stripe test puis live)
-5. `S3_ENDPOINT`+`S3_BUCKET`+`S3_ACCESS_KEY`+`S3_SECRET_KEY` (uploads)
-6. Ajouter `.github/workflows/ci.yml` (fichier prêt dans
-   `.ai/REPORTS/ci_workflow_a_ajouter.md`)
-
-Backlog non-bloquant restant : dark mode, i18n EN, 2FA, wallet
-BestRewards, comparateur, carte géographique.
+Attente instructions utilisateur. Backlog non bloquant V1 inchangé.

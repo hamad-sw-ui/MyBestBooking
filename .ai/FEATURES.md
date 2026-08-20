@@ -132,12 +132,13 @@ modification de code.
 
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
-| Liste des utilisateurs | 🚧 | Page lit la DB, `PATCH /api/users/[id]/suspend` livré (T-016) mais bouton UI absent | T-016 endpoint, 🎯 UI |
+| Liste des utilisateurs | ✅ | Page `/dashboard/users` + colonne Actions + bouton `<UserSuspendActions>` (T-021) | T-016 endpoint, T-021 UI |
 | **Validation d'une property (`pending`→`active`)** | ✅ | Endpoint T-015 + `<PropertyValidateActions>` branchée dans /dashboard/properties (T-016) | T-016 |
 | **Modération d'avis** (approuver, cacher) | ❌ | Voir Avis | 🎯 T-015 |
 | **CRUD codes promo** | ✅ | GET/POST `/api/promotions` + PATCH/DELETE `/api/promotions/[id]` (T-015). Application au checkout reste 🎯 T-016. | T-015 |
-| Journal d'actions admin | ❌ | Pas de table `audit_log` | 🎯 backlog |
-| Suspendre un utilisateur | 🚧 | `PATCH /api/users/[id]/suspend` livré (T-016), UI reste à faire | T-016 endpoint |
+| Journal d'actions admin | 🚧 | `updated_by`/`updated_at` sur `app_settings` (T-021), pas encore de table `audit_log` globale | T-021 partiel |
+| Suspendre / réactiver un utilisateur | ✅ | `PATCH /api/users/[id]/suspend` (T-016) + bouton `<UserSuspendActions>` dans `/dashboard/users` (T-021) — testé ▶️ suspend/login 401/reactivate/login 200 | T-021 |
+| **Panel de configuration runtime (TVA, commissions, seuils BestRewards, grille annulation, notifications, sécurité, providers)** | ✅ | Table `app_settings` + `src/lib/settings.ts` + endpoints `/api/admin/settings` + `<SettingsPanel>` dans `/dashboard/settings` (T-021, ADR-007). 9 tests unitaires settings + 3 tests grille custom cancellation. ▶️ PATCH billing → TVA appliquée immédiatement à `POST /api/bookings` | T-021 |
 
 ## Emails transactionnels
 
@@ -253,17 +254,18 @@ modification de code.
 
 ## 📊 Bilan de complétude
 
-Recalculé après **T-020** (fin Session 6, 20 août 2026) :
+Recalculé après **T-021** (fin Session 7, 20 août 2026) :
 
 | État | Nombre |
 |---|---|
-| ✅ Livré + testé | ~78 |
-| 🚧 Partiel (bien tracé) | ~22 |
+| ✅ Livré + testé | ~80 |
+| 🚧 Partiel (bien tracé) | ~21 |
 | 🎯 PROMISED | ~6 |
-| ❌ Absent | ~16 |
+| ❌ Absent | ~15 |
 | **Total tracé** | **~122** |
 
-**Couverture ✅ = 64 %.** Progression : 28 % (fin S4) → 48 % (T-015) →
-**64 % (T-020)**. Reste principalement : dark mode, i18n EN, 2FA, wallet
-BestRewards, comparateur, carte géographique — tous non-bloquants pour
-un lancement V1 francophone.
+**Couverture ✅ ≈ 66 %.** Progression : 28 % (fin S4) → 48 % (T-015) →
+64 % (T-020) → **66 % (T-021, panel admin + suspend UI)**. Reste
+principalement : dark mode, i18n EN, 2FA, wallet BestRewards utilisable,
+comparateur, carte géographique — tous non-bloquants pour un lancement
+V1 francophone.
