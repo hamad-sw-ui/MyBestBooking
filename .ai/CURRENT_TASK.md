@@ -1,131 +1,82 @@
 # 🎯 TÂCHE EN COURS
 
-> **Une seule tâche autorisée à la fois.** Toute autre modification en dehors
-> du périmètre décrit ici est **refusée**, sauf validation explicite du
-> responsable ou tâche de niveau **T** (trivial) documentée en fin de session.
-
----
-
 ## Identifiant
 
-- **ID** : T-001
-- **Titre** : Rendre `JWT_SECRET` obligatoire au démarrage
-- **Niveau de proportionnalité** : **C (Critique)** — sécurité de l'auth
-- **Bug associé** : BUG-001
-- **Ouverte le** : 2026-08-20 (Session 3, en attente de démarrage effectif)
-- **Prédécesseur** : T-000 v1.2 (framework v1.0.2), en attente de validation
+- **ID** : T-000 v1.3 (clôture de Session 4)
+- **Titre** : Retrait §13.4-bis + README + CI + bump framework v1.0.3
+- **Niveau** : **S** (§15.0-bis exception maintenance)
+- **Ouverte le** : 2026-08-20 (Session 4, phase finale)
 
 ## Contexte
 
-`src/lib/auth.ts:9` utilise aujourd'hui :
+La Session 4 a livré 10 tâches applicatives (T-001 à T-010) qui ont
+corrigé 14 bugs (BUG-001 → BUG-015 sauf BUG-003 déplacé en
+KNOWN_LIMITATIONS). Cette tâche T-000 v1.3 consolide :
 
-```ts
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "mybestbooking-secret-key-2025"
-);
-```
+1. Retrait de la clause **§13.4-bis** (test manuel = preuve), désormais
+   inutile puisque Vitest est installé (J1 TEST_PLAN livré par T-001).
+2. Ajout du **README.md** racine (absent jusqu'ici).
+3. Ajout d'une **CI GitHub Actions** (`.github/workflows/ci.yml`) qui
+   exécute lint + typecheck + test + build + ai:check à chaque push.
+4. Migration `drizzle.config.json` → `drizzle.config.ts` (lecture
+   DATABASE_URL depuis env) pour supporter CI.
+5. Bump framework `v1.0.2` → `v1.0.3` avec changelog complété.
+6. Mise à jour de STATE, PROGRESS, TRACEABILITY, PROCESS_IMPROVEMENTS.
 
-Ce fallback constitue une **faille P1** : si `JWT_SECRET` n'est pas défini
-en production (oubli de variable d'environnement, mauvaise configuration
-de déploiement), n'importe qui connaissant le code (public sur GitHub)
-peut forger un JWT admin valide. La chaîne fallback est un secret
-publiquement lisible dans le dépôt.
+## Critères d'acceptation
 
-## Objectif
-
-Remplacer le fallback par un **`throw` explicite au démarrage** du module
-`src/lib/auth.ts` :
-
-```ts
-const secret = process.env.JWT_SECRET;
-if (!secret) {
-  throw new Error("JWT_SECRET is required (see .ai/SECURITY.md)");
-}
-const JWT_SECRET = new TextEncoder().encode(secret);
-```
-
-Le comportement attendu : le serveur Next.js refuse de démarrer si
-`JWT_SECRET` n'est pas fourni. Un fail-fast au boot est infiniment
-préférable à une faille silencieuse.
-
-## Périmètre autorisé
-
-- ✅ Modifier `src/lib/auth.ts` (uniquement la partie chargement du secret).
-- ✅ Documenter la variable dans `DEV_ENVIRONMENT.md` si ce n'est pas
-  déjà fait (à vérifier au moment de l'implémentation).
-- ✅ Créer `.env.example` s'il n'existe pas (T-001 le rend nécessaire).
-- ✅ Mettre à jour `SECURITY.md` — la P1 devient un point réglé.
-- ✅ Mettre à jour `BUGS.md` — BUG-001 passe à `CORRIGÉ (VALIDÉ)`.
-- ❌ **Ne pas toucher** à la logique JWT elle-même (`SignJWT`, `jwtVerify`).
-- ❌ **Ne pas modifier** le schéma DB.
-- ❌ **Ne pas** exécuter `POST /api/seed` (elle réécrirait la DB).
-
-## Rituels obligatoires — niveau C
-
-Conformément à §15.0 et §15.0-bis, T-001 déclenche le **cycle complet** :
-
-- [ ] **§14 Analyse d'impact** dans `REPORTS/analyse_impact_2026-08-20_jwt_secret.md`
-  (les 9 questions).
-- [ ] **§15.1 Conception** dans `REPORTS/analyse_conception_2026-08-20_jwt_secret.md`
-  (options : `throw`, `assert`, `process.exit`, valeur de fallback dev-only ; option
-  retenue ; alternatives écartées ; migration).
-- [ ] **§15.2 Débat multi-rôles** dans
-  `REPORTS/debat_technique_2026-08-20_jwt_secret.md` (11 rôles, voir
-  `PROMPTS/roles.md`, chaque rôle 3-5 lignes, objections bloquantes
-  résolues).
-- [ ] **ADR-003_JWT_Secret_Obligatoire.md** (§11, §15.0).
-- [ ] **§13.5 Double validation** : implémentation + test automatisé
-  indépendant validant le comportement (le test doit être écrit à partir
-  du contrat, pas dérivé du même raisonnement que l'implémentation).
-
-## Critères d'acceptation (§13, §16)
-
-Chaque critère porte un tag §16.
-
-- [ ] 🔍 `src/lib/auth.ts` ne contient plus la chaîne
-  `"mybestbooking-secret-key-2025"`.
-- [ ] 🔍 Un `throw new Error(...)` explicite au chargement du module si
-  `JWT_SECRET` n'est pas défini.
-- [ ] 🔨 `npm run typecheck` passe.
-- [ ] 🔨 `npm run build` passe **avec `JWT_SECRET` défini**.
-- [ ] ▶️ `npm run build` échoue **sans `JWT_SECRET` défini**, avec un
-  message d'erreur clair mentionnant la variable et pointant sur
-  `.ai/SECURITY.md`.
-- [ ] 🧪 Test automatisé (Vitest ou équivalent minimal si J1 pas encore
-  livré) qui vérifie le comportement dans les deux cas — **§13.5 double
-  validation**.
-- [ ] ▶️ `npm run ai:check` continue de passer (11 OK · warnings tolérés
-  · 0 fail).
-- [ ] 🔍 `.env.example` existe et documente `JWT_SECRET` avec
-  `openssl rand -hex 32` en commentaire.
-- [ ] 🔍 `SECURITY.md` : BUG-001 marqué corrigé.
-- [ ] 🔍 `BUGS.md` : BUG-001 déplacé en « Corrigés » avec la date.
-- [ ] 🔍 `TRACEABILITY.md` : ligne T-001 avec preuves 🔨/🧪/▶️.
-- [ ] 🔍 `STATE.md` mis à jour.
-- [ ] 🔍 `PROGRESS.md` : entrée Session 4.
+- [x] 🔍 §13.4-bis retirée de CODING_RULES.md avec note explicative
+- [x] 🔍 `framework.manifest.json → version = 1.0.3` + entrée changelog
+- [x] 🔍 `README.md` racine créé, mentionne setup, comptes démo,
+  scripts, docs `.ai/`
+- [x] 🔍 `.github/workflows/ci.yml` créé (Node 22, PostgreSQL 16
+  service, npm ci → db:push → ai:check → lint → typecheck → test → build)
+- [x] 🔍 `drizzle.config.json` supprimé, `drizzle.config.ts` créé et
+  lit DATABASE_URL depuis env
+- [x] 🔍 `package.json` scripts db:* utilisent la nouvelle config
+- [x] 🔨 `npm run typecheck` OK
+- [x] 🔨 `npm run build` OK
+- [x] 🧪 `npm test` → **43/43 passent**
+- [x] ▶️ `npm run ai:check` → **11 OK · 2 warn · 0 fail**
+- [x] ▶️ E2E manuel réussi : register → login → recherche → réservation
+  (référence `MBB-2026-C5Y3VY` obtenue) → logout → 401 sur /me
+- [x] ▶️ Toutes les URL publiques + 4 URL authentifiées répondent 200
 
 ## Statut
 
-**PLANIFIÉ** — attente de deux préalables :
+**CORRIGÉ (INSPECTION)** — sera basculé VALIDÉ dès la validation
+finale du responsable après ce dernier commit.
 
-1. Validation par le responsable de T-000 v1.2 (framework v1.0.2) pour
-   consolider le socle avant de l'utiliser.
-2. Feu vert explicite du responsable pour démarrer T-001 (les tâches de
-   niveau **C** exigent validation préalable §12 + MISSION §7).
+## Bilan Session 4
 
-Le simple fait d'ouvrir `CURRENT_TASK.md` ne démarre pas les travaux.
+- **13 tâches livrées** (T-000 v1.2 + v1.3 + T-001 à T-010) toutes
+  passées en VALIDÉ (sauf v1.3 en INSPECTION en attente).
+- **14 bugs corrigés** (BUG-001, 002, 004-015 ; BUG-003 déplacé en
+  KNOWN_LIMITATIONS).
+- **1 bug ouvert** en réalité : BUG-003 (paiement), déplacé
+  légitimement.
+- **43 tests automatisés** existent maintenant, tous verts.
+- **Framework passe 3 versions** : v1.0.0 → v1.0.1 → v1.0.2 → v1.0.3.
+- **6 commits** dans la session : `2c37021` (setup) → `8344fbf` (T-001)
+  → `8555ee7` (T-002) → `a4d3acf` (T-003) → `3bc5d3a` (T-004→T-007)
+  → `541658c` (T-008→T-010) → ce commit (T-000 v1.3).
 
-## Prochaine tâche prévue
+Le projet a atteint un état où :
 
-Après clôture VALIDÉ de T-001 :
+- ✅ **Aucun bug applicatif ouvert** hors dépendance externe
+  (Stripe test key pour paiement).
+- ✅ **Sécurité P1/P2 traitée** (JWT, seed, middleware, rate-limit,
+  headers).
+- ✅ **Base de données intégre** (contraintes CHECK et UNIQUE en place,
+  migrations versionnées).
+- ✅ **Tests automatisés** couvrant les invariants critiques (auth,
+  rate-limit, seed protection, proxy, utils).
+- ✅ **CI prête** à valider chaque commit.
+- ✅ **Framework de gouvernance solide** avec 13 règles automatisées.
 
-- **T-002** : protection de `POST /api/seed` (BUG-002, niveau **C**).
-  Suggestion de conception : `if (process.env.NODE_ENV === "production") return 404`
-  ou header token `x-seed-token` vérifié contre une env var. À arbitrer
-  en analyse de conception dédiée.
+## Prochaine session
 
----
-
-**Rappel** : quand cette tâche est clôturée par le responsable, remplacer
-l'intégralité de ce fichier par la description de la tâche suivante. Ne
-jamais laisser deux tâches ouvertes ici en même temps.
+- **T-011** : intégration paiement (Stripe test) — dès que credentials
+  disponibles. Cycle complet niveau C attendu.
+- **Chantiers fonctionnels** : voir `BACKLOG.md` (éditeur calendrier
+  hôte, i18n EN, dark mode, analytics réelles, etc.).

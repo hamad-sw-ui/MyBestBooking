@@ -1,5 +1,5 @@
 {
-  "version": "1.0.2",
+  "version": "1.0.3",
   "name": "MyBestBooking AI Development Operating System (AI-DOS Web)",
   "description": "Framework de gouvernance hybride pour un projet Next.js/PostgreSQL/Drizzle : traçabilité des preuves, proportionnalité T/L/S/C, checklists bloquantes, honnêteté technique.",
   "derived_from": "AI-DOS 3.0 (MobileCaisse) — philosophie conservée, contenu réécrit pour le web",
@@ -23,6 +23,12 @@
       "date": "2026-08-20",
       "session": "Session 3 (second tour)",
       "changes": "Second tour d'audit : convention d'IDs BUG-xxx (bugs) / T-xxx (tâches) formalisée §8.1 (défaut A), blocking_rules enrichies d'un flag 'implemented' et étendues (défaut B), 4 règles ajoutées au script : R10 branche Git, R11 collision d'IDs BUG/T, R12 rapports d'impact/conception présents pour tâche S/C, R13 items TRACEABILITY 'VALIDÉ' portent au moins une preuve 🔨/🧪/▶️. Jaunes C-J reportés à Session 4 (voir PROCESS_IMPROVEMENTS.md)."
+    },
+    {
+      "version": "1.0.3",
+      "date": "2026-08-20",
+      "session": "Session 4",
+      "changes": "Vitest installé (T-001 = J1 TEST_PLAN), clause transitoire §13.4-bis retirée de CODING_RULES.md (les tests automatisés sont désormais exigibles). 10 bugs applicatifs corrigés en Session 4 (T-001 à T-010 : JWT_SECRET, seed protection, middleware, N+1, Suspense, contraintes DB, race averageRating, next/image + headers sécurité, rate-limit, lucide-react vérifié). CI GitHub Actions ajoutée (.github/workflows/ci.yml). README.md racine créé. drizzle.config.json migré en drizzle.config.ts (lit DATABASE_URL depuis env)."
     }
   ],
   "mandatory_documents": [

@@ -39,6 +39,7 @@ considéré comme non valide (audit §22) et repasse en `INSPECTION`.
 | T-008 | next/image + headers de sécurité + emailVerified=false (BUG-006, BUG-008) | S | CORRIGÉ (VALIDÉ) | 🔍 Image de next/image dans PropertyCard et destinations home · 🔍 next.config.ts avec remotePatterns unsplash + 5 headers de sécurité · 🔨 typecheck + build OK · ▶️ curl -I / retourne tous les headers · 🔍 register met emailVerified: false | commit T-008 | inline |
 | T-009 | Rate-limit login/register (BUG-009) | S | CORRIGÉ (VALIDÉ) | 🔍 src/lib/rate-limit.ts (Map, fenêtre glissante) · 🧪 5 tests unitaires · 🔨 typecheck + build OK · ▶️ 6 mauvais logins → 5×401 + 1×429 avec Retry-After · ▶️ 43/43 tests | commit T-009 | inline |
 | T-010 | lucide-react 1.33.0 (BUG-014) | T | CORRIGÉ (VALIDÉ) | 🔍 `npm ls lucide-react` → 1.33.0 · ▶️ `curl / \| grep 'lucide-'` retourne des `<svg class="lucide lucide-menu">` bien rendus | commit T-008 | — |
+| T-000 v1.3 | Clôture Session 4 : retrait §13.4-bis, README, CI, drizzle.config.ts, framework v1.0.3 | S (§15.0-bis) | CORRIGÉ (INSPECTION) | 🔍 §13.4-bis retirée de CODING_RULES · 🔍 README.md racine créé · 🔍 .github/workflows/ci.yml créé · 🔍 drizzle.config.ts remplace .json · 🔨 typecheck + build OK · 🧪 43/43 tests · ▶️ ai:check 11 OK · 2 warn · 0 fail · ▶️ E2E complet register→booking→logout · ▶️ 8 URL publiques + 4 privées → 200 | commit T-000 v1.3 | ce PROGRESS.md |
 
 ## Audits historiques
 

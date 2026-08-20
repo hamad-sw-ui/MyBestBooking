@@ -9,9 +9,9 @@
     "typecheck": "tsc --noEmit",
     "ai:check": "node scripts/check-ai.mjs",
     "db:dev": "node scripts/dev-db.mjs",
-    "db:push": "drizzle-kit push --config=drizzle.config.json",
-    "db:generate": "drizzle-kit generate --config=drizzle.config.json",
-    "db:studio": "drizzle-kit studio --config=drizzle.config.json",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
     "test": "vitest run",
     "test:watch": "vitest"
   },

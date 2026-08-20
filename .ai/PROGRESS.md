@@ -9,6 +9,111 @@
 
 ---
 
+## 2026-08-20 — Session 4 : traitement complet du BACKLOG applicatif
+
+**Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
+· **Agent** : Arena Agent Mode
+· **Validation-cadre** : « terminer le projet selon le framework en place »
+
+### Livré
+
+**10 tâches applicatives + 1 tâche de clôture framework** :
+
+| Tâche | Niveau | Bugs corrigés | Commit |
+|---|---|---|---|
+| setup env | L | BUG-015 (partiel) | `2c37021` |
+| T-001 JWT_SECRET obligatoire | C | BUG-001 | `8344fbf` |
+| T-002 protection /api/seed | C | BUG-002 | `8555ee7` |
+| T-003 proxy edge d'auth | S | BUG-005 | `a4d3acf` |
+| T-004+T-005+T-006+T-007 | S+L+S+S | BUG-004, 007, 010, 011, 012, 013, 015 | `3bc5d3a` |
+| T-008+T-009+T-010 | S+S+T | BUG-006, 008, 009, 014 | `541658c` |
+| T-000 v1.3 clôture (§13.4-bis retirée, README, CI, v1.0.3) | S | — | ce commit |
+
+**Rituels §14/§15.1/§15.2** livrés :
+- 4 analyses d'impact (jwt_secret, seed_protection, middleware_auth,
+  et audits framework)
+- 4 analyses de conception
+- 2 débats multi-rôles complets (T-001, T-002 — les seules C)
+- 3 ADR (ADR-003 JWT, ADR-004 Seed, ADR-005 Middleware/Proxy)
+
+**Framework de gouvernance** :
+- v1.0.2 → **v1.0.3**
+- Clause §13.4-bis (test manuel = preuve) **retirée** — Vitest est
+  installé, les tests automatisés sont désormais exigibles pour VALIDÉ.
+- Changelog manifest complété.
+
+**Infrastructure ajoutée** :
+- `README.md` racine (setup, comptes démo, scripts, liens `.ai/`)
+- `.github/workflows/ci.yml` (job unique : lint + typecheck + test +
+  build + ai:check + db:push sur Postgres 16 service)
+- `drizzle.config.ts` (remplace le .json, lit DATABASE_URL depuis env)
+- `.env.example` complet
+- `vitest.config.ts` + `tests/setup.ts` (fournit env vars minimales)
+
+### Tests exécutés
+
+- 🔨 `npm run typecheck` → 0 erreur
+- 🔨 `npm run build` → succès (rebuild post-T-008 headers)
+- 🧪 `npm test` → **43 passed / 43**
+  - 17 tests utils
+  - 9 tests auth (contrat JWT_SECRET §13.5, round-trip token,
+    signature avec autre secret)
+  - 7 tests seed (garde d'accès dev/prod × avec/sans token)
+  - 5 tests proxy (redirects, cookies valides/invalides, query string)
+  - 5 tests rate-limit (limites, fenêtre glissante, IP)
+- ▶️ `npm run ai:check` → **11 OK · 2 warn · 0 fail**
+  - R13 valide : aucun VALIDÉ sans preuve 🔨/🧪/▶️
+  - 2 warnings tolérés : R7 (motif « à mettre à jour »), R11 (numéros
+    partagés BUG-/T- 001-010, informationnel)
+- ▶️ E2E manuel complet : register → me → search → rooms → booking
+  (réf `MBB-2026-C5Y3VY`) → my-bookings → logout → 401 sur /me
+- ▶️ Toutes les URL publiques (/ /recherche /connexion /inscription
+  /aide /bestrewards /api/health /api/properties) → 200
+- ▶️ Toutes les URL authentifiées (/mon-compte /dashboard /mes-favoris
+  /mes-reservations) → 200 avec cookie, 307 vers /connexion sans
+- ▶️ Headers de sécurité : X-Content-Type-Options, X-Frame-Options,
+  Referrer-Policy, Strict-Transport-Security, Permissions-Policy tous
+  présents sur `curl -I /`
+- ▶️ Rate-limit : 5 mauvais login + 1 bon → 5×401 + 1×429 avec Retry-After
+
+### Problèmes rencontrés
+
+- **Next.js 16 deprecate `middleware.ts` → `proxy.ts`**. Découvert au
+  premier redémarrage du dev server. Migration immédiate (T-003).
+- **`process.env.NODE_ENV` readonly** en TypeScript strict — bypassé
+  par cast `(process.env as Record<string,string>)` dans les tests.
+- **Turbopack ne recharge pas le middleware automatiquement** —
+  redémarrage manuel du dev server nécessaire à la création du fichier.
+- **Docker/APT indisponibles** dans le sandbox → utilisation de
+  `embedded-postgres` (npm) qui télécharge un vrai binaire PostgreSQL 18.
+  Documenté dans DEV_ENVIRONMENT.md via le script `npm run db:dev`.
+
+### Bilan
+
+- **0 bug applicatif ouvert** (BUG-003 paiement légitimement déplacé
+  en KNOWN_LIMITATIONS.md en attendant Stripe credentials).
+- **14 bugs corrigés** (BUG-001, 002, 004-015).
+- **Framework v1.0.3** stable et opérable.
+- **43 tests automatisés** verts, CI prête.
+- **Documentation complète** : README, .env.example, DEV_ENVIRONMENT
+  à jour, tous les BUG-* corrigés référencés dans BUGS.md avec preuves.
+
+### Statut
+
+T-000 v1.3 en **CORRIGÉ (INSPECTION)** — attente validation
+responsable pour clôture VALIDÉ finale de la Session 4.
+
+### Étape suivante
+
+Session 5 :
+- **T-011** : intégration paiement Stripe (BUG-003, C) — dès que
+  credentials disponibles.
+- **Chantiers fonctionnels** listés dans BACKLOG.md et ROADMAP.md.
+- **Défauts jaunes F-J** de l'audit tour 2 (chevauchement RULES/STYLE,
+  ROADMAP dated, PROGRESS freshness, R9 étendu, refs commit en dur).
+
+---
+
 ## 2026-08-20 — Session 3, second tour : audit v1.0.1 → framework v1.0.2
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`

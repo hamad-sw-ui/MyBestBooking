@@ -347,7 +347,7 @@ if (collisionMsgs.length === 0) {
 // ─────────────────────────────────────────────────────────────
 if (existsSync(ctPath)) {
   const ct = readFileSync(ctPath, "utf8");
-  const levelMatch = ct.match(/\*\*Niveau (?:de proportionnalité)?\*\*\s*:\s*\*?\*?([TLSC])\b/i);
+  const levelMatch = ct.match(/\*\*Niveau(?:\s+de\s+proportionnalité)?\*\*\s*:\s*\*?\*?([TLSC])\b/i);
   if (levelMatch) {
     const level = levelMatch[1].toUpperCase();
     if (level === "S" || level === "C") {

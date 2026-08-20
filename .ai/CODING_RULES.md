@@ -139,22 +139,16 @@ conditions ci-dessous sont réunies :
 2. **§13.2 Build** : `npm run build` réussit.
 3. **§13.3 Lint** : `npm run lint` passe (ou les warnings restants sont
    documentés).
-4. **§13.4 Tests** : `npm test` passe (dès qu'un runner sera installé) ; les
-   tests couvrant le code modifié existent et passent.
+4. **§13.4 Tests** : `npm test` passe ; les tests couvrant le code
+   modifié existent et passent. Vitest est installé (T-001 a livré J1
+   de `TEST_PLAN.md`). Un test manuel ▶️ documenté reste acceptable
+   comme **complément** de non-régression pour les changements de
+   niveau L, mais un test automatisé est **exigé** pour toute clôture
+   VALIDÉ d'un item S ou C.
 
-   **§13.4-bis Clause transitoire (jusqu'à `TEST_PLAN.md → J1`)** — tant
-   qu'aucun runner de tests n'est configuré dans le dépôt, un **test
-   manuel ▶️ documenté** vaut preuve pour §13.4, à condition que :
-   - la commande exacte (curl, `npm run …`, requête, clic) soit consignée
-     dans `TRACEABILITY.md` ou dans un rapport `REPORTS/…` ;
-   - la sortie observée soit résumée avec assez de précision pour être
-     rejouée par un auditeur §22 ;
-   - la clause soit **explicitement invoquée** (« clause §13.4-bis ») dans
-     le message de commit ou la description de PR.
-
-   Cette clause **cesse de s'appliquer** dès que J1 de `TEST_PLAN.md` est
-   livré (Vitest installé). À partir de ce moment, un test automatisé
-   couvrant le comportement est exigé pour toute clôture VALIDÉ.
+   *La clause §13.4-bis (test manuel = preuve) qui existait dans la
+   version 1.0.1 du framework a été retirée en v1.0.3 : elle n'a plus
+   lieu d'être maintenant que Vitest est installé et fonctionnel.*
 
 5. **§13.5 Double validation** (niveau **C** uniquement) : le comportement
    est validé par une **implémentation** ET par un **test automatisé
