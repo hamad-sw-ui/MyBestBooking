@@ -77,6 +77,13 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 ## Environnement de développement
 
+- **`next/font/google` désactivé** (T-017 → revert). `next build`
+  échoue quand le CDN Google Fonts est inaccessible (cas du sandbox
+  agent Arena). Retombé sur `<link>` Google Fonts dans
+  `src/app/layout.tsx` (fonctionne à l'exécution : le navigateur du
+  visiteur télécharge les fonts). En prod avec CI ayant accès CDN,
+  migrer à `next/font/google` pour inlining + no-FOUT. Backlog.
+
 - **PostgreSQL requis en local.** Pas de SQLite d'appoint, pas de mock DB
   intégré. Choisi pour rester au plus près de la prod. Suppose Docker (ou
   un Postgres installé nativement).

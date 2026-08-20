@@ -31,8 +31,13 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createToken(userId: string): Promise<string> {
+  // T-017 (BUG-016) : ajout d'un jti aléatoire pour éviter que deux
+  // logins simultanés du même user à la même seconde produisent le
+  // même JWT (violation de sessions_token_unique).
+  const { randomUUID } = await import("node:crypto");
   return new SignJWT({ userId })
     .setProtectedHeader({ alg: "HS256" })
+    .setJti(randomUUID())
     .setExpirationTime("30d")
     .setIssuedAt()
     .sign(JWT_SECRET);

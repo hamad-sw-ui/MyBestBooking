@@ -205,6 +205,7 @@ export const bookings = pgTable("bookings", {
   currency: varchar("currency", { length: 3 }).notNull(),
   paymentStatus: varchar("payment_status", { length: 20 }).default("pending"),
   paymentMethod: varchar("payment_method", { length: 20 }),
+  paymentIntentId: varchar("payment_intent_id", { length: 255 }),
   commissionRate: decimal("commission_rate", { precision: 4, scale: 2 }).notNull(),
   commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
   netToHost: decimal("net_to_host", { precision: 10, scale: 2 }).notNull(),

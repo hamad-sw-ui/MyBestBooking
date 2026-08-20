@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation";
  */
 export function PromotionForm() {
   const router = useRouter();
-  const [form, setForm] = useState({
+  // Lazy initializer pour éviter Date.now() à chaque render (rule react-hooks/purity).
+  const [form, setForm] = useState(() => ({
     code: "",
     name: "",
     type: "percentage",
@@ -19,7 +20,7 @@ export function PromotionForm() {
     validFrom: new Date().toISOString().slice(0, 10),
     validUntil: new Date(Date.now() + 90 * 86400_000).toISOString().slice(0, 10),
     maxUses: "",
-  });
+  }));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -162,7 +163,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-until" className="block text-sm font-medium text-gray-700 mb-1">
-            Valide jusqu'au
+            Valide jusqu&apos;au
           </label>
           <input
             id="promo-until"
@@ -175,7 +176,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-maxuses" className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre max d'utilisations (optionnel)
+            Nombre max d&apos;utilisations (optionnel)
           </label>
           <input
             id="promo-maxuses"

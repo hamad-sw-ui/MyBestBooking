@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getMailer, templates } from "@/lib/mail";
 import { promotions } from "@/db/schema";
 import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
+import { getPaymentProvider } from "@/lib/payment";
 
 const bookingSchema = z
   .object({
@@ -208,6 +209,7 @@ export async function POST(request: NextRequest) {
     // Convention : deux intervalles [aIn, aOut) et [bIn, bOut) se
     // chevauchent ssi aIn < bOut ET aOut > bIn. Adjacent = pas overlap.
     let newBooking;
+    let clientSecret: string | null = null;
     try {
       newBooking = await db.transaction(async (tx) => {
         const overlaps = await tx
@@ -228,6 +230,22 @@ export async function POST(request: NextRequest) {
           throw new Error("ROOM_UNAVAILABLE");
         }
 
+        // T-020 : crée un payment intent via le provider actif
+        // (Mock si Stripe non configuré → "paid" immédiat, sinon
+        // "pending" jusqu'au webhook Stripe).
+        const provider = getPaymentProvider();
+        const intent = await provider.create({
+          amount: Math.round(total * 100), // cents
+          currency: (room.currency || "EUR").toUpperCase(),
+          bookingReference,
+          guestEmail: data.guestEmail,
+        });
+        clientSecret = intent.clientSecret;
+        const initialStatus =
+          intent.status === "succeeded" ? "paid" : "pending";
+        const bookingStatus =
+          intent.status === "succeeded" ? "confirmed" : "pending";
+
         const [inserted] = await tx
           .insert(bookings)
           .values({
@@ -235,7 +253,7 @@ export async function POST(request: NextRequest) {
             userId: user.id,
             propertyId: data.propertyId,
             roomId: data.roomId,
-            status: "confirmed",
+            status: bookingStatus,
             checkIn: data.checkIn,
             checkOut: data.checkOut,
             numNights,
@@ -253,8 +271,9 @@ export async function POST(request: NextRequest) {
             discount: discount.toFixed(2),
             total: total.toFixed(2),
             currency: room.currency || "EUR",
-            paymentStatus: "paid",
+            paymentStatus: initialStatus,
             paymentMethod: "card",
+            paymentIntentId: intent.id,
             commissionRate: commissionRate.toFixed(2),
             commissionAmount: commissionAmount.toFixed(2),
             netToHost: netToHost.toFixed(2),
@@ -331,7 +350,10 @@ export async function POST(request: NextRequest) {
       console.error("[booking] confirmation mail failed:", mailErr);
     }
 
-    return NextResponse.json({ booking: newBooking }, { status: 201 });
+    return NextResponse.json(
+      { booking: newBooking, clientSecret },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

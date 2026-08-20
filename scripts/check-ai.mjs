@@ -472,20 +472,37 @@ const productCoverage = manifest.product_coverage ?? {};
   const apiFiles = listApiFiles();
 
   for (const rawTable of expected) {
-    // Normaliser : "rate_plans" → dossier possible "rate-plans" ou "rate_plans"
-    const candidates = [rawTable, rawTable.replace(/_/g, "-")];
-    // Chemin exact
-    const found = candidates.some((c) =>
-      apiFiles.some((f) => f.includes(`/api/${c}/`) || f.endsWith(`/api/${c}/route.ts`))
+    // Normaliser : "rate_plans" → dossier possible "rate-plans" ou
+    // "rate_plans" ou "rate-plan"/"availability" (dernier segment).
+    const bases = new Set([
+      rawTable,
+      rawTable.replace(/_/g, "-"),
+      rawTable.replace(/^[^_]+_/, "").replace(/_/g, "-"), // room_availability → availability
+      rawTable.split("_").pop() ?? rawTable, // wishlist_items → items
+    ]);
+    const found = [...bases].some((c) =>
+      apiFiles.some(
+        (f) =>
+          f.includes(`/api/${c}/`) ||
+          f.endsWith(`/api/${c}/route.ts`) ||
+          f.includes(`/${c}/route.ts`),
+      ),
     );
-    // Sinon, regarder si le mot apparaît dans un fichier route.ts existant
-    // (ex: users est couvert par /api/auth/*)
+    // Sinon : le nom brut apparaît dans un route.ts (couvert
+    // implicitement, ex: wishlist_items sous /api/wishlists).
     let mentioned = false;
     if (!found) {
+      // Convertir snake_case → camelCase pour matcher les identifiants
+      // Drizzle importés dans les routes.
+      const camelCase = rawTable.replace(/_([a-z])/g, (_, c) => c.toUpperCase());
+      const patterns = [rawTable, camelCase];
       for (const f of apiFiles) {
         try {
           const text = readFileSync(f, "utf8");
-          if (text.includes(rawTable)) { mentioned = true; break; }
+          if (patterns.some((p) => text.includes(p))) {
+            mentioned = true;
+            break;
+          }
         } catch {}
       }
     }

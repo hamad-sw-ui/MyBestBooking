@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+export const metadata: Metadata = {
+  title: "Aide et FAQ",
+  description: "Trouvez des réponses à vos questions sur MyBestBooking : réservation, annulation, paiement, compte.",
+};
 import { 
   Search, MessageCircle, Phone, Mail, Book, 
   HelpCircle, CreditCard, Calendar, Shield, 

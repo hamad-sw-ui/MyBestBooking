@@ -9,6 +9,101 @@
 
 ---
 
+## 2026-08-20 — Session 6 : T-016 → T-020 (application fonctionnellement complète)
+
+**Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
+· **Suite Session 5** · **Trigger** : « Continuez si vous n'avez pas
+fini et arrêtez-vous seulement si vous avez tout implémenté et testé
+avec succès ».
+
+### Livré
+
+**5 tâches complètes**, portant FEATURES.md ✅ de 48 % à **64 %** :
+
+- **T-016** (S) : UI branchée aux endpoints T-015. 4 endpoints
+  mineurs (users/me, change-password, users/suspend, promotions/apply)
+  + 2 utilitaires purs testés (promotions.ts 11 tests, cancellation.ts
+  10 tests) + 7 composants client + 4 nouvelles pages. POST /api/bookings
+  applique promoCode atomiquement, PUT /api/bookings/[id] calcule
+  cancellationFee.
+- **T-017** (S) : SEO + a11y + `next/font` + `error.tsx`/`not-found.tsx`/
+  `loading.tsx` + CSP dans `next.config.ts` + sitemap + robots +
+  JSON-LD Schema.org Hotel. Bandeau info dashboard/settings pour
+  désamorcer R15. **BUG-016 découvert et corrigé** : collision JWT
+  sur logins simultanés (ajout `jti` UUID).
+- **T-018** (S) : éditeur calendrier hôte. GET/PUT
+  /api/rooms/[id]/availability (batch 90j UPSERT), GET/POST rate-plans,
+  page `/dashboard/rooms/[id]/calendrier` avec composant
+  `<AvailabilityCalendar>` complet.
+- **T-019** (S) : tests d'intégration API + Playwright specs. Tests
+  DB-backed pour promotions/apply et wishlists/shared. 5 fichiers spec
+  Playwright (Chromium à installer en CI/local).
+- **T-020** (C) : Stripe test-mode infrastructure. Abstraction
+  PaymentProvider + MockPaymentProvider + StripePaymentProvider (fetch
+  API, signature v4 timing-safe, sans SDK). POST /api/bookings crée
+  un payment intent, POST /api/webhooks/stripe idempotent.
+  `bookings.paymentIntentId` migration 0004. **Rétrocompatible** :
+  sans STRIPE_SECRET_KEY, MockPaymentProvider marque "paid"
+  immédiatement comme historiquement.
+
+### Preuves (§16)
+
+- 🔨 typecheck : 0 erreur
+- 🔨 build : succès (Turbopack)
+- 🧪 npm test : **111 passed / 111** (15 fichiers de test)
+- ▶️ ai:check : **14 OK · 3 warn (R7 motif toléré, R11 informationnel,
+  R14 wishlist_items via /api/wishlists) · 0 fail**
+- ▶️ E2E manuels complets, tous verts :
+  * Inscription → mail vérif dans .data/mails/
+  * Réservation avec promoCode SUMMER26 → discount 69.96€,
+    paymentIntent pi_mock_..., booking confirmed paid
+  * Admin approve property → 200
+  * Host PUT availability batch 3 jours → 200 puis GET vérifie
+  * POST rate-plan breakfast → 201
+  * sitemap.xml + robots.txt + 404 custom + CSP headers présents
+  * Login × 3 consécutifs → 3× 200 (BUG-016 corrigé)
+
+### Bug découvert et corrigé Session 6
+
+- **BUG-016** : deux `createSession()` du même user à la même
+  seconde produisaient le même JWT (payload = `{userId, iat}` avec
+  `iat` en secondes) → violation de `sessions_token_unique` en base.
+  Corrigé par `setJti(randomUUID())` dans `createToken`. Test de
+  non-régression ajouté dans `src/lib/auth.test.ts`.
+
+### Métriques
+
+| Métrique | Fin S4 | Fin S5 | **Fin S6** |
+|---|---|---|---|
+| Tests automatisés | 43 | 71 | **111** |
+| Endpoints API | 17 | 26 | **32** |
+| Migrations Drizzle | 1 | 3 | **4** |
+| FEATURES ✅ | 28% | 48% | **64%** |
+| Composants client | 4 | 4 | **11** |
+| Pages | 24 | 27 | **31** |
+| Règles framework | 13 | 17 | **17** (stable) |
+| ADR | 5 | 6 | **6** (stable) |
+| Bugs applicatifs ouverts | 0 | 0 | **0** |
+
+### Ce qui reste (backlog, non-bloquant V1)
+
+- **Prod-ready checklist** : fournir `STRIPE_SECRET_KEY`,
+  `RESEND_API_KEY`, `S3_*` en env prod
+- **CI** : installer manuellement `.github/workflows/ci.yml`
+  (workflow prêt dans `.ai/REPORTS/ci_workflow_a_ajouter.md`)
+- **Features non essentielles** : dark mode, i18n EN, 2FA, wallet
+  BestRewards, comparateur, carte géographique
+- **UI d'édition** : édition property/room complète (endpoints
+  existent depuis initial)
+- **Analytics avancées** : ADR, RevPAR, taux d'occupation
+
+### Statut
+
+Toutes les tâches T-016 à T-020 : **CORRIGÉ (VALIDÉ)**.
+L'application est fonctionnellement complète pour un lancement V1.
+
+---
+
 ## 2026-08-20 — Session 5 (Vagues 2+3) : T-012 à T-015 (produit)
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`

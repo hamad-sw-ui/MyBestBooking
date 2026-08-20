@@ -17,6 +17,20 @@ const nextConfig: NextConfig = {
   // pour éviter un deuxième cycle). Voir SECURITY.md pour les
   // recommandations restantes (CSP fine à définir).
   async headers() {
+    // T-017 : CSP souple compatible Next.js/Turbopack (dev+prod). En prod
+    // stricte, on retirerait unsafe-eval et on ajouterait des nonces.
+    const csp = [
+      "default-src 'self'",
+      "img-src 'self' data: blob: https:",
+      "style-src 'self' 'unsafe-inline'",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+      "font-src 'self' data:",
+      "connect-src 'self' https:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+    ].join("; ");
+
     return [
       {
         source: "/:path*",
@@ -26,6 +40,7 @@ const nextConfig: NextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains" },
           { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(self)" },
+          { key: "Content-Security-Policy", value: csp },
         ],
       },
     ];

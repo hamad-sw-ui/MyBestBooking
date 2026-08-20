@@ -71,6 +71,17 @@ describe("auth.ts — invariant JWT_SECRET (T-001, §13.5)", () => {
     expect(payload).toEqual({ userId: "user-uuid-abc" });
   });
 
+  it("(BUG-016) deux createToken consécutifs produisent des JWT différents", async () => {
+    // Contrat : jti aléatoire dans le payload garantit qu'aucune
+    // collision n'est possible entre deux logins simultanés du même
+    // user. La contrainte unique de sessions.token dépend de ça.
+    process.env.JWT_SECRET = "a".repeat(64);
+    const { createToken } = await import("./auth");
+    const a = await createToken("same-user");
+    const b = await createToken("same-user");
+    expect(a).not.toBe(b);
+  });
+
   it("verifyToken retourne null pour un token invalide", async () => {
     process.env.JWT_SECRET = "a".repeat(64);
     const { verifyToken } = await import("./auth");

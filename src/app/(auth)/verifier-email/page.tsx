@@ -24,7 +24,7 @@ export default async function VerifyEmailPage({
             href="/"
             className="inline-block px-6 py-3 bg-[#FF5A5F] text-white font-semibold rounded-lg hover:bg-[#e54a4f]"
           >
-            Retour à l'accueil
+            Retour à l&apos;accueil
           </Link>
         </>
       ) : (

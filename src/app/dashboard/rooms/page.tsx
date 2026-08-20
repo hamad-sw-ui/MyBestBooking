@@ -162,12 +162,13 @@ export default async function RoomsPage() {
                     <p className="text-xs text-gray-500">par nuit • {room.quantity} unité{(room.quantity || 0) > 1 ? "s" : ""}</p>
                   </div>
                   <div className="flex items-center gap-1">
-                    <button className="p-2 rounded-lg hover:bg-gray-100">
-                      <Edit className="w-4 h-4 text-gray-500" />
-                    </button>
-                    <button className="p-2 rounded-lg hover:bg-red-50">
-                      <Trash2 className="w-4 h-4 text-red-500" />
-                    </button>
+                    <Link
+                      href={`/dashboard/rooms/${room.id}/calendrier`}
+                      className="px-3 py-1.5 text-xs bg-[#1B3A6B] text-white rounded-lg hover:bg-[#0f2444]"
+                      title="Éditer le calendrier prix/stock"
+                    >
+                      Calendrier
+                    </Link>
                   </div>
                 </div>
               </CardContent>

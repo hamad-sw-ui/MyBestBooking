@@ -66,6 +66,9 @@ export function Header({ user }: HeaderProps) {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  aria-label="Menu utilisateur"
+                  aria-expanded={userMenuOpen}
+                  aria-haspopup="menu"
                   className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
                 >
                   <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white text-sm font-medium">
@@ -160,9 +163,11 @@ export function Header({ user }: HeaderProps) {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              aria-expanded={mobileMenuOpen}
               className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
-              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              {mobileMenuOpen ? <X className="w-6 h-6" aria-hidden="true" /> : <Menu className="w-6 h-6" aria-hidden="true" />}
             </button>
           </div>
         </div>

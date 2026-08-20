@@ -1,9 +1,32 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const [p] = await db.select().from(properties).where(eq(properties.slug, slug)).limit(1);
+  if (!p) return { title: "Hébergement introuvable" };
+  const desc = `${p.name} à ${p.city}, ${p.country}. ${p.description ? p.description.slice(0, 140) : "Réservez au meilleur prix."}`;
+  return {
+    title: p.name,
+    description: desc,
+    openGraph: {
+      title: p.name,
+      description: desc,
+      images: p.mainImage ? [{ url: p.mainImage }] : undefined,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.name,
+      description: desc,
+    },
+  };
+}
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -87,8 +110,45 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   const amenities = (property.amenities as string[]) || [];
   const images = (property.images as string[]) || [];
 
+  // T-017 : Schema.org Hotel/Product pour SEO enrichi
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Hotel",
+    name: property.name,
+    description: property.description ?? undefined,
+    image: property.mainImage ?? undefined,
+    starRating: property.starRating
+      ? { "@type": "Rating", ratingValue: property.starRating }
+      : undefined,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: property.addressLine ?? undefined,
+      addressLocality: property.city,
+      postalCode: property.postalCode ?? undefined,
+      addressCountry: property.country,
+    },
+    geo: property.latitude && property.longitude
+      ? { "@type": "GeoCoordinates", latitude: property.latitude, longitude: property.longitude }
+      : undefined,
+    aggregateRating:
+      property.averageRating && property.totalReviews
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: property.averageRating,
+            reviewCount: property.totalReviews,
+            bestRating: 10,
+            worstRating: 0,
+          }
+        : undefined,
+  };
+
   return (
     <div className="bg-gray-50">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">

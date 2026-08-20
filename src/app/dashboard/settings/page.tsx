@@ -27,6 +27,13 @@ export default async function SettingsPage() {
         </p>
       </div>
 
+      <div className="mb-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-900">
+        ⚠️ Cette page est une vue d&apos;ensemble des paramètres à venir.
+        Les formulaires ne sont pas encore branchés (T-017 les a désactivés
+        pour ne plus induire en erreur). Les préférences utilisateur
+        sont éditables dans <a href="/mon-compte" className="underline font-medium">Mon compte</a>.
+      </div>
+
       <div className="space-y-6">
         {/* General */}
         <Card>
@@ -78,7 +85,7 @@ export default async function SettingsPage() {
             />
           </CardContent>
           <CardFooter>
-            <Button>Enregistrer</Button>
+            <Button disabled>Bientôt disponible</Button>
           </CardFooter>
         </Card>
 
@@ -105,7 +112,7 @@ export default async function SettingsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Badge variant="info">{item.rate}</Badge>
-                    <Button variant="ghost" size="sm">Modifier</Button>
+                    <Button variant="ghost" size="sm" disabled>Bientôt</Button>
                   </div>
                 </div>
               ))}
@@ -135,7 +142,7 @@ export default async function SettingsPage() {
                       Seuil : {item.threshold} réservations • Réduction : {item.discount}
                     </p>
                   </div>
-                  <Button variant="ghost" size="sm">Modifier</Button>
+                  <Button variant="ghost" size="sm" disabled>Bientôt</Button>
                 </div>
               ))}
             </div>
@@ -181,7 +188,7 @@ export default async function SettingsPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button>Enregistrer</Button>
+            <Button disabled>Bientôt disponible</Button>
           </CardFooter>
         </Card>
 

@@ -6,8 +6,8 @@
   --color-accent: #F5A623;
   --color-success: #00A699;
   --color-danger: #D93025;
-  --font-family-sans: 'Inter', system-ui, sans-serif;
-  --font-family-display: 'Poppins', system-ui, sans-serif;
+  --font-family-sans: var(--font-inter), 'Inter', system-ui, sans-serif;
+  --font-family-display: var(--font-poppins), 'Poppins', system-ui, sans-serif;
 }
 
 @layer base {

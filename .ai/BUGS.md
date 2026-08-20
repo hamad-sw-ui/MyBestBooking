@@ -16,6 +16,20 @@ _Aucun bug critique ouvert._ Le seul point restant est **BUG-003
 
 ## Corrigés
 
+- [x] **2026-08-20 — BUG-016** (découvert Session 6) : deux
+  `createSession()` du même user à la même seconde généraient le même
+  JWT → violation de `sessions_token_unique`. Corrigé par ajout d'un
+  `jti` (UUID) au payload dans `src/lib/auth.ts:createToken`. Test
+  ajouté dans `src/lib/auth.test.ts` (« deux createToken consécutifs
+  produisent des JWT différents »).
+
+- [x] **2026-08-20 — BUG-003 (partiellement corrigé)** : le paiement
+  n'est plus mocké en dur. Infrastructure Stripe complète en T-020
+  (abstraction PaymentProvider + Stripe + Mock + webhook signé +
+  paymentIntentId en DB). Reste : credentials Stripe test-mode
+  (STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET) à fournir en env prod.
+  Voir `KNOWN_LIMITATIONS.md` (dépendance externe).
+
 - [x] **2026-08-20 — BUG-014** : `lucide-react@1.33.0` est bien la
   version majeure v1 officielle (sortie 2025-2026, attributs SVG
   améliorés `aria-hidden`, `stroke-linecap="round"`, etc.). Vérifié

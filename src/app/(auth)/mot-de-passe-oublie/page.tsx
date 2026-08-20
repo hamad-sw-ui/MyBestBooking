@@ -41,7 +41,7 @@ export default function ForgotPasswordPage() {
       </p>
       {sent ? (
         <div className="p-4 rounded-lg bg-green-50 text-green-800 text-sm">
-          Si un compte existe pour cet email, un lien vient d'être envoyé. Vérifiez
+          Si un compte existe pour cet email, un lien vient d&apos;être envoyé. Vérifiez
           votre boîte de réception (et vos spams).
         </div>
       ) : (
