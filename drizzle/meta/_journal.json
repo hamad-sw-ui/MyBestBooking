@@ -50,6 +50,13 @@
       "when": 1787240189883,
       "tag": "0006_audit_log",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1787241898046,
+      "tag": "0007_price_alerts_and_referral",
+      "breakpoints": true
     }
   ]
 }

@@ -569,6 +569,14 @@ const TEMPLATE_LABELS: Record<keyof SettingValue<"emailTemplates">, { title: str
     title: "Nouvelle réservation (hôte)",
     vars: "{hostFirstName}, {bookingReference}, {propertyName}, {guestName}, {checkIn}, {checkOut}",
   },
+  bookingCancellation: {
+    title: "Annulation de réservation (voyageur)",
+    vars: "{firstName}, {bookingReference}, {propertyName}, {cancellationFee}, {currency}",
+  },
+  newMessage: {
+    title: "Nouveau message reçu",
+    vars: "{firstName}, {senderName}",
+  },
 };
 
 function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTemplates"> }) {

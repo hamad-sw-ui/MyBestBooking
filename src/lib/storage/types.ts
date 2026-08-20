@@ -11,4 +11,11 @@ export interface Uploader {
    * intégralement dans le nom de fichier).
    */
   put(file: Buffer, mimeType: string, ownerId: string): Promise<StoredFile>;
+
+  /**
+   * Supprime un fichier par son key (T-026).
+   * Retourne true si supprimé, false si absent ou erreur non fatale.
+   * Ne throw jamais (best-effort).
+   */
+  remove(key: string): Promise<boolean>;
 }

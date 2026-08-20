@@ -11,6 +11,7 @@ import {
   MaintenanceError,
   maintenanceResponse,
 } from "@/lib/maintenance";
+import { getMailer, templates } from "@/lib/mail";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
@@ -147,6 +148,26 @@ export async function PUT(
       .set(updateData)
       .where(eq(bookings.id, id))
       .returning();
+
+    // T-027 : email d'annulation (best-effort, ne fait pas échouer la
+    // requête si SMTP down).
+    if (data.status === "cancelled" && existingBooking.booking.guestEmail) {
+      try {
+        const mail = await templates.bookingCancellation({
+          firstName: existingBooking.booking.guestFirstName ?? "",
+          bookingReference: existingBooking.booking.bookingReference,
+          propertyName: existingBooking.property?.name ?? "",
+          cancellationFee: String(updateData.cancellationFee ?? "0.00"),
+          currency: existingBooking.booking.currency ?? "EUR",
+        });
+        await getMailer().send({
+          to: existingBooking.booking.guestEmail,
+          ...mail,
+        });
+      } catch (mailErr) {
+        console.error("[bookings PUT] cancellation mail failed:", mailErr);
+      }
+    }
 
     return NextResponse.json({ booking: updatedBooking });
   } catch (error) {

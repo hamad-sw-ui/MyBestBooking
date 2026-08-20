@@ -9,6 +9,30 @@ import {
 import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
 
 /**
+ * DELETE /api/uploads?key=xxx (T-026)
+ * Supprime un fichier. Auth requise. Le key doit avoir été uploadé
+ * par l'user (préfixe = 8 premiers caractères de son id) ou par un
+ * admin (bypass).
+ */
+export async function DELETE(request: NextRequest) {
+  const user = await getCurrentUser();
+  if (!user) {
+    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  const key = new URL(request.url).searchParams.get("key");
+  if (!key || !/^[A-Za-z0-9._-]+$/.test(key)) {
+    return NextResponse.json({ error: "Key invalide" }, { status: 400 });
+  }
+  // Vérif ownership : préfixe 8 chars = id user
+  const ownedPrefix = user.id.slice(0, 8);
+  if (user.role !== "admin" && !key.startsWith(`${ownedPrefix}-`)) {
+    return NextResponse.json({ error: "Non autorisé sur ce fichier" }, { status: 403 });
+  }
+  const ok = await getUploader().remove(key);
+  return NextResponse.json({ removed: ok });
+}
+
+/**
  * POST /api/uploads
  * multipart/form-data avec un champ `file`.
  * Retourne { url, key, size, mimeType } ou une erreur.

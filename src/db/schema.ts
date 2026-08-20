@@ -39,11 +39,32 @@ export const users = pgTable("users", {
   country: varchar("country", { length: 2 }),
   timezone: varchar("timezone", { length: 50 }).default("UTC"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  // T-029 : secret TOTP base32 (stocké en clair — voir ADR-008 pour
+  // le compromis "chiffrer avec master key" reporté).
+  twoFactorSecret: varchar("two_factor_secret", { length: 64 }),
+  // T-026 : code de parrainage personnel auto-généré
+  referralCode: varchar("referral_code", { length: 12 }).unique(),
+  // T-026 : préférences alertes prix
+  priceAlertEnabled: boolean("price_alert_enabled").default(false),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
 });
+
+// T-026 : Alertes prix — Un user peut suivre une property et un prix
+// max, on notifie si le tarif descend en-dessous (job cron futur).
+export const priceAlerts = pgTable("price_alerts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  propertyId: uuid("property_id").references(() => properties.id).notNull(),
+  maxPrice: decimal("max_price", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("EUR"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uidx_price_alert_user_prop").on(table.userId, table.propertyId),
+]);
 
 // ═══════════════════════════════════════════════
 // VERIFICATION_TOKENS (T-013)
@@ -372,3 +393,5 @@ export type AppSetting = typeof appSettings.$inferSelect;
 export type NewAppSetting = typeof appSettings.$inferInsert;
 export type AuditLog = typeof auditLog.$inferSelect;
 export type NewAuditLog = typeof auditLog.$inferInsert;
+export type PriceAlert = typeof priceAlerts.$inferSelect;
+export type NewPriceAlert = typeof priceAlerts.$inferInsert;

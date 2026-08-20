@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { conversations, messages, properties } from "@/db/schema";
+import { conversations, messages, properties, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { and, eq, sql } from "drizzle-orm";
+import { getMailer, templates } from "@/lib/mail";
 
 const schema = z.object({
   conversationId: z.string().uuid(),
@@ -91,6 +92,39 @@ export async function POST(request: NextRequest) {
           : { unreadByUser: sql`${conversations.unreadByUser} + 1` }),
       })
       .where(eq(conversations.id, data.conversationId));
+
+    // T-027 : notification email au destinataire (best-effort).
+    try {
+      const senderName = `${user.firstName} ${user.lastName}`.trim() || "MyBestBooking";
+      const [convWithProperty] = await db
+        .select({
+          hostId: properties.hostId,
+          userId: conversations.userId,
+        })
+        .from(conversations)
+        .leftJoin(properties, eq(conversations.propertyId, properties.id))
+        .where(eq(conversations.id, data.conversationId))
+        .limit(1);
+      if (convWithProperty) {
+        const recipientId = ok.isGuest ? convWithProperty.hostId : convWithProperty.userId;
+        if (recipientId && recipientId !== user.id) {
+          const [recipient] = await db
+            .select({ email: users.email, firstName: users.firstName })
+            .from(users)
+            .where(eq(users.id, recipientId))
+            .limit(1);
+          if (recipient?.email) {
+            const mail = await templates.newMessage({
+              firstName: recipient.firstName ?? "",
+              senderName,
+            });
+            await getMailer().send({ to: recipient.email, ...mail });
+          }
+        }
+      }
+    } catch (mailErr) {
+      console.error("[messages POST] notification mail failed:", mailErr);
+    }
 
     return NextResponse.json({ message: msg }, { status: 201 });
   } catch (error) {

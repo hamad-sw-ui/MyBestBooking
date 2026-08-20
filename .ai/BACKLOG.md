@@ -37,22 +37,36 @@ Voir `CURRENT_TASK.md` pour la tâche active.
   atomique averageRating) (Session 7)
 - ✅ **T-024** Table `audit_log` globale + endpoint + page + hooks
   4 handlers admin (Session 7)
-- ✅ **T-025** Templates emails éditables via `app_settings` +
-  moteur `renderTemplate` avec escape XSS (Session 7)
-- ✅ **Suivi audit produit** : helpfulCount endpoint, select timezone
-  dans ProfileForm, commissionRate admin-only par property (Session 7)
+- ✅ **T-025** Templates emails éditables via `app_settings` (Session 7)
+- ✅ **T-026** Recherche & filtres avancés (amenities, guests, dates,
+  sort, near) + upload delete + price alerts + referral (Session 8)
+- ✅ **T-027** Emails cancellation/newMessage + wallet + BestRewards
+  discount + delete account (Session 8)
+- ✅ **T-028** Rate-limits bookings/reviews/wishlists + logger
+  structuré (Session 8)
+- ✅ **T-029** 2FA TOTP + i18n EN + devise dynamique + dark mode +
+  guest booking + attachments messages + skip link a11y + rotation
+  secret docs (Session 8)
 
-### Chantiers restants (V1 non bloquant)
+### Sandbox-limited restants (documenté FEATURES.md)
 
-- 🟢 Dark mode + toggle.
-- 🟢 i18n EN (schéma DB déjà prêt : `descriptionEn`, `users.language`).
-- 🟢 2FA TOTP.
-- 🟢 Wallet BestRewards utilisable au checkout.
-- 🟢 Comparateur d'hébergements.
-- 🟢 Carte géographique (lat/lng en DB).
-- 🟢 Rate-limit Redis (multi-instance).
-- 🟢 CI GitHub Actions à installer manuellement
-  (`REPORTS/ci_workflow_a_ajouter.md`).
+Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
+
+- 🟢 `next/font/google` — CDN Google indispo au sandbox build
+- 🟢 Playwright Chromium — CDN Google indispo
+- 🟢 CI GitHub Actions — permission `workflows` manquante sur token
+- 🟢 Dependabot — activation UI GitHub
+- 🟢 Rate-limit Redis — mono-instance suffit V1
+- 🟢 Dockerfile prod — pas requis Vercel/Node
+- 🟢 Backup DB auto — dépend de l'hébergeur
+
+### Backlog UX/métier non prioritaire
+
+- 🟢 Comparateur d'hébergements
+- 🟢 Rendu carte Mapbox/Leaflet (endpoint `?near=` déjà livré)
+- 🟢 Analytics avancées ADR/RevPAR
+- 🟢 PDF invoice (dépend prestataire compta)
+- 🟢 Cron notification price_alerts (job planifié)
 
 ---
 

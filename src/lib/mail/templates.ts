@@ -106,6 +106,30 @@ export const templates = {
     return { subject, html, text: stripHtml(html) };
   },
 
+  async bookingCancellation({
+    firstName, bookingReference, propertyName, cancellationFee, currency,
+  }: {
+    firstName: string; bookingReference: string; propertyName: string;
+    cancellationFee: string; currency: string;
+  }) {
+    const vars = { firstName, bookingReference, propertyName, cancellationFee, currency };
+    const tpl = (await getSetting("emailTemplates")).bookingCancellation;
+    const subject = renderTemplate(tpl.subject, vars);
+    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
+    const html = layout(bodyRendered);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  async newMessage({
+    firstName, senderName,
+  }: { firstName: string; senderName: string }) {
+    const tpl = (await getSetting("emailTemplates")).newMessage;
+    const subject = renderTemplate(tpl.subject, { firstName, senderName });
+    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), { firstName, senderName });
+    const html = layout(bodyRendered);
+    return { subject, html, text: stripHtml(html) };
+  },
+
   async bookingHostNotification({
     hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut,
   }: {

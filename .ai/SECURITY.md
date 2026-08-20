@@ -111,3 +111,44 @@ serait une seconde ligne de défense simple à ajouter.
 | `NODE_ENV` | `development` / `production` | géré par Next |
 
 Ne **jamais** commiter de `.env`. Un `.env.example` reste à créer.
+
+## Rotation de secret (T-029)
+
+Procédure documentée pour rotation urgente ou périodique de
+`JWT_SECRET`.
+
+### Rotation planifiée (recommandée tous les 90 jours)
+
+1. **Générer** un nouveau secret : `openssl rand -hex 32`.
+2. **Déployer** avec `JWT_SECRET_NEXT` = nouveau (pas encore actif).
+3. **Vérifier** que l'app boote sans erreur.
+4. **Basculer** : `JWT_SECRET` = nouveau, `JWT_SECRET_PREV` = ancien.
+   Le code accepte les deux pendant la fenêtre (implémentation future
+   dans `src/lib/auth.ts` — v1 : basculement direct, invalide les
+   sessions actives → réauth requise).
+5. **Retirer** `JWT_SECRET_PREV` après 24-48 h (durée max session).
+
+### Rotation d'urgence (fuite suspectée)
+
+1. Générer un nouveau secret.
+2. Déployer immédiatement avec `JWT_SECRET` = nouveau.
+3. `TRUNCATE sessions` en DB → toutes les sessions invalidées.
+4. Prévenir les utilisateurs (bandeau) et forcer re-login.
+5. Auditer l'audit_log (T-024) pour actions suspectes récentes.
+
+### Autres secrets
+
+- `STRIPE_SECRET_KEY` : rotation via dashboard Stripe → redéploiement
+  ; garder deux clés actives brièvement pour les webhooks en vol.
+- `RESEND_API_KEY` : rotation via dashboard Resend ; pas d'impact
+  session utilisateur.
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY` : rotation IAM ; les URLs signées
+  déjà émises resteront valides jusqu'à expiration.
+- `SEED_TOKEN` : rotation triviale, endpoint `/api/seed` protégé.
+
+### Test post-rotation
+
+- Login admin → vérifier accès dashboard.
+- `POST /api/auth/login` → 200.
+- `GET /api/auth/me` → 200.
+- `npm test` → 155+/155+ toujours vert.

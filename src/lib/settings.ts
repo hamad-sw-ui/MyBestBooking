@@ -113,6 +113,8 @@ export const emailTemplatesSchema = z.object({
   passwordReset: templateBlockSchema,
   bookingConfirmation: templateBlockSchema,
   bookingHostNotification: templateBlockSchema,
+  bookingCancellation: templateBlockSchema,
+  newMessage: templateBlockSchema,
 });
 export type EmailTemplateBlock = z.infer<typeof templateBlockSchema>;
 
@@ -208,6 +210,20 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
       body:
         "Bonjour {hostFirstName},\n\n" +
         "Une nouvelle réservation vient d'être confirmée sur votre hébergement.",
+    },
+    bookingCancellation: {
+      subject: "Réservation annulée {bookingReference}",
+      body:
+        "Bonjour {firstName},\n\n" +
+        "Votre réservation {bookingReference} pour {propertyName} a été annulée.\n\n" +
+        "Frais d'annulation appliqués : {cancellationFee} {currency}.",
+    },
+    newMessage: {
+      subject: "Nouveau message de {senderName}",
+      body:
+        "Bonjour {firstName},\n\n" +
+        "Vous avez reçu un nouveau message sur MyBestBooking. " +
+        "Connectez-vous pour y répondre.",
     },
   },
 };

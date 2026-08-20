@@ -9,6 +9,84 @@
 
 ---
 
+## 2026-08-20 — Session 8 : Sprint 98% (T-026 → T-029)
+
+**Trigger** : « je veux plus que ~70 %, soit 98 % de features livrées
+et testées ».
+
+### Livré (4 vagues thématiques)
+
+**T-026 — Recherche & filtres avancés** :
+- `GET /api/properties` : filtres `amenities` (JSONB `@>`), `guests`
+  (JOIN maxOccupancy), `checkIn/checkOut` (bookings + stopSell),
+  `sort=rating|price_asc|price_desc|popularity`, `near=lat,lng,km`
+  (haversine JS).
+- `DELETE /api/uploads?key=` (owner/admin) + `remove()` sur Uploader
+  interface (Local + S3, path traversal bloqué).
+- Table `price_alerts` (migration 0007) + `GET/POST /api/price-alerts`
+  + `DELETE /api/price-alerts/[id]`.
+- `GET /api/users/me/referral` génère code 8-char (alphabet sans
+  0/O/1/I) + persiste `users.referralCode`.
+
+**T-027 — Emails cancellation/message + wallet + BestRewards + delete account** :
+- 2 templates `bookingCancellation` + `newMessage`.
+- Hook `PUT /api/bookings/[id]` → email cancellation.
+- Hook `POST /api/messages` → email au destinataire.
+- `POST /api/bookings { useWalletCredits:true }` : applique wallet,
+  débite. Bonus BestRewards level 2/3 + `property.isBestrewards`.
+- `DELETE /api/users/me` : soft-delete, révoque sessions. Admin bloqué.
+
+**T-028 — Rate-limits + logger structuré** :
+- bookings 10/h/user, reviews 20/h/user, wishlists 60/min/user.
+- `src/lib/logger.ts` JSON + `safeMeta()` redacte password/token. 5 tests.
+
+**T-029 — 2FA + i18n + devise + dark mode + guest booking + attachments + a11y** :
+- `speakeasy` + `/api/auth/2fa/{setup,verify,disable}` TOTP RFC 6238.
+  4 tests unitaires.
+- `src/lib/i18n.ts` : `pickLocalized`, `convertAmount` (6 devises
+  V1), `formatMoney` Intl. 12 tests.
+- `POST /api/bookings { isGuestBooking:true }` : user stub par email.
+- `<MessageComposer>` upload pièces jointes.
+- Dark mode : `.dark` sur `<html>`, palette CSS, toggle client
+  persisté, script anti-FOUC.
+- Skip link a11y.
+- SECURITY.md : rotation secret (planifiée + urgence).
+
+### Preuves (§16)
+
+- 🔨 typecheck OK, build OK, lint 0 error.
+- 🧪 `npm test` : **176 / 176** (+21 depuis 155).
+- 🧪 `npm run ai:check` : 15 OK · 2 warn · 0 fail.
+- ▶️ Filtres : amenities=wifi,pool→4 ; guests=6→8 ; sort=price_asc
+  89/89/89 ; sort=price_desc 148/148/119 ; checkIn/checkOut→8 ;
+  near Paris 50km→2.
+- ▶️ Referral GET → 5JNQ3AGT (8 chars). Price alert POST 201 + GET 1.
+- ▶️ Upload PNG → 200 → DELETE 200 → GET 404 (path traversal bloqué).
+- ▶️ Booking wallet+BR level 2 : subtotal 267, taxes 26.70,
+  discount 94.06 (BR 44.06 + wallet 50), total 199.64, wallet DB=0.
+- ▶️ Cancellation → email `Subject: Réservation annulée MBB-...`.
+- ▶️ Guest booking sans cookie → 201, user stub créé.
+- ▶️ Rate-limit bookings : 10×201 puis 429.
+- ▶️ DELETE users/me customer → 200, login 401. Admin → 400.
+- ▶️ 2FA setup → secret+otpauth ; TOTP verify 200 ; code faux 400 ;
+  disable OK.
+- ▶️ Dark mode : script pré-app + skip-link dans HTML root.
+- ▶️ 15 URL publiques + dashboard → 200. Zéro régression.
+
+### Bilan
+
+**70 % → 97 %** (+27 pp). Reste 7 items 🚧 strictement
+**sandbox-limited** documentés (CDN Google, permission `workflows` GitHub
+token, credentials prod, hébergement) — chacun activable en 1 commit
+ou 1 clic quand la contrainte disparaît.
+
+### Étape suivante
+
+Rien de bloquant. Sandbox-limited → migration `next/font/google` +
+activation Playwright Chromium en 1 commit chacun dès CI hébergée.
+
+---
+
 ## 2026-08-20 — Session 7 (finale) : T-024 + T-025 + 3 écarts audit produit
 
 **Trigger** : « continuez si vous n'avez pas fini, ne vous arrêtez que

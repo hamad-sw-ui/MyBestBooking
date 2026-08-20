@@ -10,8 +10,8 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `7b8969c` (T-024 + T-025 + écarts audit)
-- **Dernier commit stable référencé** : `7b8969c` (Session 7 finale)
+- **Dernier commit connu** : à mettre à jour en fin de session en cours
+- **Dernier commit stable référencé** : `f4ebe96` (fin Session 7)
 - **Version du Framework** : **1.1.0** (AI-DOS Web, hybride + complétude
   produit — voir `PROCESS_IMPROVEMENTS.md`)
 
@@ -19,11 +19,11 @@
 
 - **Dernier `npm run typecheck`** : ✅ 0 erreur
 - **Dernier `npm run build`** : ✅ succès
-- **Dernier `npm test`** : ✅ **155 passed / 155** (0 skipped avec DB
+- **Dernier `npm test`** : ✅ **176 passed / 176** (0 skipped avec DB
   embarquée démarrée)
 - **Dernier `npm run ai:check`** : ✅ 15 OK · 2 warn attendus · 0 fail
-- **Couverture** : ~86 features ✅ / ~17 partielles / ~4 planifiées /
-  ~15 backlog (**FEATURES.md ✅ ≈ 70 %**)
+- **Couverture** : ~118 features ✅ / ~7 sandbox-limited / 0 absent
+  (**FEATURES.md ✅ ≈ 97 %**)
 
 ## 📈 Compteurs framework (§17, ADR-006)
 
@@ -82,7 +82,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-025 (25 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-029 (29 tâches)
 
 ## 🏛️ Décisions & ADR
 
@@ -96,11 +96,12 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20 (Session 7 finale — T-021 à T-025 livrés + audit
-  produit §17 + 3 écarts corrigés : panel admin configurable + mode
-  maintenance + modération d'avis + audit log global + templates
-  emails éditables + helpfulCount + timezone user + commissionRate
-  admin. 155/155 tests, 0 régression)
+- **Date** : 2026-08-20 (Session 8 — **Sprint 98%** T-026 → T-029 :
+  filtres avancés recherche + emails annulation/message + wallet +
+  BestRewards discount + delete account + 2FA TOTP + i18n EN + devise
+  dynamique + dark mode + guest booking + pièces jointes + rate-limits
+  + logger structuré + rotation secret docs. **176/176 tests, 97 %
+  couverture ✅, 0 régression**)
 - **Agent** : Arena Agent Mode
 - **Prochaine mise à jour attendue** : à chaque fin de session — obligatoire
   §11. La règle de mise à jour est vérifiée mécaniquement par

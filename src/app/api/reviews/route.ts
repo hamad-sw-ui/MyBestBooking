@@ -9,6 +9,7 @@ import {
   MaintenanceError,
   maintenanceResponse,
 } from "@/lib/maintenance";
+import { rateLimit } from "@/lib/rate-limit";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -94,6 +95,19 @@ export async function POST(request: NextRequest) {
     }
     // T-022 : mode maintenance
     await assertNotMaintenance(user);
+
+    // T-028 : rate-limit — 20 avis/heure/user (largement au-dessus
+    // du besoin réel, empêche le spam de faux avis).
+    const rl = rateLimit(`reviews:user:${user.id}`, {
+      limit: 20,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Trop d'avis publiés, réessayez plus tard" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+    }
 
     const body = await request.json();
     const data = reviewSchema.parse(body);

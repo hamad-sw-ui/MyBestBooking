@@ -15,6 +15,7 @@ import {
   MaintenanceError,
   maintenanceResponse,
 } from "@/lib/maintenance";
+import { rateLimit } from "@/lib/rate-limit";
 
 const bookingSchema = z
   .object({
@@ -33,6 +34,10 @@ const bookingSchema = z
     specialRequests: z.string().optional(),
     estimatedArrival: z.string().optional(),
     promoCode: z.string().max(50).optional(),
+    // T-027 : appliquer le walletBalance de l'user en réduction
+    useWalletCredits: z.boolean().optional(),
+    // T-029 : réservation invité (guest booking, sans compte)
+    isGuestBooking: z.boolean().optional(),
   })
   // T-006 (BUG-011) : validation métier avant d'atteindre la contrainte
   // SQL, message utilisateur plus clair.
@@ -125,18 +130,65 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
-    if (!user) {
+    let user = await getCurrentUser();
+    // T-029 : guest booking (isGuestBooking:true) — pas de user
+    // connecté requis. On crée un user « guest » stub (pas de mdp,
+    // emailVerified=false) et on continue.
+    const body = await request.json();
+    const data = bookingSchema.parse(body);
+
+    if (!user && !data.isGuestBooking) {
       return NextResponse.json(
         { error: "Veuillez vous connecter pour réserver" },
         { status: 401 }
       );
     }
+
+    if (!user && data.isGuestBooking) {
+      // Trouve un user existant avec cet email, sinon en crée un stub.
+      const [existing] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, data.guestEmail.toLowerCase()))
+        .limit(1);
+      if (existing) {
+        user = existing;
+      } else {
+        const [created] = await db
+          .insert(users)
+          .values({
+            email: data.guestEmail.toLowerCase(),
+            firstName: data.guestFirstName,
+            lastName: data.guestLastName,
+            phone: data.guestPhone ?? null,
+            country: data.guestCountry ?? null,
+            role: "customer",
+            emailVerified: false,
+            passwordHash: null,
+          })
+          .returning();
+        user = created;
+      }
+    }
+    // Type-guard : user est garanti non null à ce point.
+    if (!user) {
+      return NextResponse.json({ error: "État inattendu" }, { status: 500 });
+    }
+
     // T-022 : mode maintenance — bloquer les réservations pour les non-admins.
     await assertNotMaintenance(user);
 
-    const body = await request.json();
-    const data = bookingSchema.parse(body);
+    // T-028 : rate-limit anti-spam sur POST /api/bookings.
+    const rl = rateLimit(`bookings:user:${user.id}`, {
+      limit: 10,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Trop de tentatives, réessayez plus tard" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+    }
 
     // Get property and room
     const [property] = await db
@@ -205,6 +257,37 @@ export async function POST(request: NextRequest) {
           { error: `Code promo : ${promoErrorMsg}` },
           { status: 400 },
         );
+      }
+    }
+
+    // T-027 : bonus BestRewards level user + property.isBestrewards.
+    // Level 2/3 → réduction % lue depuis settings.bestrewards.discounts.
+    // Property isBestrewards → +2 pp de réduction pour renforcer
+    // l'attractivité (bornage à 30% max total pour éviter les abus).
+    const bestrewardsSettings = await getSetting("bestrewards");
+    const userLevel = user.bestrewardsLevel ?? 1;
+    let bestrewardsPercent = 0;
+    if (userLevel >= 3) bestrewardsPercent = bestrewardsSettings.discounts[2];
+    else if (userLevel >= 2) bestrewardsPercent = bestrewardsSettings.discounts[1];
+    else bestrewardsPercent = 0; // Level 1 pas de réduction auto
+    if (property.isBestrewards && userLevel >= 2) {
+      bestrewardsPercent = Math.min(30, bestrewardsPercent + 2);
+    }
+    if (bestrewardsPercent > 0) {
+      const bonusDiscount = Math.round(total * (bestrewardsPercent / 100) * 100) / 100;
+      discount += bonusDiscount;
+      total = Math.max(0, total - bonusDiscount);
+    }
+
+    // T-027 : wallet — utilise le crédit user comme réduction,
+    // plafonné au total restant. Ne peut jamais rendre le total < 0.
+    let walletUsed = 0;
+    if (data.useWalletCredits) {
+      const wallet = parseFloat(user.walletBalance ?? "0");
+      if (wallet > 0) {
+        walletUsed = Math.min(wallet, total);
+        total = Math.max(0, total - walletUsed);
+        discount += walletUsed;
       }
     }
 
@@ -320,11 +403,16 @@ export async function POST(request: NextRequest) {
       : newCount >= br.thresholds[0]
         ? 2
         : 1;
+    // T-027 : débite le wallet si utilisé.
+    const walletAfter = walletUsed > 0
+      ? Math.max(0, parseFloat(user.walletBalance ?? "0") - walletUsed)
+      : parseFloat(user.walletBalance ?? "0");
     await db
       .update(users)
       .set({
         bestrewardsBookingsCount: newCount,
         bestrewardsLevel: newLevel,
+        walletBalance: walletAfter.toFixed(2),
       })
       .where(eq(users.id, user.id));
 

@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import { Menu, X, User, LogOut, Heart, Calendar, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import type { User as UserType } from "@/db/schema";
+import { DarkModeToggle } from "@/components/dark-mode-toggle";
 
 interface HeaderProps {
   user: UserType | null;
@@ -62,6 +63,7 @@ export function Header({ user }: HeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-4">
+            <DarkModeToggle />
             {user ? (
               <div className="relative">
                 <button

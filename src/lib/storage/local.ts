@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync, unlinkSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
 import type { StoredFile, Uploader } from "./types";
@@ -37,5 +37,18 @@ export class LocalUploader implements Uploader {
       key,
       size: file.byteLength,
     };
+  }
+
+  async remove(key: string): Promise<boolean> {
+    // Sécurité : rejeter tout key qui tente path traversal.
+    if (key.includes("..") || key.includes("/") || key.includes("\\")) return false;
+    const path = join(this.dir, key);
+    try {
+      if (!existsSync(path)) return false;
+      unlinkSync(path);
+      return true;
+    } catch {
+      return false;
+    }
   }
 }

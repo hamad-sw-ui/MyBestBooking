@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { users, sessions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 
 const schema = z.object({
@@ -53,4 +54,31 @@ export async function PATCH(request: NextRequest) {
     console.error("users/me PATCH error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
+}
+
+/**
+ * DELETE /api/users/me (T-027)
+ * Soft-delete du compte : deletedAt=now + révoque sessions + supprime
+ * le cookie. Pas de hard-delete pour préserver la traçabilité
+ * (bookings historiques, avis, etc.).
+ * Un admin ne peut pas se supprimer via cet endpoint (il doit passer
+ * par un autre admin).
+ */
+export async function DELETE() {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (user.role === "admin") {
+    return NextResponse.json(
+      { error: "Un admin ne peut pas se supprimer lui-même" },
+      { status: 400 },
+    );
+  }
+  await db
+    .update(users)
+    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .where(eq(users.id, user.id));
+  await db.delete(sessions).where(eq(sessions.userId, user.id));
+  const jar = await cookies();
+  jar.delete("session");
+  return NextResponse.json({ deleted: true });
 }

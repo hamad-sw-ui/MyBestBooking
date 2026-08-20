@@ -56,6 +56,17 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         />
       </head>
       <body className="bg-gray-50 min-h-screen font-sans">
+        {/* T-029 : skip link a11y */}
+        <a href="#main-content" className="skip-link">Aller au contenu principal</a>
+        {/* T-029 : pré-applique la classe .dark sans FOUC */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('theme');" +
+              "var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);" +
+              "if(d)document.documentElement.classList.add('dark');}catch(e){}",
+          }}
+        />
         <ToastProvider>{children}</ToastProvider>
       </body>
     </html>

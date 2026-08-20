@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* T-029 : dark mode activé par la classe .dark sur <html>. */
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-primary: #1B3A6B;
@@ -14,9 +16,41 @@
   html {
     scroll-behavior: smooth;
   }
-  
+
   body {
     @apply antialiased text-gray-900;
+  }
+
+  /* T-029 — dark mode : palette globale minimaliste, à raffiner
+     progressivement composant par composant. */
+  .dark body {
+    background-color: #0f172a;
+    color: #e2e8f0;
+  }
+  .dark .bg-white { background-color: #1e293b !important; }
+  .dark .bg-gray-50 { background-color: #0f172a !important; }
+  .dark .bg-gray-100 { background-color: #1e293b !important; }
+  .dark .text-gray-900 { color: #e2e8f0 !important; }
+  .dark .text-gray-700 { color: #cbd5e1 !important; }
+  .dark .text-gray-600 { color: #94a3b8 !important; }
+  .dark .text-gray-500 { color: #94a3b8 !important; }
+  .dark .border-gray-200 { border-color: #334155 !important; }
+  .dark .border-gray-100 { border-color: #1e293b !important; }
+  .dark .border-gray-300 { border-color: #475569 !important; }
+
+  /* T-029 : skip link pour la navigation clavier a11y */
+  .skip-link {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    background: #1B3A6B;
+    color: #fff;
+    padding: 0.5rem 1rem;
+    z-index: 100;
+    transition: top 0.2s;
+  }
+  .skip-link:focus {
+    top: 0;
   }
 }
 
