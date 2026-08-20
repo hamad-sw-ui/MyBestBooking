@@ -1,0 +1,219 @@
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import { Menu, X, User, LogOut, Heart, Calendar, MessageSquare } from "lucide-react";
+import { useState } from "react";
+import type { User as UserType } from "@/db/schema";
+
+interface HeaderProps {
+  user: UserType | null;
+}
+
+export function Header({ user }: HeaderProps) {
+  const pathname = usePathname();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+
+  const isActive = (path: string) => pathname === path;
+
+  return (
+    <header className="sticky top-0 z-40 bg-white border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-2">
+            <span className="text-[#F5A623] text-xl">✦</span>
+            <span className="font-bold text-[#1B3A6B]">mybest</span>
+            <span className="font-bold text-[#FF5A5F]">booking</span>
+          </Link>
+
+          {/* Desktop Navigation */}
+          <nav className="hidden md:flex items-center gap-6">
+            <Link
+              href="/recherche"
+              className={cn(
+                "text-sm font-medium transition-colors",
+                isActive("/recherche") ? "text-[#1B3A6B]" : "text-gray-600 hover:text-[#1B3A6B]"
+              )}
+            >
+              Hébergements
+            </Link>
+            <Link
+              href="/bestrewards"
+              className={cn(
+                "text-sm font-medium transition-colors",
+                isActive("/bestrewards") ? "text-[#F5A623]" : "text-gray-600 hover:text-[#F5A623]"
+              )}
+            >
+              💎 BestRewards
+            </Link>
+            <Link
+              href="/aide"
+              className={cn(
+                "text-sm font-medium transition-colors",
+                isActive("/aide") ? "text-[#1B3A6B]" : "text-gray-600 hover:text-[#1B3A6B]"
+              )}
+            >
+              Aide
+            </Link>
+          </nav>
+
+          {/* Right side */}
+          <div className="flex items-center gap-4">
+            {user ? (
+              <div className="relative">
+                <button
+                  onClick={() => setUserMenuOpen(!userMenuOpen)}
+                  className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white text-sm font-medium">
+                    {user.firstName.charAt(0)}{user.lastName.charAt(0)}
+                  </div>
+                </button>
+
+                {userMenuOpen && (
+                  <>
+                    <div className="fixed inset-0" onClick={() => setUserMenuOpen(false)} />
+                    <div className="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-100">
+                        <p className="text-sm font-medium text-gray-900">{user.firstName} {user.lastName}</p>
+                        <p className="text-xs text-gray-500">{user.email}</p>
+                        {user.bestrewardsLevel && (
+                          <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[#F5A623] to-[#f7b84a] text-white">
+                            💎 Level {user.bestrewardsLevel}
+                          </span>
+                        )}
+                      </div>
+                      <Link
+                        href="/mon-compte"
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <User className="w-4 h-4" />
+                        Mon compte
+                      </Link>
+                      <Link
+                        href="/mes-reservations"
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Calendar className="w-4 h-4" />
+                        Mes réservations
+                      </Link>
+                      <Link
+                        href="/mes-favoris"
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Heart className="w-4 h-4" />
+                        Mes favoris
+                      </Link>
+                      <Link
+                        href="/messages"
+                        className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <MessageSquare className="w-4 h-4" />
+                        Messages
+                      </Link>
+                      {(user.role === "host" || user.role === "admin") && (
+                        <Link
+                          href="/dashboard"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-[#1B3A6B] font-medium hover:bg-gray-50 border-t border-gray-100 mt-2 pt-2"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          Dashboard
+                        </Link>
+                      )}
+                      <form action="/api/auth/logout" method="POST">
+                        <button
+                          type="submit"
+                          className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        >
+                          <LogOut className="w-4 h-4" />
+                          Déconnexion
+                        </button>
+                      </form>
+                    </div>
+                  </>
+                )}
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-3">
+                <Link
+                  href="/connexion"
+                  className="text-sm font-medium text-gray-600 hover:text-[#1B3A6B] transition-colors"
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  href="/inscription"
+                  className="text-sm font-medium px-4 py-2 bg-[#1B3A6B] text-white rounded-lg hover:bg-[#152d54] transition-colors"
+                >
+                  S&apos;inscrire
+                </Link>
+              </div>
+            )}
+
+            {/* Mobile menu button */}
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            >
+              {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      {mobileMenuOpen && (
+        <div className="md:hidden border-t border-gray-100 bg-white">
+          <div className="px-4 py-4 space-y-2">
+            <Link
+              href="/recherche"
+              className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Hébergements
+            </Link>
+            <Link
+              href="/bestrewards"
+              className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              💎 BestRewards
+            </Link>
+            <Link
+              href="/aide"
+              className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
+              onClick={() => setMobileMenuOpen(false)}
+            >
+              Aide
+            </Link>
+            {!user && (
+              <div className="pt-4 border-t border-gray-100 space-y-2">
+                <Link
+                  href="/connexion"
+                  className="block w-full px-4 py-2 text-center text-sm font-medium text-[#1B3A6B] border border-[#1B3A6B] rounded-lg"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Se connecter
+                </Link>
+                <Link
+                  href="/inscription"
+                  className="block w-full px-4 py-2 text-center text-sm font-medium text-white bg-[#1B3A6B] rounded-lg"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  S&apos;inscrire
+                </Link>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </header>
+  );
+}

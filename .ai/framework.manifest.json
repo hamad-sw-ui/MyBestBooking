@@ -1,0 +1,48 @@
+{
+  "version": "3.0.0",
+  "name": "MobileCaisse AI Development Operating System (AI-DOS)",
+  "description": "Système de traçabilité des preuves techniques et de gouvernance autonome",
+  "mandatory_documents": [
+    "STATE.md",
+    "INDEX.md",
+    "TRACEABILITY.md",
+    "MISSION.md",
+    "PROJECT_CONTEXT.md",
+    "ARCHITECTURE.md",
+    "DATABASE.md",
+    "SECURITY.md",
+    "CODING_RULES.md",
+    "ANDROID_RULES.md",
+    "ROADMAP.md",
+    "BUGS.md",
+    "CURRENT_TASK.md",
+    "TEST_PLAN.md",
+    "DEVLOG.md"
+  ],
+  "optional_documents": [
+    "DEPENDENCIES.md",
+    "KNOWN_LIMITATIONS.md",
+    "PROCESS_IMPROVEMENTS.md",
+    "DEV_ENVIRONMENT.md"
+  ],
+  "reading_order": [
+    "STATE.md",
+    "INDEX.md",
+    "framework.manifest.json",
+    "MISSION.md",
+    "CURRENT_TASK.md"
+  ],
+  "critical_documents": [
+    "STATE.md",
+    "SECURITY.md",
+    "DATABASE.md",
+    "CODING_RULES.md",
+    "ADR/"
+  ],
+  "blocking_rules": {
+    "missing_mandatory_document": true,
+    "obsolete_roadmap": true,
+    "unresolved_critical_bugs": false,
+    "mismatched_git_state": true
+  }
+}
