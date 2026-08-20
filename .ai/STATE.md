@@ -10,9 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `4ad8884` (docs(.ai): réécrit le dossier .ai/ …)
-- **HEAD attendu** : à confirmer via `git rev-parse HEAD` en début de session
-- **Version du Framework** : 1.0.0 (AI-DOS Web, hybride)
+- **Dernier commit connu** : à mettre à jour en fin de session en cours (voir `git rev-parse --short HEAD` avant clôture)
+- **Dernier commit stable référencé** : `455c121` (feat(.ai): ajoute la couche gouvernance AI-DOS Web v1.0.0)
+- **Version du Framework** : 1.0.1 (AI-DOS Web, hybride — voir `PROCESS_IMPROVEMENTS.md` pour le journal des règles)
 
 ## 🛠️ État Technique
 
@@ -35,12 +35,13 @@
 
 ## 📋 Progression
 
-- **Dernière tâche terminée** : Réécriture complète du dossier `.ai/`
-  (framework de gouvernance hybride v1.0.0). Commit `4ad8884` + le commit
-  courant qui ajoute la couche gouvernance.
-- **Tâche en cours** : voir `CURRENT_TASK.md`.
+- **Dernière tâche terminée** : B-000 v1 — Mise en place initiale du
+  framework de gouvernance hybride v1.0.0 (commits `4ad8884` couche contenu
+  + `455c121` couche gouvernance).
+- **Tâche en cours** : B-000 v1.1 — auto-audit + ajustements du framework
+  (voir `CURRENT_TASK.md`).
 - **Prochaine tâche prévue** : sécurisation P1 (JWT_SECRET obligatoire au
-  boot + protection de `/api/seed`) — voir `BACKLOG.md`.
+  boot + protection de `/api/seed`) — voir `BACKLOG.md` → B-001.
 
 ## 🐞 Bugs & Défauts
 
@@ -68,6 +69,8 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20
-- **Agent** : Arena Agent Mode (première mise en place du framework)
-- **Prochaine mise à jour attendue** : fin de la prochaine session
+- **Date** : 2026-08-20 (Session 3 — auto-audit)
+- **Agent** : Arena Agent Mode
+- **Prochaine mise à jour attendue** : à chaque fin de session — obligatoire
+  §11. La règle de mise à jour est **vérifiée mécaniquement** par
+  `npm run ai:check` (voir `scripts/check-ai.mjs`).

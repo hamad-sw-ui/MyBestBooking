@@ -8,78 +8,118 @@
 
 ## Identifiant
 
-- **ID** : B-000
-- **Titre** : Mise en place du framework de gouvernance `.ai/` v1.0.0
+- **ID** : B-000 v1.1
+- **Titre** : Auto-audit + ajustements du framework `.ai/` v1.0.1
 - **Niveau de proportionnalité** : **S** (Structurant)
 - **Assigné à** : Arena Agent Mode
-- **Ouverte le** : 2026-08-20
+- **Ouverte le** : 2026-08-20 (Session 3)
+- **Prédécesseur** : B-000 v1 (mise en place initiale v1.0.0, commits
+  `4ad8884` + `455c121`)
 
 ## Contexte
 
-Le dossier `.ai/` a d'abord été réécrit en mode « aide-mémoire non
-bloquant » (commit `4ad8884`). Le responsable a demandé de le transformer en
-**vrai framework de gouvernance hybride** (proportionnalité T/L/S/C,
-checklists bloquantes, `STATE.md`, `CURRENT_TASK.md`, `TRACEABILITY.md`,
-règles §13/§14/§16/§22, ADR obligatoires pour S/C, tags de preuve).
+À la demande du responsable de valider/ajuster la mise en place initiale,
+un auto-audit a été mené qui a détecté **10 défauts** (voir
+`REPORTS/audit_2026-08-20_framework_v1.0.0.md`). Les décisions du
+responsable ont fixé le périmètre de cette version 1.0.1 :
+
+- Corriger les **4 défauts rouges** (contradictions internes objectives).
+- **Assumer le niveau S** pour B-000, documenter la justification dans
+  ADR-001.
+- Ajouter une **clause transitoire §13.4** : test manuel ▶️ documenté vaut
+  preuve tant que `TEST_PLAN.md → J1` n'est pas livré.
+- Créer `scripts/check-ai.mjs` + `npm run ai:check`, tranché par
+  **ADR-002** (le framework peut produire du code de vérification hors de
+  `.ai/`).
 
 ## Objectif
 
-Livrer un `.ai/` conforme au manifest suivant :
+Livrer la version **1.0.1** du framework avec :
 
-- Couche contenu conservée (PROJECT, ARCHITECTURE, DATABASE, API, UI,
-  SECURITY, CODING_STYLE, DEV_ENVIRONMENT, DEPENDENCIES, ROADMAP, BUGS,
-  BACKLOG, DEVLOG).
-- Couche gouvernance ajoutée : MISSION, INDEX, STATE, CURRENT_TASK,
-  CODING_RULES, TRACEABILITY, TEST_PLAN, KNOWN_LIMITATIONS,
-  PROCESS_IMPROVEMENTS, PROGRESS, framework.manifest.json.
-- Checklists rendues **bloquantes** (avant_commit, avant_pull_request,
-  avant_release).
-- Prompts complétés (rôles multiples, session_start durci).
-- READMEs des dossiers ADR/REPORTS/LOGS remis à jour pour refléter le
-  caractère **obligatoire pour S et C**.
+1. `STATE.md` cohérent avec le HEAD Git courant.
+2. `framework.manifest.json → reading_order` aligné sur `INDEX.md`
+   (8 documents, `framework.manifest.json` inclus).
+3. `PROMPTS/roles.md` libellé du rôle 7 aligné sur le manifest.
+4. `CURRENT_TASK.md` (ce fichier) avec tags §16 sur les critères
+   d'acceptation.
+5. `CODING_RULES.md §13.4` amendé avec la clause transitoire.
+6. `ADR-001` complété d'une section « Niveau assumé S : justification ».
+7. `ADR-002_Automatisation_hors_dossier_ai.md` créé.
+8. `scripts/check-ai.mjs` créé + entrée `npm run ai:check` dans
+   `package.json`.
+9. `README.md` racine ajouté à `mandatory_documents`.
+10. `PROCESS_IMPROVEMENTS.md` mis à jour avec l'audit et les décisions.
+11. `PROGRESS.md` ouvre une nouvelle entrée Session 3.
+12. `TRACEABILITY.md` référence les nouveaux artefacts.
+13. `npm run ai:check` **passe** (▶️ preuve d'exécution requise pour
+    clôturer VALIDÉ).
 
 ## Périmètre autorisé
 
-- ✅ Créer / modifier des fichiers **uniquement** dans `.ai/`.
+- ✅ Modifier tout `.ai/`.
+- ✅ Créer `scripts/check-ai.mjs`.
+- ✅ Modifier `package.json` (ajout scripts uniquement, aucune dépendance
+  runtime).
 - ✅ Committer sur `arena/01a01eee-mybestbooking`.
-- ❌ **Ne pas toucher** au code applicatif (`src/`, `package.json`,
-  `next.config.ts`, `drizzle.config.json`).
+- ❌ **Ne pas toucher** au code applicatif `src/`.
 - ❌ **Ne pas modifier** le schéma DB.
 - ❌ **Ne pas ouvrir** de PR sans validation.
 
-## Analyse d'impact (obligatoire pour S)
+## Analyse d'impact (§14)
 
-Voir `REPORTS/analyse_impact_2026-08-20_governance_setup.md`.
+Voir `REPORTS/audit_2026-08-20_framework_v1.0.0.md` (l'audit lui-même
+tient lieu d'analyse d'impact pour cette itération corrective).
 
-## Conception (obligatoire pour S)
+## Conception (§15.1)
 
-Voir `REPORTS/analyse_conception_2026-08-20_governance_setup.md`.
+- **ADR-001** actualisé — assume le niveau S pour la mise en place
+  initiale.
+- **ADR-002** — tranche la question de l'automatisation hors `.ai/`.
 
 ## Critères d'acceptation
 
-- [x] Tous les documents obligatoires du `framework.manifest.json` existent.
-- [x] `INDEX.md` prescrit un ordre de lecture cohérent.
-- [x] `CODING_RULES.md` contient les §13, §14, §15, §16, §17, §22.
-- [x] `TRACEABILITY.md` ouvre un tableau vide prêt à recevoir des entrées.
-- [x] `STATE.md` reflète l'état réel du dépôt au 2026-08-20.
-- [x] `CHECKLISTS/*` sont marquées **bloquantes** et non plus facultatives.
-- [x] `PROMPTS/roles.md` liste les 11 rôles techniques web.
-- [x] Un ADR ADR-001 acte le choix du framework.
-- [x] Un rapport d'analyse d'impact et un rapport de conception existent
-  dans `REPORTS/`.
-- [x] `PROGRESS.md` ouvre une entrée horodatée pour cette session.
-- [x] Commit atomique portant uniquement `.ai/`.
+Chaque critère porte un **tag de preuve §16**. Un critère `[x]` sans tag
+▶️/🔨/🧪 est considéré comme mensonger (§16, §22).
+
+- [ ] 🔨 `npm run ai:check` passe sans erreur — **preuve principale, seule
+  qui autorise le passage à `VALIDÉ`**
+- [ ] 🔍 `STATE.md → HEAD` référence le SHA du commit courant (à mettre à
+  jour juste avant commit final)
+- [ ] 🔍 `framework.manifest.json → reading_order` contient les 8
+  documents de `INDEX.md`
+- [ ] 🔍 `PROMPTS/roles.md § rôle 7` est libellé « Expert sécurité web
+  (auth, cookies, CSP) »
+- [ ] 🔍 `CURRENT_TASK.md` (ce fichier) : chaque critère porte un tag §16
+- [ ] 🔍 `CODING_RULES.md §13.4` inclut la clause transitoire de preuve
+  manuelle
+- [ ] 🔍 `ADR-001` contient une section « Niveau assumé S : justification »
+- [ ] 🔍 `ADR-002_Automatisation_hors_dossier_ai.md` existe
+- [ ] 🔍 `scripts/check-ai.mjs` existe et est exécutable
+- [ ] 🔍 `package.json → scripts.ai:check` existe
+- [ ] 🔍 `README.md` figure dans `mandatory_documents`
+- [ ] 🔍 `PROCESS_IMPROVEMENTS.md` a une entrée « Session 3 — auto-audit »
+- [ ] 🔍 `PROGRESS.md` a une entrée « Session 3 »
+- [ ] 🔍 `TRACEABILITY.md` référence B-000 v1.1
 
 ## Statut
 
-**CORRIGÉ (INSPECTION)** — livrable produit, non validé par exécution car il
-s'agit de documentation (pas de code à typechecker/builder/tester).
+**CORRIGÉ (INSPECTION)** — tant que `npm run ai:check` n'a pas été exécuté
+avec succès ▶️ et le résultat consigné dans `TRACEABILITY.md`, la tâche
+reste en INSPECTION (§13).
+
+Passage à **CORRIGÉ (VALIDÉ)** possible seulement quand :
+
+- ▶️ `npm run ai:check` retourne code 0 dans une exécution horodatée
+  documentée ;
+- 🔍 tous les critères ci-dessus sont vérifiables ;
+- 🔍 le responsable a explicitement validé (le framework n'autorise pas
+  l'auto-validation §22).
 
 ## Prochaine tâche recommandée
 
-- **B-001** : `JWT_SECRET` obligatoire au boot (niveau **C** — sécurité auth).
-  → nécessite analyse d'impact + conception + débat multi-rôles + double
-  validation.
+Après clôture VALIDÉ de B-000 v1.1 → **B-001** : `JWT_SECRET` obligatoire
+au boot (niveau **C** — première tâche déclenchant analyse d'impact
+complète + conception + débat multi-rôles 11 rôles + double validation).
 
 ---
 

@@ -1,9 +1,25 @@
 {
-  "version": "1.0.0",
+  "version": "1.0.1",
   "name": "MyBestBooking AI Development Operating System (AI-DOS Web)",
   "description": "Framework de gouvernance hybride pour un projet Next.js/PostgreSQL/Drizzle : traçabilité des preuves, proportionnalité T/L/S/C, checklists bloquantes, honnêteté technique.",
   "derived_from": "AI-DOS 3.0 (MobileCaisse) — philosophie conservée, contenu réécrit pour le web",
+  "changelog": [
+    {
+      "version": "1.0.0",
+      "date": "2026-08-20",
+      "session": "Session 2",
+      "commit": "455c121",
+      "changes": "Mise en place initiale du framework hybride."
+    },
+    {
+      "version": "1.0.1",
+      "date": "2026-08-20",
+      "session": "Session 3",
+      "changes": "Auto-audit : correction de 4 défauts rouges (STATE.md HEAD, reading_order aligné, libellé rôle sécurité uniformisé, README.md ajouté aux mandatory_documents), clause transitoire §13.4 (test manuel documenté vaut preuve tant que TEST_PLAN J1 n'est pas livré), ajout du script scripts/check-ai.mjs tranché par ADR-002."
+    }
+  ],
   "mandatory_documents": [
+    "README.md",
     "STATE.md",
     "INDEX.md",
     "MISSION.md",
@@ -33,6 +49,7 @@
   "reading_order": [
     "STATE.md",
     "INDEX.md",
+    "framework.manifest.json",
     "MISSION.md",
     "CURRENT_TASK.md",
     "PROJECT.md",

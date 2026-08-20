@@ -126,6 +126,21 @@ conditions ci-dessous sont réunies :
    documentés).
 4. **§13.4 Tests** : `npm test` passe (dès qu'un runner sera installé) ; les
    tests couvrant le code modifié existent et passent.
+
+   **§13.4-bis Clause transitoire (jusqu'à `TEST_PLAN.md → J1`)** — tant
+   qu'aucun runner de tests n'est configuré dans le dépôt, un **test
+   manuel ▶️ documenté** vaut preuve pour §13.4, à condition que :
+   - la commande exacte (curl, `npm run …`, requête, clic) soit consignée
+     dans `TRACEABILITY.md` ou dans un rapport `REPORTS/…` ;
+   - la sortie observée soit résumée avec assez de précision pour être
+     rejouée par un auditeur §22 ;
+   - la clause soit **explicitement invoquée** (« clause §13.4-bis ») dans
+     le message de commit ou la description de PR.
+
+   Cette clause **cesse de s'appliquer** dès que J1 de `TEST_PLAN.md` est
+   livré (Vitest installé). À partir de ce moment, un test automatisé
+   couvrant le comportement est exigé pour toute clôture VALIDÉ.
+
 5. **§13.5 Double validation** (niveau **C** uniquement) : le comportement
    est validé par une **implémentation** ET par un **test automatisé
    indépendant** rédigé après ou en parallèle, pas dérivé du même
@@ -181,6 +196,26 @@ La profondeur des rituels **suit l'impact, pas la taille du diff** :
 | **L** | refactor interne | allégée | ⬜ | ⬜ | ⬜ | ⬜ |
 | **S** | route API, page, signature | ✅ | ✅ | si désaccord | ✅ | ✅ |
 | **C** | auth, paiement, migration | ✅ | ✅ | ✅ | ✅ | ✅ + double validation |
+
+### §15.0-bis Évolution du framework lui-même
+
+Toute **modification du framework `.ai/`** au-delà de la mise en place
+initiale (v1.0.0, tâche B-000, ADR-001) est de niveau **C** par défaut :
+
+- Ajout/retrait d'un document `mandatory_documents`.
+- Modification d'une règle §1–§22 de `CODING_RULES.md`.
+- Modification des `blocking_rules` de `framework.manifest.json`.
+- Modification de la liste des `roles` du débat multi-rôles.
+- Changement de la table de proportionnalité T/L/S/C.
+
+Ces changements exigent : analyse d'impact §14 + conception §15.1 +
+débat 11 rôles §15.2 + ADR + double validation §13.5, et sont consignés
+au registre `PROCESS_IMPROVEMENTS.md → Historique des règles`.
+
+Exception explicite : la **correction d'incohérences internes** (typo,
+alignement manifest ↔ documents, mise à jour du HEAD dans `STATE.md`,
+tags de preuve §16 omis) reste au niveau **S** — c'est de la maintenance
+de framework, pas une évolution.
 
 ### §15.1 Document de conception (S, C)
 

@@ -87,6 +87,43 @@ Le framework sera **audité** après **5 sessions** (mesure §17). Tout item
 qui n'a jamais servi sera candidat à la suppression. Toute règle qui aura
 été **violée systématiquement** sera candidate à la reformulation.
 
+## Niveau assumé S : justification
+
+Un auto-audit (Session 3, `REPORTS/audit_2026-08-20_framework_v1.0.0.md`)
+a soulevé une question légitime : la mise en place d'un framework opposable
+à toutes les tâches futures ne devrait-elle pas être **C (critique)**,
+au titre qu'elle modifie les règles de gouvernance elles-mêmes ?
+
+Le niveau **S** est **assumé** pour les raisons suivantes :
+
+1. **Périmètre purement documentaire.** B-000 n'a modifié aucun runtime,
+   aucun schéma DB, aucune surface exposée à un utilisateur final. Elle ne
+   crée aucun risque de perte de données ni de faille de sécurité
+   applicative.
+2. **Rollback trivial.** `git revert` suffit à annuler la totalité du
+   framework sans effet collatéral (analyse §14 point 9).
+3. **Aucune règle à défendre.** Un débat multi-rôles §15.2 sert à
+   arbitrer entre plusieurs conceptions concurrentes d'un composant
+   critique existant. Ici, il n'y avait pas de « conception antérieure »
+   à casser : le framework AI-DOS 3.0 hérité était factuellement
+   inapplicable (projet Android/Kotlin, pas Next.js). L'alternative
+   pertinente (« ne pas avoir de framework ») avait déjà été essayée en
+   Session 1 et rejetée par le responsable.
+4. **Auto-application impossible.** Un framework de gouvernance ne peut
+   pas être validé selon ses propres règles avant d'exister. Insister
+   sur le niveau **C** pour B-000 aurait exigé un débat 11 rôles et une
+   double validation… par un framework qui n'existait pas encore.
+   C'est un cas classique de « bootstrap ».
+
+**Contrepartie assumée.** Toute **évolution ultérieure** du framework
+(modification de `CODING_RULES.md §§1–22`, changement de
+`blocking_rules`, retrait d'un document `mandatory`) est de niveau **C**
+et exige le cycle complet, y compris le débat 11 rôles a posteriori si le
+changement est structurant.
+
+Cette contrepartie est enregistrée dans `PROCESS_IMPROVEMENTS.md` sous la
+rubrique « Historique des règles » comme règle §15.0-bis.
+
 ## Preuves de mise en œuvre (§16)
 
 - 🔍 Tous les documents obligatoires listés dans `framework.manifest.json`

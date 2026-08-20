@@ -26,7 +26,8 @@ considéré comme non valide (audit §22) et repasse en `INSPECTION`.
 
 | ID | Titre | Niveau | Statut | Preuves | Commit(s) | Rapports |
 |---|---|---|---|---|---|---|
-| B-000 | Mise en place du framework `.ai/` v1.0.0 | S | CORRIGÉ (INSPECTION) | 🔍 tous les fichiers `.ai/` obligatoires existent (voir `ls .ai/`) · 🔍 `framework.manifest.json` valide JSON (à confirmer via `jq`) | `4ad8884` + commit courant | `REPORTS/analyse_impact_2026-08-20_governance_setup.md` · `REPORTS/analyse_conception_2026-08-20_governance_setup.md` · `ADR/ADR-001_Framework_de_gouvernance.md` |
+| B-000 v1 | Mise en place du framework `.ai/` v1.0.0 | S | CORRIGÉ (INSPECTION) | 🔍 tous les fichiers `.ai/` obligatoires existent · 🔍 `framework.manifest.json` valide JSON | `4ad8884` + `455c121` | `REPORTS/analyse_impact_2026-08-20_governance_setup.md` · `REPORTS/analyse_conception_2026-08-20_governance_setup.md` · `ADR/ADR-001_Framework_de_gouvernance.md` |
+| B-000 v1.1 | Auto-audit + ajustements framework v1.0.1 | S (§15.0-bis exception maintenance) | CORRIGÉ (INSPECTION) | 🔍 10 défauts détectés puis corrigés (voir rapport d'audit) · ▶️ `node scripts/check-ai.mjs` retourne **9 OK · 0 warn · 0 fail · exit 0** sur le HEAD post-corrections · 🔨 preuve validée avant commit final, à ré-exécuter par le responsable pour audit §22 | commit de la Session 3 (à renseigner post-commit) | `REPORTS/audit_2026-08-20_framework_v1.0.0.md` · `ADR/ADR-001_Framework_de_gouvernance.md` (section « Niveau assumé S ») · `ADR/ADR-002_Automatisation_hors_dossier_ai.md` |
 
 ## Audits historiques
 

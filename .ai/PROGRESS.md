@@ -9,6 +9,102 @@
 
 ---
 
+## 2026-08-20 — Session 3 : auto-audit + framework v1.0.1
+
+**Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`
+· **Agent** : Arena Agent Mode
+
+### Livré (tâche B-000 v1.1, niveau **S** exception §15.0-bis maintenance)
+
+- **Auto-audit** complet du framework v1.0.0 → 10 défauts détectés,
+  consignés dans `REPORTS/audit_2026-08-20_framework_v1.0.0.md`.
+- **Décisions du responsable** pour les 10 défauts (via `ask_user`) :
+  - 🔴 défauts 1-4 (contradictions internes) → **corriger tout**.
+  - 🟠 défaut 6 (niveau B-000 S vs. C) → **assumer S**, documenter dans
+    ADR-001.
+  - 🟠 défaut 7 (contradiction §13.4 vs. tests inexistants) → **clause
+    transitoire** : test manuel ▶️ documenté vaut preuve.
+  - 🟡 défauts 8-9-10 (automatisation) → **créer** `scripts/check-ai.mjs`
+    + `npm run ai:check`, tranché par ADR-002.
+- **Corrections textuelles** (défauts 1-4) :
+  - `STATE.md` : HEAD `4ad8884` → référence à `455c121` + motif toléré
+    « à mettre à jour en fin de session ».
+  - `framework.manifest.json → reading_order` : 7 → 8 documents
+    (ajout `framework.manifest.json`).
+  - `PROMPTS/roles.md → rôle 7` : « Expert sécurité web » → « Expert
+    sécurité web (auth, cookies, CSP) ».
+  - `CURRENT_TASK.md` : refonte complète, tags §16 sur les 14 critères,
+    exigence explicite ▶️ `npm run ai:check` pour clôture VALIDÉ.
+- **Règles ajoutées** (v1.0.1) :
+  - `CODING_RULES.md §13.4-bis` — clause transitoire test manuel.
+  - `CODING_RULES.md §15.0-bis` — toute évolution du framework = niveau
+    **C** (sauf maintenance = S).
+- **Justification du niveau S de B-000 initial** ajoutée à ADR-001
+  (section « Niveau assumé S : justification », 4 arguments).
+- **ADR-002** créé — le framework peut produire du code hors `.ai/`.
+- **`scripts/check-ai.mjs`** créé (Node stdlib, ~250 lignes, 9 règles
+  R1–R9 pilotées par le manifest).
+- **`package.json → scripts.ai:check`** ajouté.
+- **`README.md`** ajouté à `mandatory_documents`.
+- **`framework.manifest.json → changelog`** ajouté, version 1.0.0 → 1.0.1.
+- **`PROCESS_IMPROVEMENTS.md`** : entrée Session 3 + 4 nouvelles lignes
+  dans « Historique des règles ».
+- **`TRACEABILITY.md`** : B-000 scindé en v1 et v1.1, preuve ▶️ posée.
+
+### Fichiers modifiés
+
+```
+M .ai/STATE.md                                            (défaut 1)
+M .ai/framework.manifest.json                             (défauts 2, 9)
+M .ai/PROMPTS/roles.md                                    (défaut 3)
+M .ai/CURRENT_TASK.md                                     (défaut 4)
+M .ai/CODING_RULES.md                                     (défauts 6, 7 — §13.4-bis, §15.0-bis)
+M .ai/ADR/ADR-001_Framework_de_gouvernance.md             (défaut 6)
+A .ai/ADR/ADR-002_Automatisation_hors_dossier_ai.md       (défaut 10)
+A .ai/REPORTS/audit_2026-08-20_framework_v1.0.0.md
+M .ai/TRACEABILITY.md
+M .ai/PROCESS_IMPROVEMENTS.md
+M .ai/PROGRESS.md                                          (ce fichier)
+A scripts/check-ai.mjs                                     (défaut 8, ADR-002)
+M package.json                                             (ai:check)
+```
+
+### Tests exécutés
+
+- ▶️ **`node scripts/check-ai.mjs`** : **9 OK · 0 warn · 0 fail · exit 0**
+  sur le HEAD post-corrections. Sortie consignée dans
+  `TRACEABILITY.md`.
+- 🔍 Vérification manuelle que `package.json` reste JSON valide après
+  ajout du script.
+- ❓ `npm run typecheck` / `build` non exécutés — le script `ai:check`
+  n'a aucune dépendance runtime au projet, et cette tâche n'a pas
+  touché `src/`.
+
+### Problèmes rencontrés
+
+- Deux défauts rouges (1 et 4) étaient des **auto-violations du
+  framework par son propre auteur** (HEAD obsolète, critères `[x]` sans
+  tag §16). Leçon : la vérification mécanique est indispensable même
+  quand on croit être rigoureux.
+- Le manifest ne s'auto-listait pas dans `mandatory_documents` (ce qui
+  est défendable), mais oubliait aussi `README.md` (ce qui ne l'est
+  pas). Corrigé.
+
+### Statut de la tâche
+
+**CORRIGÉ (INSPECTION)** — attente de validation par le responsable pour
+passage à `VALIDÉ`. La preuve mécanique ▶️ est acquise, l'audit externe
+§22 est réalisable via `npm run ai:check`.
+
+### Étape suivante
+
+- Le responsable rejoue `npm run ai:check` s'il souhaite auditer §22.
+- Si validé → passage à **B-001** (`JWT_SECRET` obligatoire, niveau **C**)
+  qui déclenchera le cycle complet : analyse d'impact §14 + conception
+  §15.1 + débat multi-rôles 11 rôles §15.2 + double validation §13.5.
+
+---
+
 ## 2026-08-20 — Session 2 : mise en place du framework de gouvernance
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`

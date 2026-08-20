@@ -52,7 +52,7 @@ détecte un risque. Le débat entier est consigné dans
 - **Objection typique** : `UPDATE ... SET averageRating = ...` sans
   transaction → race condition.
 
-### 7. Expert sécurité web
+### 7. Expert sécurité web (auth, cookies, CSP)
 - **Question directrice** : nouvelle surface d'attaque ? Élévation de
   privilèges possible ? Cookie mal configuré ? CSRF ? Injection ?
   Rate-limiting ? Secrets bien isolés ?
