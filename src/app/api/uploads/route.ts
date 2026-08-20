@@ -6,6 +6,7 @@ import {
   MAX_UPLOAD_BYTES,
   ALLOWED_UPLOAD_MIMES,
 } from "@/lib/storage";
+import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
 
 /**
  * POST /api/uploads
@@ -17,6 +18,10 @@ export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  }
+  // T-022 : mode maintenance
+  if (user.role !== "admin" && (await isMaintenanceActive())) {
+    return maintenanceResponse();
   }
 
   const rl = rateLimit(`upload:user:${user.id}`, {

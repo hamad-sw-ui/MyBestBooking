@@ -10,6 +10,11 @@ import { promotions } from "@/db/schema";
 import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
 import { getPaymentProvider } from "@/lib/payment";
 import { getSetting } from "@/lib/settings";
+import {
+  assertNotMaintenance,
+  MaintenanceError,
+  maintenanceResponse,
+} from "@/lib/maintenance";
 
 const bookingSchema = z
   .object({
@@ -127,6 +132,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    // T-022 : mode maintenance — bloquer les réservations pour les non-admins.
+    await assertNotMaintenance(user);
 
     const body = await request.json();
     const data = bookingSchema.parse(body);
@@ -366,6 +373,9 @@ export async function POST(request: NextRequest) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof MaintenanceError) {
+      return maintenanceResponse(error.retryAfterSeconds);
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },

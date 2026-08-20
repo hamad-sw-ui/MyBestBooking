@@ -4,6 +4,7 @@ import { promotions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
+import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
 
 /**
  * GET /api/promotions/apply?code=SUMMER26&amount=250 (T-016)
@@ -12,6 +13,13 @@ import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
  * POST /api/bookings.
  */
 export async function GET(request: NextRequest) {
+  // T-022 : mode maintenance — bloquer l'application de promo. Endpoint
+  // public (pas d'auth requise) : on bloque tout le monde. Un admin
+  // peut désactiver le mode depuis /dashboard/settings.
+  if (await isMaintenanceActive()) {
+    return maintenanceResponse();
+  }
+
   const rl = rateLimit(`promoapply:ip:${ipFromRequest(request)}`, {
     limit: 30,
     windowMs: 60 * 60 * 1000,

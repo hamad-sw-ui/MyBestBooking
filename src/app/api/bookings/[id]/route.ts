@@ -6,6 +6,11 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { computeCancellationFeeWithGrid, daysUntil, type CancellationPolicy } from "@/lib/cancellation";
 import { getSetting } from "@/lib/settings";
+import {
+  assertNotMaintenance,
+  MaintenanceError,
+  maintenanceResponse,
+} from "@/lib/maintenance";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
@@ -86,6 +91,8 @@ export async function PUT(
         { status: 401 }
       );
     }
+    // T-022 : mode maintenance — bloquer les mutations pour les non-admins.
+    await assertNotMaintenance(user);
 
     const { id } = await params;
     const body = await request.json();
@@ -143,6 +150,9 @@ export async function PUT(
 
     return NextResponse.json({ booking: updatedBooking });
   } catch (error) {
+    if (error instanceof MaintenanceError) {
+      return maintenanceResponse(error.retryAfterSeconds);
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },

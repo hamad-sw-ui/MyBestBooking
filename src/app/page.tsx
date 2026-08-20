@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { getCurrentUser } from "@/lib/auth";
+import { isMaintenanceActive } from "@/lib/maintenance";
 import { db } from "@/db";
 import { properties, reviews, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -23,6 +25,14 @@ async function getFeaturedProperties() {
 
 export default async function HomePage() {
   const user = await getCurrentUser();
+
+  // T-022 : mode maintenance — les non-admins sont redirigés vers
+  // /maintenance. La page racine n'est pas dans le groupe (main),
+  // donc le guard du layout (main) ne s'y applique pas.
+  if ((!user || user.role !== "admin") && (await isMaintenanceActive())) {
+    redirect("/maintenance");
+  }
+
   const featuredProperties = await getFeaturedProperties();
   
   const destinations = [

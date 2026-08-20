@@ -139,6 +139,7 @@ modification de code.
 | Journal d'actions admin | 🚧 | `updated_by`/`updated_at` sur `app_settings` (T-021), pas encore de table `audit_log` globale | T-021 partiel |
 | Suspendre / réactiver un utilisateur | ✅ | `PATCH /api/users/[id]/suspend` (T-016) + bouton `<UserSuspendActions>` dans `/dashboard/users` (T-021) — testé ▶️ suspend/login 401/reactivate/login 200 | T-021 |
 | **Panel de configuration runtime (TVA, commissions, seuils BestRewards, grille annulation, notifications, sécurité, providers)** | ✅ | Table `app_settings` + `src/lib/settings.ts` + endpoints `/api/admin/settings` + `<SettingsPanel>` dans `/dashboard/settings` (T-021, ADR-007). 9 tests unitaires settings + 3 tests grille custom cancellation. ▶️ PATCH billing → TVA appliquée immédiatement à `POST /api/bookings` | T-021 |
+| **Mode maintenance (activable par admin, redirige non-admins vers /maintenance, API métier → 503)** | ✅ | `src/lib/maintenance.ts` + page `/maintenance` + guards RSC dans 3 layouts + guards 503 dans POST /api/bookings, PUT /api/bookings/[id], POST /api/uploads, POST /api/reviews, GET /api/promotions/apply (T-022). Whitelist déterministe anti-lockout admin. 11 tests unitaires. ▶️ Customer POST /api/bookings → 503 + `Retry-After: 60`, admin → 201 (bypass) | T-022 |
 
 ## Emails transactionnels
 

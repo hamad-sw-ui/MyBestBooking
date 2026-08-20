@@ -4,6 +4,11 @@ import { reviews, properties, users, bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
+import {
+  assertNotMaintenance,
+  MaintenanceError,
+  maintenanceResponse,
+} from "@/lib/maintenance";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -87,6 +92,8 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    // T-022 : mode maintenance
+    await assertNotMaintenance(user);
 
     const body = await request.json();
     const data = reviewSchema.parse(body);
@@ -172,6 +179,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ review: newReview }, { status: 201 });
   } catch (error) {
+    if (error instanceof MaintenanceError) {
+      return maintenanceResponse(error.retryAfterSeconds);
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },

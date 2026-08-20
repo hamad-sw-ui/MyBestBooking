@@ -9,6 +9,48 @@
 
 ---
 
+## 2026-08-20 — Session 7 (suite) : T-022 (câblage mode maintenance)
+
+**Trigger** : « continuez si vous n'avez pas fini ».
+
+### Livré
+
+**T-022 (S)** — Câblage effectif de `security.maintenanceMode`
+(`REPORTS/analyse_impact_2026-08-20_maintenance_mode.md`,
+`REPORTS/analyse_conception_2026-08-20_maintenance_mode.md`) :
+
+- `src/lib/maintenance.ts` : `isMaintenanceActive`,
+  `assertNotMaintenance`, `maintenanceResponse` (503 + Retry-After 60),
+  `shouldBypassMaintenance` (whitelist déterministe anti-lockout admin).
+- Page `/maintenance` (RSC, noindex, message français).
+- Guards RSC dans `src/app/page.tsx`, `src/app/(main)/layout.tsx`
+  (avec `dynamic="force-dynamic"`), `src/app/dashboard/layout.tsx`.
+- Guards API 503 dans `POST /api/bookings`, `PUT /api/bookings/[id]`,
+  `POST /api/uploads`, `POST /api/reviews`, `GET /api/promotions/apply`.
+- 11 tests unitaires (bypass whitelist, code, retryAfter, isActive).
+
+### Preuves (§16)
+
+- 🔨 typecheck OK, build OK, lint 0 error.
+- 🧪 `npm test` : **134 passed / 134** (+11 tests maintenance).
+- 🧪 `npm run ai:check` : 14 OK · 2 warn · 0 fail (R7 motif toléré).
+- ▶️ Activer maintenance → customer `/` retourne HTML avec
+  `NEXT_REDIRECT;replace;/maintenance;307` (meta refresh navigateur).
+- ▶️ Anonyme `/` → même redirect. Admin `/` → 0 redirect (bypass).
+- ▶️ Anonyme `/api/auth/login` → 200 (whitelist). `/connexion` → 200.
+- ▶️ Admin `/dashboard/settings` → 200 (peut désactiver le mode).
+- ▶️ Customer `POST /api/bookings` → **503** + `Retry-After: 60` +
+  `{"code":"MAINTENANCE_MODE"}`.
+- ▶️ Admin `POST /api/bookings` en maintenance → **201** (bypass admin).
+- ▶️ Désactivation → booking 201, redirect disparaît sous TTL 60 s.
+
+### Étape suivante
+
+Attente instructions. Backlog restant : T-023 (modération avis),
+T-024 (audit_log global), T-025 (templates emails éditables).
+
+---
+
 ## 2026-08-20 — Session 7 : T-021 (panel d'administration configurable)
 
 **Date** : 2026-08-20 · **Branche** : `arena/01a01eee-mybestbooking`

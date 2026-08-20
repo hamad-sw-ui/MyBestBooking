@@ -32,12 +32,10 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 - ✅ **T-020** Paiement Stripe test-mode + webhook — livré
 - ✅ **T-021** Panel d'administration configurable + UI suspend user
   (Session 7, ADR-007)
+- ✅ **T-022** Câblage effectif du mode maintenance (Session 7)
 
 ### Chantiers restants proposés
 
-- 🟠 **T-022** Cabler `security.maintenanceMode` (paramètre déjà
-  enregistrable via T-021) dans le proxy edge pour renvoyer une page
-  maintenance aux non-admins.
 - 🟠 **T-023** Modération d'avis admin (approuver/cacher/rejeter) via
   endpoints + UI.
 - 🟠 **T-024** Table `audit_log` globale (au-delà d'`app_settings.updated_by`).
