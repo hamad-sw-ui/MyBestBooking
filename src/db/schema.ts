@@ -46,6 +46,20 @@ export const users = pgTable("users", {
 });
 
 // ═══════════════════════════════════════════════
+// VERIFICATION_TOKENS (T-013)
+// email_verification + password_reset — hashés SHA-256.
+// ═══════════════════════════════════════════════
+export const verificationTokens = pgTable("verification_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  tokenHash: varchar("token_hash", { length: 64 }).unique().notNull(),
+  purpose: varchar("purpose", { length: 30 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ═══════════════════════════════════════════════
 // SESSIONS
 // ═══════════════════════════════════════════════
 export const sessions = pgTable("sessions", {

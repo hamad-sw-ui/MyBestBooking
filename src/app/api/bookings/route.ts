@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { generateBookingReference, calculateNights } from "@/lib/utils";
 import { eq, and, or, desc, lt, gt, ne, sql } from "drizzle-orm";
 import { z } from "zod";
+import { getMailer, templates } from "@/lib/mail";
 
 const bookingSchema = z
   .object({
@@ -236,11 +237,51 @@ export async function POST(request: NextRequest) {
       .update(users)
       .set({
         bestrewardsBookingsCount: (user.bestrewardsBookingsCount || 0) + 1,
-        bestrewardsLevel: 
+        bestrewardsLevel:
           (user.bestrewardsBookingsCount || 0) + 1 >= 15 ? 3 :
           (user.bestrewardsBookingsCount || 0) + 1 >= 5 ? 2 : 1,
       })
       .where(eq(users.id, user.id));
+
+    // T-013 : emails de confirmation (voyageur) et notification (hôte).
+    // Best-effort : n'annule pas la réservation en cas d'échec SMTP.
+    try {
+      const mailer = getMailer();
+      // Confirmation voyageur
+      await mailer.send({
+        to: data.guestEmail,
+        ...templates.bookingConfirmation({
+          firstName: data.guestFirstName,
+          bookingReference,
+          propertyName: property.name,
+          city: property.city,
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
+          total: total.toFixed(2),
+          currency: room.currency || "EUR",
+        }),
+      });
+      // Notification hôte
+      const [host] = await db
+        .select({ email: users.email, firstName: users.firstName })
+        .from(users)
+        .where(eq(users.id, property.hostId));
+      if (host) {
+        await mailer.send({
+          to: host.email,
+          ...templates.bookingHostNotification({
+            hostFirstName: host.firstName,
+            bookingReference,
+            propertyName: property.name,
+            guestName: `${data.guestFirstName} ${data.guestLastName}`,
+            checkIn: data.checkIn,
+            checkOut: data.checkOut,
+          }),
+        });
+      }
+    } catch (mailErr) {
+      console.error("[booking] confirmation mail failed:", mailErr);
+    }
 
     return NextResponse.json({ booking: newBooking }, { status: 201 });
   } catch (error) {

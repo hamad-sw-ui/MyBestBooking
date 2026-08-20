@@ -5,6 +5,8 @@ import { hashPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
+import { issueToken } from "@/lib/tokens";
+import { getMailer, templates } from "@/lib/mail";
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -62,6 +64,18 @@ export async function POST(request: NextRequest) {
         emailVerified: false,
       })
       .returning();
+
+    // T-013 : envoi email de vérification (best-effort, ne bloque pas
+    // la création du compte si SMTP tombe).
+    try {
+      const { clear } = await issueToken(newUser.id, "email_verification");
+      const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      const url = `${base}/api/auth/verify?token=${encodeURIComponent(clear)}`;
+      const mail = templates.emailVerification({ firstName: newUser.firstName, url });
+      await getMailer().send({ to: newUser.email, ...mail });
+    } catch (mailErr) {
+      console.error("[register] verification mail failed:", mailErr);
+    }
 
     // Create session
     await createSession(newUser.id);

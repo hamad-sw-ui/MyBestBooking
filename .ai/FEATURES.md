@@ -27,8 +27,8 @@ modification de code.
 | Profil courant | ✅ | `GET /api/auth/me` | initial |
 | Édition profil (nom, tél, pays) | 🚧 | UI `/mon-compte` existe, aucune route `PATCH /api/users/me` | 🎯 T-016 |
 | Changement de mot de passe | 🚧 | UI présente, aucune route `POST /api/auth/change-password` | 🎯 T-016 |
-| Mot de passe oublié (email de reset) | ❌ | Aucune route, aucune UI | 🎯 T-013 |
-| Vérification email (envoi + confirmation via lien) | ❌ | Champ `emailVerified` mais aucun envoi ni handler `/api/auth/verify` | 🎯 T-013 |
+| Mot de passe oublié (email de reset) | ✅ | `POST /api/auth/forgot-password` (rate-limit, anti-enum) + `POST /api/auth/reset-password` + pages `/mot-de-passe-oublie` `/reinitialiser` + révocation sessions | T-013 |
+| Vérification email (envoi + confirmation via lien) | ✅ | Token SHA-256 en base (24h) + `GET /api/auth/verify` + page `/verifier-email` + envoi dans register | T-013 |
 | 2FA (TOTP ou SMS) | ❌ | Flag `twoFactorEnabled` en DB seulement | 🎯 backlog |
 | Suppression du compte | ❌ | Champ `deletedAt` en DB, aucune UI ni route | 🎯 backlog |
 
@@ -60,8 +60,8 @@ modification de code.
 | Annulation par le voyageur | 🚧 | Route existe, UI existe, aucun frais appliqué | 🎯 T-015 |
 | **Paiement réel (Stripe/CinetPay)** | ❌ | `paymentStatus: 'paid'` forcé sans débit | 🎯 T-020 |
 | **Webhook confirmation paiement** | ❌ | Aucun handler `/api/webhooks/*` | 🎯 T-020 |
-| **Email de confirmation** | ❌ | Aucun envoi | 🎯 T-013 |
-| **Email d'annulation** | ❌ | Aucun envoi | 🎯 T-013 |
+| **Email de confirmation** | ✅ | `POST /api/bookings` envoie via ConsoleMailer/ResendMailer | T-013 |
+| **Email d'annulation** | ❌ | Aucun envoi (annulation gérée en `PUT /api/bookings/[id]` mais pas de mail) | 🎯 T-015 |
 | Récupération « mes réservations » | ✅ | `GET /api/bookings` filtré par rôle | initial |
 | Détail d'une réservation | ✅ | `GET /api/bookings/[id]` | initial |
 
@@ -143,14 +143,14 @@ modification de code.
 
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
-| Service SMTP configuré (Resend/SendGrid/SES) | ❌ | Aucune lib installée | 🎯 T-013 |
-| Email vérification à l'inscription | ❌ | — | 🎯 T-013 |
-| Email reset password | ❌ | — | 🎯 T-013 |
-| Email confirmation booking | ❌ | — | 🎯 T-013 |
-| Email annulation booking | ❌ | — | 🎯 T-013 |
-| Email nouvelle réservation → hôte | ❌ | — | 🎯 T-013 |
-| Email nouveau message | ❌ | — | 🎯 T-013 |
-| Templates HTML/text | ❌ | — | 🎯 T-013 |
+| Service email abstrait (interface `Mailer`) | ✅ | `src/lib/mail/` : ConsoleMailer (dev, écrit .data/mails/) + ResendMailer (prod via RESEND_API_KEY) | T-013 |
+| Email vérification à l'inscription | ✅ | Envoyé dans `POST /api/auth/register` (best-effort) | T-013 |
+| Email reset password | ✅ | `POST /api/auth/forgot-password` + templates.passwordReset | T-013 |
+| Email confirmation booking (voyageur) | ✅ | Envoyé dans `POST /api/bookings` | T-013 |
+| Email notification nouvelle réservation (hôte) | ✅ | Envoyé dans `POST /api/bookings` | T-013 |
+| Email annulation booking | ❌ | — | 🎯 T-015 |
+| Email nouveau message | ❌ | — | 🎯 T-015 (après endpoints messagerie) |
+| Templates HTML/text | ✅ | `src/lib/mail/templates.ts` : 4 templates (verification, reset, booking-confirm, host-notif) | T-013 |
 
 ## Uploads & stockage
 
