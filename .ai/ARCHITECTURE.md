@@ -132,8 +132,15 @@ Flux détaillé dans `SECURITY.md`. En résumé :
    redirige vers `/`.
 
 Le **layout `dashboard/`** applique lui-même la garde (`redirect('/connexion')`
-si non connecté, `redirect('/')` si rôle non autorisé). Il **n'y a pas de
-`middleware.ts`** aujourd'hui.
+si non connecté, `redirect('/')` si rôle non autorisé).
+
+Depuis T-003 (2026-08-20, ADR-005), `src/proxy.ts` (nom Next.js 16 pour
+l'ancien `middleware.ts`) fait une **première barrière edge** qui redirige
+vers `/connexion?next=<path>` tout accès non authentifié à
+`/mon-compte/*`, `/mes-reservations/*`, `/mes-favoris/*`, `/messages/*`,
+`/reservation/*`, `/dashboard/*`. La vérification est faite via
+`jose.jwtVerify` (compatible edge). La révocation en base est laissée aux
+RSC/handlers en aval (défense en profondeur).
 
 ### 3.4 Autorisation par rôle
 

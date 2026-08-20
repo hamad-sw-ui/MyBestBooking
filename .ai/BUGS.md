@@ -17,11 +17,6 @@ suivante.
   retournée, un `SELECT` séparé sur `rooms` pour calculer `minPrice`.
   À remplacer par un `LEFT JOIN` avec `MIN(basePrice)` groupé.
 
-- [ ] **BUG-005 — Pas de `middleware.ts` de protection**. Les routes
-  `/mon-compte`, `/mes-reservations`, `/mes-favoris`, `/messages` ne
-  redirigent pas si l'utilisateur n'est pas connecté (le contenu se contente
-  probablement d'être vide). Ajouter la garde côté layout ou middleware.
-
 - [ ] **BUG-006 — `<img>` HTML natif** partout au lieu de `next/image`. Pas
   d'optimisation, pas de lazy-loading géré, LCP dégradé. Suppose d'ajouter
   `images.remotePatterns` dans `next.config.ts` (unsplash.com, etc.).
@@ -63,6 +58,13 @@ suivante.
   Générer les migrations et versionner un dossier `drizzle/`.
 
 ## Corrigés
+
+- [x] **2026-08-20 — BUG-005** : `src/proxy.ts` (Next.js 16 remplace
+  `middleware.ts`) redirige vers `/connexion?next=<path>` les accès non
+  authentifiés à `/mon-compte`, `/mes-reservations`, `/mes-favoris`,
+  `/messages`, `/reservation`, `/dashboard/*`. Vérification JWT via
+  `jose` en edge runtime. Tâche **T-003** (niveau S), ADR-005,
+  5 tests dans `src/proxy.test.ts`.
 
 - [x] **2026-08-20 — BUG-002** : `POST /api/seed` retourne 404 en
   production sauf en-tête `x-seed-token` valide (comparaison
