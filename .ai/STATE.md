@@ -86,18 +86,22 @@
 
 ## 📋 Sessions
 
-- **Session 14** (2026-08-21) : **Audit brutal cumulé Session 13** —
-  demande utilisateur « lancer une nouvelle passe d'audit brutal ».
-  Réinstall complet du workspace (node_modules purgés, .env recréé,
-  DB embarquée réinitialisée + seed). Séquence complète relancée avec
-  restart Next entre chaque suite. Résultat : **471/472 · 0 KO · 1
-  WARN perf** (tests 188 + smoke 91 + surface 68 + deep 81 + xtreme 89
-  + paranoid 73/74 warn + dashboards 69). Le warn = cold start
-  Turbopack sur `/api/properties/[id]` (1115ms, budget 1000ms). **Bug
-  script corrigé** : `scripts/simulate.py` ne bootstrappait pas ses
-  cookies (relayait sur `/tmp/sim/*.jar` existants) → 9 KO en cascade
-  après reset workspace. Ajout d'un bloc `_bootstrap_login()` en tête
-  avec IP randomisée pour ne pas déclencher `login:ip 20/60s`.
+- **Session 14** (2026-08-21) : **Audit brutal cumulé Session 13 —
+  correction du 1 WARN restant**. Demande utilisateur « lancer une
+  nouvelle passe d'audit brutal » puis « corrige tous ». Réinstall
+  complet du workspace (node_modules purgés, .env recréé, DB
+  embarquée réinitialisée + seed). Séquence complète relancée avec
+  restart Next entre chaque suite. Résultat final : **472/472 · 0 KO
+  · 0 WARN** (tests 188 + smoke 91 + surface 68 + deep 81 + xtreme 89
+  + paranoid 74 + dashboards 69). **2 bugs de script corrigés** :
+    1. `scripts/simulate.py` ne bootstrappait pas ses cookies (relayait
+       sur `/tmp/sim/*.jar` existants) → 9 KO en cascade après reset
+       workspace. Ajout d'un bloc `_bootstrap_login()` en tête avec IP
+       randomisée pour ne pas déclencher `login:ip 20/60s`.
+    2. `scripts/paranoid_sim.py` mesurait le cold-start Turbopack sur
+       `GET /api/properties` et `GET /api/properties/[id]` (compilation
+       de la route ~800-1500 ms au premier appel) au lieu du runtime.
+       Ajout d'un warm-up avant les mesures → t2 fiable < 100 ms.
 
 - **Session 13** (2026-08-21) : **T-034 dashboards bulk
   étendus** — l'utilisateur a exigé après T-033 : « J'espère que
@@ -192,12 +196,13 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-21 (Session 14 — **Audit brutal cumulé Session 13** :
-  workspace intégralement réinitialisé (node_modules, .env, DB), 8
-  suites relancées en séquence avec restart Next intermédiaire. Total
-  471/472 · 0 KO · 1 WARN perf (cold start Turbopack). Fix pré-existant
-  scripts/simulate.py auto-bootstrap login. STATE HEAD à mettre à jour
-  au commit final.)
+- **Date** : 2026-08-21 (Session 14 — **Audit brutal cumulé Session 13
+  + correction du 1 WARN restant** : workspace intégralement
+  réinitialisé (node_modules, .env, DB), 8 suites relancées en séquence
+  avec restart Next intermédiaire. Total 472/472 · 0 KO · 0 WARN. 2
+  fixes de script : `simulate.py` auto-bootstrap login + `paranoid_sim.py`
+  warm-up avant mesure perf pour ne plus mesurer la compilation
+  Turbopack. STATE HEAD à mettre à jour au commit final.)
 
 - **Date précédente** : 2026-08-21 (Session 13 — **T-034 dashboards bulk étendus** :
   API bulk supporte `rooms` + `promotions` + action `delete` pour

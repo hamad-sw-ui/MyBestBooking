@@ -426,22 +426,27 @@ for url, tag, expected_fields in contract_checks:
 # ═══════════════════════════════════════════════════════════════
 S = "5. N+1 queries — performance /api/properties"
 
-# Mesurer temps pour 1 requête vs N requêtes séquentielles
+# Warm-up : premier appel compile la route en Turbopack. On mesure le 2e.
+curl(BASE + "/api/properties")
 start = time.time()
 code, body = curl(BASE + "/api/properties")
 t_all = time.time() - start
 n_props = len(json.loads(body).get("properties", []))
-record(S, f"GET /api/properties ({n_props} props) → {t_all*1000:.0f}ms",
+record(S, f"GET /api/properties ({n_props} props) → {t_all*1000:.0f}ms (après warm-up)",
        "OK" if t_all < 2 else "WARN",
        f"budget : < 2s pour {n_props} props")
 
 # GET une propriété individuelle
 if n_props:
     pid = json.loads(body)["properties"][0]["id"]
+    # Warm-up : premier appel = compilation Turbopack de la route
+    # dynamique (~800-1500ms de bruit), pas représentatif du runtime.
+    # On chauffe puis on mesure sur le 2e appel.
+    curl(BASE + f"/api/properties/{pid}")
     start = time.time()
     curl(BASE + f"/api/properties/{pid}")
     t_one = time.time() - start
-    record(S, f"GET /api/properties/[id] → {t_one*1000:.0f}ms",
+    record(S, f"GET /api/properties/[id] → {t_one*1000:.0f}ms (après warm-up)",
            "OK" if t_one < 1 else "WARN", "budget : < 1s")
 
 # ═══════════════════════════════════════════════════════════════
