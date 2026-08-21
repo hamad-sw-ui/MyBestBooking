@@ -10,9 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `6845c28` (docs STATE T-034, Session 13)
-- **Dernier commit stable référencé** : `6845c28` (Session 13). Session
-  14 en cours (audit brutal + fix bootstrap simulate.py).
+- **Dernier commit connu** : `71c3508` (fix simulate.py bootstrap +
+  audit brutal Session 14)
+- **Dernier commit stable référencé** : `71c3508` (Session 14)
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
