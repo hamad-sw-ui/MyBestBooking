@@ -1,6 +1,6 @@
 # 🎬 Simulation utilisateur exhaustive — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-21 09:51
+**Généré le** : 2026-08-21 12:03
 **Base URL testée** : `http://127.0.0.1:3000` (Next.js 16 dev, PostgreSQL embarqué :55432)
 **Comptes utilisés** :
 
@@ -39,7 +39,7 @@ curl -X GET (anonyme) http://127.0.0.1:3000/
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, zéro frais cachés. Destination Arrivée Départ Rechercher Prix garantis Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.7 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres →  …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, zéro frais cachés. Destination Arrivée Départ Rechercher Prix garantis Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.8 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres →  …
 
 ---
 
@@ -58,7 +58,7 @@ curl -X GET (anonyme) http://127.0.0.1:3000/recherche
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Rechercher Tous les hébergements 8 résultat s trouvé s Filtres 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.7 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres → 💎 BestRewards Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres → 💎 BestRewa …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Rechercher Tous les hébergements 8 résultat s trouvé s Filtres 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.8 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres → 💎 BestRewards Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres → 💎 BestRewa …
 
 ---
 
@@ -404,7 +404,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, zéro frais cachés. Destination Arrivée Départ Rechercher Prix garantis Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.7 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres → 💎 BestRewards Dar El …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, zéro frais cachés. Destination Arrivée Départ Rechercher Prix garantis Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.8 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres → 💎 BestRewards Dar El …
 
 ---
 
@@ -442,7 +442,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-reservations
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes réservations Retrouvez toutes vos réservations mybestbooking À venir ( 4 ) Confirmée Hôtel Le Magnifiq …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes réservations Retrouvez toutes vos réservations mybestbooking À venir ( 25 ) Confirmée B&B Toscana Flor …
 
 ---
 
@@ -461,7 +461,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-favoris
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes favoris 1 hébergement sauvegardé Alertes prix Chargement… Vos alertes prix sont gérées ci-dessus. Ajou …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes favoris 4 hébergement s sauvegardé s Alertes prix Chargement… Vos alertes prix sont gérées ci-dessus.  …
 
 ---
 
@@ -518,7 +518,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/recherche
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Rechercher Tous les hébergements 8 résultat s trouvé s Filtres 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.7 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres → 💎 BestRewards Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres → 💎 BestRewards Villa Azure Côte …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Rechercher Tous les hébergements 8 résultat s trouvé s Filtres 💎 BestRewards B&B Toscana ★★★ Florence , IT 9.8 2 avis B&B Dès € 89 /nuit Voir les chambres → 💎 BestRewards Hôtel Le Magnifique ★★★★ Paris , FR 9.0 2 avis Hôtel Dès € 89 /nuit Voir les chambres → 💎 BestRewards Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres → 💎 BestRewards Villa Azure Côte …
 
 ---
 
@@ -556,7 +556,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/bestrewards
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programme de fidélité mybestbook …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programme de fidélité mybestbooking. Votre niveau : 💎 Level 2 — Voyageur Comment ça marche ? 1 Inscrivez-vous C'est gratuit et instantané. Vous êtes immédiatement Level 1 Explorer. 2 Réservez Chaque réservation confirmée compte. Plus vous voyagez, plus vous montez en niveau. 3 Profitez Débloquez des réductions exclusives, petits-déjeuners offerts, et bien plus. Les 3 niveaux BestRewards Level 1 Explorer Dès l'inscription  …
 
 ---
 
@@ -674,7 +674,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur mybestbooking Hébergements 8 8 actifs Réservations 34 34 ce mois Revenus 18 825,33 € 18 825,33 € ce mois Avis 20 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-D0RV1X Marie Martin B&B Toscana Florence 15 janv. 2027 → 18 janv. 2027 243,77 € Confirmée MBB-2026-9YJTW3 Marie …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur mybestbooking Hébergements 14 8 actifs Réservations 80 80 ce mois Revenus 26 752,30 € 26 752,30 € ce mois Avis 20 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-XB99W2 Marie Martin B&B Toscana Florence 15 janv. 2027 → 18 janv. 2027 243,77 € Confirmée MBB-2026-OVFAIQ Mari …
 
 ---
 
@@ -693,7 +693,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Réservations Gérez les réservations de vos hébergements Total 34 Confirmées 5 En attente 0 Revenus 18 825,33 € Référence Client Hébergement Chambre Dates Montant Statut Actions MBB-2026-D0RV1X Smoke Test customer@mybestbooking.com B&B Toscana Florence Chambre Standard 15 janv. 2027 → 18 janv. 2027 3 nuits 243,77 € Confirmée MBB-2026-9YJTW3 Smoke Test customer@mybestbooking.com B&B T …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Réservations Gérez les réservations de vos hébergements Total 80 Confirmées 44 En attente 0 Revenus 26 752,30 € Référence Client Hébergement Chambre Dates Montant Statut Actions MBB-2026-XB99W2 Smoke Test customer@mybestbooking.com B&B Toscana Florence Chambre Standard 15 janv. 2027 → 18 janv. 2027 3 nuits 243,77 € Confirmée MBB-2026-OVFAIQ Simulation Session11 customer@mybestbookin …
 
 ---
 
@@ -712,7 +712,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/properties
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Hébergements Gérez vos hébergements Ajouter un hébergement Total 8 Actifs 8 En attente 0 Suspendus 0 Hébergement Type Localisation Note Statut Actions B&B Toscana ★★★ B&B Florence , IT 9.7 ( 2 ) Actif Hôtel Barcelona Center ★★★★ Hôtel Barcelone , ES 7.6 ( 2 ) Actif Resort Les Dunes ★★★★★ Resort Djerba , TN 8.6 ( 3 ) Actif Dar El Medina ★★★ Maison d'hôtes Tunis , TN 8.9 ( 2 ) Actif A …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Hébergements Gérez vos hébergements Ajouter un hébergement Total 14 Actifs 8 En attente 0 Suspendus 0 Hébergement Type Localisation Note Statut Actions Deep Villa 1787313464 ★★★★ Villa Nice , FR — Brouillon Deep Villa 1787306926 ★★★★ Villa Nice , FR — Brouillon Deep Villa 1787306875 ★★★★ Villa Nice , FR — Brouillon Deep Villa 1787306865 ★★★★ Villa Nice , FR — Brouillon Deep Villa 17 …
 
 ---
 
@@ -731,7 +731,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total chambres 23 Actives 23 Unités totales 89 Prix moyen 162,46 € Chambre Test T-030 Hôtel Le Magnifique Double 2 pers. — m² 75,00 € par nuit • 1 unité Calendrier Chambre Supérieure Hôtel Le Magnifique Double 2 pers. 46.63 m² 172,00 € par nuit • 2 unité s Calendrier Chambre Standard Hôtel Le Magnifique Double 2 per …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total chambres 28 Actives 28 Unités totales 94 Prix moyen 151,31 € Chambre Test T-030 Hôtel Le Magnifique Double 2 pers. — m² 75,00 € par nuit • 1 unité Calendrier Chambre Supérieure Hôtel Le Magnifique Double 2 pers. 46.63 m² 172,00 € par nuit • 2 unité s Calendrier Chambre Standard Hôtel Le Magnifique Double 2 per …
 
 ---
 
@@ -750,7 +750,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms/new
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Nouvelle chambre Ajoutez une chambre à l'un de vos hébergements. Détails de la chambre Hébergement Hôtel Le Magnifique Riad Jardin Secret Villa Azure Côte d'Azur Appartement Montmartre Dar El Medina Resort Les Dunes Hôtel Barcelona Center B&B Toscana Nom de la chambre Description (optionnel) Type Simple Double Twin Suite Studio Familiale Dortoir Capacité (personnes) Superficie (m²)  …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Nouvelle chambre Ajoutez une chambre à l'un de vos hébergements. Détails de la chambre Hébergement Hôtel Le Magnifique Riad Jardin Secret Villa Azure Côte d'Azur Appartement Montmartre Dar El Medina Resort Les Dunes Hôtel Barcelona Center Deep Villa 1787306776 Deep Villa 1787306840 Deep Villa 1787306865 Deep Villa 1787306875 Deep Villa 1787306926 Deep Villa 1787313464 B&B Toscana No …
 
 ---
 
@@ -845,7 +845,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 18 825,33 € Revenus (30j) 100.0 % 34 Réservations (30j) 0.0 % 553,69 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 2 Riad Jardin Secret 4 réservations 3 217,89 € 3 Hôtel Le Magnifique 6 réservations 2 528,32 € 4 R …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 26 752,30 € Revenus (30j) 100.0 % 80 Réservations (30j) 0.0 % 334,40 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 B&B Toscana 52 réservations 9 813,28 € 2 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 3 Riad Jardin Secret 4 réservations 3 217,89 € 4 Hôtel Le …
 
 ---
 
@@ -864,7 +864,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/billing
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 16 001,50 € 34 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 16 001,50 € 34 réservation s au total Factures Export CSV via API (v prochaine) août 2026 34 réservation s 16 001,50 € En attente Transactions récentes MBB-2026-D0RV1X B&B Toscana 21 août 2026 + 207,20 € Commission: 36,57  …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 22 739,36 € 80 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 22 739,36 € 80 réservation s au total Factures Export CSV via API (v prochaine) août 2026 80 réservation s 22 739,36 € En attente Transactions récentes MBB-2026-XB99W2 B&B Toscana 21 août 2026 + 207,20 € Commission: 36,57  …
 
 ---
 
@@ -885,7 +885,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/users
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Utilisateurs Gérez les utilisateurs de la plateforme Total 10 Clients 8 Hébergeurs 1 Admins 1 Utilisateur Email Rôle BestRewards Inscrit le Dernière connexion Actions S T Smoke Test smoke1787303762@test.local Client 💎 Level 1 0 résa. 21 août 2026 — Suspendre A G Anon Guest guest-nouveau@example.com Client 💎 Level 1 1 résa. 21 août 2026 — Suspendre …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Utilisateurs Gérez les utilisateurs de la plateforme Total 119 Clients 117 Hébergeurs 1 Admins 1 Utilisateur Email Rôle BestRewards Inscrit le Dernière connexion Actions S U Sim User sim1787313686@test.local Client 💎 Level 1 0 résa. 21 août 2026 — Suspendre S U Sim User sim1787313673@test.local Client 💎 Level 1 0 résa. 21 août 2026 — Suspendre S U …
 
 ---
 
@@ -904,7 +904,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/audit
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations). Date Acteur Action Entité Détails 21 août 2026, 09:38 a@t.co Avis modéré review c727af64-6c67-40ad-b484-26d21776705d { "to": "approved", "from": "hidden" } 21 août 2026, 09:38 a@t.co Avis modéré review c727af64-6c67-40ad-b484-26d21776705d { "to …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations). Date Acteur Action Entité Détails 21 août 2026, 11:59 admin@mybestbooking.com Avis modéré review 4740fb4f-5912-4a9c-8632-001c1411a1f7 { "to": "approved", "from": "approved" } 21 août 2026, 11:57 admin@mybestbooking.com Utilisateur suspendu user …
 
 ---
 
@@ -942,7 +942,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 18 825,33 € Revenus (30j) 100.0 % 34 Réservations (30j) 0.0 % 553,69 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 2 Riad Jardin Secret 4 réservations 3 217,89 € 3 Hôtel Le Magn …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 26 752,30 € Revenus (30j) 100.0 % 80 Réservations (30j) 0.0 % 334,40 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 B&B Toscana 52 réservations 9 813,28 € 2 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 3 Riad Jardin Secret  …
 
 ---
 
@@ -963,7 +963,7 @@ curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/b-b-toscana
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… B&B Toscana | mybestbooking ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Accueil / Hébergements / Florence / B&B Toscana B&B ★★★ 💎 BestRewards B&B Toscana Via delle Colline, 42, Florence , IT 9.7 Exceptionnel ( 2 avis) ✦ La Promess …
+> Aller au contenu principal Chargement en cours… B&B Toscana | mybestbooking ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Accueil / Hébergements / Florence / B&B Toscana B&B ★★★ 💎 BestRewards B&B Toscana Via delle Colline, 42, Florence , IT 9.8 Exceptionnel ( 2 avis) ✦ La Promess …
 
 ---
 
@@ -1007,13 +1007,13 @@ curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/dar-el-medina
 
 ## H. Partage public d'une wishlist — /wishlists/share/[token]
 
-### 1. `GET /wishlists/share/8c05714c-d91e-457c-824b-fd2def841a49`
+### 1. `GET /wishlists/share/7d5b2467-0d80-41d6-98b1-324173848382`
 
 **Scénario** : Le voyageur envoie le lien à un ami. L'ami (non connecté) ouvre la wishlist publique.
 
 **Requête simulée** :
 ```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/8c05714c-d91e-457c-824b-fd2def841a49
+curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/7d5b2467-0d80-41d6-98b1-324173848382
 ```
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
@@ -1119,7 +1119,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> ref=MBB-2026-ZMIT08 · status=confirmed · discount=49.93 € · total=243.77 €
+> ref=MBB-2026-GUZ6CL · status=confirmed · discount=49.93 € · total=243.77 €
 
 ---
 
@@ -1138,7 +1138,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/wishlists
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"item":{"id":"40ece4c4-4225-4ea7-ab39-84bcbc115349","wishlistId":"8f400812-feed-424e-b881-16f898789f6c","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","addedAt":"2026-08-21T09:51:30.924Z","price
+> {"item":{"id":"9689e695-4250-458e-a156-ea4dee71d61c","wishlistId":"64f3d21c-9577-4cb7-b45e-07062bb136c5","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","addedAt":"2026-08-21T12:03:08.802Z","price
 
 ---
 
@@ -1157,7 +1157,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/price-alerts
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"alert":{"id":"5b7c4617-5a2d-45d5-8314-f74729d85362","userId":"24d0799c-915b-4e12-be22-fd93eddcc15b","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","maxPrice":"100.00","currency":"EUR","active":
+> {"alert":{"id":"6ad974de-21a9-42ef-892b-4c22c9adc084","userId":"24d0799c-915b-4e12-be22-fd93eddcc15b","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","maxPrice":"100.00","currency":"EUR","active":
 
 ---
 
@@ -1182,7 +1182,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/api/users/me/referral
 
 ### 9. `POST /api/auth/register`
 
-**Scénario** : Un nouveau visiteur crée un compte sim1787305891@test.local.
+**Scénario** : Un nouveau visiteur crée un compte sim1787313788@test.local.
 
 **Requête simulée** :
 ```bash
@@ -1195,7 +1195,7 @@ curl -X POST (anonyme) http://127.0.0.1:3000/api/auth/register
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"message":"Inscription réussie","user":{"id":"efba5d54-04a8-4fd2-a76a-a1a534d9cb0f","email":"sim1787305891@test.local","firstName":"Sim","lastName":"User","role":"customer"}}
+> {"message":"Inscription réussie","user":{"id":"f3b1e88d-62f4-4068-b60f-7d4f53dc8fcc","email":"sim1787313788@test.local","firstName":"Sim","lastName":"User","role":"customer"}}
 
 ---
 

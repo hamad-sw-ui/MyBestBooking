@@ -10,8 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `f9733ca` (T-032 paranoid + BUG-020/021/022, Session 11 quater)
-- **Dernier commit stable référencé** : `f9733ca` (Session 11 quater)
+- **Dernier commit connu** : à mettre à jour en fin de session
+  (T-032 quinquies + BUG-023/024/025/026, Session 11 quinquies)
+- **Dernier commit stable référencé** : à mettre à jour en fin de session
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
@@ -47,22 +48,31 @@
   transitions strict, uploads content-type/cache/keys/taille,
   proxy coverage, verification tokens unicité, data leakage,
   timing safe hash, i18n, cookie security)
-- **BUGS trouvés + corrigés Session 11 (total : 6)** :
-  - BUG-017 (deep_sim) : PATCH /api/users/me n'exposait pas
-    priceAlertEnabled
-  - **BUG-018** (xtreme_sim) : booking ignorait roomAvailability →
-    hôte pouvait pas bloquer les dates
-  - **BUG-019** (xtreme_sim, niveau C sécu) : login n'exigeait pas
-    TOTP après activation 2FA
-  - **BUG-020** (paranoid_sim) : RACE CONDITION bookings — 15
-    concurrents créaient 10 bookings sur chambre quantity=6
-    (surbooking). Fix : SELECT rooms FOR UPDATE en tête de transaction.
-  - **BUG-021** (paranoid_sim) : GET /api/properties exposait
-    commissionRate/validatedBy/hostId au public (fuite marge plateforme).
-    Fix : filtrer ces champs pour non-admin.
-  - **BUG-022** (paranoid_sim) : PUT bookings acceptait toutes les
-    transitions status (cancelled → confirmed possible). Fix :
-    machine à états stricte.
+- **BUGS trouvés + corrigés Session 11 (TOTAL : 10)** :
+  - BUG-017 (deep) : PATCH /api/users/me n'exposait pas priceAlertEnabled
+  - **BUG-018** (xtreme) : booking ignorait roomAvailability.stopSell
+  - **BUG-019** (xtreme, C sécu) : login n'exigeait pas TOTP après 2FA
+  - **BUG-020** (paranoid, S race) : RACE CONDITION bookings, surbooking
+    → SELECT rooms FOR UPDATE
+  - **BUG-021** (paranoid, S leak) : GET /api/properties exposait
+    commissionRate au public → filtre non-admin
+  - **BUG-022** (paranoid, S FSM) : PUT bookings acceptait toutes
+    transitions → machine à états stricte
+  - **BUG-023** (paranoid, L hardening) : JWT expiration 30j → 7j
+  - **BUG-024** (paranoid, S sécu) : timing attack login → bcrypt fake
+    sur user inconnu
+  - **BUG-025** (paranoid, S RGPD) : email/nom conservés en clair après
+    soft-delete → anonymisation hash
+  - **BUG-026** (paranoid, L UX) : settings general n'exposait pas
+    supportedLocales/supportedCurrencies
+
+- **RÉSULTAT FINAL des 5 simulations en séquence** :
+  - smoke : 91/91 ✅
+  - surface : 68/68 ✅
+  - deep : 81/81 ✅
+  - xtreme : 89/89 ✅
+  - paranoid : 74/74 ✅
+  - **TOTAL : 403 / 403 · 0 WARN · 0 KO** 🎯
 - **Couverture** : ~119 features ✅ / ~7 sandbox-limited / 0 absent
   (**FEATURES.md ✅ ≈ 97 %**)
 

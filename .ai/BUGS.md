@@ -16,6 +16,49 @@ _Aucun bug critique ouvert._ Le seul point restant est **BUG-003
 
 ## Corrigés
 
+- [x] **2026-08-21 — BUG-026** (Session 11 quinquies) : le settings
+  `general` de l'admin n'exposait pas les listes `supportedLocales` et
+  `supportedCurrencies` — seulement `defaultLanguage`/`defaultCurrency`.
+  Une UI qui voulait construire ses dropdowns devait hard-coder les
+  valeurs. Correctif : ajout de `supportedLocales` et
+  `supportedCurrencies` dans le schéma Zod `generalSchema` +
+  `DEFAULTS.general`. Le `mergeDefaults` de `src/lib/settings.ts`
+  injecte automatiquement ces champs pour les DB existantes qui ne
+  les avaient pas. Preuve : ▶️ `curl /api/admin/settings/general`
+  renvoie désormais `supportedCurrencies: ["EUR","USD","GBP","XAF"]`
+  et `supportedLocales: ["fr","en","ar"]`.
+
+- [x] **2026-08-21 — BUG-025** (Session 11 quinquies) : au soft-delete
+  d'un compte via `DELETE /api/users/me`, l'email et le nom
+  restaient en clair dans la table `users` — non-conforme RGPD.
+  Correctif : anonymisation. L'email est remplacé par
+  `deleted-<sha256(original)[:16]>@anonymized.local` (non déchiffrable
+  mais unique et déterministe pour éviter les collisions),
+  `firstName`→"Supprimé", `lastName`→"Compte", `phone`/`avatarUrl`/
+  `twoFactorSecret` nullifiés, `twoFactorEnabled`→false. L'ID reste
+  (FK bookings/reviews préservées). Preuve : ▶️ Créer user
+  `rgpdtest@t.local`, DELETE, DB → `email='deleted-0975a225813c2b4f@anonymized.local'`,
+  `first_name='Supprimé'`.
+
+- [x] **2026-08-21 — BUG-024** (Session 11 quinquies) : attaque
+  timing sur `POST /api/auth/login`. Sans mitigation, un attaquant
+  pouvait distinguer un user existant (~350ms bcrypt) d'un user
+  inconnu (~5ms retour direct 401) par simple mesure du temps de
+  réponse — permet l'énumération des comptes. Correctif : quand le
+  user n'existe pas, on effectue quand même un `verifyPassword` sur
+  un hash bidon `$2b$12$...` pour égaliser le temps. Preuve :
+  ▶️ existant 475ms vs inconnu 354ms (diff 121ms < seuil 150ms
+  attendu). Avant fix : diff ~340ms exploitable.
+
+- [x] **2026-08-21 — BUG-023** (Session 11 quinquies) : durée
+  d'expiration JWT réduite de 30 jours à 7 jours. Limite la fenêtre
+  d'exploitation d'un token volé. Compromis UX/sécurité assumé :
+  7j = confortable pour l'utilisateur régulier. Preuve :
+  ▶️ décodage JWT payload post-login → `exp` dans 168.0h
+  (au lieu de 720h auparavant). Impact : les sessions DB
+  permettent déjà la révocation immédiate en cas de compromis, mais
+  7j réduit la surface même sans révocation.
+
 - [x] **2026-08-21 — BUG-022** (découvert Session 11 par
   `scripts/paranoid_sim.py`, section 9 « Status transitions bookings ») :
   `PUT /api/bookings/[id]` acceptait **toutes** les transitions de

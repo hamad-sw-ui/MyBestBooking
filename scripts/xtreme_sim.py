@@ -559,7 +559,8 @@ ensure_logged_in("host", "host@mybestbooking.com", "Host123!")
 # Récupérer une room du host
 me_host = json.loads(curl(BASE + "/api/auth/me", jar="host")[1]).get("user", {})
 host_id = me_host.get("id", "")
-props_all = json.loads(curl(BASE + "/api/properties")[1]).get("properties", [])
+# BUG-021 fix : /api/properties public ne renvoie plus hostId → utiliser jar admin
+props_all = json.loads(curl(BASE + "/api/properties", jar="admin")[1]).get("properties", [])
 host_props = [p for p in props_all if p.get("hostId") == host_id]
 if host_props:
     hp_id = host_props[0]["id"]

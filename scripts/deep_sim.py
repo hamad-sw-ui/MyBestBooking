@@ -394,7 +394,15 @@ S = "8. Wallet + BestRewards + promo (combinaisons)"
 code, body = curl(BASE + "/api/promotions", jar="host")
 try: promos = json.loads(body).get("promotions", [])
 except: promos = []
-active = next((p for p in promos if p.get("active", p.get("isActive"))), None)
+# Filtrer sur les promos seed (pas les MIN200_/MAX1_/EXPIRED_/FUTURE_ créées
+# par paranoid_sim qui ont des contraintes gênantes)
+seed_promos = [
+    p for p in promos
+    if p.get("active", p.get("isActive"))
+    and not any(p.get("code", "").startswith(pfx)
+                for pfx in ["MIN200_", "MAX1_", "EXPIRED_", "FUTURE_", "SIMXTREME"])
+]
+active = seed_promos[0] if seed_promos else None
 
 if active:
     code_pr = active.get("code", "")
@@ -402,11 +410,17 @@ if active:
     wallet = json.loads(me_body).get("user", {}).get("walletBalance", "0")
     bl = json.loads(me_body).get("user", {}).get("bestrewardsLevel", 1)
     record(S, f"État user avant combo : wallet={wallet}€ level={bl} promo={code_pr}",
-           "OK", f"promo : {active}")
+           "OK", f"promo : {active.get('code')} type={active.get('type')} value={active.get('value')}")
 
+    # Date dynamique pour ne pas heurter les résas des runs précédents
+    combo_day = (int(time.time()) % 20) + 1
     code, body = curl(BASE + "/api/bookings", "POST", jar="cust",
-        data=booking({"checkIn":"2028-07-10","checkOut":"2028-07-13",
-                       "useWalletCredits":True, "promoCode":code_pr}))
+        data=booking({
+            "checkIn": f"2048-07-{combo_day:02d}",
+            "checkOut": f"2048-07-{combo_day+3:02d}",
+            "useWalletCredits": True,
+            "promoCode": code_pr,
+        }))
     try:
         b = json.loads(body)["booking"]
         subtot = float(b["subtotal"]); disc = float(b["discount"])
@@ -415,7 +429,7 @@ if active:
         math_ok = abs((subtot + tax + fee_ - disc) - total) < 0.02
     except: subtot = disc = total = 0; math_ok = False
     record(S, f"Booking wallet+BR+promo{code_pr} : subtotal={subtot} disc={disc} total={total}",
-           "OK" if code == 201 and disc > 0 and math_ok else "WARN",
+           "OK" if code == 201 and disc > 0 and math_ok else "KO",
            f"code={code} math_ok={math_ok} body={body[:250]}")
 else:
     record(S, "Aucune promo active dans le seed", "WARN",
@@ -424,13 +438,16 @@ else:
 # ═══════════════════════════════════════════════════════════════
 S = "9. Guest booking (sans compte)"
 
+# Dates dynamiques pour ne pas heurter les résas des runs précédents
+guest_day = (int(time.time()) % 25) + 1
+guest_email = f"guest-{int(time.time())}@test.local"
 code, body = curl(BASE + "/api/bookings", "POST",
     data=json.dumps({
         "propertyId": prop_id, "roomId": room_id,
-        "checkIn": "2028-08-15", "checkOut": "2028-08-17",
+        "checkIn": f"2049-08-{guest_day:02d}", "checkOut": f"2049-08-{guest_day+2:02d}",
         "numAdults": 2,
         "guestFirstName": "Anonymous", "guestLastName": "Guest",
-        "guestEmail": "guest-no-account@test.local",
+        "guestEmail": guest_email,
         "isGuestBooking": True,
     }))
 try:
@@ -567,7 +584,13 @@ S = "14. Chambres — host crée sa chambre, guards"
 
 me_host = json.loads(curl(BASE + "/api/auth/me", jar="host")[1]).get("user", {})
 host_id = me_host.get("id", "")
-host_props = [p for p in props if p.get("hostId") == host_id]
+# BUG-021 fix : /api/properties public ne renvoie plus hostId.
+# On requête avec cookie admin pour voir les hostId (admin voit tout).
+_, props_admin_body = curl(BASE + "/api/properties", jar="admin")
+try:
+    props_admin = json.loads(props_admin_body).get("properties", [])
+except: props_admin = []
+host_props = [p for p in props_admin if p.get("hostId") == host_id]
 if host_props:
     hpid = host_props[0]["id"]
     payload = json.dumps({

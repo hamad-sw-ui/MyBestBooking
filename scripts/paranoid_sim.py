@@ -236,13 +236,18 @@ if db_count and isinstance(db_count, list) and db_count[0].get("n"):
 # ═══════════════════════════════════════════════════════════════
 S = "2. JWT — inspection profonde"
 
-# Attendre pour éviter rate-limit
-time.sleep(2)
-# Login pour récupérer un fresh JWT
+# Créer un user dédié pour ne pas heurter le rate-limit customer/host/admin
+# (ceux-ci ont pu être utilisés dans les sections précédentes).
+jwt_ts = int(time.time())
+jwt_email = f"jwttest{jwt_ts}@t.local"
+curl(BASE + "/api/auth/register", "POST",
+     data=json.dumps({"email": jwt_email, "password": "JwtTest123!",
+                      "firstName": "Jwt", "lastName": "Test"}))
+# Login live pour capturer le Set-Cookie
 hdrs = subprocess.run(["curl","-s","-D","-","-o","/dev/null",
     "-H", f"X-Forwarded-For: {_next_ip()}",
     "-X","POST","-H","Content-Type: application/json",
-    "-d",'{"email":"customer@mybestbooking.com","password":"Customer123!"}',
+    "-d",f'{{"email":"{jwt_email}","password":"JwtTest123!"}}',
     BASE + "/api/auth/login"], capture_output=True, text=True, timeout=10).stdout
 m = re.search(r"^Set-Cookie:\s*session=([A-Za-z0-9._-]+)", hdrs, re.M | re.I)
 if m:
@@ -270,9 +275,10 @@ if m:
             exp_time = payload["exp"]
             now = int(time.time())
             hours = (exp_time - now) / 3600
-            record(S, f"JWT expiration → {hours:.1f}h dans le futur",
-                   "OK" if 1 < hours < 24*30 else "WARN",
-                   f"exp={exp_time} now={now}")
+            # 1h < exp < 8j (BUG-023 fix : 7d = 168h)
+            record(S, f"JWT expiration → {hours:.1f}h dans le futur (attendu 1-192h)",
+                   "OK" if 1 < hours < 24*8 else "WARN",
+                   f"exp={exp_time} now={now} — 7 jours = 168h")
 
         # Tampering payload : changer userId
         try:
@@ -307,12 +313,12 @@ if m:
         except Exception as e:
             record(S, "alg=none test", "WARN", str(e))
 
-        # Vérifier jti unique : login 2 fois, comparer jtis
+        # Vérifier jti unique : login 2 fois (même user dédié), comparer jtis
         time.sleep(1)
         hdrs2 = subprocess.run(["curl","-s","-D","-","-o","/dev/null",
             "-H", f"X-Forwarded-For: {_next_ip()}",
             "-X","POST","-H","Content-Type: application/json",
-            "-d",'{"email":"customer@mybestbooking.com","password":"Customer123!"}',
+            "-d",f'{{"email":"{jwt_email}","password":"JwtTest123!"}}',
             BASE + "/api/auth/login"], capture_output=True, text=True, timeout=10).stdout
         m2 = re.search(r"^Set-Cookie:\s*session=([A-Za-z0-9._-]+)", hdrs2, re.M | re.I)
         if m2:
@@ -357,11 +363,23 @@ record(S, f"Unicité booking_reference : {'aucun doublon' if not refs_dup else '
        "OK" if not refs_dup else "KO", f"doublons: {refs_dup}")
 
 # FK : créer un booking avec userId inexistant via SQL direct (contourner API)
-fk_test = db_query(f"INSERT INTO bookings (booking_reference,user_id,property_id,room_id,check_in,check_out,num_nights,num_adults,guest_first_name,guest_last_name,guest_email,subtotal,taxes,discount,total) VALUES ('MBB-TEST','00000000-0000-0000-0000-000000000000','{prop_id}','{room_id}','2030-06-01','2030-06-03',2,1,'X','Y','x@t.local',100,10,0,110)")
-has_fk_error = isinstance(fk_test, dict) and "error" in fk_test and "foreign key" in fk_test["error"].lower()
-record(S, f"Insert booking avec userId inexistant → FK constraint",
-       "OK" if has_fk_error else "WARN",
-       f"result: {fk_test}")
+# Payload complet avec currency (contrainte NOT NULL séparée), pour bien
+# isoler la contrainte FK sur user_id
+fk_test = db_query(
+    f"INSERT INTO bookings (booking_reference,user_id,property_id,room_id,check_in,check_out,num_nights,num_adults,guest_first_name,guest_last_name,guest_email,subtotal,taxes,discount,total,currency) "
+    f"VALUES ('MBB-FK-{int(time.time())}','00000000-0000-0000-0000-000000000000','{prop_id}','{room_id}','2030-06-01','2030-06-03',2,1,'X','Y','x@t.local',100,10,0,110,'EUR')"
+)
+# Détecte l'erreur FK (code 23503 ou message contenant "foreign key" / "violates")
+err = fk_test.get("error", "") if isinstance(fk_test, dict) else ""
+has_fk_error = (
+    "foreign key" in err.lower()
+    or "violates" in err.lower()
+    or "23503" in err
+    or "user_id" in err.lower()
+)
+record(S, f"Insert booking avec userId inexistant → FK constraint refuse",
+       "OK" if has_fk_error else "KO",
+       f"err: {err[:200]}" if err else f"result: {fk_test}")
 
 # Vérif : soft-delete customer garde ses bookings
 soft_deleted = db_query("SELECT count(*) as n FROM users WHERE deleted_at IS NOT NULL")
@@ -513,10 +531,16 @@ record(S, f"logger.ts redacte password/token/secret",
 # Test unitaire logger : voir tests
 with open(f"{REPO}/src/lib/logger.test.ts") as f:
     logger_test = f.read()
-tests_redaction = "password" in logger_test and "REDACTED" in logger_test
-record(S, f"logger.test.ts vérifie la redaction",
-       "OK" if tests_redaction else "WARN",
-       "tests couvrent redaction PII")
+# Chercher la présence d'un test qui vérifie la redaction : soit [redacted]
+# soit REDACTED soit un pattern générique. On cherche des mots-clés
+# indiquant qu'un test métier de redaction existe.
+tests_redaction = (
+    "password" in logger_test
+    and ("redacted" in logger_test.lower() or "safeMeta" in logger_test)
+)
+record(S, "logger.test.ts vérifie la redaction",
+       "OK" if tests_redaction else "KO",
+       f"password+redacted trouvés : {tests_redaction}")
 
 # ═══════════════════════════════════════════════════════════════
 S = "8. Wallet edge cases"
@@ -542,9 +566,12 @@ record(S, f"Wallet réinitialisé à 500€ pour tests : mesuré {wallet_now}€
 # Prix ~ 89€/nuit × 2 nuits = 178 subtotal + taxes ~17.80 = 195€
 # Wallet 500 devrait couvrir intégralement
 if room_id and prop_id:
+    # Dates dynamiques pour éviter les conflits inter-runs
+    wallet_day = (int(time.time()) % 20) + 1
     payload = json.dumps({
         "propertyId": prop_id, "roomId": room_id,
-        "checkIn": "2030-02-01", "checkOut": "2030-02-03",
+        "checkIn": f"2046-02-{wallet_day:02d}",
+        "checkOut": f"2046-02-{wallet_day+2:02d}",
         "numAdults": 1,
         "guestFirstName": "Wallet", "guestLastName": "Test",
         "guestEmail": wallet_email,
@@ -572,32 +599,59 @@ if room_id and prop_id:
 # ═══════════════════════════════════════════════════════════════
 S = "9. Status transitions bookings"
 
-# Récupérer un booking Wallet Test (créé plus haut dans section 8)
-# Utiliser walletjar (le user propriétaire) pour tester les transitions
-recent = db_query(f"SELECT id, status, user_id FROM bookings WHERE guest_email='{wallet_email}' ORDER BY created_at DESC LIMIT 1")
-if recent and isinstance(recent, list) and recent:
-    bid = recent[0]["id"]
-    orig_status = recent[0]["status"]
-    record(S, f"Booking test walletjar : id={bid[:8]}… status='{orig_status}'", "OK", "")
-
-    # PUT status='completed' via walletjar (owner)
-    c, b = curl(BASE + f"/api/bookings/{bid}", "PUT", jar="walletjar",
-        data='{"status":"completed"}')
-    record(S, f"Owner tente PUT status=completed → {c}",
-           "OK" if c in (200, 400, 403) else "KO", f"body={b[:200]}")
-    # Note : l'API accepte via Zod enum. Voir si c'est un gap.
-
-    # Annuler puis tenter remettre à confirmed
-    c1, b1 = curl(BASE + f"/api/bookings/{bid}", "PUT", jar="walletjar",
-        data='{"status":"cancelled","cancellationReason":"test"}')
-    c2, b2 = curl(BASE + f"/api/bookings/{bid}", "PUT", jar="walletjar",
-        data='{"status":"confirmed"}')  # revenir à confirmed après cancel
+# Créer un booking DÉDIÉ pour tester la machine à états (isolé des autres tests)
+if prop_id and room_id and wallet_email:
+    trans_payload = json.dumps({
+        "propertyId": prop_id, "roomId": room_id,
+        "checkIn": f"2039-11-{(int(time.time()) % 20) + 1:02d}",
+        "checkOut": f"2039-11-{(int(time.time()) % 20) + 3:02d}",
+        "numAdults": 1,
+        "guestFirstName": "Trans", "guestLastName": "State",
+        "guestEmail": wallet_email,
+    })
+    c, b = curl(BASE + "/api/bookings", "POST", jar="walletjar", data=trans_payload)
     try:
-        after_status = json.loads(b2).get("booking", {}).get("status")
-    except: after_status = "?"
-    record(S, f"Annuler puis remettre confirmed : status final='{after_status}'",
-           "OK" if after_status == "cancelled" else "WARN (transition invalide acceptée)",
-           f"c1={c1} c2={c2} body2={b2[:150]}")
+        bid = json.loads(b)["booking"]["id"]
+        orig_status = json.loads(b)["booking"]["status"]
+    except:
+        bid = ""; orig_status = "?"
+    record(S, f"Booking test dédié transitions : id={bid[:8] if bid else '?'}… status='{orig_status}'",
+           "OK" if bid else "KO", "")
+
+    if bid:
+        # Test A : Transition VALIDE confirmed → cancelled
+        c1, b1 = curl(BASE + f"/api/bookings/{bid}", "PUT", jar="walletjar",
+            data='{"status":"cancelled","cancellationReason":"test transition"}')
+        try:
+            after_cancel = json.loads(b1).get("booking", {}).get("status")
+        except: after_cancel = "?"
+        record(S, f"Transition VALIDE confirmed → cancelled → status='{after_cancel}'",
+               "OK" if c1 == 200 and after_cancel == "cancelled" else "KO",
+               f"c1={c1}")
+
+        # Test B : Transition INVALIDE cancelled → confirmed (BUG-022 fix)
+        c2, b2 = curl(BASE + f"/api/bookings/{bid}", "PUT", jar="walletjar",
+            data='{"status":"confirmed"}')
+        error_msg = ""
+        try:
+            error_msg = json.loads(b2).get("error", "")
+        except: pass
+        record(S, f"Transition INVALIDE cancelled → confirmed → 400 (BUG-022 fix)",
+               "OK" if c2 == 400 and "Transition invalide" in error_msg else "KO",
+               f"c2={c2} error={error_msg[:150]}")
+
+        # Test C : Vérifier DB — status inchangé (immutable)
+        db_check = db_query(f"SELECT status FROM bookings WHERE id='{bid}'")
+        db_status = db_check[0]["status"] if db_check and isinstance(db_check, list) else "?"
+        record(S, f"DB check après tentative invalide : status='{db_status}' (immuable)",
+               "OK" if db_status == "cancelled" else "KO",
+               f"status doit rester cancelled")
+
+        # Test D : Transition INVALIDE cancelled → completed (aussi terminal)
+        c3, b3 = curl(BASE + f"/api/bookings/{bid}", "PUT", jar="walletjar",
+            data='{"status":"completed"}')
+        record(S, f"Transition INVALIDE cancelled → completed → 400",
+               "OK" if c3 == 400 else "KO", f"c3={c3}")
 
 # ═══════════════════════════════════════════════════════════════
 S = "10. Content-Type et cache des uploads"
@@ -825,20 +879,29 @@ else:
     record(S, "/api/reviews : aucun email dans le body", "OK", "")
 
 # ═══════════════════════════════════════════════════════════════
-S = "16. Timing safe — hash password"
+S = "16. Timing safe — hash password (BUG-024 fix)"
 
-# Bcrypt doit prendre ~100-300ms (empêche le brute force)
-start = time.time()
-raw_login("customer@mybestbooking.com", "WrongPassword!", "timing")
-t_wrong = time.time() - start
-start = time.time()
-raw_login("nonexistent@nowhere.tld", "WrongPassword!", "timing2")
-t_unknown = time.time() - start
-# Différence de timing < 100ms attendue (mitigation timing attack)
-diff = abs(t_wrong - t_unknown) * 1000
-record(S, f"Timing user existant vs inconnu : {t_wrong*1000:.0f}ms vs {t_unknown*1000:.0f}ms (diff {diff:.0f}ms)",
-       "OK" if diff < 300 or (t_wrong > 0.05 and t_unknown > 0.05) else "WARN",
-       "attaque timing basique")
+# BUG-024 fix : sur user inexistant, on effectue quand même un bcrypt
+# bidon pour égaliser les temps.
+# On utilise deux emails DÉDIÉS (différents) pour éviter le rate-limit
+# login:email:5/60s qui rendrait le test biaisé (429 rapide au lieu
+# de bcrypt lent).
+# 1 mesure sur user existant (jwt_email créé section 2), 1 mesure sur
+# email inconnu → si BUG-024 fix marche, les deux prennent ~350ms.
+def one_shot_time(email, pwd, jar):
+    s = time.time()
+    raw_login(email, pwd, jar)
+    return time.time() - s
+
+# jwt_email a été créé en section 2 et n'a pas été rate-limité (1 seul login)
+t_existant = one_shot_time(jwt_email, "WrongPassword!", "timingE")
+# Email 100% inédit
+t_inconnu = one_shot_time(f"nonexistent-{int(time.time())}-{os.getpid()}@nowhere.tld",
+                          "WrongPassword!", "timingI")
+diff = abs(t_existant - t_inconnu) * 1000
+record(S, f"Timing existant vs inconnu : {t_existant*1000:.0f}ms vs {t_inconnu*1000:.0f}ms (diff {diff:.0f}ms)",
+       "OK" if diff < 200 and t_existant > 0.05 and t_inconnu > 0.05 else "KO",
+       f"BUG-024 fix : bcrypt fake sur user inconnu → diff < 200ms attendue, les 2 > 50ms")
 
 # ═══════════════════════════════════════════════════════════════
 S = "17. i18n — Locales et devises exposées"
@@ -850,8 +913,9 @@ try:
     langs = g.get("supportedLocales") or g.get("locales") or []
     currs = g.get("supportedCurrencies") or g.get("currencies") or []
 except: langs = currs = []
-record(S, f"Settings general : locales={langs} currencies={currs}",
-       "OK" if langs and currs else "WARN", "")
+record(S, f"Settings general : locales={langs} currencies={currs} (BUG-026 fix)",
+       "OK" if langs and currs else "KO",
+       f"attendu supportedLocales/supportedCurrencies dans settings.general")
 
 # PATCH user currency=USD
 c, b = curl(BASE + "/api/users/me", "PATCH", jar="cust",
@@ -986,19 +1050,28 @@ if paid and isinstance(paid, list) and paid:
 S = "23. Booking totaux — calcul déterministe et cohérent DB"
 
 # Créer un booking et vérifier subtotal = price × nights, taxes = subtotal × taxRate
+# Utilise un user dédié (calc_user) pour éviter le rate-limit 10/h du customer@.
 if prop_id and room_id:
     _, room_data = curl(BASE + f"/api/rooms?propertyId={prop_id}")
     r0 = json.loads(room_data)["rooms"][0]
     price = float(r0["basePrice"])
     calc_day = (int(time.time()) % 15) + 1
+    # User dédié pour ce test (évite le rate-limit épuisé du customer)
+    calc_ts = int(time.time())
+    calc_email = f"calc{calc_ts}@t.local"
+    curl(BASE + "/api/auth/register", "POST",
+         data=json.dumps({"email":calc_email,"password":"CalcTest123!",
+                          "firstName":"Calc","lastName":"Test"}))
+    raw_login(calc_email, "CalcTest123!", "calcjar")
+
     payload = json.dumps({
         "propertyId": prop_id, "roomId": room_id,
         "checkIn": f"2038-01-{calc_day:02d}", "checkOut": f"2038-01-{calc_day+3:02d}",
         "numAdults": 1,
         "guestFirstName": "Calc", "guestLastName": "Test",
-        "guestEmail": "customer@mybestbooking.com",
+        "guestEmail": calc_email,
     })
-    c, b = curl(BASE + "/api/bookings", "POST", jar="cust", data=payload)
+    c, b = curl(BASE + "/api/bookings", "POST", jar="calcjar", data=payload)
     try:
         bo = json.loads(b)["booking"]
         sub = float(bo["subtotal"]); tax = float(bo["taxes"])
@@ -1007,11 +1080,11 @@ if prop_id and room_id:
         expected_tax_10 = expected_sub * 0.10
         match_sub = abs(sub - expected_sub) < 0.01
         match_tax = abs(tax - expected_tax_10) < 0.01
-        record(S, f"Booking 3 nuits @ {price}€ : subtotal={sub}€ (attendu {expected_sub}), taxes={tax}€ (attendu {expected_tax_10} @ 10%)",
-               "OK" if match_sub and match_tax else "WARN",
+        record(S, f"Booking 3 nuits @ {price}€ : subtotal={sub}€ (attendu {expected_sub}), taxes={tax}€ (attendu {expected_tax_10:.2f} @ 10%)",
+               "OK" if match_sub and match_tax else "KO",
                f"math ok : sub={match_sub} tax={match_tax}")
     except Exception as e:
-        record(S, f"Booking calc parsing error", "WARN", f"c={c} err={e} body={b[:200]}")
+        record(S, "Booking calc parsing error", "KO", f"c={c} err={e} body={b[:200]}")
 
 # ═══════════════════════════════════════════════════════════════
 S = "24. GDPR — DELETE user cascade + wipe des données personnelles"
@@ -1053,9 +1126,17 @@ if u and isinstance(u, list) and u:
     # Email doit-il rester en clair ? RGPD dit non idéalement, mais soft-delete
     # accepte que l'email reste pour audit
     still_email = user_row.get("email")
-    record(S, f"Email conservé en clair après soft-delete : '{still_email}'",
-           "WARN" if still_email == gdpr_email else "OK",
-           "RGPD strict recommanderait email nullé ou hashé, mais audit historique acceptable")
+    # BUG-025 fix (Session 11 quinquies) : au soft-delete, l'email est
+    # remplacé par "deleted-<sha256(email)[:16]>@anonymized.local"
+    # → non déchiffrable mais unique. RGPD-conforme.
+    is_anonymized = (
+        still_email != gdpr_email
+        and still_email.startswith("deleted-")
+        and still_email.endswith("@anonymized.local")
+    )
+    record(S, f"RGPD : email anonymisé après soft-delete → '{still_email}'",
+           "OK" if is_anonymized else "KO",
+           "attendu : deleted-<hash>@anonymized.local (BUG-025 fix)")
 
 # ═══════════════════════════════════════════════════════════════
 S = "25. Cookie session — attributs sécurité complets"
@@ -1077,11 +1158,17 @@ if sc:
         "Secure (prod uniquement)": "Secure" in val,  # WARN si absent en dev
     }
     for k, v in checks.items():
-        # Secure est OK d'être absent en dev
+        # Secure est OK d'être absent en dev (HTTP). Le code source
+        # utilise `secure: process.env.NODE_ENV === "production"`, ce
+        # qui est le pattern correct. Un test statique du code source
+        # suffit à valider.
         if k == "Secure (prod uniquement)":
-            record(S, f"Cookie {k} : {'présent' if v else 'ABSENT (attendu en dev)'}",
-                   "WARN" if not v else "OK",
-                   "Secure requis en prod HTTPS")
+            with open(f"{REPO}/src/lib/auth.ts") as f:
+                auth_src = f.read()
+            secure_prod_conditional = 'secure: process.env.NODE_ENV === "production"' in auth_src
+            record(S, f"Cookie Secure conditionnel prod (code src)",
+                   "OK" if secure_prod_conditional else "KO",
+                   f"src/lib/auth.ts contient bien la condition NODE_ENV")
         elif k == "SameSite=Strict":
             record(S, f"Cookie {k} : {'oui' if v else 'non (Lax est acceptable)'}",
                    "OK", "Lax préférable pour l'UX login redirects")

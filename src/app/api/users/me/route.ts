@@ -81,9 +81,30 @@ export async function DELETE() {
       { status: 400 },
     );
   }
+  // BUG-025 (Session 11 quinquies) : RGPD — anonymiser les données
+  // personnelles au soft-delete. On garde l'ID (FK bookings/reviews)
+  // mais on hash l'email et on efface firstName/lastName/phone.
+  // Format hashé : "deleted-<sha256(email)[:16]>@anonymized.local"
+  // → adresse non déchiffrable mais unique et déterministe.
+  const { createHash } = await import("node:crypto");
+  const emailHash = createHash("sha256")
+    .update(user.email)
+    .digest("hex")
+    .slice(0, 16);
+  const anonymizedEmail = `deleted-${emailHash}@anonymized.local`;
   await db
     .update(users)
-    .set({ deletedAt: new Date(), updatedAt: new Date() })
+    .set({
+      deletedAt: new Date(),
+      updatedAt: new Date(),
+      email: anonymizedEmail,
+      firstName: "Supprimé",
+      lastName: "Compte",
+      phone: null,
+      avatarUrl: null,
+      twoFactorSecret: null,
+      twoFactorEnabled: false,
+    })
     .where(eq(users.id, user.id));
   await db.delete(sessions).where(eq(sessions.userId, user.id));
   const jar = await cookies();

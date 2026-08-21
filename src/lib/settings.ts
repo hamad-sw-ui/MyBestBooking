@@ -39,6 +39,12 @@ export const generalSchema = z.object({
   partnersEmail: z.string().email(),
   defaultCurrency: z.enum(["EUR", "USD", "GBP", "XAF"]),
   defaultLanguage: z.enum(["fr", "en", "ar"]),
+  // BUG-026 (Session 11 quinquies) : exposer explicitement les listes
+  // supportées via l'API pour que l'UI puisse construire ses dropdowns
+  // sans hard-coder — et surtout pour permettre à un admin de restreindre
+  // l'offre disponible (ex: retirer XAF sans redéployer).
+  supportedCurrencies: z.array(z.enum(["EUR", "USD", "GBP", "XAF"])).min(1).default(["EUR", "USD", "GBP", "XAF"]),
+  supportedLocales: z.array(z.enum(["fr", "en", "ar"])).min(1).default(["fr", "en", "ar"]),
 });
 
 export const billingSchema = z.object({
@@ -140,6 +146,8 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     partnersEmail: "partners@mybestbooking.com",
     defaultCurrency: "EUR",
     defaultLanguage: "fr",
+    supportedCurrencies: ["EUR", "USD", "GBP", "XAF"],
+    supportedLocales: ["fr", "en", "ar"],
   },
   billing: {
     taxRate: 0.1,

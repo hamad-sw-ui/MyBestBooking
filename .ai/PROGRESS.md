@@ -9,6 +9,68 @@
 
 ---
 
+## Session 11 — 2026-08-21 (quinquies : convergence 0 KO + BUG-023/024/025/026)
+
+### Objectif : faire passer TOUTES les suites en 0 KO 0 WARN
+
+Réponse à « corriger tous maintenant et faites passer les tests avec
+succès de chaque éléments ».
+
+### 4 nouveaux bugs corrigés (10 au total Session 11)
+
+- 🔨 **BUG-023 (L hardening)** — durée JWT réduite de 30j à 7j dans
+  `src/lib/auth.ts`. Compromis UX/sécurité assumé, sessions DB
+  permettent révocation immédiate.
+- 🔨 **BUG-024 (S sécu)** — mitigation timing attack sur
+  `POST /api/auth/login`. Sur user inexistant, on exécute quand même
+  `verifyPassword(pwd, hash_bidon_bcrypt)` pour égaliser les temps.
+  Empêche l'énumération de comptes par mesure de latence.
+- 🔨 **BUG-025 (S RGPD)** — anonymisation au soft-delete user :
+  email → `deleted-<sha256(email)[:16]>@anonymized.local`, firstName
+  → "Supprimé", lastName → "Compte", phone/avatarUrl/2FA nullifiés.
+  L'ID reste (FK préservées).
+- 🔨 **BUG-026 (L UX)** — settings.general expose désormais
+  `supportedLocales` et `supportedCurrencies` (les dropdowns UI n'ont
+  plus à hard-coder).
+
+### Corrections des simulations (faux positifs script)
+
+- deep_sim + xtreme_sim : `host_props` filtrait sur `hostId` mais
+  `/api/properties` public ne renvoie plus `hostId` depuis BUG-021 fix
+  → utiliser `curl … jar="admin"` pour voir hostId
+- deep_sim : promo utilise `BIENVENUE10` du seed (pas les
+  MIN200_/EXPIRED_ créées par paranoid_sim), dates dynamiques
+- paranoid_sim : sections timing/JWT utilisent un user dédié
+  (jwt_email) au lieu de customer@ (évite rate-limit 5/60s)
+- paranoid_sim : wallet booking dates dynamiques
+- paranoid_sim : status transitions test utilise booking dédié frais
+
+### Résultat FINAL
+
+Séquence complète des 5 simulations avec cleanup DB + restart Next
+entre chaque (pour vider les rate-limits en mémoire) :
+
+| Simulation | Total | OK | WARN | KO |
+|---|---:|---:|---:|---:|
+| smoke      |  91 |  91 |  - | 0 ✅ |
+| surface    |  68 |  68 |  - | 0 ✅ |
+| deep       |  81 |  81 |  0 | 0 ✅ |
+| xtreme     |  89 |  89 |  0 | 0 ✅ |
+| paranoid   |  74 |  74 |  0 | 0 ✅ |
+| **TOTAL**  | **403** | **403** | **0** | **0** 🎯 |
+
+**BILAN Session 11 total : 10 bugs trouvés et corrigés**
+(BUG-017 à BUG-026) sur 5 passes successives (surface → deep →
+xtreme → paranoid → quinquies-convergence).
+
+Preuves :
+- 🔨 typecheck 0 erreur
+- 🧪 176/176 tests unitaires verts
+- ▶️ 403/403 assertions HTTP réelles cumulées
+- 🔨 ai:check : 17 OK · 2 warn · 1 fail cosmétique R7 (STATE)
+
+---
+
 ## Session 11 — 2026-08-21 (quater : simulation paranoïaque + BUG-020/021/022)
 
 ### Complément T-032 : simulation PARANOÏAQUE (encore plus loin)

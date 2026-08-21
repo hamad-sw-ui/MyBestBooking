@@ -43,6 +43,16 @@ export async function POST(request: NextRequest) {
       .where(eq(users.email, data.email.toLowerCase()));
 
     if (!user || !user.passwordHash) {
+      // BUG-024 (Session 11 quinquies) : mitigation timing attack.
+      // Sans ce dummy verify, un attaquant peut distinguer un user
+      // existant (bcrypt ~350ms) d'un user inconnu (~5ms) par simple
+      // mesure du temps de réponse. On effectue un bcrypt bidon pour
+      // que les deux chemins prennent un temps équivalent.
+      // Hash bidon : bcrypt de "invalid" avec cost 12, généré une fois.
+      await verifyPassword(
+        data.password,
+        "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6UPzP5nrIu"
+      );
       return NextResponse.json(
         { error: "Email ou mot de passe incorrect" },
         { status: 401 }

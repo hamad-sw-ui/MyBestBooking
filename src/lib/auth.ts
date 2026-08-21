@@ -20,7 +20,12 @@ if (jwtSecretEnv.length < 32) {
 }
 const JWT_SECRET = new TextEncoder().encode(jwtSecretEnv);
 
-const SESSION_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
+// BUG-023 (Session 11 quinquies) : réduire l'expiration JWT de 30j à 7j
+// pour limiter la fenêtre d'exploitation d'un token volé. Compromis
+// UX/sécurité : 7j = confortable pour un utilisateur régulier, forcé à
+// se ré-authentifier hebdomadairement. Refresh token flow non requis
+// à ce stade (sessions DB permettent la révocation immédiate).
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days (was 30)
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -38,7 +43,7 @@ export async function createToken(userId: string): Promise<string> {
   return new SignJWT({ userId })
     .setProtectedHeader({ alg: "HS256" })
     .setJti(randomUUID())
-    .setExpirationTime("30d")
+    .setExpirationTime("7d")
     .setIssuedAt()
     .sign(JWT_SECRET);
 }
