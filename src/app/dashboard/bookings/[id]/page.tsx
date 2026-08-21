@@ -13,6 +13,7 @@ import {
   CheckCircle, XCircle, AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { BookingRowActions } from "@/components/booking-row-actions";
 
 interface BookingDetailPageProps {
   params: Promise<{ id: string }>;
@@ -364,23 +365,15 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
             </CardContent>
           </Card>
 
-          {/* Actions */}
+          {/* Actions — T-031 branchées */}
           <Card>
-            <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Envoyer un message
-              </Button>
-              <Button variant="outline" className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                Télécharger la confirmation
-              </Button>
-              {booking.status === "confirmed" && (
-                <Button variant="danger" className="w-full">
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Annuler la réservation
-                </Button>
-              )}
+            <CardContent className="flex flex-wrap gap-2">
+              <BookingRowActions
+                bookingId={booking.id}
+                bookingReference={booking.bookingReference}
+                status={booking.status}
+                hostContactEmail={booking.guestEmail ?? null}
+              />
             </CardContent>
           </Card>
         </div>

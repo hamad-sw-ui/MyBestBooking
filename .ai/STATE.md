@@ -10,9 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `8c7be04` (T-030 R18 + UI gaps, Session 9)
-- **Dernier commit stable référencé** : `8c7be04` (Session 9)
-- **Version du Framework** : **1.1.1** (AI-DOS Web, hybride + complétude
+- **Dernier commit connu** : à mettre à jour en fin de session en cours
+- **Dernier commit stable référencé** : `6c99ad3` (Session 9 close)
+- **Version du Framework** : **1.1.2** (AI-DOS Web, hybride + complétude
   produit — voir `PROCESS_IMPROVEMENTS.md`)
 
 ## 🛠️ État Technique
@@ -82,7 +82,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-030 (30 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-031 (31 tâches)
 
 ## 🏛️ Décisions & ADR
 
@@ -96,7 +96,13 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-21 (Session 9 — **T-030 R18 no_dead_ui** :
+- **Date** : 2026-08-21 (Session 10 — **T-031 audit UI brutal + R19** :
+  framework v1.1.2, R19 bloque les liens vers pages inexistantes, 15
+  liens footer morts corrigés, 22 boutons câblés (mailto/Link/actions
+  clients), 4 composants inutilisés retirés/branchés, 2 pages légales
+  livrées, 176/176 tests inchangés, 16 OK 0 fail)
+
+- **Date précédente** : 2026-08-21 (Session 9 — **T-030 R18 no_dead_ui** :
   framework v1.1.1 durci pour bloquer les liens/handlers morts
   (href="#", onClick={()=>{}}, onChange={()=>{}}) + 7 nouveaux
   composants client livrés pour combler les UI manquantes (2FA

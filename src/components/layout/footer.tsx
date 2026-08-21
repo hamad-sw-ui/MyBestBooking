@@ -1,109 +1,106 @@
 import Link from "next/link";
 
+/**
+ * Footer public. Ne référence QUE des routes qui existent réellement
+ * (règle R19 du framework — pas de lien qui envoie sur une 404).
+ * Les liens marketing/entreprise non implémentés sont volontairement
+ * remplacés par du texte grisé plutôt que par des liens morts.
+ */
 export function Footer() {
   return (
     <footer className="bg-[#1B3A6B] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {/* Company */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4">mybestbooking</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/a-propos" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  À propos
-                </Link>
-              </li>
-              <li>
-                <Link href="/carrieres" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Carrières
-                </Link>
-              </li>
-              <li>
-                <Link href="/presse" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Presse
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Blog
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Discover */}
+          {/* Découvrir */}
           <div>
             <h3 className="text-sm font-semibold mb-4">Découvrir</h3>
             <ul className="space-y-2">
+              <li>
+                <Link href="/recherche" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Rechercher un hébergement
+                </Link>
+              </li>
               <li>
                 <Link href="/bestrewards" className="text-sm text-gray-300 hover:text-white transition-colors">
                   💎 BestRewards
                 </Link>
               </li>
               <li>
-                <Link href="/garantie-prix" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Garantie Prix
-                </Link>
-              </li>
-              <li>
-                <Link href="/destinations" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Destinations
-                </Link>
-              </li>
-              <li>
-                <Link href="/avis" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Avis vérifiés
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Partners */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4">Partenaires</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/devenir-partenaire" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Devenir partenaire
-                </Link>
-              </li>
-              <li>
-                <Link href="/extranet" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Extranet hébergeurs
-                </Link>
-              </li>
-              <li>
-                <Link href="/affiliation" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Programme d&apos;affiliation
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4">Aide</h3>
-            <ul className="space-y-2">
-              <li>
                 <Link href="/aide" className="text-sm text-gray-300 hover:text-white transition-colors">
                   Centre d&apos;aide
                 </Link>
               </li>
+            </ul>
+          </div>
+
+          {/* Voyageurs */}
+          <div>
+            <h3 className="text-sm font-semibold mb-4">Voyageurs</h3>
+            <ul className="space-y-2">
               <li>
-                <Link href="/contact" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Nous contacter
+                <Link href="/mon-compte" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Mon compte
                 </Link>
               </li>
               <li>
-                <span className="text-sm text-gray-300">
-                  📧 support@mybestbooking.com
-                </span>
+                <Link href="/mes-reservations" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Mes réservations
+                </Link>
               </li>
               <li>
-                <span className="text-sm text-gray-300">
-                  💬 Chat 24/7
-                </span>
+                <Link href="/mes-favoris" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Mes favoris
+                </Link>
+              </li>
+              <li>
+                <Link href="/messages" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Messagerie
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Hébergeurs */}
+          <div>
+            <h3 className="text-sm font-semibold mb-4">Hébergeurs</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/dashboard/properties/new" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Ajouter mon hébergement
+                </Link>
+              </li>
+              <li>
+                <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Espace hébergeur
+                </Link>
+              </li>
+              <li>
+                <Link href="/inscription" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  Créer un compte
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="text-sm font-semibold mb-4">Contact</h3>
+            <ul className="space-y-2">
+              <li>
+                <a
+                  href="mailto:support@mybestbooking.com"
+                  className="text-sm text-gray-300 hover:text-white transition-colors"
+                >
+                  📧 support@mybestbooking.com
+                </a>
+              </li>
+              <li>
+                <a
+                  href="mailto:partners@mybestbooking.com"
+                  className="text-sm text-gray-300 hover:text-white transition-colors"
+                >
+                  🤝 partners@mybestbooking.com
+                </a>
               </li>
             </ul>
           </div>
@@ -122,10 +119,12 @@ export function Footer() {
               &quot;Réservez mieux. Voyagez plus.&quot;
             </p>
             <div className="flex items-center gap-4 text-sm text-gray-400">
-              <Link href="/cgu" className="hover:text-white transition-colors">CGU</Link>
-              <Link href="/cgv" className="hover:text-white transition-colors">CGV</Link>
-              <Link href="/confidentialite" className="hover:text-white transition-colors">Confidentialité</Link>
-              <Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link>
+              <Link href="/mentions-legales" className="hover:text-white transition-colors">
+                Mentions légales
+              </Link>
+              <Link href="/confidentialite" className="hover:text-white transition-colors">
+                Confidentialité
+              </Link>
             </div>
           </div>
           <p className="text-center text-xs text-gray-500 mt-6">

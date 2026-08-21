@@ -753,6 +753,90 @@ const productCoverage = manifest.product_coverage ?? {};
 }
 
 // ─────────────────────────────────────────────────────────────
+// Règle 19 : liens internes doivent pointer vers une page existante
+//   Scanne src/**/*.tsx pour tous les href="/foo" et Link href="/foo".
+//   Vérifie qu'un fichier src/app/**/page.tsx existe pour cette route.
+//   Ignore : /api/*, /uploads/*, /_next/*, ancres (#foo), externes (https:).
+//   T-031 (Session 10). Bloquant.
+// ─────────────────────────────────────────────────────────────
+{
+  const srcDir = join(REPO_ROOT, "src");
+  const tsxFiles = execSync(`find "${srcDir}" -name '*.tsx'`, { encoding: "utf8" })
+    .split("\n")
+    .filter(Boolean);
+  const appDir = join(REPO_ROOT, "src", "app");
+
+  // Construire la liste des routes existantes depuis les page.tsx.
+  const pageFiles = execSync(`find "${appDir}" -name 'page.tsx'`, { encoding: "utf8" })
+    .split("\n")
+    .filter(Boolean);
+  const existingRoutes = new Set(["/"]);
+  for (const pf of pageFiles) {
+    let route = pf
+      .replace(appDir, "")
+      .replace(/\/page\.tsx$/, "");
+    // retirer les groupes de route (main), (auth) etc.
+    route = route.replace(/\/\([^/)]+\)/g, "");
+    // remplacer les segments dynamiques [id] par un motif — pour le
+    // matching on garde le brut, on comparera avec /:slug plus loin.
+    if (route === "") route = "/";
+    existingRoutes.add(route);
+  }
+  // Certaines routes internes valides sans page (redirections/proxy)
+  const knownAliases = new Set([
+    "/api", // toute /api/* est valide
+  ]);
+
+  function routeExists(href) {
+    // Retire query et hash
+    const clean = href.split("?")[0].split("#")[0];
+    if (clean === "" || clean === "/") return true;
+    if (clean.startsWith("/api/") || clean.startsWith("/uploads/") || clean.startsWith("/_next/")) return true;
+    if (existingRoutes.has(clean)) return true;
+    // Matcher les segments dynamiques : /hebergement/foo → /hebergement/[slug]
+    const parts = clean.split("/").filter(Boolean);
+    outer: for (const route of existingRoutes) {
+      const rParts = route.split("/").filter(Boolean);
+      if (rParts.length !== parts.length) continue;
+      for (let i = 0; i < parts.length; i++) {
+        if (rParts[i].startsWith("[") && rParts[i].endsWith("]")) continue;
+        if (rParts[i] !== parts[i]) continue outer;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  const deadHrefs = new Map(); // route -> [(file:line), ...]
+  const hrefRe = /href=["']([^"'#][^"']*)["']/g;
+  for (const f of tsxFiles) {
+    const txt = readFileSync(f, "utf8");
+    const rel = relative(REPO_ROOT, f);
+    let m;
+    while ((m = hrefRe.exec(txt))) {
+      const href = m[1];
+      if (!href.startsWith("/")) continue; // externe ou relatif
+      if (href.startsWith("//")) continue; // protocole
+      if (!routeExists(href)) {
+        const line = txt.slice(0, m.index).split("\n").length;
+        if (!deadHrefs.has(href)) deadHrefs.set(href, []);
+        deadHrefs.get(href).push(`${rel}:${line}`);
+      }
+    }
+  }
+
+  if (deadHrefs.size === 0) {
+    record("R19 links_target_existing_pages", "ok", `tous les href internes pointent vers une page existante (${existingRoutes.size} routes)`);
+  } else {
+    const details = [...deadHrefs.entries()]
+      .slice(0, 8)
+      .map(([h, occ]) => `${h} (${occ.length}× ex: ${occ[0]})`)
+      .join(" | ");
+    record("R19 links_target_existing_pages", "fail", `${deadHrefs.size} route(s) inexistante(s) référencée(s) : ${details}${deadHrefs.size > 8 ? " …" : ""}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Rapport
 // ─────────────────────────────────────────────────────────────
 function printReportAndExit() {

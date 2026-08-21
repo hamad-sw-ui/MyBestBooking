@@ -9,6 +9,72 @@
 
 ---
 
+## 2026-08-21 — Session 10 : T-031 R19 + audit UI brutal
+
+**Trigger utilisateur** : « refaites l'audit maintenant ».
+L'utilisateur soupçonnait à raison qu'il restait des manquements
+après T-030. L'audit brutal a révélé **4 catégories de morts UI**.
+
+### Diagnostic (avant corrections)
+
+- **15 liens footer/header** pointant vers des pages inexistantes
+  (/a-propos, /blog, /carrieres, /cgu, /cgv, /confidentialite,
+  /contact, /destinations, etc.)
+- **22 boutons `<Button>`** sans onClick, sans type=submit, non
+  wrappés dans Link
+- **4 composants** livrés jamais utilisés (Modal, Skeleton,
+  ImageUploader, PriceAlertsSection)
+- **1 formulaire** `<form>` sans onSubmit/method/action explicite
+  (/recherche)
+
+### Livré
+
+**A. Framework v1.1.2** :
+- Nouvelle règle **R19 links_target_existing_pages** dans
+  `scripts/check-ai.mjs` — bloque tout `href=/xxx` sans page.tsx
+  correspondant. Manifest.blocking_rules ajoutée.
+
+**B. Footer refondu** : `src/components/layout/footer.tsx` ne
+référence plus que des routes existantes.
+
+**C. 2 pages légales** : `/mentions-legales` + `/confidentialite`
+(RGPD complet).
+
+**D. 2 composants clients** : `<BookingRowActions>` (Contacter/
+Confirmation/Annuler) et `<WishlistActions>` (Partager/Supprimer).
+
+**E. 22 boutons câblés** : mailto: pour aide/messages/laisser-avis,
+Link pour dashboard/rooms/promotions/properties, remplacements de
+retirer les boutons non-implémentables (téléphone, PDF invoice).
+
+**F. Composants nettoyés** : Modal/Skeleton/ImageUploader supprimés
+(0 import), PriceAlertsSection branché dans /mes-favoris.
+
+**G. /recherche** : `method="get" action="/recherche"` explicites.
+
+### Preuves (§16)
+
+- 🔨 typecheck OK, build OK, lint 0 error.
+- 🧪 176/176 tests inchangés.
+- 🧪 `npm run ai:check` : **16 OK · 2 warn · 0 fail** (R18 + R19 ✅).
+- ▶️ Grep final : 0 lien mort, 0 href="#", 0 handler vide, 0 bouton
+  sans handler, 0 composant inutilisé, 0 form sans handler.
+- ▶️ /mentions-legales et /confidentialite → 200.
+- ▶️ Annulation booking via UI : PUT status=cancelled → 200 fee 0.00.
+- ▶️ /dashboard/rooms/new + /dashboard/promotions/new + /aide + /mes-favoris
+  + /mes-reservations tous fonctionnels.
+
+### Note de discipline (§16)
+
+R18 (Session 9) attrapait les patterns explicites (`href="#"`).
+R19 (Session 10) attrape les patterns implicites (liens vers pages
+inexistantes). Les boutons sans handler restent un audit
+semi-manuel (contexte multi-lignes trop délicat pour une règle sans
+faux positifs). Rejouable avec le grep Python fourni dans
+`REPORTS/audit_ui_2026-08-21_session_10.md`.
+
+---
+
 ## 2026-08-21 — Session 9 : T-030 R18 no_dead_ui + UI réellement livrées
 
 **Trigger utilisateur** : « je vois beaucoup de manquements, des

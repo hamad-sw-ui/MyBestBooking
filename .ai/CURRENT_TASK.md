@@ -2,118 +2,123 @@
 
 ## Identifiant
 
-- **ID** : T-030
-- **Titre** : R18 no_dead_ui + livraison des UI réellement manquantes
+- **ID** : T-031
+- **Titre** : R19 + audit UI brutal (liens morts, boutons câblés, composants nettoyés)
 - **Niveau** : **S**
-- **Ouverte le** : 2026-08-21 (Session 9)
+- **Ouverte le** : 2026-08-21 (Session 10)
 - **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Contexte
 
-Retour utilisateur direct : « je vois beaucoup de manquements, des
-interfaces qui n'existent pas et des boutons qui ne servent à rien.
-Pourquoi le framework n'anticipe pas ? ». Reproche fondé : j'ai marqué
-plusieurs features ✅ en Session 8 dès qu'un endpoint existait, sans
-vérifier qu'un utilisateur pouvait s'en servir depuis l'UI (2FA,
-delete account, price alerts, referral, wallet checkout, rooms/new,
-guest booking, pièces jointes).
+Réponse directe à « refaites l'audit maintenant » après T-030.
+L'utilisateur soupçonnait à raison qu'il restait des manquements.
+L'audit brutal a révélé 4 catégories de morts UI : 15 liens footer
+→ 404, 22 boutons sans handler ni Link, 4 composants inutilisés,
+1 formulaire sans method/action explicite.
 
 ## Livrables
 
-### A. Framework — R18 no_dead_ui
+### A. Framework (v1.1.2)
 
-- Nouvelle règle dans `scripts/check-ai.mjs` : détecte et **bloque**
-  `href="#"`, `onClick={() => {}}`, `onChange={() => {}}`.
-- Statut `fail` (bloquant). L'ai:check refuse tout futur retour de
-  ces patterns.
-- Ajoutée à `blocking_rules` du manifest sous
-  `dead_ui_link_or_handler`.
+- **Nouvelle règle R19** dans `scripts/check-ai.mjs` : bloque
+  `href="/xxx"` qui pointe vers une route sans `page.tsx` existant.
+  Supporte segments dynamiques `[slug]`. Whitelist : `/api/*`,
+  `/uploads/*`, `/_next/*`.
+- **manifest.blocking_rules.link_to_nonexistent_page** ajoutée.
+- Manifest version bumped 1.1.1 → 1.1.2.
 
-### B. UI — 7 nouveaux composants client
+### B. Footer refondu
 
-1. `src/components/two-factor-section.tsx` : setup TOTP (secret + QR
-   code via `api.qrserver.com`) → verify → disable. Cycle complet.
-2. `src/components/delete-account-section.tsx` : confirmation par
-   saisie « SUPPRIMER » avant `DELETE /api/users/me`.
-3. `src/components/referral-card.tsx` : `GET /api/users/me/referral`
-   + copier via `navigator.clipboard`.
-4. `src/components/notification-prefs-section.tsx` :
-   `PATCH /api/users/me { priceAlertEnabled }`.
-5. `src/components/price-alert-button.tsx` : sur fiche property, mini
-   formulaire prix max → `POST /api/price-alerts`.
-6. `src/components/price-alerts-section.tsx` : liste + suppression
-   des alertes user.
-7. `src/components/new-room-form.tsx` : formulaire complet →
-   `POST /api/rooms`.
+`src/components/layout/footer.tsx` : ne référence plus que des routes
+existantes. Sections : Découvrir, Voyageurs, Hébergeurs, Contact,
+Bottom (mentions-legales + confidentialite).
 
-### C. Nouvelles pages / refactor pages
+### C. 2 pages légales livrées
 
-- `src/app/dashboard/rooms/new/page.tsx` : hôte ajoute une chambre.
-- `/mon-compte tab security` : intègre `<TwoFactorSection>` +
-  `<DeleteAccountSection>` (retire toggle mort et bouton `<Button>`
-  disabled).
-- `/mon-compte tab notifications` : `<NotificationPrefsSection>` +
-  `<ReferralCard>` (remplace 5 toggles décoratifs + bouton mort).
-- `/reservation` : détection non-auth → mode invité automatique avec
-  bannière ; wallet checkbox si `walletBalance > 0` ; envoie
-  `useWalletCredits` et `isGuestBooking` au POST.
-- `/hebergement/[slug]` : bouton « Voir les disponibilités » devient
-  un vrai `<a href="/reservation?...">` + `<PriceAlertButton>`.
-- `/aide` : retire 2 `href="#"` (articles inexistants → texte simple).
-- `/dashboard/rooms` : bouton Ajouter devient `<Link>` vers
-  `/dashboard/rooms/new`.
+- `/mentions-legales` : éditeur, hébergeur, CGU, CGV, IP, droit
+  applicable.
+- `/confidentialite` : RGPD complet (données, cookies, droits,
+  sécurité, sous-traitants, DPO).
 
-### D. APIs mineurement enrichies
+### D. 2 composants clients réutilisables
 
-- `PATCH /api/users/me` : accepte `priceAlertEnabled: boolean`.
-- `GET /api/auth/me` : expose `priceAlertEnabled` et `timezone`.
+- `src/components/booking-row-actions.tsx` : Contacter (mailto),
+  Confirmation (download .txt), Annuler (`PUT /api/bookings/[id]`).
+- `src/components/wishlist-actions.tsx` : Partager (clipboard share
+  URL), Supprimer (`DELETE /api/wishlists?wishlistId=`).
+
+### E. 22 boutons morts câblés
+
+- **mailto:** : /aide (chat, email), /messages (support),
+  /mes-reservations (Laisser un avis)
+- **Link** : /dashboard/rooms (Ajouter), /dashboard/promotions
+  (Créer ×2), /dashboard/properties/[id] (Ajouter chambre ×2,
+  Modifier room → calendrier), /mon-compte (Utiliser mon solde)
+- **BookingRowActions** intégré dans /mes-reservations et
+  /dashboard/bookings/[id]
+- **WishlistActions** + **PriceAlertsSection** intégrés dans /mes-favoris
+- **Retirés** : bouton « Appeler » (téléphone non actif) →
+  span « Numéro à activer », bouton « Tout télécharger » dashboard/billing
+  → span « Export CSV via API (v prochaine) »
+
+### F. Composants inutilisés
+
+- **Supprimés** : `ui/modal.tsx`, `ui/skeleton.tsx`,
+  `ui/image-uploader.tsx` (aucun import).
+- **Branché** : `price-alerts-section.tsx` (T-030) intégré dans /mes-favoris.
+
+### G. Formulaire /recherche
+
+Ajout de `method="get"` + `action="/recherche"` explicites.
 
 ## Preuves (§16)
 
-- 🔍 `REPORTS/analyse_impact_2026-08-21_ui_gaps.md`.
-- 🔍 `REPORTS/analyse_conception_2026-08-21_ui_gaps.md`.
+- 🔍 `REPORTS/audit_ui_2026-08-21_session_10.md` (rapport détaillé).
 - 🔨 `npm run typecheck` ✅ 0 erreur.
-- 🔨 `npm run build` ✅ succès (nouveaux endpoints/pages listés :
-  `/dashboard/rooms/new`, `/api/auth/2fa/*` déjà présents).
+- 🔨 `npm run build` ✅ succès.
 - 🔨 `npm run lint` ✅ 0 error.
-- 🧪 `npm test` : **176 / 176** verts (inchangé, aucune régression).
-- 🧪 `npm run ai:check` : **R18 no_dead_ui ✅**, R15 UI↔API ✅,
-  15 OK · 2 warn attendus · 0 fail.
-- ▶️ `POST /api/auth/2fa/setup` (customer) → secret 32 chars +
-  otpauth URI valide.
-- ▶️ `POST /api/rooms` (host, sur sa property) → chambre 75€ créée.
-- ▶️ `POST /api/price-alerts` (customer) → alerte 201.
-- ▶️ `GET /api/users/me/referral` (customer) → code `BU23WN3L` (8
-  chars alphabet lisible).
-- ▶️ `PATCH /api/users/me { priceAlertEnabled: true }` → 200.
-- ▶️ `DELETE /api/users/me` (admin) → 400 « Un admin ne peut pas se
-  supprimer lui-même ».
-- ▶️ `POST /api/bookings { useWalletCredits: true }` (customer wallet
-  25€ + BestRewards level 2) : subtotal 150, taxes 15, discount
-  **53.05** (wallet 25 + BR 15% de 165 = 28.05), total 111.95.
-- ▶️ `POST /api/bookings { isGuestBooking: true }` sans cookie →
-  201 confirmed, user stub créé.
-- ▶️ Inspection du bundle JS `src_0gi6nkl._.js` (238 KB) confirme
-  la présence des composants : `TwoFactorSection`,
-  `DeleteAccountSection`, `ReferralCard`, « Activer la 2FA »,
-  « SUPPRIMER pour », « Alertes prix favoris », « code de parrainage ».
-- ▶️ Grep post-modification : `href="#"` = **0**, `onClick={()=>{}}` = **0**,
-  `onChange={()=>{}}` = **0**.
+- 🧪 `npm test` : **176 / 176** inchangé.
+- 🧪 `npm run ai:check` : **16 OK · 2 warn · 0 fail** (R18 ✅, R19 ✅).
+- ▶️ `/mentions-legales` et `/confidentialite` → 200.
+- ▶️ /aide contient uniquement des `mailto:support@mybestbooking.com` et
+  `mailto:partners@mybestbooking.com`, plus aucun bouton mort.
+- ▶️ /mes-favoris : PriceAlertsSection + WishlistActions branchés,
+  détectés dans le HTML rendu.
+- ▶️ /mes-reservations : BookingRowActions branché.
+- ▶️ Annulation booking via UI : `PUT /api/bookings/[id]
+  {status:"cancelled"}` → 200 avec `fee: 0.00` calculé selon policy.
+- ▶️ /dashboard/rooms/new → 200 (formulaire host).
+- ▶️ /dashboard/promotions/new → 200.
 
-## Non-régression
+## Grep final (audit reproductible)
 
-- 176/176 tests inchangés.
-- Signatures API existantes préservées (PATCH users/me accepte
-  `priceAlertEnabled` en plus, les callers actuels continuent de
-  fonctionner).
-- Les 15 URL testées Session 8 répondent toujours 200.
+Vous pouvez rejouer :
+```bash
+# 1. Liens footer/header morts
+grep -rhoE 'href="/[a-z][a-z0-9/_-]*"' src/components/layout src/app \
+  | sort -u | sed 's/href="//;s/"//' > /tmp/all_hrefs.txt
+find src/app -name page.tsx -not -path "*api*" \
+  | sed 's|src/app||;s|/page.tsx||;s|/(main)||;s|/(auth)||;s|/\[[a-z]*\]|/:id|g' \
+  | sort -u > /tmp/pages_exist.txt
+comm -23 <(grep -vE "^/api/|/uploads/|^/#" /tmp/all_hrefs.txt) /tmp/pages_exist.txt
+# → 0
 
-## Framework — v1.1.1
+# 2-3. href="#" + handlers vides (couvert par R18)
+grep -rn 'href="#"' src/app src/components  # → 0
 
-- Manifest bumped 1.1.0 → 1.1.1.
-- Blocking rule `dead_ui_link_or_handler` ajoutée.
-- R18 sera opposable à toute future soumission.
+# 4. Boutons sans handler ni Link (analyse contextuelle Python)
+# → 0
+
+# 5. Composants inutilisés
+# ui/modal ui/skeleton ui/image-uploader supprimés
+# price-alerts-section branché dans /mes-favoris
+# → 0
+
+# 6. Forms sans onSubmit/method/action
+grep -rn "<form\b" src/app | grep -vE "onSubmit|method=|action="  # → 0
+```
 
 ## Étape suivante
 
-Attente prochaine directive utilisateur.
+Rien de bloquant restant. Toute future soumission R18+R19 bloque
+les nouvelles régressions de liens/handlers morts.

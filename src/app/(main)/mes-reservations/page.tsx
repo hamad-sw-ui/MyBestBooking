@@ -8,8 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
-import { Calendar, MapPin, Download, MessageSquare, Star, XCircle } from "lucide-react";
+import { Calendar, MapPin, Star } from "lucide-react";
 import Link from "next/link";
+import { BookingRowActions } from "@/components/booking-row-actions";
 
 async function getMyBookings(userId: string) {
   return db
@@ -152,20 +153,13 @@ export default async function MyBookingsPage() {
                                 Voir l&apos;hébergement
                               </Button>
                             </Link>
-                            <Button variant="ghost" size="sm">
-                              <MessageSquare className="w-4 h-4 mr-2" />
-                              Contacter
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              <Download className="w-4 h-4 mr-2" />
-                              Confirmation
-                            </Button>
-                            {booking.status === "confirmed" && (
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                                <XCircle className="w-4 h-4 mr-2" />
-                                Annuler
-                              </Button>
-                            )}
+                            <BookingRowActions
+                              bookingId={booking.id}
+                              bookingReference={booking.bookingReference}
+                              propertySlug={property?.slug ?? null}
+                              status={booking.status}
+                              hostContactEmail={null}
+                            />
                           </div>
                         </div>
                       </div>
@@ -215,12 +209,13 @@ export default async function MyBookingsPage() {
                           
                           {booking.status === "completed" && (
                             <div className="mt-3">
-                              <Link href={`/laisser-un-avis/${booking.id}`}>
-                                <Button variant="secondary" size="sm">
-                                  <Star className="w-4 h-4 mr-2" />
-                                  Laisser un avis
-                                </Button>
-                              </Link>
+                              <a
+                                href={`mailto:support@mybestbooking.com?subject=Avis pour réservation ${booking.bookingReference}&body=Note (sur 10) : %0A%0ACommentaire :`}
+                                className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F5A623] text-white text-sm font-medium hover:bg-[#e0951f] transition"
+                              >
+                                <Star className="w-4 h-4 mr-2" />
+                                Laisser un avis
+                              </a>
                             </div>
                           )}
                         </div>

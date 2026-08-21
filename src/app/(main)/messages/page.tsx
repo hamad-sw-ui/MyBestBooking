@@ -200,9 +200,12 @@ export default async function MessagesPage() {
               <p className="text-sm text-gray-600 mt-1">
                 Notre équipe support est disponible 24h/24 pour répondre à vos questions.
               </p>
-              <Button variant="outline" size="sm" className="mt-3">
+              <a
+                href="mailto:support@mybestbooking.com?subject=Aide%20MyBestBooking"
+                className="inline-flex items-center mt-3 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 transition"
+              >
                 Contacter le support
-              </Button>
+              </a>
             </div>
           </CardContent>
         </Card>

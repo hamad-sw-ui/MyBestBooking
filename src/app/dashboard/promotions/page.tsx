@@ -95,10 +95,12 @@ export default async function PromotionsPage() {
             title="Aucune promotion"
             description="Créez votre première promotion pour attirer plus de clients"
             action={
-              <Button>
-                <Plus className="w-4 h-4 mr-2" />
-                Créer une promotion
-              </Button>
+              <Link href="/dashboard/promotions/new">
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Créer une promotion
+                </Button>
+              </Link>
             }
             className="py-16"
           />
@@ -223,9 +225,9 @@ export default async function PromotionsPage() {
               BIENVENUE10 (10% nouveaux), ETE2025 (15% été), LASTMINUTE (20% dernière minute)
             </p>
           </div>
-          <Button variant="outline">
-            Créer depuis un modèle
-          </Button>
+          <Link href="/dashboard/promotions/new" className="inline-flex items-center px-4 py-2 rounded-lg border-2 border-[#1B3A6B] text-[#1B3A6B] font-medium hover:bg-[#1B3A6B] hover:text-white transition text-sm">
+            Créer une promotion
+          </Link>
         </CardContent>
       </Card>
     </div>

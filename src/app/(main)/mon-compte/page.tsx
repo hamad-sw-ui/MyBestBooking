@@ -230,10 +230,15 @@ export default function MyAccountPage() {
                           €{parseFloat(user.walletBalance || "0").toFixed(2)}
                         </p>
                       </div>
-                      <Button variant="outline">Utiliser mon solde</Button>
+                      <Link
+                        href="/recherche"
+                        className="inline-flex items-center px-4 py-2 rounded-lg border border-[#1B3A6B] text-[#1B3A6B] font-medium hover:bg-[#1B3A6B] hover:text-white transition"
+                      >
+                        Utiliser mon solde
+                      </Link>
                     </div>
                     <p className="text-sm text-gray-500 mt-3">
-                      Votre solde peut être utilisé lors de votre prochaine réservation.
+                      Cochez « Utiliser mon crédit wallet » sur la page de réservation.
                     </p>
                   </CardContent>
                 </Card>

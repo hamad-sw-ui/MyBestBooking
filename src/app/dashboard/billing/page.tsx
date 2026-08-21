@@ -218,10 +218,10 @@ export default async function BillingPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Factures</CardTitle>
-              <Button variant="outline" size="sm">
-                <Download className="w-4 h-4 mr-2" />
-                Tout télécharger
-              </Button>
+              <span className="inline-flex items-center px-3 py-1 rounded-lg border border-gray-200 text-xs text-gray-400">
+                <Download className="w-3 h-3 mr-1" />
+                Export CSV via API (v prochaine)
+              </span>
             </div>
           </CardHeader>
           <CardContent>
