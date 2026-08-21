@@ -4,6 +4,9 @@ import { users } from "@/db/schema";
 import { hashPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
+import { issueToken } from "@/lib/tokens";
+import { getMailer, templates } from "@/lib/mail";
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -15,6 +18,17 @@ const registerSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    // T-009 (BUG-009) : rate-limit inscription par IP (plus permissif
+    // que login car pas de brute-force ciblé possible).
+    const ip = ipFromRequest(request);
+    const ipLimit = rateLimit(`register:ip:${ip}`, { limit: 10, windowMs: 60_000 });
+    if (!ipLimit.ok) {
+      return NextResponse.json(
+        { error: "Trop de créations de compte, réessayez plus tard" },
+        { status: 429, headers: { "Retry-After": String(ipLimit.retryAfter) } },
+      );
+    }
+
     const body = await request.json();
     const data = registerSchema.parse(body);
 
@@ -42,9 +56,26 @@ export async function POST(request: NextRequest) {
         firstName: data.firstName,
         lastName: data.lastName,
         role: data.role,
-        emailVerified: true, // For demo purposes
+        // T-008 (BUG-008) : par défaut, l'email n'est PAS vérifié.
+        // L'utilisateur peut se connecter mais un flux de vérification
+        // (envoi de mail avec lien signé) reste à implémenter — voir
+        // KNOWN_LIMITATIONS.md. Le seed force `emailVerified: true`
+        // pour les comptes de démo, ce qui est explicite et acceptable.
+        emailVerified: false,
       })
       .returning();
+
+    // T-013 : envoi email de vérification (best-effort, ne bloque pas
+    // la création du compte si SMTP tombe).
+    try {
+      const { clear } = await issueToken(newUser.id, "email_verification");
+      const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      const url = `${base}/api/auth/verify?token=${encodeURIComponent(clear)}`;
+      const mail = await templates.emailVerification({ firstName: newUser.firstName, url });
+      await getMailer().send({ to: newUser.email, ...mail });
+    } catch (mailErr) {
+      console.error("[register] verification mail failed:", mailErr);
+    }
 
     // Create session
     await createSession(newUser.id);

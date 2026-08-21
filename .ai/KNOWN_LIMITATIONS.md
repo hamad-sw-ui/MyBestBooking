@@ -1,153 +1,96 @@
-# 🚧 LIMITATIONS CONNUES
+# 🚧 KNOWN_LIMITATIONS — limites assumées
 
-Ce document liste les limites **assumées** — choix de conception ou contraintes
-externes — par opposition aux défauts corrigibles listés dans `BUGS.md`.
-Ne pas les « corriger » sans décision produit explicite.
+Ce document liste les **limites connues** du produit qui **ne sont pas des
+bugs** : ce sont des choix ou des dettes acceptées, avec la raison. Une
+limite peut redevenir un bug si le contexte change — la déplacer alors dans
+`BUGS.md`.
 
----
+À distinguer de :
 
-## 1. Aucun backend, aucune synchronisation multi-appareils
-
-**Limite** : la base vit uniquement sur l'appareil. Deux téléphones = deux
-caisses indépendantes, sans consolidation.
-
-**Pourquoi** : marché à connectivité intermittente et coûteuse ; coût
-d'exploitation d'un serveur incompatible avec le prix cible.
-
-**Conséquences** :
-- Perte du téléphone = perte des données non sauvegardées manuellement.
-- Impossible de gérer plusieurs points de vente d'un même commerçant.
-- La « sync cloud » n'est qu'un partage de fichier `.db` par Intent.
-
-**Voie de sortie** : ✅ **D2 tranchée (2026-07-28)** — deux volets en parallèle :
-renommage honnête de l'existant (B-110) et vraie sauvegarde automatique distante
-via Google Drive (B-111/B-112). Voir
-`REPORTS/rapport_analyse_2026-07-28_sauvegarde_distante.md`.
-La limite « pas de synchronisation multi-appareils » reste néanmoins entière :
-une sauvegarde distante n'est pas une synchronisation.
+- `BUGS.md` — défauts non voulus.
+- `BACKLOG.md` — évolutions désirées, non encore priorisées.
 
 ---
 
-## 2. Licence hors-ligne intrinsèquement contournable
+## Produit
 
-**Limite** : la vérification d'abonnement est purement locale (HMAC-SHA256 avec
-un sel embarqué). Un utilisateur déterminé peut la neutraliser.
+- **Paiement mocké.** `POST /api/bookings` force `paymentStatus: 'paid'`
+  sans débit. Une vraie intégration Stripe/CinetPay/PayPal est nécessaire
+  avant tout usage réel. Requiert des credentials fournisseur non
+  disponibles dans l'environnement sandbox actuel. Déplacé de BUG-003
+  vers cette liste le 2026-08-20 (session 4). À rouvrir en tâche
+  T-011 dès qu'un compte test est fourni.
 
-**Pourquoi** : pas de serveur de licence, et Play Billing est inadapté (achat
-souvent via Mobile Money, hors Play Store).
+- **Vérification d'email non implémentée.** Depuis T-008, l'inscription
+  crée un compte avec `emailVerified: false`, mais aucun mail de
+  vérification n'est envoyé. L'utilisateur peut se connecter sans
+  vérifier. Complet impliquerait : service SMTP (Resend/SendGrid/SES),
+  route `/api/auth/verify?token=...`, table `verification_tokens`,
+  UI dédiée. Voir BACKLOG.md.
 
-**Atténuation possible** : R8, obfuscation, sortie du secret du code clair
-(B-022 à B-024). **La protection restera imparfaite par construction** —
-c'est un choix économique, pas un oubli.
+- **Rate-limit en mémoire (mono-instance).** `src/lib/rate-limit.ts` de
+  T-009 utilise une Map process-local. En déploiement multi-instance
+  (Vercel, Kubernetes avec réplicas), chaque instance a son propre
+  compteur → limite effective multipliée par le nombre d'instances.
+  Suffisant pour ralentir un attaquant naïf, à remplacer par Redis
+  (Upstash, ioredis) pour un vrai rate-limiting global.
 
----
+- **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
+  invalide toutes les sessions actives (30 jours par défaut).
+- **Uniquement le français.** Le modèle DB supporte `descriptionEn` et
+  `users.language`, mais aucun mécanisme d'i18n n'est en place côté UI.
+  Assumé tant que le marché cible est francophone.
+- **Une seule devise affichée** au niveau utilisateur (EUR par défaut),
+  bien que la table `bookings.currency` soit multi-devises.
+- **Pas de mode invité** au checkout : il faut créer un compte pour
+  réserver. Choix pour simplifier le programme BestRewards.
 
-## 3. Parsing SMS heuristique, jamais fiable à 100 %
+## Technique
 
-**Limite** : les opérateurs modifient leurs libellés sans préavis.
-`SmsParser` fonctionne par scoring et peut manquer un paiement ou en
-mal-interpréter un.
+- **Aucune migration Drizzle versionnée.** Le schéma est synchronisé via
+  `drizzle-kit push` en dev. Assumé jusqu'au premier déploiement, ensuite
+  ce devient un bloqueur (tracé en BUG-015).
+- **Aucun test automatisé.** État courant, cible : voir `TEST_PLAN.md`.
+- **`<img>` HTML natif** partout au lieu de `next/image`. Assumé pour aller
+  vite sur le prototype ; à migrer avant tout SEO sérieux (BUG-006).
+- **Fallback `JWT_SECRET`** hard-codé. Assumé **uniquement en dev**. Devient
+  une faille P1 en prod (BUG-001).
+- **`POST /api/seed` public.** Assumé en dev, à supprimer/protéger en prod
+  (BUG-002).
+- **Pas de rate-limiting.** Assumé sans utilisateurs réels. Devient bug avec
+  premier utilisateur (BUG-009).
+- **`averageRating` recalculé à la main** dans `POST /api/reviews`. Race
+  condition théorique acceptée tant que le trafic est faible (BUG-010).
 
-**Atténuations en place** : seuil de score élevé (50), exigence
-montant **et** ID de transaction, drapeau `isSecure`, file `sms_errors` pour
-traitement manuel, déduplication par `transactionId`.
+## Framework
 
-**Conséquence** : la réconciliation reste **assistée**, jamais entièrement
-automatique. Le commerçant doit contrôler la file des SMS non reconnus.
+- **Application manuelle du framework.** Aucun linter, aucun hook Git ne
+  vérifie que `CURRENT_TASK.md` est à jour, que les rapports d'impact
+  existent, ou que les tags §16 sont posés. L'application repose sur la
+  discipline des humains et des agents. Un mécanisme automatisé
+  (`.githooks/`, GitHub Actions) est souhaitable — voir
+  `PROCESS_IMPROVEMENTS.md`.
+- **Pas de vérification que `framework.manifest.json` est cohérent** avec
+  l'arborescence réelle. Un fichier obligatoire supprimé ne fait pas
+  échouer un `npm run build`. À terme, un script `scripts/check-ai.mjs`
+  pourrait détecter les incohérences.
 
----
+## Environnement de développement
 
-## 4. Portée géographique : Cameroun uniquement
+- **`next/font/google` désactivé** (T-017 → revert). `next build`
+  échoue quand le CDN Google Fonts est inaccessible (cas du sandbox
+  agent Arena). Retombé sur `<link>` Google Fonts dans
+  `src/app/layout.tsx` (fonctionne à l'exécution : le navigateur du
+  visiteur télécharge les fonts). En prod avec CI ayant accès CDN,
+  migrer à `next/font/google` pour inlining + no-FOUT. Backlog.
 
-Codé en dur dans le produit :
-- format de numéro `6[25-9]\d{7}` (`PhoneUtil`, `SmsParser`) ;
-- devise FCFA par défaut ;
-- barèmes de frais MTN / Orange Cameroun (`FeeCalculator`) ;
-- expéditeurs SMS officiels camerounais.
-
-Toute extension régionale exige une couche de configuration par pays.
-
----
-
-## 5. Barèmes de frais Mobile Money approximatifs
-
-`FeeCalculator` applique des pourcentages arrondis (MTN retrait ≈ 1 % + 0,2 % + 4 F ;
-Orange retrait ≈ 1,5 %). Les grilles réelles sont **par tranches** et évoluent.
-
-**Conséquence** : les frais affichés sont indicatifs. Ils ne doivent pas servir
-de référence comptable officielle.
-
----
-
-## 6. Montants en `Double`
-
-Toutes les entités stockent les montants en `Double` (virgule flottante).
-Risque d'erreurs d'arrondi sur les cumuls.
-
-**Atténuation** : en FCFA il n'y a pas de centimes, les montants sont entiers et
-les écarts restent négligeables à l'échelle d'une boutique.
-
-**Voie de sortie** : B-077 (passage à `Long`) — migration coûteuse touchant
-toutes les tables ; non prioritaire.
-
----
-
-## 7. Un seul point de vente par installation
-
-La table `boutique` contient une **ligne unique** (`id = 1`). Le modèle ne
-supporte ni plusieurs boutiques, ni plusieurs caisses simultanées.
-
----
-
-## 8. Scanner de code-barres dépendant des Google Play Services
-
-ML Kit passe par `play-services-mlkit-barcode-scanning`. Sur un appareil sans
-GMS (fréquent sur l'entrée de gamme importé), le scan est indisponible.
-
-**Atténuation** : la saisie manuelle du code-barres reste possible partout.
-
----
-
-## 9. Impression limitée aux imprimantes ESC/POS Bluetooth
-
-Pas d'USB, pas de Wi-Fi, pas de partage réseau. L'adresse MAC est stockée en
-configuration : changer d'imprimante impose de la reconfigurer.
+- **PostgreSQL requis en local.** Pas de SQLite d'appoint, pas de mock DB
+  intégré. Choisi pour rester au plus près de la prod. Suppose Docker (ou
+  un Postgres installé nativement).
+- **Node 20+** requis (contrainte de Next 16). Assumé.
 
 ---
 
-## 10. Sécurité physique de l'appareil
-
-Le chiffrement SQLCipher protège le **fichier** de base. Il ne protège pas
-contre :
-- un appareil déverrouillé laissé sans surveillance ;
-- un appareil rooté (Keystore contournable) ;
-- un employé connaissant le PIN Manager.
-
-Les contre-mesures sont **organisationnelles** (rôles, journal d'actions,
-détection d'anomalies), pas cryptographiques.
-
----
-
-## 11. minSdk 24 — API modernes indisponibles
-
-Pas de `EncryptedSharedPreferences` sans compromis, contraintes sur les API de
-fichiers et de notifications, et **fragmentation forte** du comportement
-Bluetooth et SMS entre Android 7 et 15. Tout code doit être testé sur au moins
-un appareil ancien.
-
----
-
-## 12. Interface monolingue française codée en dur
-
-~99 % des textes sont écrits directement dans les Composables.
-Traduire l'application demandera une passe complète d'externalisation
-(B-073/B-074), pas un simple fichier de traduction.
-
----
-
-## 13. Environnement de développement de l'agent non outillé
-
-L'environnement d'exécution de l'agent ne dispose **ni de JDK ni de SDK
-Android**. Les vérifications sont **statiques** (lecture, `grep`, analyse de
-schémas). Toute affirmation du type « ça compile » doit venir d'une exécution
-réelle par le responsable ou par la CI.
+Si l'une de ces limites bloque la prochaine étape (ex : mise en prod), la
+déplacer immédiatement dans `BUGS.md` **avec la priorité appropriée** et
+créer une tâche dans `BACKLOG.md`.

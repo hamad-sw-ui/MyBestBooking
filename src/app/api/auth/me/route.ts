@@ -27,6 +27,8 @@ export async function GET() {
       walletBalance: user.walletBalance,
       emailVerified: user.emailVerified,
       twoFactorEnabled: user.twoFactorEnabled,
+      timezone: user.timezone,
+      priceAlertEnabled: user.priceAlertEnabled,
     },
   });
 }

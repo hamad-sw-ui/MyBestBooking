@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+
+export const metadata: Metadata = {
+  title: "Aide et FAQ",
+  description: "Trouvez des réponses à vos questions sur MyBestBooking : réservation, annulation, paiement, compte.",
+};
 import { 
   Search, MessageCircle, Phone, Mail, Book, 
   HelpCircle, CreditCard, Calendar, Shield, 
@@ -87,9 +93,14 @@ export default function HelpPage() {
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#1B3A6B]/10 flex items-center justify-center">
                 <MessageCircle className="w-6 h-6 text-[#1B3A6B]" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Chat en direct</h3>
-              <p className="text-sm text-gray-500 mb-4">Disponible 24h/24, 7j/7</p>
-              <Button>Démarrer un chat</Button>
+              <h3 className="font-semibold text-gray-900 mb-2">Messagerie</h3>
+              <p className="text-sm text-gray-500 mb-4">Écrivez-nous par email</p>
+              <a
+                href="mailto:support@mybestbooking.com?subject=Aide%20MyBestBooking"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-[#1B3A6B] text-white text-sm font-medium hover:bg-[#152d54] transition"
+              >
+                Écrire à l&apos;équipe
+              </a>
             </CardContent>
           </Card>
 
@@ -99,8 +110,10 @@ export default function HelpPage() {
                 <Phone className="w-6 h-6 text-[#FF5A5F]" />
               </div>
               <h3 className="font-semibold text-gray-900 mb-2">Téléphone</h3>
-              <p className="text-sm text-gray-500 mb-4">+33 1 XX XX XX XX</p>
-              <Button variant="outline">Appeler</Button>
+              <p className="text-sm text-gray-500 mb-4">+237 XXX XX XX XX</p>
+              <span className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-500">
+                Numéro à activer
+              </span>
             </CardContent>
           </Card>
 
@@ -109,9 +122,14 @@ export default function HelpPage() {
               <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-[#F5A623]/10 flex items-center justify-center">
                 <Mail className="w-6 h-6 text-[#F5A623]" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Email</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">Email direct</h3>
               <p className="text-sm text-gray-500 mb-4">support@mybestbooking.com</p>
-              <Button variant="outline">Envoyer un email</Button>
+              <a
+                href="mailto:support@mybestbooking.com"
+                className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-[#1B3A6B] text-[#1B3A6B] text-sm font-medium hover:bg-[#1B3A6B] hover:text-white transition"
+              >
+                Ouvrir mon client mail
+              </a>
             </CardContent>
           </Card>
         </div>
@@ -134,10 +152,10 @@ export default function HelpPage() {
                     <ul className="space-y-2">
                       {cat.articles.map((article) => (
                         <li key={article}>
-                          <a href="#" className="text-sm text-[#1B3A6B] hover:underline flex items-center gap-1">
-                            <ChevronRight className="w-3 h-3" />
+                          <span className="text-sm text-gray-600 flex items-center gap-1">
+                            <ChevronRight className="w-3 h-3 text-gray-400" />
                             {article}
-                          </a>
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -155,14 +173,13 @@ export default function HelpPage() {
         <Card className="mb-12">
           <CardContent className="divide-y divide-gray-100">
             {popularQuestions.map((question, i) => (
-              <a
+              <div
                 key={i}
-                href="#"
-                className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-6 px-6 transition-colors"
+                className="flex items-center justify-between py-4 -mx-6 px-6"
               >
                 <span className="text-gray-900">{question}</span>
-                <ArrowRight className="w-4 h-4 text-gray-400" />
-              </a>
+                <ArrowRight className="w-4 h-4 text-gray-300" />
+              </div>
             ))}
           </CardContent>
         </Card>
@@ -177,14 +194,20 @@ export default function HelpPage() {
               </p>
             </div>
             <div className="flex gap-4">
-              <Button className="bg-white text-[#1B3A6B] hover:bg-gray-100">
+              <a
+                href="mailto:support@mybestbooking.com?subject=Aide%20MyBestBooking"
+                className="inline-flex items-center px-5 py-2.5 rounded-lg bg-white text-[#1B3A6B] font-medium hover:bg-gray-100 transition"
+              >
                 <MessageCircle className="w-4 h-4 mr-2" />
-                Chat en direct
-              </Button>
-              <Button variant="outline" className="border-white text-white hover:bg-white/10">
+                Écrire à l&apos;équipe
+              </a>
+              <a
+                href="mailto:support@mybestbooking.com"
+                className="inline-flex items-center px-5 py-2.5 rounded-lg border border-white text-white hover:bg-white/10 transition"
+              >
                 <Mail className="w-4 h-4 mr-2" />
-                Nous contacter
-              </Button>
+                support@mybestbooking.com
+              </a>
             </div>
           </CardContent>
         </Card>

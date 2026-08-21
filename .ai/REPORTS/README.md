@@ -1,52 +1,43 @@
-# 📊 RAPPORTS
+# REPORTS
 
-Ce dossier contient les **modèles** de rapports et les **rapports datés**
-produits au fil du projet.
+**Obligatoire pour tout changement de niveau S ou C.** Facultatif pour L,
+interdit (pas de valeur) pour T.
 
-## Convention de nommage
+Contenu attendu :
 
-```
-rapport_<type>_<AAAA-MM-JJ>.md
-```
+- `analyse_impact_<date>_<sujet>.md` — répond aux 9 questions de
+  `CODING_RULES.md` §14.
+- `analyse_conception_<date>_<sujet>.md` — plan de conception §15.1
+  (options, retenu, alternatives écartées, migration).
+- `debat_technique_<date>_<sujet>.md` — débat 11 rôles §15.2 pour tout
+  niveau **C** (ou **S** en cas de désaccord).
+- `opportunites_<date>_<sujet>.md` — opportunités d'amélioration adjacentes
+  identifiées pendant la tâche.
+- `rapport_analyse_<date>_<sujet>.md` — audits ponctuels (perf, sécurité,
+  couverture).
 
-Exemples : `rapport_securite_2026-08-15.md`, `rapport_analyse_2026-09-02.md`.
+## Nommage
 
-## Modèles disponibles
+`<type>_<YYYY-MM-DD>_<slug>.md`. La date est celle de rédaction, jamais
+antérieure au commit associé.
 
-| Modèle | Quand le produire |
-|---|---|
-| `MODELE_analyse_impact.md` | ⛔ **AVANT toute modification de code** (§14) |
-| `MODELE_analyse_conception.md` | Niveaux S et C — après l'impact, avant le code (§15.1) |
-| `MODELE_debat_technique.md` | Niveau C — 10 rôles, désaccords encouragés (§15.2) |
-| `MODELE_opportunites.md` | Niveaux S et C — améliorations proposées, jamais imposées (§15.3) |
-| `MODELE_analyse_impact_post_correction.md` | Après chaque correction importante — prévu vs. constaté |
-| `MODELE_rapport_analyse.md` | Avant toute décision structurante ou refactor important |
-| `MODELE_rapport_securite.md` | À chaque modification de crypto, permission, accès — et avant chaque release |
-| `MODELE_rapport_performance.md` | Avant/après optimisation, ou en cas de lenteur signalée |
-| `MODELE_rapport_couverture_tests.md` | À chaque jalon de la roadmap |
-| `MODELE_rapport_architecture.md` | À chaque évolution structurelle (Hilt, découpage) |
+## Discipline
 
-## Rapports produits
+Un rapport est **daté**, **signé** (auteur + éventuellement responsable),
+et référencé depuis :
 
-| Date | Fichier | Type |
-|---|---|---|
-| 2026-07-28 | `rapport_analyse_2026-07-28_audit_initial.md` | Analyse — audit initial du dépôt |
-| 2026-07-28 | `rapport_analyse_2026-07-28_sauvegarde_distante.md` | Analyse — Drive vs Dropbox (D2) |
-| 2026-07-28 | `analyse_impact_2026-07-28_branchement_backupmanager.md` | **Analyse d'impact** — branchement `BackupManager` (B-101) |
-| 2026-07-28 | `analyse_conception_2026-07-28_branchement_backupmanager.md` | **Conception** — 4 solutions comparées, C retenue |
-| 2026-07-28 | `debat_technique_2026-07-28_branchement_backupmanager.md` | **Débat** — 10 rôles, 2 ❌ bloquants, BUG-024 découvert |
-| 2026-07-28 | `opportunites_2026-07-28_sauvegarde.md` | **Opportunités** — 13 identifiées, 9 versées au backlog |
+- `TRACEABILITY.md` (si le rapport prouve la clôture d'un item) ;
+- `PROGRESS.md` (dans l'entrée de la session correspondante) ;
+- l'ADR concerné (si applicable).
 
-## Rapports générés automatiquement
+Un rapport orphelin (non référencé, non daté) est **supprimé** en
+rétrospective §17. Un rapport de niveau S ou C manquant **bloque** la
+clôture de la tâche (`framework.manifest.json → blocking_rules →
+missing_impact_analysis_for_S_or_C`).
 
-Les rapports produits par la chaîne Docker (`rapport_compilation_*`,
-`rapport_tests_*`, `rapport_validation_*`…) sont **horodatés et non versionnés**
-(voir `.gitignore`). Seuls les modèles et les analyses rédigées à la main sont
-suivis en Git.
+## Registre
 
-## Règles
-
-- Un rapport est **daté et figé** : on n'écrase jamais un rapport existant.
-- Un rapport constate des **faits vérifiables**, pas des impressions.
-- Si une mesure n'a pas pu être exécutée, l'écrire — ne jamais l'inventer.
-- Tout rapport structurant est référencé depuis `PROGRESS.md`.
+| Date | Type | Sujet | Tâche |
+|---|---|---|---|
+| 2026-08-20 | analyse_impact | governance_setup | T-000 |
+| 2026-08-20 | analyse_conception | governance_setup | T-000 |

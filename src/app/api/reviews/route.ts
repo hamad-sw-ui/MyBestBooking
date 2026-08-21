@@ -4,6 +4,12 @@ import { reviews, properties, users, bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
+import {
+  assertNotMaintenance,
+  MaintenanceError,
+  maintenanceResponse,
+} from "@/lib/maintenance";
+import { rateLimit } from "@/lib/rate-limit";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -87,6 +93,21 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    // T-022 : mode maintenance
+    await assertNotMaintenance(user);
+
+    // T-028 : rate-limit — 20 avis/heure/user (largement au-dessus
+    // du besoin réel, empêche le spam de faux avis).
+    const rl = rateLimit(`reviews:user:${user.id}`, {
+      limit: 20,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Trop d'avis publiés, réessayez plus tard" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+    }
 
     const body = await request.json();
     const data = reviewSchema.parse(body);
@@ -153,25 +174,28 @@ export async function POST(request: NextRequest) {
       })
       .returning();
 
-    // Update property average rating
-    const propertyReviews = await db
-      .select({ overallRating: reviews.overallRating })
-      .from(reviews)
-      .where(and(eq(reviews.propertyId, booking.propertyId), eq(reviews.status, "approved")));
-
-    const totalRating = propertyReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0);
-    const averageRating = totalRating / propertyReviews.length;
-
-    await db
-      .update(properties)
-      .set({
-        averageRating: averageRating.toFixed(1),
-        totalReviews: propertyReviews.length,
-      })
-      .where(eq(properties.id, booking.propertyId));
+    // T-007 (BUG-010) : recalcul atomique en SQL — plus de race entre
+    // deux POST /api/reviews concurrents. Une seule requête, valeurs
+    // dérivées de la table `reviews` elle-même.
+    await db.execute(sql`
+      UPDATE properties
+         SET average_rating = sub.avg_rating,
+             total_reviews  = sub.total
+        FROM (
+          SELECT ROUND(AVG(overall_rating)::numeric, 1) AS avg_rating,
+                 COUNT(*)                              AS total
+            FROM reviews
+           WHERE property_id = ${booking.propertyId}
+             AND status      = 'approved'
+        ) AS sub
+       WHERE properties.id = ${booking.propertyId};
+    `);
 
     return NextResponse.json({ review: newReview }, { status: 201 });
   } catch (error) {
+    if (error instanceof MaintenanceError) {
+      return maintenanceResponse(error.retryAfterSeconds);
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },

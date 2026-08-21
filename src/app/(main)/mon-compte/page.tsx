@@ -11,6 +11,12 @@ import {
   Shield, Bell, LogOut, Trash2, ChevronRight 
 } from "lucide-react";
 import Link from "next/link";
+import { ProfileForm } from "@/components/profile-form";
+import { ChangePasswordForm } from "@/components/change-password-form";
+import { TwoFactorSection } from "@/components/two-factor-section";
+import { DeleteAccountSection } from "@/components/delete-account-section";
+import { ReferralCard } from "@/components/referral-card";
+import { NotificationPrefsSection } from "@/components/notification-prefs-section";
 
 interface UserData {
   id: string;
@@ -148,64 +154,21 @@ export default function MyAccountPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Prénom"
-                        value={user.firstName}
-                        onChange={() => {}}
-                        icon={<User className="w-4 h-4" />}
-                      />
-                      <Input
-                        label="Nom"
-                        value={user.lastName}
-                        onChange={() => {}}
-                      />
-                      <Input
-                        label="Email"
-                        value={user.email}
-                        onChange={() => {}}
-                        icon={<Mail className="w-4 h-4" />}
-                        disabled
-                      />
-                      <Input
-                        label="Téléphone"
-                        value={user.phone || ""}
-                        onChange={() => {}}
-                        placeholder="+33 6 00 00 00 00"
-                        icon={<Phone className="w-4 h-4" />}
-                      />
+                    <div className="mb-2 text-sm text-gray-600">
+                      Email : <strong>{user.email}</strong>{" "}
+                      <span className="text-xs text-gray-500">
+                        (non modifiable ici — contact support si besoin)
+                      </span>
                     </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button loading={saving}>Enregistrer les modifications</Button>
-                  </CardFooter>
-                </Card>
-
-                {/* Preferences */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Préférences</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Langue</label>
-                        <select className="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
-                          <option value="fr">🇫🇷 Français</option>
-                          <option value="en">🇬🇧 English</option>
-                          <option value="ar">🇸🇦 العربية</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
-                        <select className="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
-                          <option value="EUR">€ EUR</option>
-                          <option value="USD">$ USD</option>
-                          <option value="MAD">MAD</option>
-                          <option value="TND">TND</option>
-                        </select>
-                      </div>
-                    </div>
+                    <ProfileForm initial={{
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      phone: user.phone,
+                      country: null,
+                      language: user.language ?? null,
+                      currency: user.currency ?? null,
+                      timezone: (user as unknown as { timezone?: string | null }).timezone ?? null,
+                    }} />
                   </CardContent>
                 </Card>
               </>
@@ -267,10 +230,15 @@ export default function MyAccountPage() {
                           €{parseFloat(user.walletBalance || "0").toFixed(2)}
                         </p>
                       </div>
-                      <Button variant="outline">Utiliser mon solde</Button>
+                      <Link
+                        href="/recherche"
+                        className="inline-flex items-center px-4 py-2 rounded-lg border border-[#1B3A6B] text-[#1B3A6B] font-medium hover:bg-[#1B3A6B] hover:text-white transition"
+                      >
+                        Utiliser mon solde
+                      </Link>
                     </div>
                     <p className="text-sm text-gray-500 mt-3">
-                      Votre solde peut être utilisé lors de votre prochaine réservation.
+                      Cochez « Utiliser mon crédit wallet » sur la page de réservation.
                     </p>
                   </CardContent>
                 </Card>
@@ -319,99 +287,30 @@ export default function MyAccountPage() {
                   <CardHeader>
                     <CardTitle>Mot de passe</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Input
-                      type="password"
-                      label="Mot de passe actuel"
-                      placeholder="••••••••"
-                    />
-                    <Input
-                      type="password"
-                      label="Nouveau mot de passe"
-                      placeholder="Min. 8 caractères"
-                    />
-                    <Input
-                      type="password"
-                      label="Confirmer le nouveau mot de passe"
-                      placeholder="••••••••"
-                    />
-                  </CardContent>
-                  <CardFooter>
-                    <Button>Modifier le mot de passe</Button>
-                  </CardFooter>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Authentification à deux facteurs</CardTitle>
-                  </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">2FA par SMS</p>
-                        <p className="text-sm text-gray-500">
-                          Recevez un code par SMS lors de la connexion
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" checked={user.twoFactorEnabled || false} onChange={() => {}} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-                      </label>
-                    </div>
+                    <ChangePasswordForm />
                   </CardContent>
                 </Card>
 
-                <Card className="border-red-200">
-                  <CardHeader>
-                    <CardTitle className="text-red-600">Zone de danger</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-red-600">Supprimer mon compte</p>
-                        <p className="text-sm text-gray-500">
-                          Cette action est irréversible
-                        </p>
-                      </div>
-                      <Button variant="danger" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Supprimer
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* T-030 : 2FA TOTP complète (setup + QR + verify + disable) */}
+                <TwoFactorSection initiallyEnabled={user.twoFactorEnabled || false} />
+
+                {/* T-030 : suppression compte réelle */}
+                <DeleteAccountSection />
               </>
             )}
 
             {activeTab === "notifications" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Préférences de notification</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {[
-                    { id: "booking", label: "Confirmations de réservation", desc: "Emails et SMS pour vos réservations" },
-                    { id: "reminder", label: "Rappels de voyage", desc: "Notifications avant votre séjour" },
-                    { id: "promo", label: "Offres et promotions", desc: "Bons plans et réductions exclusives" },
-                    { id: "review", label: "Demandes d'avis", desc: "Invitations à laisser un avis après séjour" },
-                    { id: "price", label: "Alertes prix", desc: "Baisse de prix sur vos favoris" },
-                  ].map((notif) => (
-                    <div key={notif.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{notif.label}</p>
-                        <p className="text-sm text-gray-500">{notif.desc}</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-                      </label>
-                    </div>
-                  ))}
-                </CardContent>
-                <CardFooter>
-                  <Button>Enregistrer les préférences</Button>
-                </CardFooter>
-              </Card>
+              <div className="space-y-6">
+                {/* T-030 : préférence user réellement branchée */}
+                <NotificationPrefsSection
+                  initial={{
+                    priceAlertEnabled: (user as unknown as { priceAlertEnabled?: boolean }).priceAlertEnabled ?? false,
+                  }}
+                />
+                {/* T-030 : code de parrainage */}
+                <ReferralCard />
+              </div>
             )}
           </div>
         </div>

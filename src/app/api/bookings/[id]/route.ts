@@ -4,6 +4,14 @@ import { bookings, properties, rooms, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import { computeCancellationFeeWithGrid, daysUntil, type CancellationPolicy } from "@/lib/cancellation";
+import { getSetting } from "@/lib/settings";
+import {
+  assertNotMaintenance,
+  MaintenanceError,
+  maintenanceResponse,
+} from "@/lib/maintenance";
+import { getMailer, templates } from "@/lib/mail";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
@@ -84,6 +92,8 @@ export async function PUT(
         { status: 401 }
       );
     }
+    // T-022 : mode maintenance — bloquer les mutations pour les non-admins.
+    await assertNotMaintenance(user);
 
     const { id } = await params;
     const body = await request.json();
@@ -118,10 +128,50 @@ export async function PUT(
       );
     }
 
+    // BUG-022 (Session 11 paranoid) : machine à états stricte sur
+    // le status. Sans validation, on pouvait :
+    //   - annuler puis remettre confirmed (ressusciter une résa)
+    //   - marquer completed sans passer par confirmed
+    //   - toucher un booking cancelled arbitrairement
+    // Transitions autorisées :
+    //   pending → confirmed | cancelled
+    //   confirmed → cancelled | completed | no_show
+    //   cancelled → (aucun — statut terminal, immuable)
+    //   completed → (aucun — statut terminal)
+    //   no_show → (aucun — statut terminal)
+    const currentStatus = existingBooking.booking.status;
+    const allowedTransitions: Record<string, string[]> = {
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["cancelled", "completed", "no_show"],
+      cancelled: [],
+      completed: [],
+      no_show: [],
+    };
+    if (data.status && data.status !== currentStatus) {
+      const allowed = allowedTransitions[currentStatus] ?? [];
+      if (!allowed.includes(data.status)) {
+        return NextResponse.json(
+          {
+            error: `Transition invalide : ${currentStatus} → ${data.status} (autorisées : ${allowed.length ? allowed.join(", ") : "aucune, statut terminal"})`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Handle cancellation
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
     if (data.status === "cancelled") {
       updateData.cancelledAt = new Date();
+      // T-016 : calcule le cancellationFee selon la policy de la property
+      // et le nombre de jours avant check-in.
+      // T-021 : la grille est désormais éditable via app_settings.
+      const policy = (existingBooking.property?.cancellationPolicy ?? "flexible") as CancellationPolicy;
+      const total = parseFloat(existingBooking.booking.total);
+      const days = daysUntil(existingBooking.booking.checkIn);
+      const grid = await getSetting("cancellation");
+      const fee = computeCancellationFeeWithGrid(policy, total, days, grid);
+      updateData.cancellationFee = fee.toFixed(2);
     }
 
     const [updatedBooking] = await db
@@ -130,8 +180,31 @@ export async function PUT(
       .where(eq(bookings.id, id))
       .returning();
 
+    // T-027 : email d'annulation (best-effort, ne fait pas échouer la
+    // requête si SMTP down).
+    if (data.status === "cancelled" && existingBooking.booking.guestEmail) {
+      try {
+        const mail = await templates.bookingCancellation({
+          firstName: existingBooking.booking.guestFirstName ?? "",
+          bookingReference: existingBooking.booking.bookingReference,
+          propertyName: existingBooking.property?.name ?? "",
+          cancellationFee: String(updateData.cancellationFee ?? "0.00"),
+          currency: existingBooking.booking.currency ?? "EUR",
+        });
+        await getMailer().send({
+          to: existingBooking.booking.guestEmail,
+          ...mail,
+        });
+      } catch (mailErr) {
+        console.error("[bookings PUT] cancellation mail failed:", mailErr);
+      }
+    }
+
     return NextResponse.json({ booking: updatedBooking });
   } catch (error) {
+    if (error instanceof MaintenanceError) {
+      return maintenanceResponse(error.retryAfterSeconds);
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },

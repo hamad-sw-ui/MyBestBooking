@@ -1,202 +1,154 @@
-# 🔐 SÉCURITÉ
+# 🛡️ Sécurité
 
-État au 2026-07-28, **révision 2** après confirmation des correctifs de
-sécurité antérieurs (audit GitHub Copilot + Gemini Code Assist).
+État réel du code au moment de la rédaction. Ce document décrit ce qui est en
+place et ce qui reste à traiter avant une mise en production.
 
-## 0. Correctifs de sécurité déjà en place (vérifiés dans le code)
+## Modèle d'authentification
 
-| # | Correctif | Vérification | Statut |
-|---|---|---|---|
-| 1 | Porte dérobée `MASTER_EMERGENCY_2024` supprimée | 0 occurrence dans tout le dépôt | ✅ |
-| 2 | `fallbackToDestructiveMigration()` retiré | 0 occurrence | ✅ **à ne jamais réintroduire** |
-| 3 | Clé DB dérivée (`phone`+`managerCode`) + AndroidKeyStore + rekey auto/manuel, mode standard SQLCipher | `SecurityUtil`, `AppDatabase` ; 0 occurrence de syntaxe hex brute `x'...'` | ✅ |
-| 4 | Sauvegarde chiffrée par mot de passe (PBKDF2 100k + AES-GCM + checksum) | `BackupManager` complet | ⚠️ **code présent mais non branché** → BUG-017 |
-| 5 | PIN en PBKDF2 + sel unique + migration paresseuse | `SecurityUtil.hashPinPbkdf2`/`verifyPin`, `MainViewModel.checkPin` | ✅ |
+- **Table `sessions`** : chaque login insère une ligne (`userId`, `token`,
+  `expiresAt`).
+- **JWT** signé avec `jose` (HS256), payload minimal `{userId}`, TTL 30 jours,
+  émis par `createToken()` dans `src/lib/auth.ts`.
+- **Cookie** `session` :
+  - `HttpOnly: true`
+  - `SameSite: "lax"`
+  - `Secure: true` en production (`NODE_ENV === "production"`)
+  - `path: "/"`
+  - `expires` = `Date.now() + 30j`
+- **Vérification** (`getSession()`) : parse le JWT, puis vérifie que la ligne
+  `sessions` existe et n'est pas expirée, puis charge le `users` (et refuse
+  si `deletedAt` est set).
 
-Couverts par `SecurityMigrationTest` (2 tests d'instrumentation passants).
+**Conséquence intéressante** : la révocation est possible côté serveur (on
+supprime la ligne `sessions`) même si le JWT n'est pas expiré. C'est un choix
+délibéré et à conserver.
 
-**Ces acquis ne doivent pas être régressés.** Toute modification touchant
-`SecurityUtil`, `AppDatabase` ou `BackupManager` doit vérifier explicitement que
-ces cinq points restent satisfaits.
+## Mots de passe
 
----
+- **`bcryptjs`** avec coût 12 (~250 ms sur un CPU moderne).
+- Validation minimale à l'inscription : longueur ≥ 8.
+- Aucune vérification de complexité, pas de check contre les listes de mots de
+  passe faibles.
 
----
+## Autorisation
 
-## 1. Actifs à protéger
+Trois rôles, appliqués à deux endroits :
 
-| Actif | Sensibilité | Où |
+1. **Layout `dashboard/layout.tsx`** : `redirect('/connexion')` si non
+   authentifié, `redirect('/')` si `role !== 'host' && role !== 'admin'`.
+2. **Handlers `/api/*`** : chaque handler qui mute vérifie explicitement le
+   rôle et/ou la propriété de la ressource.
+
+Il **n'y a pas de `middleware.ts`** global. C'est acceptable tant que chaque
+handler et chaque layout protégé fait sa vérification, mais un middleware
+serait une seconde ligne de défense simple à ajouter.
+
+## Points critiques à traiter avant production
+
+### 🔴 P1 — bloquants
+
+1. ~~**`JWT_SECRET` avec fallback hard-codé**~~ **CORRIGÉ 2026-08-20 (T-001, BUG-001, ADR-003)**.
+   Le module `src/lib/auth.ts` throw explicitement au chargement si
+   `process.env.JWT_SECRET` est absent ou vide. Un `console.warn` est
+   émis si le secret fait moins de 32 caractères. Un test automatisé
+   (`src/lib/auth.test.ts`, 9 cas) protège contre la régression.
+
+2. ~~**`POST /api/seed` accessible publiquement**~~ **CORRIGÉ 2026-08-20 (T-002, BUG-002, ADR-004)**.
+   Le handler retourne `404` en production sauf si l'en-tête
+   `x-seed-token` correspond à `process.env.SEED_TOKEN` (comparaison
+   timing-safe). En développement, aucun changement. 7 tests
+   automatisés (`src/app/api/seed/route.test.ts`) couvrent les
+   scénarios.
+
+3. **Paiement non implémenté**. `POST /api/bookings` force
+   `paymentStatus: 'paid'` sans aucun débit. Déplacé dans
+   `KNOWN_LIMITATIONS.md` en attendant des credentials Stripe/CinetPay
+   test. Aucune vraie transaction n'a jamais été réalisée par
+   l'application.
+
+### 🟠 P2 — importants
+
+4. ~~**Pas de rate-limiting**~~ **CORRIGÉ 2026-08-20 (T-009, BUG-009)**.
+   `src/lib/rate-limit.ts` applique 20 req/min/IP + 5 req/min/email sur
+   `/api/auth/login`, 10 req/min/IP sur `/api/auth/register`. Retourne
+   429 + Retry-After. Voir `KNOWN_LIMITATIONS.md` pour la limite
+   mono-instance à traiter avec Redis dans un déploiement scaled.
+5. ~~**Pas de headers de sécurité**~~ **CORRIGÉ 2026-08-20 (T-008)**.
+   `next.config.ts → headers()` pose `X-Content-Type-Options: nosniff`,
+   `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy:
+   strict-origin-when-cross-origin`, `Strict-Transport-Security:
+   max-age=31536000; includeSubDomains`, `Permissions-Policy`. La CSP
+   fine reste à définir (voir BACKLOG).
+6. **`NEXT_PUBLIC_APP_URL`** utilisé dans `logout` avec fallback
+   `http://localhost:3000` — à définir en prod.
+
+### 🟡 P3 — nice to have
+
+7. **2FA** : `users.twoFactorEnabled` existe mais aucune logique associée.
+8. ~~**Vérification email d'office**~~ **CORRIGÉ 2026-08-20 (T-008,
+   BUG-008)**. `POST /api/auth/register` met désormais
+   `emailVerified: false`. Le flux d'envoi/vérification email reste à
+   implémenter — tracé dans `KNOWN_LIMITATIONS.md`.
+9. **Politique de mot de passe** : ajouter un check contre HaveIBeenPwned ou
+   au minimum une règle de complexité.
+10. **CSRF** : le fait que les cookies soient `SameSite=Lax` bloque la plupart
+    des attaques CSRF, mais les formulaires HTML de logout / actions
+    sensibles pourraient bénéficier d'un token anti-CSRF explicite.
+11. **Injection** : Drizzle paramétrise correctement, aucune concat SQL
+    détectée. Continuer sur ce standard, éviter `sql\`\`` interpolé.
+12. **Uploads d'images** : les URLs d'images sont stockées telles quelles en
+    base. Aujourd'hui elles pointent vers `unsplash.com`. Dès qu'un upload
+    réel arrivera, prévoir une validation MIME/dimension et un stockage
+    contrôlé (S3, R2…).
+
+## Variables d'environnement sensibles
+
+| Nom | Rôle | Obligatoire |
 |---|---|---|
-| Historique des ventes et de la caisse | 🔴 Élevée — donnée financière irremplaçable | `caisse_database` (SQLCipher) |
-| Dettes et coordonnées clients | 🔴 Élevée — donnée personnelle | tables `customers`, `ventes` |
-| PIN Manager / Staff | 🔴 Élevée — contrôle d'accès | `boutique`, `staff` (hachés) |
-| `managerCode` | 🔴 Critique — **dérive la clé de chiffrement** | `boutique.managerCode` |
-| Clé SQLCipher | 🔴 Critique | AndroidKeyStore + SharedPreferences chiffrées |
-| Secret de licence | 🟠 Moyenne — protège le revenu | **en clair dans le code** |
-| Contenu des SMS | 🟠 Moyenne | `ventes.smsBody`, `sms_errors.body` |
-| Fichiers de sauvegarde | 🔴 Élevée | `filesDir`, `getExternalFilesDir()`, cache |
+| `DATABASE_URL` | URL PostgreSQL | oui (throw au boot) |
+| `JWT_SECRET` | Secret HMAC pour les JWT | oui à corriger — actuellement fallback |
+| `NEXT_PUBLIC_APP_URL` | URL publique pour redirect logout | recommandé |
+| `NODE_ENV` | `development` / `production` | géré par Next |
 
----
+Ne **jamais** commiter de `.env`. Un `.env.example` reste à créer.
 
-## 2. Modèle de menace
+## Rotation de secret (T-029)
 
-| # | Menace | Réalisme | Protection actuelle | Verdict |
-|---|---|---|---|---|
-| M1 | Vol du téléphone → lecture des données | Élevé | SQLCipher + Keystore | 🟠 Partiel (clé faiblement dérivée) |
-| M2 | Employé malveillant modifiant les ventes | Élevé | Rôles, PIN, `action_logs`, verrouillage après clôture | 🟡 Correct |
-| M3 | Employé falsifiant l'heure système | Moyen | `AnomalyEngine` + contrôle SMS | 🔴 Contrôle SMS inopérant (BUG-008) |
-| M4 | Contournement de la licence | Élevé | HMAC local | 🔴 Trivial (secret en clair, pas de R8) |
-| M5 | Autre application lisant les données | Faible | Stockage interne + chiffrement | 🟡 Correct, sauf miroir externe |
-| M6 | Faux SMS MoMo pour simuler un paiement | Moyen | `isSecure` (expéditeur officiel), déduplication | 🟡 Correct mais heuristique |
-| M7 | Appareil rooté | Moyen | — | 🔴 Aucune protection (assumé) |
-| M8 | Perte de données par migration ratée | **Élevé** | `fallbackToDestructiveMigration` retiré ✅ | 🔴 **BUG-001/002** — divergences schéma subsistantes |
-| M9 | Sauvegarde exposée en clair | Moyen | Le `.db` reste chiffré | 🟡 Correct, mais partagé sans contrôle |
+Procédure documentée pour rotation urgente ou périodique de
+`JWT_SECRET`.
 
----
+### Rotation planifiée (recommandée tous les 90 jours)
 
-## 3. Chiffrement de la base
+1. **Générer** un nouveau secret : `openssl rand -hex 32`.
+2. **Déployer** avec `JWT_SECRET_NEXT` = nouveau (pas encore actif).
+3. **Vérifier** que l'app boote sans erreur.
+4. **Basculer** : `JWT_SECRET` = nouveau, `JWT_SECRET_PREV` = ancien.
+   Le code accepte les deux pendant la fenêtre (implémentation future
+   dans `src/lib/auth.ts` — v1 : basculement direct, invalide les
+   sessions actives → réauth requise).
+5. **Retirer** `JWT_SECRET_PREV` après 24-48 h (durée max session).
 
-```
-Nominal :  SHA-256("phone|managerCode|CIPHER_SECRET_V1")  →  32 octets
-Repli   :  SHA-256(ANDROID_ID + "CAISSE_CIPHER_SECRET")   →  32 octets
-Stockage:  clé chiffrée AES/GCM (AndroidKeyStore, alias "db_key_enc_v1")
-           puis Base64 dans SharedPreferences "security_prefs"
-Passphrase SQLCipher = hexadécimal de la clé (PBKDF2 appliqué par SQLCipher)
-```
+### Rotation d'urgence (fuite suspectée)
 
-**Acquis (correctif n°3, vérifié)** :
-- ✅ Plus aucun secret en dur dans la dérivation : la clé dépend du `managerCode`.
-- ✅ Clé protégée par AndroidKeyStore (AES/GCM).
-- ✅ Rekey automatique et manuel opérationnels, testés en instrumentation.
-- ✅ **Mode standard** : SQLCipher applique son PBKDF2 natif sur la passphrase
-  hexadécimale ; aucune manipulation de syntaxe SQL brute `x'...'`.
+1. Générer un nouveau secret.
+2. Déployer immédiatement avec `JWT_SECRET` = nouveau.
+3. `TRUNCATE sessions` en DB → toutes les sessions invalidées.
+4. Prévenir les utilisateurs (bandeau) et forcer re-login.
+5. Auditer l'audit_log (T-024) pour actions suspectes récentes.
 
-**Faiblesses résiduelles** :
-- 🟡 **Une seule itération de SHA-256** au niveau applicatif, sans sel aléatoire.
-  Atténué par le PBKDF2 natif de SQLCipher en aval et par l'exigence d'un
-  `managerCode` ≥ 12 caractères. *(BUG-004 — requalifié 🟡, non prioritaire)*
-- 🟡 Le repli sur `ANDROID_ID` n'est pas un secret ; il ne subsiste que comme
-  voie de migration à sens unique, à retirer une fois la migration généralisée.
-- 🟠 `PRAGMA rekey` construit par concaténation de chaîne *(BUG-006 / B-025)*.
-- 🟡 Le Keystore n'exige pas l'authentification utilisateur
-  (`setUserAuthenticationRequired(false)` implicite) — choix délibéré : l'app
-  doit fonctionner sans verrouillage d'écran configuré.
+### Autres secrets
 
----
+- `STRIPE_SECRET_KEY` : rotation via dashboard Stripe → redéploiement
+  ; garder deux clés actives brièvement pour les webhooks en vol.
+- `RESEND_API_KEY` : rotation via dashboard Resend ; pas d'impact
+  session utilisateur.
+- `S3_ACCESS_KEY` / `S3_SECRET_KEY` : rotation IAM ; les URLs signées
+  déjà émises resteront valides jusqu'à expiration.
+- `SEED_TOKEN` : rotation triviale, endpoint `/api/seed` protégé.
 
-## 4. Authentification (PIN)
+### Test post-rotation
 
-- PBKDF2WithHmacSHA256, **5 000 itérations**, sel Base64 de 16 octets, sortie 256 bits.
-- Comparaison à temps constant (`MessageDigest.isEqual`) ✅.
-- Migration paresseuse depuis le SHA-256 legacy sans sel ✅.
-- Verrouillage temporaire après échecs (`PreferencesManager.lock`) ✅.
-
-**Acquis (correctif n°5, vérifié)** : passage de SHA-256 nu à PBKDF2 + sel
-unique par utilisateur, avec migration paresseuse au login. ✅
-
-**Faiblesses résiduelles** :
-- 🟠 **5 000 itérations, c'est trop peu** en 2026 (recommandation OWASP :
-  ≥ 600 000 pour PBKDF2-HMAC-SHA256). À noter : `BackupManager` utilise déjà
-  **100 000** itérations — l'incohérence entre les deux modules est en soi un
-  signal. *(B-028)*
-- 🟠 PIN à 4 chiffres = 10 000 combinaisons → seul le verrouillage protège du
-  brute force. Vérifier qu'il n'est pas contournable par redémarrage.
-- 🟡 Le hash SHA-256 legacy (sans sel) subsiste tant que la migration paresseuse
-  n'a pas eu lieu.
-
----
-
-## 5. Licence
-
-⚠️ **À distinguer du correctif n°1** : la porte dérobée `MASTER_EMERGENCY_2024`
-est bien supprimée ✅. Le problème ci-dessous est **distinct** et non couvert par
-l'audit antérieur — il porte sur le sel du HMAC de licence.
-
-🔴 **Contournable trivialement** :
-- `SECRET_SALT` en clair dans `LicenseUtil` ;
-- `generateActivationKey()` (outil admin) **présent dans l'APK client** ;
-- `isMinifyEnabled = false` → décompilation directe.
-
-Correctifs : B-022 (R8), B-023 (retirer le générateur), B-024 (sortir le secret).
-La protection restera imparfaite : voir `KNOWN_LIMITATIONS.md` §2.
-
----
-
-## 6. Permissions — surface d'attaque
-
-`READ_SMS` et `RECEIVE_SMS` sont des permissions **sensibles** : elles donnent
-accès à l'intégralité des SMS (codes bancaires, OTP…).
-
-Obligations :
-- Déclaration d'usage argumentée sur le Play Store (sous peine de rejet).
-- **Ne jamais** exfiltrer un SMS hors de l'appareil.
-- `ventes.smsBody` conserve le texte brut → à purger avec `purgeOldData`.
-
-`SmsReceiver` est exporté mais protégé par `android:permission="android.permission.BROADCAST_SMS"` ✅.
-
----
-
-## 7. Sauvegardes
-
-> ⚠️ **BUG-017** : `BackupManager` (PBKDF2 100k + AES-GCM + checksum, correctif
-> n°4) est implémenté mais **n'est appelé par aucun code applicatif**. Les
-> chemins réellement utilisés sont les copies brutes ci-dessous. Le fichier
-> copié reste chiffré par SQLCipher, mais sans mot de passe utilisateur ni
-> contrôle d'intégrité.
-
-- `filesDir/daily_backup.db` — stockage interne ✅
-- `getExternalFilesDir()/caisse_mirror.db` — stockage externe privé à l'app
-  🟡 (accessible en ADB ou sur appareil rooté ; le fichier reste chiffré)
-- `syncToCloud` — copie dans `cacheDir` puis `ACTION_SEND` : le fichier part vers
-  une destination **choisie par l'utilisateur** (Gmail, WhatsApp, Drive…).
-  🟡 Il reste chiffré, mais la clé dépend du `managerCode` : le destinataire ne
-  peut rien en faire sans ce code. Cette propriété est **essentielle** et doit
-  être préservée lors du renforcement de la dérivation (B-021).
-- ⚠️ `android:allowBackup="true"` dans le manifeste avec `backup_rules.xml` :
-  **à auditer** — la base chiffrée ne doit pas remonter dans une sauvegarde
-  Google sans la clé Keystore correspondante (qui, elle, n'est pas exportable).
-
----
-
-## 8. Journalisation
-
-`action_logs` trace : ajustements de stock, changements de prix, suppressions de
-vente, clôtures, sauvegardes, anomalies. Niveaux INFO / WARNING / CRITICAL,
-avec `userRole` ✅.
-
-**Faiblesses** :
-- 🟡 Le journal est modifiable par quiconque a accès à la base (pas de chaînage
-  cryptographique) — un manager peut effacer ses traces.
-- 🟡 Aucun contrôle : le log est purgé par `purgeOldData`.
-
----
-
-## 9. Règles de sécurité permanentes
-
-1. **Aucun secret en clair** dans le code source (clé, sel, numéro privé, token).
-2. **Aucune donnée personnelle** hors de l'appareil sans action explicite de l'utilisateur.
-3. **Aucun SQL construit par concaténation.**
-4. Toute modification touchant `SecurityUtil`, `AppDatabase` ou la sauvegarde
-   exige un `REPORTS/rapport_securite_<date>.md`.
-5. Toute nouvelle permission doit être justifiée par écrit ici.
-6. Les hachages de PIN et la dérivation de clé ne changent **jamais** sans
-   chemin de migration testé.
-7. R8 activé en release, sans exception.
-8. Ne jamais logger un PIN, une clé, un `managerCode` ou un SMS complet.
-
----
-
-## 10. Suivi
-
-| Réf. | Sujet | Priorité |
-|---|---|---|
-| B-020/021 | Dérivation de clé : sel aléatoire (optionnel) | 🟡 *(requalifié)* |
-| **B-101** | **Brancher `BackupManager` sur le parcours de sauvegarde** | 🟠 *(nouveau)* |
-| B-022 | R8 | 🟠 |
-| B-023/024 | Secret de licence | 🟠 |
-| B-025 | `PRAGMA rekey` | 🟠 |
-| B-028 | Itérations PBKDF2 du PIN | 🟠 |
-| B-029 | Anomalie de date SMS | 🟡 |
-| B-026 | Seeder en debug uniquement | 🟡 |
-| B-027 | Rôle porté par `Screen` | 🟡 |
-| — | Audit de `allowBackup` | 🟡 |
+- Login admin → vérifier accès dashboard.
+- `POST /api/auth/login` → 200.
+- `GET /api/auth/me` → 200.
+- `npm test` → 155+/155+ toujours vert.

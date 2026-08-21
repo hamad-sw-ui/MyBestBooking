@@ -1,48 +1,140 @@
 {
-  "version": "3.0.0",
-  "name": "MobileCaisse AI Development Operating System (AI-DOS)",
-  "description": "Système de traçabilité des preuves techniques et de gouvernance autonome",
+  "version": "1.1.3",
+  "name": "MyBestBooking AI Development Operating System (AI-DOS Web)",
+  "description": "Framework de gouvernance hybride pour un projet Next.js/PostgreSQL/Drizzle : discipline de processus (impact, conception, preuve, audit, honnêteté) ET complétude produit (FEATURES vs implémentation).",
+  "derived_from": "AI-DOS 3.0 (MobileCaisse) — philosophie conservée, contenu et portée réécrits pour le web",
+  "changelog": [
+    { "version": "1.0.0", "date": "2026-08-20", "session": "Session 2", "commit": "455c121", "changes": "Mise en place initiale du framework hybride." },
+    { "version": "1.0.1", "date": "2026-08-20", "session": "Session 3", "commit": "cbb3b2e", "changes": "Auto-audit tour 1 : 4 défauts rouges + clause §13.4-bis + scripts/check-ai.mjs (R1-R9) + ADR-002." },
+    { "version": "1.0.2", "date": "2026-08-20", "session": "Session 3 (tour 2)", "changes": "Auto-audit tour 2 : convention §8.1 BUG-/T-, blocking_rules enrichies, R10-R13 ajoutées." },
+    { "version": "1.0.3", "date": "2026-08-20", "session": "Session 4", "changes": "Vitest installé (J1 TEST_PLAN), §13.4-bis retirée, 10 T-001→T-010 (14 bugs), README + CI docs + drizzle.config.ts." },
+    { "version": "1.1.0", "date": "2026-08-20", "session": "Session 5", "changes": "Élargissement à la complétude produit (ADR-006) : FEATURES.md + PRODUCT_ACCEPTANCE.md + R14 (schéma↔API) + R15 (UI↔API) + R16 (hygiène BACKLOG) + R17 (fraîcheur FEATURES/PROGRESS) + tag §16 🎯 PROMISED + rituel audit produit (compteur STATE) + Playwright installé (dev-dep, Chromium seul) + BACKLOG.md réécrit + KNOWN_LIMITATIONS nettoyé." },
+    { "version": "1.1.1", "date": "2026-08-21", "session": "Session 9", "changes": "R18 no_dead_ui : bloque href=\"#\", onClick={()=>{}}, onChange={()=>{}} (T-030). Réponse à l'audit utilisateur qui a révélé des interfaces mortes livrées avec un ✅ menteur." },
+    { "version": "1.1.2", "date": "2026-08-21", "session": "Session 10", "changes": "R19 links_target_existing_pages : bloque tout href=/xxx qui pointe vers une route sans page.tsx correspondante (T-031). Nouveau audit brutal a révélé 15 liens footer morts + 22 boutons sans handler + 4 composants inutilisés + 1 form sans onSubmit — tous corrigés. Footer refondu, 2 pages légales créées, boutons câblés en mailto/router.push, composants ui/{modal,skeleton,image-uploader} retirés." },
+    { "version": "1.1.3", "date": "2026-08-21", "session": "Session 11", "changes": "R20 smoke_manifest_present : le framework exige désormais un smoke test HTTP versionné (scripts/smoke.sh) qui joue login × 3 rôles, navigations pages, guard body-check et scénarios métier (POST /api/bookings notamment). R20 vérifie statiquement présence + intégrité (@assertions ≥ 40 + 5 patterns essentiels). Le lancement live est `npm run smoke` (~25 s, ~90 assertions). Réponse à l'analyse de framework (Session 11) qui a révélé que les 19 règles précédentes ne testaient aucun comportement runtime. ADR-008 (T-032)." }
+  ],
   "mandatory_documents": [
+    "README.md",
     "STATE.md",
     "INDEX.md",
-    "TRACEABILITY.md",
     "MISSION.md",
-    "PROJECT_CONTEXT.md",
+    "PROJECT.md",
     "ARCHITECTURE.md",
     "DATABASE.md",
+    "API.md",
     "SECURITY.md",
     "CODING_RULES.md",
-    "ANDROID_RULES.md",
+    "CODING_STYLE.md",
     "ROADMAP.md",
+    "BACKLOG.md",
     "BUGS.md",
     "CURRENT_TASK.md",
+    "TRACEABILITY.md",
+    "PROGRESS.md",
     "TEST_PLAN.md",
-    "DEVLOG.md"
+    "FEATURES.md",
+    "PRODUCT_ACCEPTANCE.md"
   ],
   "optional_documents": [
+    "UI.md",
     "DEPENDENCIES.md",
+    "DEV_ENVIRONMENT.md",
+    "DEVLOG.md",
     "KNOWN_LIMITATIONS.md",
-    "PROCESS_IMPROVEMENTS.md",
-    "DEV_ENVIRONMENT.md"
+    "PROCESS_IMPROVEMENTS.md"
   ],
   "reading_order": [
     "STATE.md",
     "INDEX.md",
     "framework.manifest.json",
     "MISSION.md",
-    "CURRENT_TASK.md"
+    "CURRENT_TASK.md",
+    "FEATURES.md",
+    "PROJECT.md",
+    "ARCHITECTURE.md",
+    "CODING_RULES.md"
   ],
   "critical_documents": [
     "STATE.md",
     "SECURITY.md",
     "DATABASE.md",
     "CODING_RULES.md",
+    "TRACEABILITY.md",
+    "FEATURES.md",
+    "PRODUCT_ACCEPTANCE.md",
     "ADR/"
   ],
   "blocking_rules": {
-    "missing_mandatory_document": true,
-    "obsolete_roadmap": true,
-    "unresolved_critical_bugs": false,
-    "mismatched_git_state": true
+    "missing_mandatory_document":         { "blocking": true,  "implemented": true,  "verified_by": "R2 mandatory_present" },
+    "mismatched_git_state":               { "blocking": true,  "implemented": true,  "verified_by": "R7 state_head_synced + R10 git_branch" },
+    "id_collision_bug_task":              { "blocking": true,  "implemented": true,  "verified_by": "R11 id_collision" },
+    "missing_impact_analysis_for_S_or_C": { "blocking": true,  "implemented": true,  "verified_by": "R12 impact_reports_for_S_or_C" },
+    "closure_without_evidence":           { "blocking": true,  "implemented": true,  "verified_by": "R13 validated_items_have_evidence" },
+    "schema_without_endpoint":            { "blocking": false, "implemented": true,  "verified_by": "R14 db_api_coverage", "note": "Warning informatif : les tables métier doivent avoir au moins un endpoint API." },
+    "ui_action_without_backend":          { "blocking": false, "implemented": true,  "verified_by": "R15 ui_api_coverage", "note": "Warning : boutons d'action visibles sans fetch ou Server Action associée." },
+    "stale_backlog":                      { "blocking": false, "implemented": true,  "verified_by": "R16 backlog_hygiene", "note": "Warning : items 🔴/🟠 du backlog déjà présents dans BUGS Corrigés, ou références BUG-xxx orphelines." },
+    "stale_features_or_progress":         { "blocking": false, "implemented": true,  "verified_by": "R17 freshness", "note": "Warning : FEATURES.md pas touché depuis > 30 commits API/schema, PROGRESS.md pas touché depuis > 5 commits." },
+    "dead_ui_link_or_handler":            { "blocking": true,  "implemented": true,  "verified_by": "R18 no_dead_ui", "note": "Bloque tout href=\"#\", onClick={()=>{}} ou onChange={()=>{}} laissé dans le code (T-030)." },
+    "link_to_nonexistent_page":           { "blocking": true,  "implemented": true,  "verified_by": "R19 links_target_existing_pages", "note": "Bloque tout href=/xxx qui pointe vers une route sans page.tsx correspondante (T-031)." },
+    "smoke_manifest_present":             { "blocking": true,  "implemented": true,  "verified_by": "R20 smoke_manifest_present", "note": "scripts/smoke.sh doit exister, être exécutable, contenir @assertions ≥ 40 et les patterns essentiels (login × 3 rôles, POST /api/bookings, guard body-check). Le lancement live est `npm run smoke` (T-032, ADR-008)." },
+    "obsolete_roadmap":                   { "blocking": true,  "implemented": false, "note": "Aspirational : ROADMAP.md sans date/version rend cette règle sans critère mesurable." },
+    "unchecked_pre_commit_checklist":     { "blocking": true,  "implemented": false, "note": "Aspirational : nécessite un hook Git, contournable via --no-verify." },
+    "periodic_product_audit":             { "blocking": false, "implemented": true,  "verified_by": "R17 (compteur sessions_since_last_product_audit dans STATE.md)", "note": "Warning si > 5 sessions sans audit produit (rituel humain)." },
+    "unresolved_critical_bugs":           { "blocking": false, "implemented": false, "note": "Désactivé pour ne pas bloquer les évolutions de framework quand des bugs P1 restent." }
+  },
+  "proportionality_levels": {
+    "T": { "label": "Trivial", "examples": ["typo", "commentaire"], "impact_analysis": false, "design_doc": false, "multi_role_debate": false, "opportunities_report": false, "adr": false },
+    "L": { "label": "Local", "examples": ["refactor interne", "ajout test unitaire", "correction bug sans impact API"], "impact_analysis": "light", "design_doc": false, "multi_role_debate": false, "opportunities_report": false, "adr": false },
+    "S": { "label": "Structurant", "examples": ["nouvelle route API", "nouvelle page", "signature exportée modifiée", "nouveau champ DB"], "impact_analysis": true, "design_doc": true, "multi_role_debate": "if_disagreement", "opportunities_report": true, "adr": true },
+    "C": { "label": "Critique", "examples": ["auth", "paiement", "migration DB destructive", "changement de schéma users/bookings", "cryptographie", "évolution des règles §1-§22 du framework"], "impact_analysis": true, "design_doc": true, "multi_role_debate": true, "opportunities_report": true, "adr": true, "double_validation": true }
+  },
+  "evidence_tags": {
+    "OBSERVED": "🔍 constaté dans le code",
+    "COMPILED": "🔨 typecheck ou build a réussi",
+    "TESTED": "🧪 test automatisé passe",
+    "EXECUTED": "▶️ exécuté à la main (dev server, curl, clic UI)",
+    "PROMISED": "🎯 promis dans FEATURES.md, non encore livré",
+    "DEDUCED": "🧠 déduit logiquement, non vérifié",
+    "HYPOTHESIS": "❓ hypothèse à confirmer"
+  },
+  "roles": [
+    "Architecte",
+    "Développeur Next.js senior",
+    "Expert TypeScript",
+    "Expert React (RSC / Client)",
+    "Expert Drizzle / SQL",
+    "Expert PostgreSQL",
+    "Expert sécurité web (auth, cookies, CSP)",
+    "Ingénieur QA",
+    "DevOps / SRE",
+    "Expert UX / a11y",
+    "Relecteur (advocatus diaboli)"
+  ],
+  "product_coverage": {
+    "features_document": "FEATURES.md",
+    "expected_endpoint_tables": [
+      "users",
+      "properties",
+      "rooms",
+      "rate_plans",
+      "room_availability",
+      "bookings",
+      "reviews",
+      "wishlists",
+      "wishlist_items",
+      "conversations",
+      "messages",
+      "promotions"
+    ],
+    "exempted_tables": ["sessions"],
+    "ui_action_labels": [
+      "Envoyer", "Répondre", "Publier", "Annuler", "Valider",
+      "Supprimer", "Uploader", "Enregistrer", "Sauvegarder",
+      "Confirmer", "Créer", "Modifier", "Approuver", "Rejeter",
+      "Suspendre"
+    ],
+    "max_commits_without_features_update": 30,
+    "max_commits_without_progress_update": 5,
+    "max_sessions_without_product_audit": 5
   }
 }

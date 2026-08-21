@@ -1,64 +1,79 @@
-# 📁 .ai/ — Mémoire persistante du projet MobileCaisse
+# 📁 `.ai/` — Framework de gouvernance de **MyBestBooking**
 
-Ce dossier est la **source officielle de vérité** du projet.
-Il existe pour qu'une session de travail (humaine ou agent IA) puisse retrouver
-le contexte complet du dépôt **sans ré-analyser 12 000 lignes de Kotlin**.
+Ce dossier est la **source officielle de vérité** du projet et le **cadre
+de gouvernance** de toutes les interventions techniques (humaines ou IA)
+sur `hamad-sw-ui/MyBestBooking`.
 
-> ⚠️ Ce framework a été créé **une seule fois** (2026-07-28) et doit être
-> **réutilisé et mis à jour**, jamais reconstruit ni remplacé par un autre système.
+Il existe pour deux raisons complémentaires :
 
----
+1. **Documenter** ce que fait le projet, comment il est bâti, où regarder.
+2. **Encadrer** les modifications : chaque changement suit une procédure
+   proportionnée à son impact, produit des preuves auditables, et met à
+   jour la mémoire du projet.
 
-## 🐳 Préalable absolu : l'environnement Docker
-
-Depuis la Phase 6, **aucune compilation ni aucun test ne se fait hors Docker**.
-
-```bash
-make verify      # AVANT toute modification
-make validate    # APRÈS chaque modification
-```
-
-Documentation : [`DEV_ENVIRONMENT.md`](DEV_ENVIRONMENT.md).
-
----
-
-## 🔀 Workflow des évolutions importantes (Phase 7)
-
-```
-Audit → .ai/ → Code réel → Analyse d'impact §14 → Conception §15.1
-  → Débat multi-rôles §15.2 → Décision → Développement
-  → Compilation → Tests → Validation §13 → Impact post-correction
-  → Documentation → Clôture → Rétrospective §17
-```
-
-**Proportionnalité** (`CODING_RULES.md` §15.0) — la profondeur suit l'impact,
-jamais la taille du diff :
-
-| Niveau | Exemple | Impact | Conception | Débat | Opportunités |
-|---|---|---|---|---|---|
-| **T** Trivial | typo, commentaire | ⬜ | ⬜ | ⬜ | ⬜ |
-| **L** Local | refactor interne, ajout de test | allégée | ⬜ | ⬜ | ⬜ |
-| **S** Structurant | signature publique, écran | ✅ | ✅ | si désaccord | ✅ |
-| **C** Critique | sécurité, Room, migration, finance | ✅ | ✅ | ✅ | ✅ |
-
-**Honnêteté technique** (§16) — toute affirmation est classée :
-🔍 observé · 🔨 compilé · 🧪 testé · ▶️ exécuté · 🧠 déduit · ❓ hypothèse.
+> ⚠️ Ce framework — **AI-DOS Web v1.0.0** — a été mis en place le
+> 2026-08-20. Il **ne doit pas** être remplacé par un autre système sans
+> discussion préalable et ADR dédié.
 
 ---
 
 ## 🚦 Procédure obligatoire à chaque session
 
-0. **Valider l'environnement Docker** (`make verify`).
-1. **Lire tous les fichiers de `.ai/`** — ils font foi.
-2. **Analyser ensuite le code réel** (`app/src/...`).
-3. **Si le code a divergé de la documentation → mettre `.ai/` à jour EN PREMIER**,
-   avant toute nouvelle implémentation.
-4. **Lire `CURRENT_TASK.md`** et exécuter **uniquement** cette tâche.
-5. **Respecter `CODING_RULES.md`** et `ANDROID_RULES.md`.
-6. **Mettre à jour `PROGRESS.md` et `BACKLOG.md`** en fin de session.
-7. **Attendre les instructions** du responsable avant de passer à la tâche suivante.
+**Ordre de lecture prescrit** (voir `INDEX.md`) :
 
-Prompt de démarrage prêt à copier : [`PROMPTS/session_start.md`](PROMPTS/session_start.md)
+1. `STATE.md` — mémoire courante
+2. `INDEX.md` — carte du framework
+3. `framework.manifest.json` — règles machine-lisibles
+4. `MISSION.md` — mandat permanent
+5. `CURRENT_TASK.md` — la **seule** tâche autorisée
+6. `PROJECT.md` — contexte métier
+7. `ARCHITECTURE.md` — architecture réelle
+8. `CODING_RULES.md` — règles non négociables (§13 clôture, §14 impact,
+   §16 honnêteté, §22 audit)
+
+Prompt prêt à copier : **[`PROMPTS/session_start.md`](PROMPTS/session_start.md)**.
+
+Ensuite :
+
+- Analyser le code réel des fichiers concernés **et leurs appelants**
+  (`grep -rn`).
+- Si le code diverge de la documentation → mettre `.ai/` à jour **en
+  premier**.
+- Exécuter **une seule tâche à la fois** (`CURRENT_TASK.md`).
+- Documenter la session en fin de travail (`STATE.md`, `PROGRESS.md`,
+  `TRACEABILITY.md`, `BACKLOG.md`, `BUGS.md`).
+
+---
+
+## 🎚️ Proportionnalité T / L / S / C (`CODING_RULES.md` §15.0)
+
+La profondeur des rituels **suit l'impact**, jamais la taille du diff :
+
+| Niveau | Exemple | Impact | Conception | Débat | Opportunités | ADR |
+|---|---|---|---|---|---|---|
+| **T** Trivial | typo, commentaire | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| **L** Local | refactor interne, test | allégée | ⬜ | ⬜ | ⬜ | ⬜ |
+| **S** Structurant | route API, page, signature publique | ✅ | ✅ | si désaccord | ✅ | ✅ |
+| **C** Critique | auth, paiement, migration DB destructive | ✅ | ✅ | ✅ | ✅ | ✅ + double validation |
+
+Un niveau **C** exige la **double validation** (§13.5) : implémentation +
+test indépendant validant le comportement.
+
+---
+
+## 🔍 Honnêteté technique (`CODING_RULES.md` §16)
+
+Toute affirmation est classée par un **tag de preuve** :
+
+- 🔍 **OBSERVED** — lu dans le code / le fichier / la sortie
+- 🔨 **COMPILED** — `npm run typecheck` / `npm run build` a réussi
+- 🧪 **TESTED** — un test automatisé passe
+- ▶️ **EXECUTED** — commande lancée, requête curl réussie
+- 🧠 **DEDUCED** — déduit logiquement, non vérifié
+- ❓ **HYPOTHESIS** — hypothèse à confirmer
+
+**Interdit** : marquer un item `CORRIGÉ (VALIDÉ)` sans au moins un 🔨,
+🧪 ou ▶️. Un audit §22 peut refaire tomber tout item validé sans preuve.
 
 ---
 
@@ -66,49 +81,77 @@ Prompt de démarrage prêt à copier : [`PROMPTS/session_start.md`](PROMPTS/sess
 
 | Fichier | Rôle | Fréquence de mise à jour |
 |---|---|---|
-| `MISSION.md` | Mandat permanent de l'équipe technique | Jamais (sauf changement de mandat) |
-| `PROJECT_CONTEXT.md` | Quoi, pour qui, pourquoi — métier et contraintes terrain | Rare |
-| `ARCHITECTURE.md` | Architecture **réelle** constatée dans le code | À chaque changement structurel |
-| `CODING_RULES.md` | Règles de code non négociables | Rare |
-| `ANDROID_RULES.md` | Règles spécifiques Android/Compose/Room | Rare |
-| `DATABASE.md` | Entités, DAO, migrations, chiffrement | À chaque changement de schéma |
-| `API.md` | Interfaces externes (SMS, Bluetooth, Intents, licence) | À chaque nouvelle intégration |
-| `ROADMAP.md` | Ordre logique de complétion du projet | À chaque jalon |
-| `BACKLOG.md` | Toutes les tâches restantes (□ / ☑) | **Chaque session** |
-| `CURRENT_TASK.md` | La seule tâche autorisée en cours | **Chaque session** |
-| `PROGRESS.md` | Journal horodaté des sessions | **Chaque session** |
-| `BUGS.md` | Bugs identifiés, avec gravité et statut | Dès qu'un bug est trouvé/corrigé |
+| `MISSION.md` | Mandat permanent | Jamais (sauf changement de mandat) |
+| `INDEX.md` | Ordre de lecture prescrit | Rare |
+| `framework.manifest.json` | Règles machine-lisibles | À chaque évolution du framework |
+| `STATE.md` | Mémoire officielle courante — **source de vérité n°1** | **Chaque session** |
+| `CURRENT_TASK.md` | Tâche unique en cours | **Chaque session** |
+| `PROGRESS.md` | Journal horodaté | **Chaque session** |
+| `TRACEABILITY.md` | Matrice preuves ↔ tâches | **Chaque session** |
+| `PROJECT.md` | Contexte métier, glossaire | Rare |
+| `ARCHITECTURE.md` | Architecture réelle constatée | À chaque changement structurel |
+| `DATABASE.md` | Schéma Drizzle, index, migrations | À chaque changement de schéma |
+| `API.md` | Endpoints REST, contrats | À chaque changement d'API |
+| `UI.md` | Design system, pages | À chaque changement d'UX |
+| `SECURITY.md` | Auth, cookies, headers | À chaque changement crypto/auth |
+| `CODING_RULES.md` | Règles non négociables (§1–§22) | Rare |
+| `CODING_STYLE.md` | Conventions TS/React/Drizzle/Tailwind | Rare |
+| `DEV_ENVIRONMENT.md` | `.env`, DB locale, scripts | À chaque outillage |
+| `DEPENDENCIES.md` | Libs et versions | À chaque `package.json` modifié |
+| `ROADMAP.md` | Jalons planifiés | À chaque jalon |
+| `BACKLOG.md` | Toutes les tâches restantes | **Chaque session** |
+| `BUGS.md` | Bugs identifiés avec statut | Dès un bug trouvé/corrigé |
+| `TEST_PLAN.md` | Stratégie et couverture | À chaque nouveau test |
 | `KNOWN_LIMITATIONS.md` | Limites assumées (non-bugs) | Rare |
-| `DEPENDENCIES.md` | Dépendances, versions, risques | À chaque `libs.versions.toml` modifié |
-| `SECURITY.md` | Modèle de menace et posture sécurité | À chaque changement crypto/permission |
-| `TEST_PLAN.md` | Stratégie et couverture de tests | À chaque nouveau test |
-| `PROCESS_IMPROVEMENTS.md` | Rétrospectives et évolutions du framework (§17) | Après chaque tâche |
-| `DEV_ENVIRONMENT.md` | **Environnement Docker obligatoire** (Phase 6) | À chaque changement d'outillage |
-| `PROMPTS/` | Prompts réutilisables (démarrage, revue, rôles) | Rare |
-| `CHECKLISTS/` | Contrôles avant commit / avant PR / avant release | Rare |
-| `REPORTS/` | Modèles + rapports datés générés au fil du projet | À la demande |
-| `LOGS/` | Journaux bruts de session (décisions, commandes) | Chaque session |
+| `PROCESS_IMPROVEMENTS.md` | Rétrospectives §17 | Après chaque session non triviale |
+| `DEVLOG.md` | Journal libre, complément | Optionnel |
+| `PROMPTS/` | Prompts réutilisables (démarrage prescrit, rôles prescrit) | Rare |
+| `CHECKLISTS/` | Contrôles ⛔ **bloquants** avant commit / PR / release | Rare |
+| `ADR/` | Décisions structurantes (obligatoire S, C) | À chaque décision |
+| `REPORTS/` | Analyses d'impact, conception, débats, audits (obligatoire S, C) | À chaque tâche S/C |
+| `LOGS/` | Journaux bruts optionnels | Optionnel |
 
 ---
 
-## 🧠 Rôles spécialisés
+## 🧠 Rôles spécialisés (`PROMPTS/roles.md`)
 
-Toute décision technique importante doit être raisonnée successivement selon
-11 rôles (Architecte, Dev Android senior, Expert Kotlin, Expert Room, Expert
-Compose, Expert Hilt, Expert SQL, Ingénieur QA, Expert sécurité, DevOps,
-Relecteur). Grille détaillée : [`PROMPTS/roles.md`](PROMPTS/roles.md).
+Toute décision technique de niveau **C** (ou **S** en cas de désaccord)
+doit être raisonnée successivement selon **11 rôles** : Architecte,
+Développeur Next.js senior, Expert TypeScript, Expert React (RSC/Client),
+Expert Drizzle/SQL, Expert PostgreSQL, Expert sécurité web, Ingénieur QA,
+DevOps/SRE, Expert UX/a11y, Relecteur (advocatus diaboli).
+
+Le débat est consigné dans `REPORTS/debat_technique_<date>_<sujet>.md`.
+
+---
+
+## ⛔ Règles bloquantes (`framework.manifest.json`)
+
+- Document obligatoire manquant → blocage
+- Roadmap obsolète → blocage
+- État Git incohérent (branche ≠ `arena/01a01eee-mybestbooking`) → blocage
+- Checklist `avant_commit` non déroulée sans justification → blocage
+- Tâche S/C sans analyse d'impact préalable → blocage
+- Clôture (`VALIDÉ`) sans preuve dans `TRACEABILITY.md` → blocage
+
+Ces règles sont **appliquées par la personne (humaine ou IA) qui reçoit le
+livrable**. L'honnêteté (« je n'ai pas pu vérifier car… ») est **acceptée** ;
+l'invisibilité (silence sur une limite) est **refusée**.
 
 ---
 
 ## ✅ Règles d'or
 
-- **Analyse d'impact avant toute modification** (`CODING_RULES.md` §14) :
-  9 questions, enregistrée dans `REPORTS/`, antérieure au code.
-- **Un correctif non exécuté est une hypothèse.** Compilation réelle + tests
-  passés + aucune régression = seule définition de « terminé » (`CODING_RULES.md` §13).
-- **Double validation** pour les composants critiques : implémentation de
-  référence indépendante **et** tests Kotlin réels.
-- **Comprendre avant de modifier.**
-- **Aucune régression** : une fonctionnalité qui marche ne doit jamais casser.
+- **Analyse d'impact avant toute modification S/C** (`CODING_RULES.md` §14) :
+  9 questions, écrite dans `REPORTS/`, antérieure au code.
+- **Un correctif non exécuté est une hypothèse.** Typecheck + build + tests
+  + zéro régression = seule définition de « terminé » (§13).
+- **Double validation** pour les composants critiques : implémentation +
+  test indépendant (§13.5).
+- **Comprendre avant de modifier** (grep les appelants).
+- **Aucune régression** : une fonctionnalité qui marche ne doit jamais
+  casser.
 - **Une tâche à la fois**, celle de `CURRENT_TASK.md`.
-- **Documenter dans `.ai/` fait partie de la définition de « terminé ».**
+- **Documenter dans `.ai/` fait partie de la définition de « terminé »**
+  (§11).
+- **Rétrospective** en fin de session (§17) → `PROCESS_IMPROVEMENTS.md`.

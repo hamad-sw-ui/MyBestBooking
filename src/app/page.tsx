@@ -1,7 +1,10 @@
 import Link from "next/link";
+import Image from "next/image";
+import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { getCurrentUser } from "@/lib/auth";
+import { isMaintenanceActive } from "@/lib/maintenance";
 import { db } from "@/db";
 import { properties, reviews, users } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -22,6 +25,14 @@ async function getFeaturedProperties() {
 
 export default async function HomePage() {
   const user = await getCurrentUser();
+
+  // T-022 : mode maintenance — les non-admins sont redirigés vers
+  // /maintenance. La page racine n'est pas dans le groupe (main),
+  // donc le guard du layout (main) ne s'y applique pas.
+  if ((!user || user.role !== "admin") && (await isMaintenanceActive())) {
+    redirect("/maintenance");
+  }
+
   const featuredProperties = await getFeaturedProperties();
   
   const destinations = [
@@ -169,10 +180,12 @@ export default async function HomePage() {
                 href={`/recherche?city=${encodeURIComponent(dest.name)}`}
                 className="group relative rounded-xl overflow-hidden aspect-[4/5]"
               >
-                <img
+                <Image
                   src={dest.image}
                   alt={dest.name}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 20vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">

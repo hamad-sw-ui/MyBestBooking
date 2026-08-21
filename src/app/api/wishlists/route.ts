@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { wishlists, wishlistItems, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { rateLimit } from "@/lib/rate-limit";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
@@ -67,6 +68,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: "Non autorisé" },
         { status: 401 }
+      );
+    }
+
+    // T-028 : rate-limit — 60 ops wishlist/min/user (permet la
+    // navigation rapide + ajout multiple, empêche le hammer).
+    const rl = rateLimit(`wishlists:user:${user.id}`, {
+      limit: 60,
+      windowMs: 60_000,
+    });
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Trop d'ajouts, ralentissez" },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
       );
     }
 

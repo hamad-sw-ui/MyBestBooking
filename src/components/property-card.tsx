@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Star, MapPin, Heart } from "lucide-react";
 import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -25,10 +26,12 @@ export function PropertyCard({ property, showFavorite = true }: PropertyCardProp
     >
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
-        <img
+        <Image
           src={property.mainImage || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400"}
           alt={property.name}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+          fill
+          sizes="(max-width: 768px) 100vw, 25vw"
+          className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         {showFavorite && (
           <button
@@ -36,9 +39,10 @@ export function PropertyCard({ property, showFavorite = true }: PropertyCardProp
               e.preventDefault();
               e.stopPropagation();
             }}
+            aria-label="Ajouter aux favoris"
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
           >
-            <Heart className="w-5 h-5 text-gray-600" />
+            <Heart className="w-5 h-5 text-gray-600" aria-hidden="true" />
           </button>
         )}
         {property.isBestrewards && (

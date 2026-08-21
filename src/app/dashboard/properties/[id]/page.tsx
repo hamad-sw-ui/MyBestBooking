@@ -383,20 +383,24 @@ export default function EditPropertyPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Chambres</CardTitle>
-              <Button size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter une chambre
-              </Button>
+              <Link href="/dashboard/rooms/new">
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter une chambre
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
             {rooms.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>Aucune chambre configurée</p>
-                <Button variant="outline" className="mt-4">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Ajouter une chambre
-                </Button>
+                <Link href="/dashboard/rooms/new">
+                  <Button variant="outline" className="mt-4">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter une chambre
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-4">
@@ -413,9 +417,11 @@ export default function EditPropertyPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <p className="font-bold">€{parseFloat(room.basePrice).toFixed(0)}/nuit</p>
-                      <Button variant="ghost" size="sm">
-                        Modifier
-                      </Button>
+                      <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
+                        <Button variant="ghost" size="sm">
+                          Calendrier
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 ))}

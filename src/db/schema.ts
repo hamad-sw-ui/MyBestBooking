@@ -12,7 +12,10 @@ import {
   time,
   jsonb,
   index,
+  uniqueIndex,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 
 // ═══════════════════════════════════════════════
 // USERS
@@ -36,10 +39,45 @@ export const users = pgTable("users", {
   country: varchar("country", { length: 2 }),
   timezone: varchar("timezone", { length: 50 }).default("UTC"),
   twoFactorEnabled: boolean("two_factor_enabled").default(false),
+  // T-029 : secret TOTP base32 (stocké en clair — voir ADR-008 pour
+  // le compromis "chiffrer avec master key" reporté).
+  twoFactorSecret: varchar("two_factor_secret", { length: 64 }),
+  // T-026 : code de parrainage personnel auto-généré
+  referralCode: varchar("referral_code", { length: 12 }).unique(),
+  // T-026 : préférences alertes prix
+  priceAlertEnabled: boolean("price_alert_enabled").default(false),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
+});
+
+// T-026 : Alertes prix — Un user peut suivre une property et un prix
+// max, on notifie si le tarif descend en-dessous (job cron futur).
+export const priceAlerts = pgTable("price_alerts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  propertyId: uuid("property_id").references(() => properties.id).notNull(),
+  maxPrice: decimal("max_price", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).default("EUR"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uidx_price_alert_user_prop").on(table.userId, table.propertyId),
+]);
+
+// ═══════════════════════════════════════════════
+// VERIFICATION_TOKENS (T-013)
+// email_verification + password_reset — hashés SHA-256.
+// ═══════════════════════════════════════════════
+export const verificationTokens = pgTable("verification_tokens", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  tokenHash: varchar("token_hash", { length: 64 }).unique().notNull(),
+  purpose: varchar("purpose", { length: 30 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  usedAt: timestamp("used_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ═══════════════════════════════════════════════
@@ -151,7 +189,11 @@ export const roomAvailability = pgTable("room_availability", {
   stopSell: boolean("stop_sell").default(false),
   minStay: smallint("min_stay").default(1),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // T-006 (BUG-013) : un unique record par (room, date) — calendrier
+  // d'inventaire journalier.
+  uniqueIndex("uniq_room_availability_room_date").on(table.roomId, table.date),
+]);
 
 // ═══════════════════════════════════════════════
 // BOOKINGS (RÉSERVATIONS)
@@ -184,6 +226,7 @@ export const bookings = pgTable("bookings", {
   currency: varchar("currency", { length: 3 }).notNull(),
   paymentStatus: varchar("payment_status", { length: 20 }).default("pending"),
   paymentMethod: varchar("payment_method", { length: 20 }),
+  paymentIntentId: varchar("payment_intent_id", { length: 255 }),
   commissionRate: decimal("commission_rate", { precision: 4, scale: 2 }).notNull(),
   commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
   netToHost: decimal("net_to_host", { precision: 10, scale: 2 }).notNull(),
@@ -195,6 +238,11 @@ export const bookings = pgTable("bookings", {
 }, (table) => [
   index("idx_bookings_user").on(table.userId, table.status),
   index("idx_bookings_property").on(table.propertyId, table.checkIn, table.checkOut),
+  // T-012 : index dédié aux vérifications de disponibilité par chambre.
+  index("idx_bookings_room_dates").on(table.roomId, table.checkIn, table.checkOut),
+  // T-006 (BUG-011) : garantit une réservation d'au moins 1 nuit.
+  check("bookings_dates_check", sql`${table.checkOut} > ${table.checkIn}`),
+  check("bookings_nights_positive", sql`${table.numNights} > 0`),
 ]);
 
 // ═══════════════════════════════════════════════
@@ -245,7 +293,10 @@ export const wishlistItems = pgTable("wishlist_items", {
   propertyId: uuid("property_id").references(() => properties.id).notNull(),
   addedAt: timestamp("added_at").defaultNow().notNull(),
   priceAlertEnabled: boolean("price_alert_enabled").default(false),
-});
+}, (table) => [
+  // T-006 (BUG-012) : un hébergement au plus une fois par wishlist.
+  uniqueIndex("uniq_wishlist_items_wishlist_property").on(table.wishlistId, table.propertyId),
+]);
 
 // ═══════════════════════════════════════════════
 // MESSAGES
@@ -291,6 +342,42 @@ export const promotions = pgTable("promotions", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
+// ═══════════════════════════════════════════════
+// APP_SETTINGS (T-021, ADR-007)
+// Réglages runtime éditables par un admin sans redéploiement.
+// key = identifiant de section (billing, bestrewards, cancellation, ...)
+// value = objet JSONB validé côté application par un schéma Zod
+//         dans src/lib/settings.ts. La table est délibérément clef/valeur
+//         pour rester agnostique aux évolutions de structure.
+// ═══════════════════════════════════════════════
+export const appSettings = pgTable("app_settings", {
+  key: varchar("key", { length: 64 }).primaryKey(),
+  value: jsonb("value").notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ═══════════════════════════════════════════════
+// AUDIT_LOG (T-024)
+// Journal centralisé des actions admin sensibles (settings, modération
+// d'avis, suspend user, validation property). Écrit en best-effort via
+// `src/lib/audit.ts`. Conservé même si l'acteur est supprimé
+// (actor_email copié + FK ON DELETE SET NULL).
+// ═══════════════════════════════════════════════
+export const auditLog = pgTable("audit_log", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  actorId: uuid("actor_id"),
+  actorEmail: varchar("actor_email", { length: 255 }),
+  action: varchar("action", { length: 64 }).notNull(),
+  entityType: varchar("entity_type", { length: 32 }),
+  entityId: varchar("entity_id", { length: 64 }),
+  metadata: jsonb("metadata"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_audit_log_created").on(table.createdAt),
+  index("idx_audit_log_action").on(table.action, table.createdAt),
+]);
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -302,3 +389,9 @@ export type Booking = typeof bookings.$inferSelect;
 export type NewBooking = typeof bookings.$inferInsert;
 export type Review = typeof reviews.$inferSelect;
 export type NewReview = typeof reviews.$inferInsert;
+export type AppSetting = typeof appSettings.$inferSelect;
+export type NewAppSetting = typeof appSettings.$inferInsert;
+export type AuditLog = typeof auditLog.$inferSelect;
+export type NewAuditLog = typeof auditLog.$inferInsert;
+export type PriceAlert = typeof priceAlerts.$inferSelect;
+export type NewPriceAlert = typeof priceAlerts.$inferInsert;

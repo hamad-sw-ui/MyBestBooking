@@ -3,13 +3,45 @@ import type { ReactNode } from "react";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
+// T-017 (note) : les fonts sont chargées via <link> plutôt que
+// `next/font/google` parce que le sandbox n'a pas d'accès au CDN
+// Google Fonts au build time et fait échouer `next build`. En prod
+// avec accès CDN, `next/font/google` est préférable (inlining + no
+// FOUT). Migration prévue backlog quand la CI aura un accès réseau
+// stable. Voir KNOWN_LIMITATIONS.md.
+
+const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export const metadata: Metadata = {
+  metadataBase: new URL(APP_URL),
   title: {
     default: "mybestbooking — Réservez mieux. Voyagez plus.",
     template: "%s | mybestbooking",
   },
-  description: "Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, 0 frais cachés.",
-  keywords: ["réservation", "hôtel", "hébergement", "voyage", "booking", "vacances"],
+  description:
+    "Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, 0 frais cachés.",
+  keywords: [
+    "réservation",
+    "hôtel",
+    "hébergement",
+    "voyage",
+    "booking",
+    "vacances",
+  ],
+  openGraph: {
+    type: "website",
+    locale: "fr_FR",
+    siteName: "mybestbooking",
+    title: "mybestbooking — Réservez mieux. Voyagez plus.",
+    description:
+      "Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, 0 frais cachés.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "mybestbooking",
+    description: "Réservez mieux. Voyagez plus.",
+  },
+  robots: { index: true, follow: true },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
@@ -23,10 +55,19 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           rel="stylesheet"
         />
       </head>
-      <body className="bg-gray-50 min-h-screen" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
-        <ToastProvider>
-          {children}
-        </ToastProvider>
+      <body className="bg-gray-50 min-h-screen font-sans">
+        {/* T-029 : skip link a11y */}
+        <a href="#main-content" className="skip-link">Aller au contenu principal</a>
+        {/* T-029 : pré-applique la classe .dark sans FOUC */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var t=localStorage.getItem('theme');" +
+              "var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);" +
+              "if(d)document.documentElement.classList.add('dark');}catch(e){}",
+          }}
+        />
+        <ToastProvider>{children}</ToastProvider>
       </body>
     </html>
   );

@@ -1,12 +1,36 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const [p] = await db.select().from(properties).where(eq(properties.slug, slug)).limit(1);
+  if (!p) return { title: "Hébergement introuvable" };
+  const desc = `${p.name} à ${p.city}, ${p.country}. ${p.description ? p.description.slice(0, 140) : "Réservez au meilleur prix."}`;
+  return {
+    title: p.name,
+    description: desc,
+    openGraph: {
+      title: p.name,
+      description: desc,
+      images: p.mainImage ? [{ url: p.mainImage }] : undefined,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.name,
+      description: desc,
+    },
+  };
+}
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PriceAlertButton } from "@/components/price-alert-button";
 import {
   Star, MapPin, Heart, Share2, Check, X, Wifi, Car, Utensils, Waves,
   Dumbbell, Wind, Users, Calendar, Shield, MessageCircle, Award
@@ -82,13 +106,54 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   }
 
   const { property, rooms: propertyRooms, reviews: propertyReviews } = data;
+  // T-030 : chambre la moins chère pour le CTA "Voir dispo" et alerte prix
+  const cheapestRoom = propertyRooms.length > 0
+    ? [...propertyRooms].sort((a, b) => parseFloat(a.basePrice) - parseFloat(b.basePrice))[0]
+    : null;
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating) : null;
   const amenities = (property.amenities as string[]) || [];
   const images = (property.images as string[]) || [];
 
+  // T-017 : Schema.org Hotel/Product pour SEO enrichi
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Hotel",
+    name: property.name,
+    description: property.description ?? undefined,
+    image: property.mainImage ?? undefined,
+    starRating: property.starRating
+      ? { "@type": "Rating", ratingValue: property.starRating }
+      : undefined,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: property.addressLine ?? undefined,
+      addressLocality: property.city,
+      postalCode: property.postalCode ?? undefined,
+      addressCountry: property.country,
+    },
+    geo: property.latitude && property.longitude
+      ? { "@type": "GeoCoordinates", latitude: property.latitude, longitude: property.longitude }
+      : undefined,
+    aggregateRating:
+      property.averageRating && property.totalReviews
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: property.averageRating,
+            reviewCount: property.totalReviews,
+            bestRating: 10,
+            worstRating: 0,
+          }
+        : undefined,
+  };
+
   return (
     <div className="bg-gray-50">
+      <script
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -397,13 +462,25 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                     </div>
                   </div>
 
-                  <Button className="w-full" size="lg">
+                  <a
+                    href={`/reservation?propertyId=${property.id}&roomId=${cheapestRoom?.id ?? ""}`}
+                    className="block w-full text-center px-6 py-3 rounded-lg bg-[#FF5A5F] text-white font-medium hover:bg-[#e54a4f] transition"
+                  >
                     Voir les disponibilités
-                  </Button>
+                  </a>
 
                   <p className="text-xs text-center text-gray-500 mt-3">
                     ✓ Annulation gratuite • ✓ Paiement sécurisé
                   </p>
+
+                  {/* T-030 : suivre le prix */}
+                  <div className="mt-3">
+                    <PriceAlertButton
+                      propertyId={property.id}
+                      currency={cheapestRoom?.currency ?? "EUR"}
+                      defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 

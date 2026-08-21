@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { isMaintenanceActive } from "@/lib/maintenance";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardMobileHeader } from "@/components/layout/dashboard-mobile-header";
 import type { ReactNode } from "react";
@@ -13,6 +14,12 @@ export default async function DashboardLayout({ children }: { children: ReactNod
 
   if (user.role !== "admin" && user.role !== "host") {
     redirect("/");
+  }
+
+  // T-022 : en mode maintenance, seuls les admins accèdent au dashboard.
+  // Un host est renvoyé vers /maintenance (au même titre qu'un customer).
+  if (user.role !== "admin" && (await isMaintenanceActive())) {
+    redirect("/maintenance");
   }
 
   return (

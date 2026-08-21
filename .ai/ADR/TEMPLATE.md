@@ -1,27 +1,42 @@
-# ADR-XXX : [Titre de la décision]
+# ADR-NNN — <titre court>
+
+- **Date** : YYYY-MM-DD
+- **Statut** : proposé | accepté | remplacé par ADR-XXX | abandonné
+- **Niveau** : S | C
+- **Tâche associée** : B-xxx
+- **Rapports liés** : `REPORTS/analyse_impact_...`, `REPORTS/analyse_conception_...`, `REPORTS/debat_technique_...` (le cas échéant)
 
 ## Contexte
-[Décrire le contexte technique et métier ayant mené à cette décision.]
 
-## Problème
-[Quel était le problème ou le besoin spécifique ?]
+Quel problème essaie-t-on de résoudre ? Quelles contraintes existent ?
+Quelles solutions ont été envisagées ? Références aux appelants concernés
+(§14 point 4).
 
-## Solutions envisagées
-- **Solution A** : [Description]
-- **Solution B** : [Description]
-- **Solution C** : [Description]
+## Décision
 
-## Solution retenue
-[Indiquer la solution choisie.]
+Ce qu'on a choisi, en une ou deux phrases claires. Sans ambiguïté.
 
-## Arguments
-[Justifier le choix par rapport aux alternatives.]
+## Alternatives écartées
+
+- **Option A** — pourquoi non ? (compromis mesuré)
+- **Option B** — pourquoi non ?
+- (…)
 
 ## Conséquences
-[Impacts sur le code, la maintenance, la performance, la sécurité, etc.]
 
-## Date
-[AAAA-MM-JJ]
+- **Positives** : ce qu'on gagne.
+- **Négatives** : ce qu'on accepte de perdre / la dette introduite.
+- **À suivre** : ce qui pourrait nous faire revenir sur cette décision
+  (seuil de charge, nouvelle contrainte réglementaire, autre).
 
-## Références
-[Liens vers des issues, commits, rapports d'analyse ou documentation externe.]
+## Preuves de mise en œuvre (§16)
+
+- 🔍 …
+- 🔨 …
+- 🧪 …
+- ▶️ …
+
+## Signatures
+
+- Auteur : <nom / agent>
+- Validé par : <responsable>

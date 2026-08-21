@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { properties, rooms, reviews } from "@/db/schema";
+import { properties, rooms, reviews, bookings, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { generateSlug } from "@/lib/utils";
-import { eq, and, ilike, or, desc, sql } from "drizzle-orm";
+import { eq, and, ilike, or, desc, asc, sql, min, count, gte, lte, lt, gt, ne, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 
 const propertySchema = z.object({
@@ -38,6 +38,13 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "20");
     const offset = parseInt(searchParams.get("offset") || "0");
     const search = searchParams.get("search");
+    // T-026 : nouveaux filtres
+    const amenitiesParam = searchParams.get("amenities"); // csv
+    const guests = searchParams.get("guests");
+    const checkIn = searchParams.get("checkIn");
+    const checkOut = searchParams.get("checkOut");
+    const sort = searchParams.get("sort") || "rating"; // rating | price_asc | price_desc | popularity
+    const near = searchParams.get("near"); // "lat,lng,km"
 
     let query = db.select().from(properties).where(eq(properties.status, "active"));
 
@@ -69,44 +76,165 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const results = await db
-      .select()
+    // T-026 : filtre amenities — chaque équipement demandé doit être
+    // présent dans le tableau JSONB `properties.amenities`.
+    if (amenitiesParam) {
+      const wanted = amenitiesParam.split(",").map((a) => a.trim()).filter(Boolean);
+      for (const a of wanted) {
+        conditions.push(sql`${properties.amenities} @> ${JSON.stringify([a])}::jsonb`);
+      }
+    }
+
+    // T-026 : conditions supplémentaires sur les rooms (guests).
+    // On filtre les rooms compatibles côté JOIN pour éviter d'exclure
+    // une property qui a d'autres rooms plus petites.
+    const roomJoinConds = [eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)];
+    if (guests) {
+      const g = parseInt(guests, 10);
+      if (Number.isFinite(g) && g > 0) {
+        roomJoinConds.push(gte(rooms.maxOccupancy, g));
+      }
+    }
+
+    // T-026 : ordre configurable.
+    let orderClause;
+    switch (sort) {
+      case "price_asc":
+        orderClause = asc(sql`MIN(${rooms.basePrice})`);
+        break;
+      case "price_desc":
+        orderClause = desc(sql`MIN(${rooms.basePrice})`);
+        break;
+      case "popularity":
+        orderClause = desc(properties.totalReviews);
+        break;
+      case "rating":
+      default:
+        orderClause = desc(properties.averageRating);
+    }
+
+    // ── T-004 (BUG-004) : remplace le N+1 par un unique LEFT JOIN
+    //    + agrégation SQL. Le filtre price est appliqué avec un
+    //    HAVING plutôt qu'en JS.
+    const rows = await db
+      .select({
+        property: properties,
+        minPrice: min(rooms.basePrice),
+        roomCount: count(rooms.id),
+      })
       .from(properties)
+      .leftJoin(rooms, and(...roomJoinConds))
       .where(and(...conditions))
-      .orderBy(desc(properties.averageRating))
+      .groupBy(properties.id)
+      .orderBy(orderClause)
       .limit(limit)
       .offset(offset);
 
-    // Get room prices for each property
-    const propertiesWithPrices = await Promise.all(
-      results.map(async (property) => {
-        const propertyRooms = await db
-          .select()
-          .from(rooms)
-          .where(and(eq(rooms.propertyId, property.id), eq(rooms.isActive, true)));
+    let filteredResults = rows.map((r) => ({
+      ...r.property,
+      minPrice: r.minPrice !== null ? parseFloat(r.minPrice as string) : null,
+      roomCount: Number(r.roomCount),
+    }));
 
-        const minPriceValue = propertyRooms.length > 0
-          ? Math.min(...propertyRooms.map((r) => parseFloat(r.basePrice)))
-          : null;
-
-        return {
-          ...property,
-          minPrice: minPriceValue,
-          roomCount: propertyRooms.length,
-        };
-      })
-    );
-
-    // Filter by price if needed
-    let filteredResults = propertiesWithPrices;
+    // Filter by price if needed (post-agrégation, borne côté JS car
+    // Drizzle 0.45 n'expose pas `having` sur select simple ; tolerable
+    // pour l'ordre de grandeur d'aujourd'hui, à optimiser si le trafic
+    // impose le HAVING SQL).
     if (minPrice) {
-      filteredResults = filteredResults.filter((p) => p.minPrice && p.minPrice >= parseFloat(minPrice));
+      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice >= parseFloat(minPrice));
     }
     if (maxPrice) {
-      filteredResults = filteredResults.filter((p) => p.minPrice && p.minPrice <= parseFloat(maxPrice));
+      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice <= parseFloat(maxPrice));
     }
 
-    return NextResponse.json({ properties: filteredResults });
+    // T-026 : filtre disponibilité (dates). Exclut les properties dont
+    // TOUTES les rooms sont bookées ou marquées stop-sell sur la
+    // fenêtre. Fait en JS après la première requête pour rester
+    // compatible avec l'agrégation actuelle ; à optimiser si trafic
+    // impose HAVING SQL.
+    if (checkIn && checkOut && /^\d{4}-\d{2}-\d{2}$/.test(checkIn) && /^\d{4}-\d{2}-\d{2}$/.test(checkOut) && checkOut > checkIn) {
+      const inDate = checkIn;
+      const outDate = checkOut;
+      const propIds = filteredResults.map((p) => p.id);
+      if (propIds.length > 0) {
+        // rooms disponibles = quantity - overlaps > 0 ET pas stop_sell
+        const roomsInfo = await db
+          .select({
+            id: rooms.id, propertyId: rooms.propertyId, quantity: rooms.quantity,
+          })
+          .from(rooms)
+          .where(and(inArray(rooms.propertyId, propIds), eq(rooms.isActive, true)));
+        const roomIds = roomsInfo.map((r) => r.id);
+        const bookedRows = roomIds.length > 0 ? await db
+          .select({ roomId: bookings.roomId, cnt: count() })
+          .from(bookings)
+          .where(and(
+            inArray(bookings.roomId, roomIds),
+            ne(bookings.status, "cancelled"),
+            lt(bookings.checkIn, outDate),
+            gt(bookings.checkOut, inDate),
+          ))
+          .groupBy(bookings.roomId) : [];
+        const bookedByRoom = new Map(bookedRows.map((b) => [b.roomId, Number(b.cnt)]));
+        const stopSellRows = roomIds.length > 0 ? await db
+          .select({ roomId: roomAvailability.roomId })
+          .from(roomAvailability)
+          .where(and(
+            inArray(roomAvailability.roomId, roomIds),
+            gte(roomAvailability.date, inDate),
+            lt(roomAvailability.date, outDate),
+            eq(roomAvailability.stopSell, true),
+          )) : [];
+        const stopSellRoomIds = new Set(stopSellRows.map((s) => s.roomId));
+        const availablePropIds = new Set<string>();
+        for (const r of roomsInfo) {
+          if (stopSellRoomIds.has(r.id)) continue;
+          const bookedCount = bookedByRoom.get(r.id) ?? 0;
+          if ((r.quantity ?? 1) > bookedCount) availablePropIds.add(r.propertyId);
+        }
+        filteredResults = filteredResults.filter((p) => availablePropIds.has(p.id));
+      }
+    }
+
+    // T-026 : filtre "near" — distance haversine grossière en km,
+    // filtre uniquement les properties avec lat/lng renseignés.
+    if (near) {
+      const parts = near.split(",").map((s) => parseFloat(s.trim()));
+      if (parts.length === 3 && parts.every(Number.isFinite)) {
+        const [lat, lng, km] = parts;
+        filteredResults = filteredResults.filter((p) => {
+          if (!p.latitude || !p.longitude) return false;
+          const pLat = parseFloat(p.latitude);
+          const pLng = parseFloat(p.longitude);
+          const R = 6371;
+          const toRad = (d: number) => (d * Math.PI) / 180;
+          const dLat = toRad(pLat - lat);
+          const dLng = toRad(pLng - lng);
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat)) * Math.cos(toRad(pLat)) * Math.sin(dLng / 2) ** 2;
+          const d = 2 * R * Math.asin(Math.sqrt(a));
+          return d <= km;
+        });
+      }
+    }
+
+    // BUG-021 (Session 11 paranoid) : filtrer les champs métier
+    // sensibles (commissionRate, validatedBy, hostId interne) pour
+    // les listings publics. Un admin peut lire tous les champs via
+    // GET /api/properties/[id] (route détail qui ne filtre pas).
+    const currentUser = await getCurrentUser();
+    const isAdmin = currentUser?.role === "admin";
+    const sanitized = isAdmin
+      ? filteredResults
+      : filteredResults.map((p) => {
+          const {
+            commissionRate: _cr,
+            validatedBy: _vb,
+            hostId: _hi,
+            ...safe
+          } = p as typeof p & { commissionRate?: unknown; validatedBy?: unknown; hostId?: unknown };
+          return safe;
+        });
+    return NextResponse.json({ properties: sanitized });
   } catch (error) {
     console.error("Error fetching properties:", error);
     return NextResponse.json(

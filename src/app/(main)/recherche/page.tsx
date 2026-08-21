@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { db } from "@/db";
 import { properties, rooms } from "@/db/schema";
 import { eq, and, ilike, or, desc, sql } from "drizzle-orm";
+
+export const metadata: Metadata = {
+  title: "Recherche d'hébergements",
+  description: "Trouvez le meilleur hébergement pour votre séjour : hôtel, riad, villa, appartement, camping.",
+};
 import { PropertyCard } from "@/components/property-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
@@ -70,7 +76,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {/* Search Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <form className="flex flex-wrap gap-4 items-end">
+          <form method="get" action="/recherche" className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
               <label className="block text-xs font-medium text-gray-500 mb-1">Destination</label>
               <div className="relative">

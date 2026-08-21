@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PromoCodeInput } from "@/components/promo-code-input";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
@@ -36,7 +37,7 @@ interface RoomData {
   amenities: string[];
 }
 
-export default function ReservationPage() {
+function ReservationPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const propertyId = searchParams.get("property");
@@ -49,6 +50,12 @@ export default function ReservationPage() {
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [room, setRoom] = useState<RoomData | null>(null);
   const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string } | null>(null);
+  const [promo, setPromo] = useState<{ code: string; discount: number; finalTotal: number } | null>(null);
+  // T-030 : wallet + guest booking
+  const [walletBalance, setWalletBalance] = useState<number>(0);
+  const [useWalletCredits, setUseWalletCredits] = useState<boolean>(false);
+  const [isAuthed, setIsAuthed] = useState<boolean>(true);
+  const [guestMode, setGuestMode] = useState<boolean>(false);
 
   const [formData, setFormData] = useState({
     checkIn: searchParams.get("checkIn") || "",
@@ -75,7 +82,8 @@ export default function ReservationPage() {
     : 0;
   const subtotal = pricePerNight * numNights;
   const taxes = subtotal * 0.1;
-  const total = subtotal + taxes;
+  const totalBeforePromo = subtotal + taxes;
+  const total = promo ? promo.finalTotal : totalBeforePromo;
 
   useEffect(() => {
     if (!propertyId || !roomId) return;
@@ -91,17 +99,12 @@ export default function ReservationPage() {
         setLoading(false);
       });
 
-    // Pre-fill user data
+    // T-030 : pré-remplir si connecté, sinon proposer mode invité.
     fetch("/api/auth/me")
-      .then(res => {
-        if (!res.ok) {
-          router.push("/connexion");
-          return null;
-        }
-        return res.json();
-      })
+      .then(res => (res.ok ? res.json() : { user: null }))
       .then(data => {
         if (data?.user) {
+          setIsAuthed(true);
           setFormData(prev => ({
             ...prev,
             guestFirstName: data.user.firstName || "",
@@ -110,6 +113,12 @@ export default function ReservationPage() {
             guestPhone: data.user.phone || "",
             guestCountry: data.user.country || "FR",
           }));
+          const wb = parseFloat(data.user.walletBalance ?? "0");
+          if (Number.isFinite(wb) && wb > 0) setWalletBalance(wb);
+        } else {
+          // Non connecté : passe en guest mode par défaut plutôt que de bloquer.
+          setIsAuthed(false);
+          setGuestMode(true);
         }
       });
   }, [propertyId, roomId, router]);
@@ -138,6 +147,9 @@ export default function ReservationPage() {
           tripPurpose: formData.tripPurpose || undefined,
           specialRequests: formData.specialRequests || undefined,
           estimatedArrival: formData.estimatedArrival || undefined,
+          promoCode: promo?.code || undefined,
+          useWalletCredits: useWalletCredits || undefined,
+          isGuestBooking: guestMode || undefined,
         }),
       });
 
@@ -550,14 +562,58 @@ export default function ReservationPage() {
                         <span className="text-gray-600">Taxes et frais</span>
                         <span>€{taxes.toFixed(2)}</span>
                       </div>
+                      {promo && (
+                        <div className="flex justify-between text-sm mb-2 text-green-700">
+                          <span>Code {promo.code}</span>
+                          <span>−€{promo.discount.toFixed(2)}</span>
+                        </div>
+                      )}
+                      <div className="my-3">
+                        <PromoCodeInput amount={totalBeforePromo} onApplied={setPromo} />
+                      </div>
+                      {/* T-030 : wallet BestRewards utilisable au checkout */}
+                      {isAuthed && walletBalance > 0 && (
+                        <label className="flex items-start gap-2 my-3 p-2 rounded-lg bg-amber-50 border border-amber-200 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={useWalletCredits}
+                            onChange={(e) => setUseWalletCredits(e.target.checked)}
+                            className="mt-1"
+                          />
+                          <div className="text-xs">
+                            <p className="font-medium text-amber-900">
+                              💰 Utiliser mon crédit wallet (€{walletBalance.toFixed(2)} dispo)
+                            </p>
+                            <p className="text-amber-700">
+                              Sera appliqué en réduction sur le total, plafonné au montant restant.
+                            </p>
+                          </div>
+                        </label>
+                      )}
+                      {promo && useWalletCredits && walletBalance > 0 && (
+                        <div className="flex justify-between text-sm mb-2 text-amber-800">
+                          <span>Wallet</span>
+                          <span>−€{Math.min(walletBalance, total).toFixed(2)}</span>
+                        </div>
+                      )}
                       <hr className="my-3" />
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
-                        <span className="text-[#1B3A6B]">€{total.toFixed(2)}</span>
+                        <span className="text-[#1B3A6B]">
+                          €{Math.max(0, useWalletCredits ? total - Math.min(walletBalance, total) : total).toFixed(2)}
+                        </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
                         ✅ Aucun frais supplémentaire
                       </p>
+                      {/* T-030 : bannière mode invité */}
+                      {!isAuthed && guestMode && (
+                        <div className="mt-3 p-2 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900">
+                          👤 <strong>Mode invité</strong> — vous réservez sans créer de compte.
+                          Un email de confirmation vous sera envoyé.{" "}
+                          <a href="/inscription" className="underline">Créer un compte plutôt</a>
+                        </div>
+                      )}
                     </>
                   )}
 
@@ -573,5 +629,15 @@ export default function ReservationPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+// T-005 (BUG-007) : useSearchParams doit être enveloppé dans <Suspense>
+// depuis Next.js 15/16 pour permettre le rendu statique / streaming.
+export default function ReservationPage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-center text-gray-500">Chargement…</div>}>
+      <ReservationPageInner />
+    </Suspense>
   );
 }

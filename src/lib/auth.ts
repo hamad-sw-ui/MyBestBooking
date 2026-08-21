@@ -5,11 +5,27 @@ import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "mybestbooking-secret-key-2025"
-);
+const jwtSecretEnv = process.env.JWT_SECRET;
+if (!jwtSecretEnv) {
+  throw new Error(
+    "JWT_SECRET is required. Generate one with `openssl rand -hex 32` " +
+    "and set it in your environment. See .ai/SECURITY.md."
+  );
+}
+if (jwtSecretEnv.length < 32) {
+  console.warn(
+    "[auth] JWT_SECRET is shorter than 32 characters — this is insecure. " +
+    "Regenerate with `openssl rand -hex 32`."
+  );
+}
+const JWT_SECRET = new TextEncoder().encode(jwtSecretEnv);
 
-const SESSION_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
+// BUG-023 (Session 11 quinquies) : réduire l'expiration JWT de 30j à 7j
+// pour limiter la fenêtre d'exploitation d'un token volé. Compromis
+// UX/sécurité : 7j = confortable pour un utilisateur régulier, forcé à
+// se ré-authentifier hebdomadairement. Refresh token flow non requis
+// à ce stade (sessions DB permettent la révocation immédiate).
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days (was 30)
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -20,9 +36,14 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export async function createToken(userId: string): Promise<string> {
+  // T-017 (BUG-016) : ajout d'un jti aléatoire pour éviter que deux
+  // logins simultanés du même user à la même seconde produisent le
+  // même JWT (violation de sessions_token_unique).
+  const { randomUUID } = await import("node:crypto");
   return new SignJWT({ userId })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("30d")
+    .setJti(randomUUID())
+    .setExpirationTime("7d")
     .setIssuedAt()
     .sign(JWT_SECRET);
 }

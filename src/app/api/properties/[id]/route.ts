@@ -24,6 +24,9 @@ const updatePropertySchema = z.object({
   images: z.array(z.string()).optional(),
   mainImage: z.string().optional(),
   status: z.enum(["draft", "pending", "active", "suspended", "archived"]).optional(),
+  // T-021 audit follow-up : commission par property, admin uniquement
+  // (filtré côté handler ci-dessous).
+  commissionRate: z.string().regex(/^\d{1,3}(\.\d{1,2})?$/, "Commission invalide").optional(),
 });
 
 export async function GET(
@@ -126,6 +129,15 @@ export async function PUT(
       return NextResponse.json(
         { error: "Non autorisé" },
         { status: 403 }
+      );
+    }
+
+    // T-021 audit follow-up : commissionRate est un champ admin-only.
+    // Un host ne peut jamais modifier sa propre commission.
+    if (data.commissionRate !== undefined && user.role !== "admin") {
+      return NextResponse.json(
+        { error: "Modification de commission réservée à l'admin" },
+        { status: 403 },
       );
     }
 

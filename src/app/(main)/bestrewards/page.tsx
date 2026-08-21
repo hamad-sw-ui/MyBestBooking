@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+
+export const metadata: Metadata = {
+  title: "BestRewards — programme fidélité",
+  description: "Cumulez des réservations et débloquez 3 niveaux de récompenses : réductions, upgrades, avantages exclusifs.",
+};
 import { Badge } from "@/components/ui/badge";
 import { Award, Check, Star, Gift, Percent, Coffee, ArrowUp, Wallet } from "lucide-react";
 import Link from "next/link";
