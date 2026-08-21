@@ -10,10 +10,8 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : à mettre à jour en fin de session
-  (T-032 xtreme + BUG-018 + BUG-019, Session 11 ter)
-- **Dernier commit stable référencé** : à mettre à jour en fin de
-  session
+- **Dernier commit connu** : `f671ae2` (T-032 xtreme + BUG-018 + BUG-019, Session 11 ter)
+- **Dernier commit stable référencé** : `f671ae2` (Session 11 ter)
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
