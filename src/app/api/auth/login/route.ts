@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import speakeasy from "speakeasy";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { verifyPassword, createSession } from "@/lib/auth";
@@ -9,6 +10,9 @@ import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
   password: z.string().min(1, "Le mot de passe est requis"),
+  // BUG-019 (Session 11 xtreme) : totpCode requis si user.twoFactorEnabled=true.
+  // Si absent, la réponse renvoie 401 { twoFactorRequired: true }.
+  totpCode: z.string().regex(/^\d{6}$/).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -60,6 +64,31 @@ export async function POST(request: NextRequest) {
         { error: "Ce compte a été supprimé" },
         { status: 401 }
       );
+    }
+
+    // BUG-019 (Session 11 xtreme) : si 2FA activée, exiger totpCode.
+    // Sans code fourni → 401 { twoFactorRequired: true } pour permettre
+    // à l'UI d'afficher le champ TOTP.
+    // Avec code invalide → 401 { error: "Code 2FA invalide" }.
+    if (user.twoFactorEnabled && user.twoFactorSecret) {
+      if (!data.totpCode) {
+        return NextResponse.json(
+          { error: "Code 2FA requis", twoFactorRequired: true },
+          { status: 401 }
+        );
+      }
+      const validTotp = speakeasy.totp.verify({
+        secret: user.twoFactorSecret,
+        encoding: "base32",
+        token: data.totpCode,
+        window: 1,
+      });
+      if (!validTotp) {
+        return NextResponse.json(
+          { error: "Code 2FA invalide", twoFactorRequired: true },
+          { status: 401 }
+        );
+      }
     }
 
     // Update last login

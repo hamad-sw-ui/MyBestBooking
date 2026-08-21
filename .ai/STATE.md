@@ -10,8 +10,10 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `09d9195` (T-032 bis + BUG-017, Session 11)
-- **Dernier commit stable référencé** : `09d9195` (Session 11 bis)
+- **Dernier commit connu** : à mettre à jour en fin de session
+  (T-032 xtreme + BUG-018 + BUG-019, Session 11 ter)
+- **Dernier commit stable référencé** : à mettre à jour en fin de
+  session
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
@@ -27,12 +29,24 @@
 - **Dernier `npm run smoke`** : ✅ **91 assertions PASS · 0 FAIL**
   (~30 s, log dans `.ai/REPORTS/smoke_run_2026-08-21_session_11.log`)
 - **Dernier `python3 scripts/deep_sim.py`** : ✅ **81 contrôles
-  profonds PASS · 0 KO** en ~15 s (21 sections : chemins d'erreur,
-  flux 2FA/upload/booking/annulation/propriété/suspend, effets DB +
-  emails, rate-limits, RBAC). Rapport dans
-  `.ai/REPORTS/simulation_deep_2026-08-21_session_11.md`
-- **BUG trouvé + corrigé Session 11 bis** : BUG-017 (PATCH /api/users/me
-  n'exposait pas priceAlertEnabled dans le retour)
+  profonds PASS · 0 KO** en ~15 s
+- **Dernier `python3 scripts/xtreme_sim.py`** : ✅ **89 contrôles
+  extrêmes PASS · 0 KO** en ~80 s (21 sections : sécurité HTTP
+  complète, injections XSS/SQL, inputs extrêmes, flow email
+  bout-en-bout, flow reset password bout-en-bout, cycle reviews
+  complet, availability+rate-plans+stopSell, promotions CRUD, delete
+  price-alert, pages dynamiques not-found, audit statique UX
+  composants, intégrité seed, contenu emails, webhook Stripe,
+  fichiers publics, 2FA à login, CORS, path traversal, cookie
+  invalidation, 404/405). Rapport dans
+  `.ai/REPORTS/simulation_xtreme_2026-08-21_session_11.md`
+- **BUGS trouvés + corrigés Session 11** :
+  - BUG-017 (deep_sim) : PATCH /api/users/me n'exposait pas
+    priceAlertEnabled
+  - **BUG-018** (xtreme_sim) : booking ignorait roomAvailability →
+    hôte pouvait pas bloquer les dates
+  - **BUG-019** (xtreme_sim) : login n'exigeait pas TOTP après
+    activation 2FA (gap sécuritaire)
 - **Couverture** : ~119 features ✅ / ~7 sandbox-limited / 0 absent
   (**FEATURES.md ✅ ≈ 97 %**)
 

@@ -1,0 +1,13 @@
+{
+  "name": "MyBestBooking",
+  "short_name": "MBB",
+  "description": "Plateforme de réservation d'hébergements — prix garantis, avis vérifiés",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3B82F6",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "16x16", "type": "image/x-icon" }
+  ],
+  "lang": "fr"
+}

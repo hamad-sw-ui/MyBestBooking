@@ -9,6 +9,94 @@
 
 ---
 
+## Session 11 — 2026-08-21 (ter : simulation extrême + BUG-018 + BUG-019)
+
+### Complément T-032 : simulation EXTRÊME (aller ENCORE plus loin)
+
+Après la simulation deep (81 contrôles), l'utilisateur : « je ne suis
+pas toujours convaincu, allez encore plus loin ». Livré :
+
+- 🔨 **`scripts/xtreme_sim.py`** (~1000 lignes) : 21 sections,
+  **89 contrôles extrêmes** en ~80s couvrant :
+  - **Sécurité HTTP** : X-Content-Type, X-Frame, Referrer-Policy,
+    HSTS, CSP, Permissions-Policy, Cookie HttpOnly + SameSite + Path
+  - **Injections XSS** dans reviews (20 scans clean), register avec
+    `<script>alert(1)</script>Bob`, booking `guestFirstName=<script>`
+    (validé stocké, échappé à l'affichage)
+  - **SQL injection** dans login `email='admin' OR 1=1--` → 400
+    (rejeté par Zod), search city injection → réponse propre, table
+    users toujours accessible
+  - **Inputs extrêmes** : password 100 000 chars, unicode `Marie🎉👋`
+    conservé, email null byte refusé, numAdults=999999999999 refusé
+  - **Flow vérification email** BOUT-EN-BOUT : register → parse
+    `.data/mails/` → extract token depuis lien `/api/auth/verify?token=`
+    → GET verify 307 → /api/auth/me confirme `emailVerified=true`
+  - **Flow reset password** BOUT-EN-BOUT : forgot → parse mail →
+    token → reset → login nouveau password OK, ancien 401, rejeu
+    token 400
+  - **Cycle reviews** : reply host 200, moderate admin 200, helpful
+    customer, double refusé, guards customer moderate 403 + reply 403
+  - **Rooms availability + rate-plans** : GET, PUT 3 jours stopSell,
+    **BOOKING SUR DATES BLOQUÉES → 409 (BUG-018 corrigé)**,
+    customer PUT 403, GET rate-plans, POST rate-plan
+  - **Promotions CRUD complet** : POST admin, apply→discount 30,
+    PATCH isActive:false, apply refuse ok:false, DELETE, apply 404
+  - **Delete price-alert** avec ownership (host tente = 403)
+  - **Pages dynamiques** : /wishlists/share/invalide et
+    /hebergement/inexistant → body contient not-found
+  - **Audit statique UX** : composants avec fetch mais sans
+    loading/error/feedback signalés (aucun critique après filtre)
+  - **Intégrité seed** : 8 types property, 8/8 avec rooms + reviews,
+    4/4 promotions actives
+  - **Contenu emails** : Subject présent, HTML valide, aucun XSS
+    injectable
+  - **Webhook Stripe** : GET 405, POST sans signature 400
+  - **Fichiers publics** : robots.txt 200, sitemap.xml 200,
+    icon.svg 200 (NEW), manifest.json 200 (NEW), rel=icon dans HTML
+  - **2FA à login** : activation → login sans totpCode 401 +
+    twoFactorRequired:true (BUG-019 corrigé), login avec code valide
+    200, code invalide 401
+  - **CORS** : pas de `*` exposé (bon défaut Next 16)
+  - **Path traversal** : `?key=../../etc/passwd`, `../secret`,
+    `%2E%2E%2F...`, `test/../../../` → tous 400 "Key invalide"
+  - **Cookie invalidation** : login → me OK → logout → me 401,
+    cookie tamperisé 401
+  - **404/405** propres
+
+- 🔨 **BUG-018 (S) DÉCOUVERT ET CORRIGÉ** :
+  `src/app/api/bookings/route.ts` ignorait totalement la table
+  `roomAvailability`. Un hôte qui bloquait des dates via `stopSell:true`
+  n'avait AUCUN effet. Correctif : ajout d'une sous-requête dans la
+  transaction atomique qui refuse ROOM_UNAVAILABLE si UNE nuit est
+  stopSell ou availableCount=0.
+
+- 🔨 **BUG-019 (C) DÉCOUVERT ET CORRIGÉ — GAP SÉCURITAIRE** :
+  `src/app/api/auth/login/route.ts` **n'exigeait PAS** de code TOTP
+  après activation 2FA. La feature 2FA était donc **factice** — le
+  composant `<TwoFactorSection>` faisait croire à l'utilisateur qu'il
+  était protégé. Correctif : login accepte un `totpCode` optionnel ;
+  si `twoFactorEnabled` sans code → 401 `twoFactorRequired:true` ;
+  code invalide → 401 ; code valide → 200. C'est le plus grave bug
+  trouvé cette session — aucune règle framework + aucun test unitaire
+  + smoke + deep_sim ne l'auraient détecté (aucun n'active 2FA puis
+  tente login).
+
+- 🔨 **src/app/icon.svg + public/manifest.json** créés (icon PWA)
+
+- 🔨 Cleanup DB direct dans `xtreme_sim.py` : désactive 2FA seed en
+  début + fin de section 17 (évite cascade de failures dûe au fix
+  BUG-019).
+
+### Résultat final Session 11 (ter)
+
+- **89 / 89 contrôles extrêmes OK** en 80s
+- **3 vrais bugs trouvés et corrigés** (BUG-017, BUG-018, BUG-019)
+- **176 / 176 tests unitaires verts**
+- **`ai:check` : 16 OK · 2 warn · 2 fail cosmétiques** (STATE HEAD +
+  BUG-018/019 → résolus au commit)
+
+---
+
 ## Session 11 — 2026-08-21 (bis : simulation profonde + BUG-017)
 
 ### Complément T-032 : simulation PROFONDE

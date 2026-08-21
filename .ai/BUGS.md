@@ -16,6 +16,36 @@ _Aucun bug critique ouvert._ Le seul point restant est **BUG-003
 
 ## Corrigés
 
+- [x] **2026-08-21 — BUG-019** (découvert Session 11 par
+  `scripts/xtreme_sim.py`, section 17 « Flow 2FA à login ») : le login
+  `POST /api/auth/login` **ne vérifiait PAS** le code TOTP même quand
+  `user.twoFactorEnabled === true`. Le composant `<TwoFactorSection>`
+  (T-030) faisait croire à l'utilisateur qu'il était protégé alors
+  que la 2FA n'était **jamais exigée** à la connexion — gap sécuritaire
+  critique. Correctif : `src/app/api/auth/login/route.ts` accepte
+  désormais un champ optionnel `totpCode` ; si `twoFactorEnabled=true`
+  sans code → 401 `{twoFactorRequired:true}` ; code invalide → 401
+  `{error:"Code 2FA invalide",twoFactorRequired:true}` ; code valide
+  → 200. Preuves : ▶️ `POST login sans totpCode` → 401 attendu ;
+  ▶️ `POST login avec totpCode` généré via speakeasy → 200. Ni
+  R18/R19/R20 ni les 176 tests unitaires n'auraient trouvé ce bug
+  car aucun test n'exerçait le login **après** activation 2FA.
+
+- [x] **2026-08-21 — BUG-018** (découvert Session 11 par
+  `scripts/xtreme_sim.py`, section 8 « Rooms availability + rate-plans ») :
+  la route `POST /api/bookings` **ignorait totalement** la table
+  `roomAvailability`. Un hôte qui bloquait manuellement des dates via
+  `PUT /api/rooms/[id]/availability` avec `stopSell:true` ou
+  `availableCount:0` n'avait **aucun effet** — la logique de
+  disponibilité ne consultait que les chevauchements dans `bookings`.
+  Correctif : ajout d'une sous-requête `SELECT roomAvailability WHERE
+  roomId=? AND date IN [checkIn, checkOut)` dans la transaction ; si
+  UNE seule nuit est `stopSell` ou `availableCount=0` → throw
+  ROOM_UNAVAILABLE → 409. Preuves : ▶️ PUT availability 2029-03-01..03
+  avec stopSell:true, puis POST booking sur ces dates → 409
+  `{error:"Cette chambre n'est plus disponible pour ces dates"}`.
+  Contre-preuve : POST booking sur dates libres → 201.
+
 - [x] **2026-08-21 — BUG-017** (découvert Session 11 par
   `scripts/deep_sim.py`) : `PATCH /api/users/me` accepte
   `priceAlertEnabled` (et `twoFactorEnabled` en lecture indirecte) en

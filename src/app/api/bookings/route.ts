@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { bookings, properties, rooms, users } from "@/db/schema";
+import { bookings, properties, rooms, roomAvailability, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { generateBookingReference, calculateNights } from "@/lib/utils";
-import { eq, and, or, desc, lt, gt, ne, sql } from "drizzle-orm";
+import { eq, and, or, desc, lt, gt, gte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getMailer, templates } from "@/lib/mail";
 import { promotions } from "@/db/schema";
@@ -307,6 +307,33 @@ export async function POST(request: NextRequest) {
     let clientSecret: string | null = null;
     try {
       newBooking = await db.transaction(async (tx) => {
+        // BUG-018 (Session 11, T-032 xtreme) : consulter aussi la table
+        // roomAvailability pour respecter les dates bloquées par l'hôte
+        // (stopSell:true ou availableCount:0). Sans ce contrôle, un hôte
+        // qui ferme manuellement des dates via PUT /api/rooms/[id]/availability
+        // n'avait aucun effet — la route bookings ne regardait que les
+        // chevauchements bookings vs bookings.
+        //
+        // Convention : roomAvailability[date] est vérifié pour toutes les
+        // nuits [checkIn, checkOut). Si UNE seule nuit est stopSell ou
+        // availableCount=0, on refuse.
+        const blocked = await tx
+          .select({ date: roomAvailability.date, stopSell: roomAvailability.stopSell, count: roomAvailability.availableCount })
+          .from(roomAvailability)
+          .where(
+            and(
+              eq(roomAvailability.roomId, data.roomId),
+              gte(roomAvailability.date, data.checkIn),
+              lt(roomAvailability.date, data.checkOut),
+            ),
+          );
+        const hasBlockedNight = blocked.some(
+          (b) => b.stopSell === true || (b.count !== null && b.count === 0)
+        );
+        if (hasBlockedNight) {
+          throw new Error("ROOM_UNAVAILABLE");
+        }
+
         const overlaps = await tx
           .select({ id: bookings.id })
           .from(bookings)
