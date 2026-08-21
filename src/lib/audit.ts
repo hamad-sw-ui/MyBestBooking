@@ -50,6 +50,8 @@ export const AUDIT_ACTIONS = {
   propertyValidate: "property.validate",
   propertyReject: "property.reject",
   propertySuspend: "property.suspend",
+  // T-033 (Session 12) — actions groupées
+  bulkAction: "bulk.action",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

@@ -10,8 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `3d23354` (T-032 quinquies + BUG-023/024/025/026)
-- **Dernier commit stable référencé** : `3d23354` (Session 11 quinquies)
+- **Dernier commit connu** : à mettre à jour en fin de session
+  (T-033 dashboards bulk, Session 12)
+- **Dernier commit stable référencé** : à mettre à jour en fin de session
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
@@ -132,7 +133,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-032 (32 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-033 (33 tâches)
 
 ## 🏛️ Décisions & ADR
 

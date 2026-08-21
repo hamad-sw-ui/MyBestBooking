@@ -9,6 +9,87 @@
 
 ---
 
+## Session 12 — 2026-08-21 : T-033 dashboards bulk actions
+
+### Fonctionnalité livrée
+
+Les dashboards admin (users, properties, reviews, bookings) supportent
+désormais tous les raccourcis attendus par l'utilisateur :
+
+- 🔨 **Filtres de recherche** live (nom/email/ville/référence, dropdown
+  statut/rôle/type, filtre date pour bookings)
+- 🔨 **Sélection multiple** : checkboxes ligne par ligne + « tout
+  sélectionner sur cette vue »
+- 🔨 **Actions groupées** :
+  - users : suspend / reactivate / anonymize (RGPD)
+  - properties : approve / reject / suspend
+  - reviews : approve / hide / reject
+  - bookings : cancel (respecte machine à états BUG-022)
+- 🔨 **Raccourcis clavier** : `/` recherche, `Ctrl+A` tout, `Ctrl+D`
+  vider, `Escape` annuler
+
+### Architecture
+
+- `src/app/api/admin/bulk/route.ts` — endpoint POST unifié, max 100
+  ids par batch, chaque item traité en isolation
+  (skipped/succeeded/failed granulaire), audit log
+- `src/components/bulk/bulk-toolbar.tsx` — barre outils réutilisable
+- `src/components/bulk/{users,properties,reviews,bookings}-manager.tsx`
+- Pages `dashboard/*/page.tsx` refactorées en shells server-component
+  qui délèguent au Manager client
+
+### Sécurité (guards)
+
+- 403 sans rôle admin
+- Admin ne peut pas s'auto-modifier via bulk
+- Bulk suspend/anonymize refuse les autres admins (via `ne(role, "admin")`)
+- Max 100 ids par appel (Zod)
+- Chaque action bulk audit-loggée avec metadata { operation,
+  requested, succeeded, skipped, failed, ids }
+- Machine à états bookings respectée : bulk cancel skip les
+  bookings déjà cancelled/completed/no_show avec raison
+
+### Tests
+
+- `src/app/api/admin/bulk/route.test.ts` : 6 tests d'intégration
+  DB-backed (RBAC, payload, ids limit, id inexistant)
+- `scripts/dashboards_sim.py` : 37 contrôles E2E incluant :
+  - Contrôle statique (pages branchées sur Managers, patterns UX
+    présents dans chaque composant)
+  - RBAC (sans cookie / customer / host → 403)
+  - Validation payload (7 cas)
+  - Cycle bulk users complet (create 3 → suspend → reactivate → anonymize)
+  - Bulk properties approve
+  - Bulk reviews hide + approve
+  - Bulk bookings cancel avec vérif machine à états
+  - Audit log alimenté
+
+### Utilitaire nouveau
+
+`scripts/reset_test_db.mjs` — reset la DB aux valeurs seed avant chaque
+suite (élimine les faux positifs dûs aux artefacts des tests précédents).
+
+### Résultat FINAL — 6 suites en séquence
+
+| Suite | Total | OK | WARN | KO |
+|---|---:|---:|---:|---:|
+| smoke | 91 | 91 | – | 0 ✅ |
+| surface | 68 | 68 | – | 0 ✅ |
+| deep | 81 | 81 | 0 | 0 ✅ |
+| xtreme | 89 | 89 | 0 | 0 ✅ |
+| paranoid | 74 | 74 | 0 | 0 ✅ |
+| **dashboards (NEW)** | **37** | **37** | **0** | **0** ✅ |
+| **TOTAL** | **440** | **440** | **0** | **0** 🎯 |
+
+Preuves :
+- 🔨 `npm run typecheck` : 0 erreur
+- 🧪 `npm run test` : **182/182** (176 + 6 nouveaux bulk)
+- 🔨 `npm run ai:check` : 17 OK · 2 warn · 1 fail cosmétique R7
+- ▶️ E2E manuel : suspend 3 → reactivate 3 → anonymize 3 (validé DB)
+- ▶️ Audit log : entrées `bulk.action` avec metadata complète
+
+---
+
 ## Session 11 — 2026-08-21 (quinquies : convergence 0 KO + BUG-023/024/025/026)
 
 ### Objectif : faire passer TOUTES les suites en 0 KO 0 WARN

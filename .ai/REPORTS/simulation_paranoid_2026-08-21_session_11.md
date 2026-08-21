@@ -1,6 +1,6 @@
 # 🕵️ Simulation PARANOÏAQUE — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-21 12:12
+**Généré le** : 2026-08-21 12:33
 **Base URL** : `http://127.0.0.1:3000`
 
 Après surface (68), deep (81), xtreme (89), l'utilisateur demande
@@ -61,11 +61,11 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **JWT header : alg=HS256, typ=None**  
   <sub>complet : {'alg': 'HS256'}</sub>
 
-- ✅ **JWT payload : userId=d3cff60a… jti=84ca2fca… exp=1787919124**  
-  <sub>complet : {'userId': 'd3cff60a-6775-4a7e-b6b0-58103253f737', 'jti': '84ca2fca-9746-4674-a6e4-569b37cdbe71', 'exp': 1787919124, 'iat': 1787314324}</sub>
+- ✅ **JWT payload : userId=653c514b… jti=8cd674a1… exp=1787920384**  
+  <sub>complet : {'userId': '653c514b-e7f6-45f0-a56a-c5e54d405507', 'jti': '8cd674a1-e501-4057-99df-1ae00b546383', 'exp': 1787920384, 'iat': 1787315584}</sub>
 
 - ✅ **JWT expiration → 168.0h dans le futur (attendu 1-192h)**  
-  <sub>exp=1787919124 now=1787314324 — 7 jours = 168h</sub>
+  <sub>exp=1787920384 now=1787315584 — 7 jours = 168h</sub>
 
 - ✅ **JWT payload tamperisé (userId changé) → 401**  
   <sub>code=401 body={"error":"Non authentifié"}</sub>
@@ -73,13 +73,13 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **JWT avec alg=none → 401 (aucune fuite)**  
   <sub>code=401 body={"error":"Non authentifié"}</sub>
 
-- ✅ **JWT jti unique entre 2 logins (jti1=84ca2fca…, jti2=380c99f5…)**  
+- ✅ **JWT jti unique entre 2 logins (jti1=8cd674a1…, jti2=bc9d9aab…)**  
 
 
 ## 3. Intégrité DB — FK, contraintes, unicité
 
 - ✅ **Register avec MiXeD case → 200**  
-  <sub>body={"message":"Inscription réussie","user":{"id":"6146fb3a-b2f9-4a83-8497-ee586a104304","email":"mixed1787314326@t.local","firstName":"Mixed","lastName":</sub>
+  <sub>body={"message":"Inscription réussie","user":{"id":"945ea273-d047-4eb1-99f9-42538887e0c3","email":"mixed1787315586@t.local","firstName":"Mixed","lastName":</sub>
 
 - ✅ **Register même email en lowercase → 400 (unicité case-insensitive)**  
   <sub>code=400 body={"error":"Un compte existe déjà avec cet email"}</sub>
@@ -93,7 +93,7 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **Insert booking avec userId inexistant → FK constraint refuse**  
   <sub>err: null value in column "commission_rate" of relation "bookings" violates not-null constraint</sub>
 
-- ✅ **Soft-delete users historique : 28 users deletedAt IS NOT NULL**  
+- ✅ **Soft-delete users historique : 38 users deletedAt IS NOT NULL**  
   <sub>cohérent avec le design (préservation historique)</sub>
 
 
@@ -126,23 +126,23 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **GET /api/properties (8 props) → 16ms**  
   <sub>budget : < 2s pour 8 props</sub>
 
-- ✅ **GET /api/properties/[id] → 784ms**  
+- ✅ **GET /api/properties/[id] → 790ms**  
   <sub>budget : < 1s</sub>
 
 
 ## 6. Promotions — edge cases
 
 - ✅ **POST promo maxUses=1 → 201**  
-  <sub>body={"promotion":{"id":"61e76b69-c63c-492a-8f77-bb6fb99951a3","code":"MAX1_1787314328","name":"Test maxUses","type":"percentage","value":"10.00","minBookingAmount":"0.00","maxDiscount"</sub>
+  <sub>body={"promotion":{"id":"671246bb-0d39-45d0-968a-24bfdb396647","code":"MAX1_1787315588","name":"Test maxUses","type":"percentage","value":"10.00","minBookingAmount":"0.00","maxDiscount"</sub>
 
 - ✅ **Apply promo maxUses=1 (1ère fois) → 200**  
-  <sub>body={"ok":true,"promotion":{"code":"MAX1_1787314328","name":"Test maxUses","type":"percentage","value":"10.00"},"discount":10,"finalTotal":90}</sub>
+  <sub>body={"ok":true,"promotion":{"code":"MAX1_1787315588","name":"Test maxUses","type":"percentage","value":"10.00"},"discount":10,"finalTotal":90}</sub>
 
 - ✅ **Apply promo minBookingAmount=200 sur amount=100 → refusé**  
   <sub>code=400 body={"ok":false,"error":"Réservation minimum 200.00"}</sub>
 
 - ✅ **Apply promo min=200 sur amount=300 → 200 discount 60**  
-  <sub>code=200 body={"ok":true,"promotion":{"code":"MIN200_1787314328","name":"Test min","type":"percentage","value":"20.00"},"discount":60,"finalTotal":240}</sub>
+  <sub>code=200 body={"ok":true,"promotion":{"code":"MIN200_1787315588","name":"Test min","type":"percentage","value":"20.00"},"discount":60,"finalTotal":240}</sub>
 
 - ✅ **Apply promo expirée (2020) → refusé**  
   <sub>code=400 body={"ok":false,"error":"Code expiré"}</sub>
@@ -165,7 +165,7 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **Wallet réinitialisé à 500€ pour tests : mesuré 500.0€**  
 
 - ✅ **Booking avec wallet 500€ > total : total_final=0.0€ discount=195.8€**  
-  <sub>code=201 body={"booking":{"id":"d3e0f5ed-f686-43a1-945d-99fdcf05149d","bookingReference":"MBB-2026-5NH4JD","userId":"312373ef-3f08-434d-9c7d-fa361cc0193c","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","roomId":"d8bc6067-13e6-4766-95f8-2c1240acd901","status":</sub>
+  <sub>code=201 body={"booking":{"id":"971212cf-3f9a-4b95-8bcf-7ce2d3c10dc3","bookingReference":"MBB-2026-88HPHJ","userId":"a554b558-0cd9-4517-b27d-8a3767789738","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","roomId":"d8bc6067-13e6-4766-95f8-2c1240acd901","status":</sub>
 
 - ✅ **Wallet après booking : 304.2€ (500€ initial - discount wallet appliqué)**  
   <sub>wallet_debit = 195.8€</sub>
@@ -173,7 +173,7 @@ Verdict : **✅ TOUT PASSE**
 
 ## 9. Status transitions bookings
 
-- ✅ **Booking test dédié transitions : id=a5ef8794… status='confirmed'**  
+- ✅ **Booking test dédié transitions : id=918d41b6… status='confirmed'**  
 
 - ✅ **Transition VALIDE confirmed → cancelled → status='cancelled'**  
   <sub>c1=200</sub>
@@ -190,13 +190,13 @@ Verdict : **✅ TOUT PASSE**
 
 ## 10. Content-Type et cache des uploads
 
-- ✅ **GET /uploads/24d0799c-d8fba108-e626-49e4-a042-226498f1d1dd.png Content-Type='image/png'**  
+- ✅ **GET /uploads/24d0799c-4d65b32f-8c70-4c49-aedb-4e6f1327ae4f.png Content-Type='image/png'**  
   <sub>headers[:200]=HTTP/1.1 200 OK X-Content-Type-Options: nosniff X-Frame-Options: SAMEORIGIN Referrer-Policy: strict-origin-when-cross-origin Strict-Transport-Security: max-age=31536000; includeSubDomains Permissions-</sub>
 
 - ✅ **GET upload Cache-Control='public, max-age=0'**  
   <sub>présence Cache-Control importante pour perf</sub>
 
-- ✅ **Upload même fichier 2x → keys différents (24d0799c-d8fba108-e6… vs 24d0799c-232a9fd2-1d…)**  
+- ✅ **Upload même fichier 2x → keys différents (24d0799c-4d65b32f-8c… vs 24d0799c-da4379fd-41…)**  
   <sub>évite les collisions</sub>
 
 - ✅ **Upload 10 MB → 413**  
@@ -248,7 +248,7 @@ Verdict : **✅ TOUT PASSE**
 
 ## 16. Timing safe — hash password (BUG-024 fix)
 
-- ✅ **Timing existant vs inconnu : 343ms vs 349ms (diff 5ms)**  
+- ✅ **Timing existant vs inconnu : 347ms vs 345ms (diff 3ms)**  
   <sub>BUG-024 fix : bcrypt fake sur user inconnu → diff < 200ms attendue, les 2 > 50ms</sub>
 
 
@@ -306,19 +306,19 @@ Verdict : **✅ TOUT PASSE**
 ## 25. Cookie session — attributs sécurité complets
 
 - ✅ **Cookie session : HttpOnly**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiIwMmU1Y2FlNi04NmY4LTQ5N2YtOTc3Yi04M</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiI5NWUzZTM1Yy1hZDAwLTQwZjgtYTVmMS1kO</sub>
 
 - ✅ **Cookie session : SameSite=Lax**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiIwMmU1Y2FlNi04NmY4LTQ5N2YtOTc3Yi04M</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiI5NWUzZTM1Yy1hZDAwLTQwZjgtYTVmMS1kO</sub>
 
 - ✅ **Cookie SameSite=Strict : non (Lax est acceptable)**  
   <sub>Lax préférable pour l'UX login redirects</sub>
 
 - ✅ **Cookie session : Path=/**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiIwMmU1Y2FlNi04NmY4LTQ5N2YtOTc3Yi04M</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiI5NWUzZTM1Yy1hZDAwLTQwZjgtYTVmMS1kO</sub>
 
 - ✅ **Cookie session : Max-Age**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiIwMmU1Y2FlNi04NmY4LTQ5N2YtOTc3Yi04M</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJlMTQzZTQzOC1mYmY5LTQ2ODgtYWNhOS1iY2QzNWFmYTVhNmMiLCJqdGkiOiI5NWUzZTM1Yy1hZDAwLTQwZjgtYTVmMS1kO</sub>
 
 - ✅ **Cookie Secure conditionnel prod (code src)**  
   <sub>src/lib/auth.ts contient bien la condition NODE_ENV</sub>

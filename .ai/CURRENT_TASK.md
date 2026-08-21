@@ -2,96 +2,113 @@
 
 ## Identifiant
 
-- **ID** : T-032
-- **Titre** : R20 smoke_manifest_present + scripts/smoke.sh (preuve runtime obligatoire)
+- **ID** : T-033
+- **Titre** : Dashboards — filtres, sélection multiple, actions groupées, raccourcis clavier
 - **Niveau** : **S**
-- **Ouverte le** : 2026-08-21 (Session 11)
+- **Ouverte le** : 2026-08-21 (Session 12)
 - **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Contexte
 
-Réponse directe à l'analyse critique du framework rédigée en début de
-Session 11 (`REPORTS/analyse_framework_2026-08-21_pourquoi_illusion.md`).
-Le framework `.ai/` v1.1.2, malgré ses 19 règles vertes, ne teste
-**aucun comportement runtime** — c'est ce qui a produit l'illusion en
-Session 8 où 7 features avaient été marquées ✅ VALIDÉ alors que leur
-UI n'existait pas.
+Demande utilisateur :
+> « Est-ce que selon vous les utilisateurs peuvent utiliser les
+> dashboards en utilisant des raccourcis EN FAISANT DES FILTRES POUR
+> LES RECHERCHES ET SELECTIONS POUR LES ELEMENTS DONNE NOUS VOUS FAIRE
+> DES ACTION GROUPÉ ? Faites tous et n'arrêter que si tous est
+> implémenté et testé avec succès »
 
-Le tag §16 `▶️ EXECUTED` était défini mais ni obligatoire ni
-auto-vérifié. R20 le rend structurel via un script versionné dont
-l'intégrité est contrôlée.
+Avant cette tâche, les 4 dashboards (users / properties / reviews /
+bookings) rendaient toute la liste sans filtre, sans sélection multiple,
+sans action groupée. Un admin devait suspendre 20 utilisateurs un à un.
 
 ## Livrables
 
-### A. Framework (v1.1.3)
+### A. API bulk générique
 
-- **Nouvelle règle bloquante R20** dans `scripts/check-ai.mjs` : vérifie
-  statiquement que `scripts/smoke.sh` existe, est exécutable, porte un
-  header `# @assertions: N` avec N ≥ 40, et contient les 5 patterns
-  essentiels (login × 3 rôles, POST /api/bookings, guard body-check).
-  Bloquant en cas de disparition ou vidage silencieux.
-- **manifest.blocking_rules.smoke_manifest_present** ajoutée
-  (blocking=true, verified_by=R20).
-- Manifest version bumped `1.1.2 → 1.1.3`.
-- Entrée changelog manifest.
+`src/app/api/admin/bulk/route.ts` — endpoint POST admin-only.
 
-### B. Script versionné `scripts/smoke.sh`
+Contrat :
+```
+POST /api/admin/bulk
+{ entity: "users"|"properties"|"reviews"|"bookings",
+  action: string, ids: string[] (1..100) }
 
-- **91 assertions HTTP réelles** en ~30 s.
-- Démarre PostgreSQL embarqué + Next dev si nécessaire, reprend
-  l'existant sinon, cleanup respectueux (`trap EXIT`).
-- Play : login × 3 rôles, 11 pages publiques, 20 pages protégées via
-  proxy, 9 pages customer, 7 guards body-check dashboard, 11 pages
-  host, 9 pages admin, 3 `/api/auth/me`, 8 API protégées, 2 RBAC
-  admin, 7 scénarios métier (`POST /api/bookings` complet inclus).
-- Exit code non nul si un cas échoue → intégrable CI.
+→ { entity, action, requested, succeeded, skipped[], failed[] }
+```
 
-### C. ADR-008
+Actions par entité :
+- **users** : `suspend` / `reactivate` / `anonymize` (RGPD hash email)
+- **properties** : `approve` / `reject` / `suspend`
+- **reviews** : `approve` / `hide` / `reject`
+- **bookings** : `cancel` (respecte machine à états BUG-022)
 
-`.ai/ADR/ADR-008_Smoke_HTTP_Preuve_Runtime.md` — décision technique,
-alternatives rejetées (Playwright / Vitest E2E / live dans ai:check),
-conséquences positives et dettes assumées (R21-R25 à venir).
+Sécurité :
+- 403 sans rôle admin
+- Max 100 IDs par batch
+- Admin ne peut pas s'auto-modifier
+- Bulk suspend/anonymize refuse les autres admins (ne(role, "admin"))
+- Chaque item traité en isolation → skipped/failed granulaire
+- Audit log `bulk.action` avec metadata complète (ids, requested, succeeded)
 
-### D. `npm run smoke`
+### B. Composant `<BulkToolbar>` réutilisable
 
-Ajouté dans `package.json` — commande unique pour lancer le smoke live.
+`src/components/bulk/bulk-toolbar.tsx` :
+- Barre de recherche avec raccourci `/`
+- Filtre statut dropdown
+- Bandeau actions groupées (visible si sélection > 0)
+- Confirmations métier (`window.confirm`)
+- Feedback aria-live (succès/erreur)
+- Raccourcis clavier globaux : `/`, `Ctrl+A`, `Ctrl+D`, `Escape`
 
-### E. Docs `.ai/` à jour
+### C. Manager par entité (composants clients)
 
-STATE, PROGRESS, TRACEABILITY, FEATURES, BACKLOG, CURRENT_TASK,
-CODING_RULES (§13.5-bis), 2 rapports impact/conception + 1 log
-d'exécution capté.
+- `src/components/bulk/users-manager.tsx` : filtres statut (active/suspended/verified) + rôle, checkboxes, 3 actions bulk
+- `src/components/bulk/properties-manager.tsx` : filtres statut + type, checkboxes, 3 actions bulk (approve/reject/suspend)
+- `src/components/bulk/reviews-manager.tsx` : filtre statut, checkboxes, 3 actions bulk (approve/hide/reject)
+- `src/components/bulk/bookings-manager.tsx` : filtre statut + date check-in/check-out, checkboxes désactivées sur statuts terminaux, 1 action bulk (cancel)
+
+### D. Pages dashboard shell refactorées
+
+`src/app/dashboard/{users,properties,reviews,bookings}/page.tsx`
+→ Server Component minimal qui délègue au `*Manager` client.
+
+### E. Tests
+
+- `src/app/api/admin/bulk/route.test.ts` : 6 tests (RBAC, payload,
+  action invalide, id inexistant, > 100 ids, customer refusé)
+- `scripts/dashboards_sim.py` : 37 contrôles E2E dédiés
+
+### F. Nouveau utilitaire
+
+`scripts/reset_test_db.mjs` : reset DB aux valeurs seed
+(supprime properties test, bookings test, promos test, restore 2FA off,
+wallet 25€, BR level 2, reviews approved, promo BIENVENUE10 active).
+Nécessaire pour rejouer les 6 suites en séquence sans faux positifs.
 
 ## Preuves (§16)
 
-- 🔨 `npm run typecheck` : 0 erreur.
-- 🧪 `npm run test` : 176/176 verts (0 skip avec DB).
-- 🔨 `npm run ai:check` : **17 OK · 2 warn attendus · R20 vert · fail cosmétique R7 (STATE HEAD)**.
-- ▶️ `npm run smoke` : **91 PASS · 0 FAIL** — log capté dans
-  `.ai/REPORTS/smoke_run_2026-08-21_session_11.log`.
-- ▶️ Test anti-triche R20 : `mv scripts/smoke.sh /tmp/` → `ai:check`
-  sort `❌ R20 scripts/smoke.sh est absent`. Restauration → `✅`.
+- 🔨 `npm run typecheck` : 0 erreur
+- 🧪 `npm run test` : **182/182 verts** (176 précédents + 6 nouveaux
+  bulk)
+- 🔨 `npm run ai:check` : 17 OK · 2 warn · 1 fail cosmétique R7
+- ▶️ **6 suites en séquence · 440/440 assertions · 0 KO** :
+  - smoke 91/91 ✅
+  - surface 68/68 ✅
+  - deep 81/81 ✅
+  - xtreme 89/89 ✅
+  - paranoid 74/74 ✅
+  - **dashboards 37/37 ✅** (NEW)
+- ▶️ E2E manuel bulk : create 3 users → suspend batch → reactivate batch
+  → anonymize batch → DB vérifiée à chaque étape
+- ▶️ Audit log : 17+ entrées `bulk.action` avec metadata complète
 
-## Rapports associés
+## Rapport associé
 
-- `REPORTS/analyse_framework_2026-08-21_pourquoi_illusion.md` (motif)
-- `REPORTS/analyse_impact_2026-08-21_T-032_smoke_r20.md` (§14, 9 questions)
-- `REPORTS/analyse_conception_2026-08-21_T-032_smoke_r20.md` (§15.1)
-- `REPORTS/smoke_run_2026-08-21_session_11.log` (preuve ▶️)
-- `.ai/ADR/ADR-008_Smoke_HTTP_Preuve_Runtime.md` (décision)
+`.ai/REPORTS/simulation_dashboards_2026-08-21_session_12.md`
 
-## Prochaines étapes proposées (hors T-032)
+## Raccourcis clavier documentés
 
-R21-R25 identifiées dans l'analyse framework restent à livrer si
-l'utilisateur en décide (chaque règle = 1 tâche S) :
-
-- **R21 button_effect_trace** : chaque `<Button>` visible doit
-  prouver un effet (onClick référencé, submit ou Link non-#).
-- **R22 role_guard_effective_test** : automatiser le body-check
-  aujourd'hui dans le smoke via Vitest supertest.
-- **R23 features_reality_check** : croiser chaque ✅ de FEATURES.md
-  avec le rapport smoke.
-- **R24 evidence_freshness** : preuves TRACEABILITY doivent citer un
-  SHA, dégrader en RÉGRESSION_POTENTIELLE si le code touché depuis.
-- **R25 test_covers_the_claim** : matcher lexical entre tests cités
-  et fonctionnalité VALIDÉ.
+- `/` — Focus barre de recherche
+- `Ctrl+A` — Sélectionner tous les items visibles (filtrés)
+- `Ctrl+D` — Désélectionner tout
+- `Escape` — Vider la sélection ou perdre le focus recherche
