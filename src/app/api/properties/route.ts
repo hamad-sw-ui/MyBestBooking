@@ -217,7 +217,24 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({ properties: filteredResults });
+    // BUG-021 (Session 11 paranoid) : filtrer les champs métier
+    // sensibles (commissionRate, validatedBy, hostId interne) pour
+    // les listings publics. Un admin peut lire tous les champs via
+    // GET /api/properties/[id] (route détail qui ne filtre pas).
+    const currentUser = await getCurrentUser();
+    const isAdmin = currentUser?.role === "admin";
+    const sanitized = isAdmin
+      ? filteredResults
+      : filteredResults.map((p) => {
+          const {
+            commissionRate: _cr,
+            validatedBy: _vb,
+            hostId: _hi,
+            ...safe
+          } = p as typeof p & { commissionRate?: unknown; validatedBy?: unknown; hostId?: unknown };
+          return safe;
+        });
+    return NextResponse.json({ properties: sanitized });
   } catch (error) {
     console.error("Error fetching properties:", error);
     return NextResponse.json(

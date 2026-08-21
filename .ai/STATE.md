@@ -10,8 +10,10 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `f671ae2` (T-032 xtreme + BUG-018 + BUG-019, Session 11 ter)
-- **Dernier commit stable référencé** : `f671ae2` (Session 11 ter)
+- **Dernier commit connu** : à mettre à jour en fin de session
+  (T-032 paranoid + BUG-020/021/022, Session 11 quater)
+- **Dernier commit stable référencé** : à mettre à jour en fin de
+  session
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
@@ -38,13 +40,31 @@
   fichiers publics, 2FA à login, CORS, path traversal, cookie
   invalidation, 404/405). Rapport dans
   `.ai/REPORTS/simulation_xtreme_2026-08-21_session_11.md`
-- **BUGS trouvés + corrigés Session 11** :
+- **Dernier `python3 scripts/paranoid_sim.py`** : ✅ **66 OK · 8 WARN
+  attendus · 0 KO** sur 75 contrôles PARANOÏAQUES en ~80 s (25
+  sections : race conditions bookings/helpful/cancel, JWT deep
+  inspection avec tampering + alg=none, intégrité DB (FK/unicité),
+  response shape contract, N+1 queries, promotions edge cases
+  (maxUses/min/expiré/futur), log PII, wallet > total, status
+  transitions strict, uploads content-type/cache/keys/taille,
+  proxy coverage, verification tokens unicité, data leakage,
+  timing safe hash, i18n, cookie security)
+- **BUGS trouvés + corrigés Session 11 (total : 6)** :
   - BUG-017 (deep_sim) : PATCH /api/users/me n'exposait pas
     priceAlertEnabled
   - **BUG-018** (xtreme_sim) : booking ignorait roomAvailability →
     hôte pouvait pas bloquer les dates
-  - **BUG-019** (xtreme_sim) : login n'exigeait pas TOTP après
-    activation 2FA (gap sécuritaire)
+  - **BUG-019** (xtreme_sim, niveau C sécu) : login n'exigeait pas
+    TOTP après activation 2FA
+  - **BUG-020** (paranoid_sim) : RACE CONDITION bookings — 15
+    concurrents créaient 10 bookings sur chambre quantity=6
+    (surbooking). Fix : SELECT rooms FOR UPDATE en tête de transaction.
+  - **BUG-021** (paranoid_sim) : GET /api/properties exposait
+    commissionRate/validatedBy/hostId au public (fuite marge plateforme).
+    Fix : filtrer ces champs pour non-admin.
+  - **BUG-022** (paranoid_sim) : PUT bookings acceptait toutes les
+    transitions status (cancelled → confirmed possible). Fix :
+    machine à états stricte.
 - **Couverture** : ~119 features ✅ / ~7 sandbox-limited / 0 absent
   (**FEATURES.md ✅ ≈ 97 %**)
 

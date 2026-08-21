@@ -9,6 +9,92 @@
 
 ---
 
+## Session 11 — 2026-08-21 (quater : simulation paranoïaque + BUG-020/021/022)
+
+### Complément T-032 : simulation PARANOÏAQUE (encore plus loin)
+
+Après xtreme (89 contrôles), l'utilisateur : « je ne suis pas
+toujours convaincu, allez encore plus loin ». Livré :
+
+- 🔨 **`scripts/paranoid_sim.py`** (~1200 lignes) : 25 sections,
+  **75 contrôles paranoïaques** (~80 s), utilise ThreadPoolExecutor
+  pour tester les race conditions et fait des requêtes SQL directes
+  pour vérifier l'intégrité DB. Couvre :
+  - **Race conditions** : 15 bookings concurrents sur chambre
+    limitée, 10 helpful concurrents (idempotence), 5 cancel
+    concurrents (atomicité)
+  - **JWT deep inspection** : décodage header/payload avec
+    base64.urlsafe, exp/iat/jti, **tampering payload → 401 attendu**,
+    **exploit alg=none → 401 attendu**, unicité jti entre 2 logins
+  - **Intégrité DB** : FK constraint (userId inexistant refusé),
+    unicité slug/booking_reference/email case-insensitive,
+    soft-delete historique
+  - **Response shape contract** : /api/auth/me expose 9 champs
+    critiques (leçon BUG-017)
+  - **N+1 queries** : /api/properties en 21ms pour 8 props (safe)
+  - **Promotions edge** : maxUses=1 (2ème apply refusé),
+    minBookingAmount respecté, expirée refusée, future refusée
+  - **Log PII** : logger.ts redacte password/token/secret
+  - **Wallet > total** : booking avec 500€ wallet couvre totalement
+  - **Status transitions** : cancel puis confirmed → refusé
+  - **Uploads** : content-type image/png, cache-control, keys
+    uniques (même fichier 2x → keys différents), 10 MB → 413,
+    sans champ file → 400
+  - **Proxy coverage** : toutes routes sensibles matchent
+  - **Verification tokens** : unicité, non-rejouables
+  - **Data leakage** : /api/properties public ne fuit plus
+    commissionRate ni les emails reviewers
+  - **Timing safe hash** : mesure bcrypt vs user inconnu
+  - **i18n** : PATCH currency effectif
+  - **Cookie security** : HttpOnly, SameSite=Lax, Path=/, Max-Age
+  - **GDPR** : soft-delete user + bookings conservés
+  - **Secrets protégés** : /.env, /.git/config → 404
+
+- 🔨 **BUG-020 (S) DÉCOUVERT ET CORRIGÉ — RACE CONDITION** :
+  `POST /api/bookings` faisait `SELECT bookings FOR UPDATE` mais en
+  isolation READ COMMITTED de PostgreSQL, ce lock ne verrouille QUE
+  les rows existants, pas les futurs INSERT. Test : 15 threads
+  concurrents sur `quantity=6` → **10 bookings créés** (surbooking
+  de 4 au-delà de la capacité). Correctif : ajout d'un
+  `SELECT rooms WHERE id=? FOR UPDATE` en tête de transaction qui
+  verrouille la row ROOMS parent et sérialise toutes les tx bookings
+  sur cette room. Après fix : **15 threads → exactement 6×201 +
+  4×409**, DB confirme 6 max. Impact business : sans fix, hôte
+  reçoit plus de bookings que sa capacité → refus à l'arrivée +
+  remboursement à perte.
+
+- 🔨 **BUG-021 (S) DÉCOUVERT ET CORRIGÉ — FUITE DONNÉES SENSIBLES** :
+  `GET /api/properties` exposait `commissionRate` (marge plateforme,
+  15%), `validatedBy` (id admin), `hostId` au public anonyme. Un
+  concurrent pouvait scraper la marge de la plateforme. Correctif :
+  `src/app/api/properties/route.ts` filtre ces 3 champs pour toute
+  requête non-admin. Preuves : ▶️ anonyme → sans commissionRate ;
+  ▶️ admin → avec commissionRate="15.00".
+
+- 🔨 **BUG-022 (S) DÉCOUVERT ET CORRIGÉ — MACHINE À ÉTATS MANQUANTE** :
+  `PUT /api/bookings/[id]` acceptait toutes les transitions status
+  sans validation métier. On pouvait annuler puis remettre à
+  `confirmed`, faire `completed → pending`, etc. Correctif : matrice
+  `allowedTransitions` : `pending → confirmed|cancelled` ; `confirmed
+  → cancelled|completed|no_show` ; `cancelled|completed|no_show` →
+  terminal. Toute transition non listée → 400 "Transition invalide :
+  X → Y (autorisées : ...)". Preuves : ▶️ cancel booking → ok, PUT
+  confirmed → 400 avec message explicite, DB confirme immuable.
+
+### Résultat final Session 11 (quater)
+
+- **75 / 75 contrôles paranoïaques** (66 OK · 8 WARN acceptables ·
+  0 KO)
+- **3 nouveaux bugs critiques trouvés et corrigés** (BUG-020/021/022)
+- **176 / 176 tests unitaires verts**
+- **`ai:check` : 17 OK · 2 warn · 1 fail cosmétique R7**
+
+**Bilan total Session 11 : 6 bugs trouvés + corrigés** en 4 passes
+successives (surface → deep → xtreme → paranoid). Chaque passe a
+révélé des angles morts des précédentes.
+
+---
+
 ## Session 11 — 2026-08-21 (ter : simulation extrême + BUG-018 + BUG-019)
 
 ### Complément T-032 : simulation EXTRÊME (aller ENCORE plus loin)

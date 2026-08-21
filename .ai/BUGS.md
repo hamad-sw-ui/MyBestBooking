@@ -16,6 +16,54 @@ _Aucun bug critique ouvert._ Le seul point restant est **BUG-003
 
 ## Corrigés
 
+- [x] **2026-08-21 — BUG-022** (découvert Session 11 par
+  `scripts/paranoid_sim.py`, section 9 « Status transitions bookings ») :
+  `PUT /api/bookings/[id]` acceptait **toutes** les transitions de
+  statut sans validation métier. On pouvait annuler un booking puis
+  le remettre à `confirmed`, faire `completed → pending`, ou toucher
+  arbitrairement un booking `cancelled`/`completed` (statuts qui
+  devraient être terminaux). Correctif : ajout d'une **machine à
+  états stricte** dans `src/app/api/bookings/[id]/route.ts` :
+  - `pending → confirmed | cancelled`
+  - `confirmed → cancelled | completed | no_show`
+  - `cancelled | completed | no_show → (aucun, terminal)`
+  Toute transition non autorisée renvoie 400 `{error:"Transition
+  invalide : X → Y (autorisées : ...)"}`. Preuves : ▶️ Cancel booking
+  → `status=cancelled`, PUT `{status:"confirmed"}` → 400 avec message
+  explicite, DB confirme le statut inchangé. Ni R18/R19/R20/smoke/
+  deep/xtreme n'auraient trouvé ce bug — il faut tester des
+  **séquences** d'actions, pas juste des actions isolées.
+
+- [x] **2026-08-21 — BUG-021** (découvert Session 11 par
+  `scripts/paranoid_sim.py`, section 15 « Data leakage ») :
+  `GET /api/properties` exposait **`commissionRate`, `validatedBy`,
+  `hostId`** au public (endpoint anonyme). `commissionRate` est un
+  secret métier (marge de la plateforme, ex : 15%) qui ne devrait
+  jamais être visible aux voyageurs/concurrents. Correctif :
+  `src/app/api/properties/route.ts` filtre ces 3 champs pour les
+  requêtes non-admin ; admin peut les voir via GET /api/properties/[id]
+  qui garde le shape complet. Preuves : ▶️ `curl /api/properties`
+  anonyme → aucun `commissionRate` dans le JSON ; ▶️ même endpoint
+  avec cookie admin → `commissionRate: "15.00"` présent.
+
+- [x] **2026-08-21 — BUG-020** (découvert Session 11 par
+  `scripts/paranoid_sim.py`, section 1 « Race conditions ») : **RACE
+  CONDITION CRITIQUE dans la logique de disponibilité**.
+  `POST /api/bookings` faisait `SELECT bookings FOR UPDATE` pour
+  compter les chevauchements, mais en isolation READ COMMITTED de
+  PostgreSQL, ce lock ne verrouille QUE les rows existants, pas les
+  futurs INSERT. Résultat : 15 threads concurrents sur une chambre
+  `quantity=6` créaient **10 bookings** (surbooking massif de 4
+  bookings au-delà de la capacité). Correctif :
+  `src/app/api/bookings/route.ts` ajoute un `SELECT rooms WHERE id=?
+  FOR UPDATE` au tout début de la transaction, qui verrouille la row
+  ROOMS elle-même et sérialise toutes les transactions bookings sur
+  cette room. Preuves : après fix, 15 threads → **exactement
+  6×201 + 4×409 + 5×429** (rate-limit), DB confirme 6 bookings max.
+  Impact business : sans ce fix, un hôte pouvait recevoir plus de
+  bookings que sa capacité réelle, provoquer des refus à l'arrivée
+  et rembourser à perte.
+
 - [x] **2026-08-21 — BUG-019** (découvert Session 11 par
   `scripts/xtreme_sim.py`, section 17 « Flow 2FA à login ») : le login
   `POST /api/auth/login` **ne vérifiait PAS** le code TOTP même quand

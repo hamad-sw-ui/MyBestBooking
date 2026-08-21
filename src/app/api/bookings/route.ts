@@ -307,6 +307,27 @@ export async function POST(request: NextRequest) {
     let clientSecret: string | null = null;
     try {
       newBooking = await db.transaction(async (tx) => {
+        // BUG-020 (Session 11 paranoid) : verrouiller la row ROOMS elle-même
+        // pour sérialiser TOUS les bookings concurrents sur cette room.
+        //
+        // Sans ce lock, la race condition suivante se produit :
+        // - Tx A démarre : SELECT bookings ... FOR UPDATE → overlaps = []
+        // - Tx B démarre : SELECT bookings ... FOR UPDATE → overlaps = [] (READ COMMITTED)
+        // - Tx A insert booking 1
+        // - Tx B insert booking 2 (0 conflit détecté)
+        // - ... → N bookings > room.quantity
+        //
+        // Le FOR UPDATE sur bookings ne verrouille que les rows existants,
+        // pas les futurs INSERT. En verrouillant rooms.id, on force la
+        // sérialisation de toutes les transactions bookings sur cette room.
+        // Test paranoid : 15 POST concurrents sur quantity=6 → doit accepter
+        // exactement 6, refuser 9.
+        await tx
+          .select({ id: rooms.id })
+          .from(rooms)
+          .where(eq(rooms.id, data.roomId))
+          .for("update");
+
         // BUG-018 (Session 11, T-032 xtreme) : consulter aussi la table
         // roomAvailability pour respecter les dates bloquées par l'hôte
         // (stopSell:true ou availableCount:0). Sans ce contrôle, un hôte

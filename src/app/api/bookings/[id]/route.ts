@@ -128,6 +128,37 @@ export async function PUT(
       );
     }
 
+    // BUG-022 (Session 11 paranoid) : machine à états stricte sur
+    // le status. Sans validation, on pouvait :
+    //   - annuler puis remettre confirmed (ressusciter une résa)
+    //   - marquer completed sans passer par confirmed
+    //   - toucher un booking cancelled arbitrairement
+    // Transitions autorisées :
+    //   pending → confirmed | cancelled
+    //   confirmed → cancelled | completed | no_show
+    //   cancelled → (aucun — statut terminal, immuable)
+    //   completed → (aucun — statut terminal)
+    //   no_show → (aucun — statut terminal)
+    const currentStatus = existingBooking.booking.status;
+    const allowedTransitions: Record<string, string[]> = {
+      pending: ["confirmed", "cancelled"],
+      confirmed: ["cancelled", "completed", "no_show"],
+      cancelled: [],
+      completed: [],
+      no_show: [],
+    };
+    if (data.status && data.status !== currentStatus) {
+      const allowed = allowedTransitions[currentStatus] ?? [];
+      if (!allowed.includes(data.status)) {
+        return NextResponse.json(
+          {
+            error: `Transition invalide : ${currentStatus} → ${data.status} (autorisées : ${allowed.length ? allowed.join(", ") : "aucune, statut terminal"})`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
     // Handle cancellation
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
     if (data.status === "cancelled") {
