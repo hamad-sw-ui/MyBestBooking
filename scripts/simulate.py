@@ -9,6 +9,29 @@ BASE = "http://127.0.0.1:3000"
 JAR = "/tmp/sim"
 OUT = "/home/user/MyBestBooking/.ai/REPORTS/simulation_2026-08-21_session_11.md"
 
+# ─────────────────────────────────────────────────────────────
+# Bootstrap (T-034 audit) : le script n'utilisait pas de X-Forwarded-For
+# et supposait que /tmp/sim/*.jar existaient d'une session précédente.
+# Après un reset workspace, les cookies sont manquants → tous les
+# scénarios auth échouent en 401. On crée le dossier et on connecte
+# les 3 rôles avec des IP variées pour ne pas déclencher login:ip 20/60s.
+# ─────────────────────────────────────────────────────────────
+os.makedirs(JAR, exist_ok=True)
+import random
+def _bootstrap_login(tag, email, pwd):
+    xff = f"10.{random.randint(1,254)}.{random.randint(1,254)}.{random.randint(1,254)}"
+    subprocess.run([
+        "curl", "-s", "-o", "/dev/null",
+        "-c", f"{JAR}/{tag}.jar",
+        "-H", f"X-Forwarded-For: {xff}",
+        "-X", "POST", "-H", "Content-Type: application/json",
+        "-d", f'{{"email":"{email}","password":"{pwd}"}}',
+        BASE + "/api/auth/login"
+    ], timeout=15)
+_bootstrap_login("cust",  "customer@mybestbooking.com", "Customer123!")
+_bootstrap_login("host",  "host@mybestbooking.com",     "Host123!")
+_bootstrap_login("admin", "admin@mybestbooking.com",    "Admin123!")
+
 def curl(url, method="GET", jar=None, data=None, headers=None, max_time=15):
     args = ["curl", "-s", "-L", "-w", "\n__CODE__%{http_code}\n__URL__%{url_effective}", "--max-time", str(max_time)]
     if jar:

@@ -1,6 +1,6 @@
 # 🔬 Simulation PROFONDE — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-21 13:07
+**Généré le** : 2026-08-21 13:38
 **Base URL** : `http://127.0.0.1:3000`
 
 Complète la simulation surface (`simulation_2026-08-21_session_11.md`) en
@@ -110,11 +110,11 @@ Verdict : **✅ TOUT PASSE**
 ## 4. Flux 2FA COMPLET (setup → verify → disable) — champ 'code'
 
 - ✅ **POST 2fa/setup → secret 32 chars + otpauth + qr**  
-  <sub>secret=HRTU6QRSPV… otpauth=otpauth://totp/MyBestBooking%3Acustomer%40mybestbooking.com? qr_url=non</sub>
+  <sub>secret=ORMDQJTNJN… otpauth=otpauth://totp/MyBestBooking%3Acustomer%40mybestbooking.com? qr_url=non</sub>
 
-- ✅ **TOTP calculé speakeasy → 702994**  
+- ✅ **TOTP calculé speakeasy → 741606**  
 
-- ✅ **POST 2fa/verify {code:'702994'} → 200 activation**  
+- ✅ **POST 2fa/verify {code:'741606'} → 200 activation**  
   <sub>code=200 body={"enabled":true}</sub>
 
 - ✅ **POST 2fa/verify {code:'000000'} → 400/401**  
@@ -122,7 +122,7 @@ Verdict : **✅ TOUT PASSE**
 
 - ✅ **Après verify : /api/auth/me twoFactorEnabled=True**  
 
-- ✅ **POST 2fa/disable {code:'702994'} → 200 désactivation**  
+- ✅ **POST 2fa/disable {code:'597728'} → 200 désactivation**  
   <sub>code=200 body={"enabled":false}</sub>
 
 - ✅ **Après disable : twoFactorEnabled=False**  
@@ -131,9 +131,9 @@ Verdict : **✅ TOUT PASSE**
 ## 5. Upload flow (PNG réel → URL → DELETE → 404 + ownership)
 
 - ✅ **POST /api/uploads (PNG 68o) → url + key + size correct**  
-  <sub>code=200 url=/uploads/24d0799c-a38dda10-d12b-4fad-8712-330a58f7e220.png key=24d0799c-a38dda10-d12b-4fad-8712-330a58f7e220.png size=68</sub>
+  <sub>code=200 url=/uploads/74fee4e6-6e02ef34-8991-4176-a121-65eda006c913.png key=74fee4e6-6e02ef34-8991-4176-a121-65eda006c913.png size=68</sub>
 
-- ✅ **GET /uploads/24d0799c-a38dda10-d12b-4fad-8712-330a58f7e220.png → 200 fichier accessible**  
+- ✅ **GET /uploads/74fee4e6-6e02ef34-8991-4176-a121-65eda006c913.png → 200 fichier accessible**  
   <sub>code=200</sub>
 
 - ✅ **Upload d'un .json → 400**  
@@ -145,7 +145,7 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **DELETE par owner → 200 removed**  
   <sub>code=200 body={"removed":true}</sub>
 
-- ✅ **Après DELETE : GET /uploads/24d0799c-a38dda10-d12b-4fad-8712-330a58f7e220.png → 404**  
+- ✅ **Après DELETE : GET /uploads/74fee4e6-6e02ef34-8991-4176-a121-65eda006c913.png → 404**  
   <sub>code=404</sub>
 
 
@@ -175,26 +175,26 @@ Verdict : **✅ TOUT PASSE**
 
 ## 7. Booking → annulation avec effets DB + email
 
-- ✅ **Créer booking futur → ref=MBB-2026-NS8RW7 total=243.77 paymentStatus=paid**  
+- ✅ **Créer booking futur → ref=MBB-2026-CDE7WV total=249.64 paymentStatus=paid**  
   <sub>code=201</sub>
 
 - ✅ **Après booking : 2 email(s) écrit(s) dans .data/mails/**  
-  <sub>fichiers : ['2026-08-21T13-07-49-724Z-0-customer@mybestbooking_com.txt', '2026-08-21T13-07-49-726Z-1-host@mybestbooking_com.txt']</sub>
+  <sub>fichiers : ['2026-08-21T13-38-32-016Z-0-customer@mybestbooking_com.txt', '2026-08-21T13-38-32-019Z-1-host@mybestbooking_com.txt']</sub>
 
-- ✅ **Email 2026-08-21T13-07-49-726Z-1-host@mybestbooking_com.txt contient référence MBB-2026-NS8RW7**  
+- ✅ **Email 2026-08-21T13-38-32-019Z-1-host@mybestbooking_com.txt contient référence MBB-2026-CDE7WV**  
   <sub>...ashboard/bookings">dashboard</a>.</p>          <hr style="margin-top:32px;border:none;border-top:1px solid #eee;">     <p style="font-size:12px;color:#888;text-align:center;">MyBestBooking — Réservez mieux. Voyagez plus.</p>   </div> </body> </html> </sub>
 
-- ✅ **GET /api/bookings/aef3120b… (owner) → 200**  
+- ✅ **GET /api/bookings/5afdd5c0… (owner) → 200**  
   <sub>code=200</sub>
 
 - ✅ **PUT annulation → status=cancelled, fee=0.00, paymentStatus=paid**  
-  <sub>code=200 body={"booking":{"id":"aef3120b-8995-4e12-9e9a-9d5bc9447685","bookingReference":"MBB-2026-NS8RW7","userId":"24d0799c-915b-4e12-be22-fd93eddcc15b","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","roomId":"d8bc6067-13e6-4766-95f8-2c1240acd901","status":"cancelled","checkIn":"2028-04</sub>
+  <sub>code=200 body={"booking":{"id":"5afdd5c0-2394-47ba-98b2-d3382f638446","bookingReference":"MBB-2026-CDE7WV","userId":"74fee4e6-5f89-49cf-8497-446fb77c2ab8","propertyId":"c8ca8d6b-80f1-44af-973b-6620e834af4b","roomId":"e5c42701-2fa7-4e05-8f47-c0fc9c95373e","status":"cancelled","checkIn":"2028-04</sub>
 
 - ✅ **Après annulation : 1 email(s)**  
-  <sub>['2026-08-21T13-07-51-128Z-2-customer@mybestbooking_com.txt']</sub>
+  <sub>['2026-08-21T13-38-33-648Z-2-customer@mybestbooking_com.txt']</sub>
 
 - ✅ **Re-annuler booking déjà cancelled → 200**  
-  <sub>body={"booking":{"id":"aef3120b-8995-4e12-9e9a-9d5bc9447685","bookingReference":"MBB-2026-NS8RW7","userId":"24d0799c-915b-4e12-be22-fd93eddcc15b","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","roomId</sub>
+  <sub>body={"booking":{"id":"5afdd5c0-2394-47ba-98b2-d3382f638446","bookingReference":"MBB-2026-CDE7WV","userId":"74fee4e6-5f89-49cf-8497-446fb77c2ab8","propertyId":"c8ca8d6b-80f1-44af-973b-6620e834af4b","roomId</sub>
 
 
 ## 8. Wallet + BestRewards + promo (combinaisons)
@@ -202,48 +202,48 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **État user avant combo : wallet=25.00€ level=2 promo=ETE2025**  
   <sub>promo : ETE2025 type=percentage value=15.00</sub>
 
-- ✅ **Booking wallet+BR+promoETE2025 : subtotal=267.0 disc=111.5 total=182.2**  
-  <sub>code=201 math_ok=True body={"booking":{"id":"be1ed0fc-9fe0-43d1-abf8-3534ea2cf855","bookingReference":"MBB-2026-3LKU7U","userId":"24d0799c-915b-4e12-be22-fd93eddcc15b","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","roomId":"d8bc6067-13e6-4766-95f8-2c1240acd901","status":</sub>
+- ✅ **Booking wallet+BR+promoETE2025 : subtotal=267.0 disc=106.51 total=187.19**  
+  <sub>code=201 math_ok=True body={"booking":{"id":"d74005c2-99ab-4e51-b942-14f59804e975","bookingReference":"MBB-2026-3W3ZZV","userId":"74fee4e6-5f89-49cf-8497-446fb77c2ab8","propertyId":"c8ca8d6b-80f1-44af-973b-6620e834af4b","roomId":"e5c42701-2fa7-4e05-8f47-c0fc9c95373e","status":</sub>
 
 
 ## 9. Guest booking (sans compte)
 
-- ✅ **POST bookings SANS cookie + isGuestBooking:true → 201 ref=MBB-2026-Q1IT6K**  
-  <sub>body={"booking":{"id":"8691181b-92df-431f-87d1-e5b49a53cae2","bookingReference":"MBB-2026-Q1IT6K","userId":"beb044a1-1703-4d4d-93a7-74238f31fcf3","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","roomId":"d8bc6067-13e6-476</sub>
+- ✅ **POST bookings SANS cookie + isGuestBooking:true → 201 ref=MBB-2026-QHJ05G**  
+  <sub>body={"booking":{"id":"877d6288-8ebe-4d9e-845e-72df5f106d73","bookingReference":"MBB-2026-QHJ05G","userId":"c710152b-9c9a-4ed2-8ef5-aec8763cebb2","propertyId":"c8ca8d6b-80f1-44af-973b-6620e834af4b","roomId":"e5c42701-2fa7-4e0</sub>
 
 
 ## 10. Propriété — host crée → admin approve/reject
 
 - ✅ **POST /api/properties (host) → status=pending**  
-  <sub>code=201 body={"property":{"id":"2144ff8a-ddd1-4916-974d-4b1c8e8282c0","hostId":"e143e438-fbf9-4688-aca9-bcd35afa5a6c","name":"Deep Villa 1787317671","slug":"deep-villa-1787317671","type":"villa","description":"Tes</sub>
+  <sub>code=201 body={"property":{"id":"f5f5059d-6b88-40d7-9866-394ea6f150ba","hostId":"ca34c43f-e690-4ab8-8874-87279a9ce0ab","name":"Deep Villa 1787319514","slug":"deep-villa-1787319514","type":"villa","description":"Tes</sub>
 
 - ✅ **POST /api/properties (customer) → 401/403**  
   <sub>code=401</sub>
 
 - ✅ **admin approve → status=active**  
-  <sub>code=200 body={"property":{"id":"2144ff8a-ddd1-4916-974d-4b1c8e8282c0","hostId":"e143e438-fbf9-4688-aca9-bcd35afa5a6c","name":"Deep Villa 1787317671","slug":"deep-villa-1787317671","type":"villa","description":"Tes</sub>
+  <sub>code=200 body={"property":{"id":"f5f5059d-6b88-40d7-9866-394ea6f150ba","hostId":"ca34c43f-e690-4ab8-8874-87279a9ce0ab","name":"Deep Villa 1787319514","slug":"deep-villa-1787319514","type":"villa","description":"Tes</sub>
 
 - ✅ **host tente validate → 403**  
   <sub>code=403</sub>
 
 - ✅ **admin reject → status=draft**  
-  <sub>body={"property":{"id":"2144ff8a-ddd1-4916-974d-4b1c8e8282c0","hostId":"e143e438-fbf9-4688-aca9-bcd35afa5a6c","name":"Deep Villa 1787317671","slug":"deep-villa-1787317671","type":"villa","description":"Tes</sub>
+  <sub>body={"property":{"id":"f5f5059d-6b88-40d7-9866-394ea6f150ba","hostId":"ca34c43f-e690-4ab8-8874-87279a9ce0ab","name":"Deep Villa 1787319514","slug":"deep-villa-1787319514","type":"villa","description":"Tes</sub>
 
 
 ## 11. Admin suspend user → sessions killed + login refusé
 
-- ✅ **Créer user suspendme1787317672@test.local → id=4a4ef375…**  
+- ✅ **Créer user suspendme1787319515@test.local → id=ac0b9afe…**  
 
-- ✅ **Session suspendme1787317672@test.local active avant suspension**  
+- ✅ **Session suspendme1787319515@test.local active avant suspension**  
   <sub>code=200</sub>
 
-- ✅ **PATCH /users/4a4ef375…/suspend (admin) → 200**  
-  <sub>code=200 body={"user":{"id":"4a4ef375-98ec-4088-9f69-ce61a1d68f64","email":"suspendme1787317672@test.local","deletedAt":"2026-08-21T13:07:54.317Z"}}</sub>
+- ✅ **PATCH /users/ac0b9afe…/suspend (admin) → 200**  
+  <sub>code=200 body={"user":{"id":"ac0b9afe-c610-46ac-be2f-3483ab68bd28","email":"suspendme1787319515@test.local","deletedAt":"2026-08-21T13:38:37.511Z"}}</sub>
 
 - ✅ **Après suspend : /api/auth/me → 401 (attendu 401)**  
   <sub>body={"error":"Non authentifié"}</sub>
 
-- ✅ **Login suspendme1787317672@test.local après suspend → 401 (attendu 400/401/403)**  
+- ✅ **Login suspendme1787319515@test.local après suspend → 401 (attendu 400/401/403)**  
   <sub>body={"error":"Ce compte a été supprimé"}</sub>
 
 - ✅ **Admin auto-suspension → 400**  
@@ -252,8 +252,8 @@ Verdict : **✅ TOUT PASSE**
 
 ## 12. Audit log alimenté (après actions admin ci-dessus)
 
-- ✅ **GET /api/admin/audit → 50 entrées ; actions récentes : ['user.suspend', 'property.reject', 'property.validate', 'bulk.action', 'bulk.action']**  
-  <sub>body[:200]={"entries":[{"id":"407d29f9-b04b-457a-a9f3-6e9785f79d1a","actorId":"416a87dc-5a7c-479b-adf9-831a64c60c77","actorEmail":"admin@mybestbooking.com","action":"user.suspend","entityType":"user","entityId":</sub>
+- ✅ **GET /api/admin/audit → 11 entrées ; actions récentes : ['user.suspend', 'property.reject', 'property.validate', 'review.moderate', 'review.moderate']**  
+  <sub>body[:200]={"entries":[{"id":"a15fff43-a572-4f0f-8cba-645e12883092","actorId":"957172b3-2ba3-4d50-bc05-425ee16dc0e4","actorEmail":"admin@mybestbooking.com","action":"user.suspend","entityType":"user","entityId":</sub>
 
 
 ## 13. Panel admin settings — lecture + RBAC
@@ -271,7 +271,7 @@ Verdict : **✅ TOUT PASSE**
 ## 14. Chambres — host crée sa chambre, guards
 
 - ✅ **POST /api/rooms (host, sa property) → 201**  
-  <sub>body={"room":{"id":"f5fcb074-531f-4fe5-9be5-e0c9da807344","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","name":"Deep Room 1787317675","description":null,"roomType":"double","bedConfiguration":null,"m</sub>
+  <sub>body={"room":{"id":"d1e0e582-d51c-440e-b10c-b78ada8b2bd0","propertyId":"c8ca8d6b-80f1-44af-973b-6620e834af4b","name":"Deep Room 1787319519","description":null,"roomType":"double","bedConfiguration":null,"m</sub>
 
 - ✅ **POST /api/rooms par customer → 401**  
   <sub>body={"error":"Non autorisé"}</sub>
@@ -294,29 +294,29 @@ Verdict : **✅ TOUT PASSE**
 
 ## 17. Wishlist partagée publique
 
-- ✅ **GET /api/wishlists/shared/6a35a2ed… (anonyme) → 200 name='?'**  
+- ✅ **GET /api/wishlists/shared/01f9091f… (anonyme) → 200 name='?'**  
   <sub>body={"name":"Public share test","itemCount":0,"items":[]}</sub>
 
-- ✅ **GET /wishlists/share/6a35a2ed… (page) → 200**  
+- ✅ **GET /wishlists/share/01f9091f… (page) → 200**  
 
 
 ## 18. Referral code
 
-- ✅ **GET /api/users/me/referral → code='BU23WN3L'**  
-  <sub>body={"code":"BU23WN3L"}</sub>
+- ✅ **GET /api/users/me/referral → code='YH8YM9MS'**  
+  <sub>body={"code":"YH8YM9MS"}</sub>
 
 
 ## 19. Notification prefs — PATCH /api/users/me
 
 - ✅ **PATCH priceAlertEnabled=true → priceAlertEnabled=True**  
-  <sub>body={"user":{"id":"24d0799c-915b-4e12-be22-fd93eddcc15b","email":"customer@mybestbooking.com","firstName":"Marie","lastName":"Martin","phone":null,"country":null,"language":"fr","currency":"EUR","timezone</sub>
+  <sub>body={"user":{"id":"74fee4e6-5f89-49cf-8497-446fb77c2ab8","email":"customer@mybestbooking.com","firstName":"Marie","lastName":"Martin","phone":null,"country":null,"language":"fr","currency":"EUR","timezone</sub>
 
 - ✅ **PATCH priceAlertEnabled=false → priceAlertEnabled=False**  
 
 
 ## 20. Delete account — flow réel avec compte sacrifice
 
-- ✅ **Créer deleteme1787317677@test.local → id=79b82f3f…**  
+- ✅ **Créer deleteme1787319522@test.local → id=282e2092…**  
 
 - ✅ **DELETE /api/users/me self → 200**  
   <sub>body={"deleted":true}</sub>

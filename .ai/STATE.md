@@ -10,9 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `4c39523` (T-034 dashboards bulk étendus,
-  Session 13)
-- **Dernier commit stable référencé** : `4c39523` (Session 13)
+- **Dernier commit connu** : `6845c28` (docs STATE T-034, Session 13)
+- **Dernier commit stable référencé** : `6845c28` (Session 13). Session
+  14 en cours (audit brutal + fix bootstrap simulate.py).
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
@@ -86,7 +86,20 @@
 
 ## 📋 Sessions
 
-- **Session 13** (2026-08-21, en cours) : **T-034 dashboards bulk
+- **Session 14** (2026-08-21) : **Audit brutal cumulé Session 13** —
+  demande utilisateur « lancer une nouvelle passe d'audit brutal ».
+  Réinstall complet du workspace (node_modules purgés, .env recréé,
+  DB embarquée réinitialisée + seed). Séquence complète relancée avec
+  restart Next entre chaque suite. Résultat : **471/472 · 0 KO · 1
+  WARN perf** (tests 188 + smoke 91 + surface 68 + deep 81 + xtreme 89
+  + paranoid 73/74 warn + dashboards 69). Le warn = cold start
+  Turbopack sur `/api/properties/[id]` (1115ms, budget 1000ms). **Bug
+  script corrigé** : `scripts/simulate.py` ne bootstrappait pas ses
+  cookies (relayait sur `/tmp/sim/*.jar` existants) → 9 KO en cascade
+  après reset workspace. Ajout d'un bloc `_bootstrap_login()` en tête
+  avec IP randomisée pour ne pas déclencher `login:ip 20/60s`.
+
+- **Session 13** (2026-08-21) : **T-034 dashboards bulk
   étendus** — l'utilisateur a exigé après T-033 : « J'espère que
   chaque interface dashboard nécessitant ces fonctionnalités possède
   ces nouvelles arrangements sinon faites l'implémentation ». Livré :
@@ -179,7 +192,14 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-21 (Session 13 — **T-034 dashboards bulk étendus** :
+- **Date** : 2026-08-21 (Session 14 — **Audit brutal cumulé Session 13** :
+  workspace intégralement réinitialisé (node_modules, .env, DB), 8
+  suites relancées en séquence avec restart Next intermédiaire. Total
+  471/472 · 0 KO · 1 WARN perf (cold start Turbopack). Fix pré-existant
+  scripts/simulate.py auto-bootstrap login. STATE HEAD à mettre à jour
+  au commit final.)
+
+- **Date précédente** : 2026-08-21 (Session 13 — **T-034 dashboards bulk étendus** :
   API bulk supporte `rooms` + `promotions` + action `delete` pour
   users/properties/reviews. Composant `<RowDeleteButton>` réutilisable
   avec confirm + refresh. 4 nouveaux Managers (rooms/promotions/
