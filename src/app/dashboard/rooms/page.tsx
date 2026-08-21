@@ -66,10 +66,12 @@ export default async function RoomsPage() {
             Gérez les chambres de vos hébergements
           </p>
         </div>
-        <Button>
-          <Plus className="w-4 h-4 mr-2" />
-          Ajouter une chambre
-        </Button>
+        <Link href="/dashboard/rooms/new">
+          <Button>
+            <Plus className="w-4 h-4 mr-2" />
+            Ajouter une chambre
+          </Button>
+        </Link>
       </div>
 
       {/* Stats */}

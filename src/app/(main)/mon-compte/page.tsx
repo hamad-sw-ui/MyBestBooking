@@ -13,6 +13,10 @@ import {
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { ChangePasswordForm } from "@/components/change-password-form";
+import { TwoFactorSection } from "@/components/two-factor-section";
+import { DeleteAccountSection } from "@/components/delete-account-section";
+import { ReferralCard } from "@/components/referral-card";
+import { NotificationPrefsSection } from "@/components/notification-prefs-section";
 
 interface UserData {
   id: string;
@@ -283,77 +287,25 @@ export default function MyAccountPage() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Authentification à deux facteurs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">2FA par SMS</p>
-                        <p className="text-sm text-gray-500">
-                          Recevez un code par SMS lors de la connexion
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" checked={user.twoFactorEnabled || false} onChange={() => {}} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-                      </label>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* T-030 : 2FA TOTP complète (setup + QR + verify + disable) */}
+                <TwoFactorSection initiallyEnabled={user.twoFactorEnabled || false} />
 
-                <Card className="border-red-200">
-                  <CardHeader>
-                    <CardTitle className="text-red-600">Zone de danger</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-red-600">Supprimer mon compte</p>
-                        <p className="text-sm text-gray-500">
-                          Cette action est irréversible
-                        </p>
-                      </div>
-                      <Button variant="danger" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Supprimer
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* T-030 : suppression compte réelle */}
+                <DeleteAccountSection />
               </>
             )}
 
             {activeTab === "notifications" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Préférences de notification</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {[
-                    { id: "booking", label: "Confirmations de réservation", desc: "Emails et SMS pour vos réservations" },
-                    { id: "reminder", label: "Rappels de voyage", desc: "Notifications avant votre séjour" },
-                    { id: "promo", label: "Offres et promotions", desc: "Bons plans et réductions exclusives" },
-                    { id: "review", label: "Demandes d'avis", desc: "Invitations à laisser un avis après séjour" },
-                    { id: "price", label: "Alertes prix", desc: "Baisse de prix sur vos favoris" },
-                  ].map((notif) => (
-                    <div key={notif.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{notif.label}</p>
-                        <p className="text-sm text-gray-500">{notif.desc}</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-                      </label>
-                    </div>
-                  ))}
-                </CardContent>
-                <CardFooter>
-                  <Button>Enregistrer les préférences</Button>
-                </CardFooter>
-              </Card>
+              <div className="space-y-6">
+                {/* T-030 : préférence user réellement branchée */}
+                <NotificationPrefsSection
+                  initial={{
+                    priceAlertEnabled: (user as unknown as { priceAlertEnabled?: boolean }).priceAlertEnabled ?? false,
+                  }}
+                />
+                {/* T-030 : code de parrainage */}
+                <ReferralCard />
+              </div>
             )}
           </div>
         </div>

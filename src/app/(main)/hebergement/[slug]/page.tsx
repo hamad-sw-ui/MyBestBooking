@@ -30,6 +30,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PriceAlertButton } from "@/components/price-alert-button";
 import {
   Star, MapPin, Heart, Share2, Check, X, Wifi, Car, Utensils, Waves,
   Dumbbell, Wind, Users, Calendar, Shield, MessageCircle, Award
@@ -105,6 +106,10 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
   }
 
   const { property, rooms: propertyRooms, reviews: propertyReviews } = data;
+  // T-030 : chambre la moins chère pour le CTA "Voir dispo" et alerte prix
+  const cheapestRoom = propertyRooms.length > 0
+    ? [...propertyRooms].sort((a, b) => parseFloat(a.basePrice) - parseFloat(b.basePrice))[0]
+    : null;
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating) : null;
   const amenities = (property.amenities as string[]) || [];
@@ -457,13 +462,25 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                     </div>
                   </div>
 
-                  <Button className="w-full" size="lg">
+                  <a
+                    href={`/reservation?propertyId=${property.id}&roomId=${cheapestRoom?.id ?? ""}`}
+                    className="block w-full text-center px-6 py-3 rounded-lg bg-[#FF5A5F] text-white font-medium hover:bg-[#e54a4f] transition"
+                  >
                     Voir les disponibilités
-                  </Button>
+                  </a>
 
                   <p className="text-xs text-center text-gray-500 mt-3">
                     ✓ Annulation gratuite • ✓ Paiement sécurisé
                   </p>
+
+                  {/* T-030 : suivre le prix */}
+                  <div className="mt-3">
+                    <PriceAlertButton
+                      propertyId={property.id}
+                      currency={cheapestRoom?.currency ?? "EUR"}
+                      defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
+                    />
+                  </div>
                 </CardContent>
               </Card>
 

@@ -2,138 +2,118 @@
 
 ## Identifiant
 
-- **ID** : T-029 (Sprint 98%, chapeautant T-026 + T-027 + T-028 + T-029)
-- **Titre** : Sprint 98% — Convertir tous les 🚧/❌ de FEATURES.md en ✅
-- **Niveau** : **S** (nombreux items indépendants, aucun ne touche
-  auth/paiement/schéma destructif)
-- **Ouverte le** : 2026-08-20 (Session 8)
+- **ID** : T-030
+- **Titre** : R18 no_dead_ui + livraison des UI réellement manquantes
+- **Niveau** : **S**
+- **Ouverte le** : 2026-08-21 (Session 9)
 - **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Contexte
 
-Demande utilisateur : « je veux plus que ~70 %, soit 98 % de features
-livrées et testées ». Sprint massif regroupé en 4 vagues thématiques.
+Retour utilisateur direct : « je vois beaucoup de manquements, des
+interfaces qui n'existent pas et des boutons qui ne servent à rien.
+Pourquoi le framework n'anticipe pas ? ». Reproche fondé : j'ai marqué
+plusieurs features ✅ en Session 8 dès qu'un endpoint existait, sans
+vérifier qu'un utilisateur pouvait s'en servir depuis l'UI (2FA,
+delete account, price alerts, referral, wallet checkout, rooms/new,
+guest booking, pièces jointes).
 
 ## Livrables
 
-### T-026 — Recherche & filtres avancés
-- Filtre `amenities=csv` (JSONB `@>` PostgreSQL) sur `GET /api/properties`.
-- Filtre `guests=N` (rooms.maxOccupancy >= N) au JOIN.
-- Filtre `checkIn`/`checkOut` : exclut les properties dont toutes les
-  rooms sont bookées ou stop-sell.
-- `sort=rating|price_asc|price_desc|popularity`.
-- Filtre `near=lat,lng,km` (haversine côté JS).
-- `DELETE /api/uploads?key=xxx` (owner ou admin, path traversal
-  bloqué) + méthode `remove` sur Uploader interface (Local + S3).
-- Table `price_alerts` (migration 0007) + `GET/POST /api/price-alerts`
-  + `DELETE /api/price-alerts/[id]`.
-- `GET /api/users/me/referral` génère un code alphanumérique lisible
-  8-char et le persiste dans `users.referralCode`.
+### A. Framework — R18 no_dead_ui
 
-### T-027 — Emails supplémentaires + wallet + BestRewards discount + delete account
-- 2 nouveaux templates : `bookingCancellation`, `newMessage` (subject +
-  body éditables via `/dashboard/settings`).
-- Hook mail dans `PUT /api/bookings/[id]` quand status→cancelled.
-- Hook mail dans `POST /api/messages` (notification au destinataire).
-- `POST /api/bookings` accepte `useWalletCredits:true` → applique
-  `users.walletBalance` en réduction plafonnée + débite le wallet.
-- Bonus BestRewards level 2/3 (% de settings.bestrewards.discounts) +
-  bonus +2 pp si `property.isBestrewards` (borné à 30%).
-- `DELETE /api/users/me` : soft-delete `deletedAt=now` + révocation
-  sessions + delete cookie. Admin bloqué (400).
+- Nouvelle règle dans `scripts/check-ai.mjs` : détecte et **bloque**
+  `href="#"`, `onClick={() => {}}`, `onChange={() => {}}`.
+- Statut `fail` (bloquant). L'ai:check refuse tout futur retour de
+  ces patterns.
+- Ajoutée à `blocking_rules` du manifest sous
+  `dead_ui_link_or_handler`.
 
-### T-028 — Rate-limits + logger structuré
-- Rate-limit `bookings:user:` 10/h, `reviews:user:` 20/h,
-  `wishlists:user:` 60/min.
-- `src/lib/logger.ts` : JSON one-liner, stdout/stderr selon niveau,
-  helper `safeMeta()` qui redacte password/token/secret/apiKey.
-- 5 tests unitaires logger.
+### B. UI — 7 nouveaux composants client
 
-### T-029 — 2FA + i18n + devise + dark mode + guest booking + attachments + a11y
-- `POST /api/auth/2fa/setup` : `speakeasy.generateSecret()` + otpauth URI.
-- `POST /api/auth/2fa/verify` : `speakeasy.totp.verify` avec window ±1.
-- `POST /api/auth/2fa/disable` : idem, requiert code TOTP valide.
-- 4 tests unitaires TOTP (secret base32, verify OK, verify invalid,
-  verify autre secret).
-- `src/lib/i18n.ts` : `pickLocalized()` (fr par défaut, en si champ
-  `xxxEn` disponible), `convertAmount()` (table figée V1, 6 devises),
-  `formatMoney()` via `Intl.NumberFormat`. 12 tests unitaires.
-- `POST /api/bookings` `isGuestBooking:true` : crée un user stub sans
-  mdp par email + réservation. Type-guard `if (!user)` intermédiaire.
-- `<MessageComposer>` accepte des pièces jointes (upload via
-  `/api/uploads`, envoi via `attachmentUrl` du POST message).
-- Dark mode : classe `.dark` sur `<html>`, palette CSS globale,
-  `<DarkModeToggle>` client avec persistance `localStorage`, script
-  inline pré-application anti-FOUC.
-- Skip link a11y (`Aller au contenu principal` → `#main-content`).
-- Migration 0007 : `users.two_factor_secret`, `users.referral_code`,
-  `users.price_alert_enabled`, table `price_alerts`.
-- SECURITY.md : section « Rotation de secret » complète.
+1. `src/components/two-factor-section.tsx` : setup TOTP (secret + QR
+   code via `api.qrserver.com`) → verify → disable. Cycle complet.
+2. `src/components/delete-account-section.tsx` : confirmation par
+   saisie « SUPPRIMER » avant `DELETE /api/users/me`.
+3. `src/components/referral-card.tsx` : `GET /api/users/me/referral`
+   + copier via `navigator.clipboard`.
+4. `src/components/notification-prefs-section.tsx` :
+   `PATCH /api/users/me { priceAlertEnabled }`.
+5. `src/components/price-alert-button.tsx` : sur fiche property, mini
+   formulaire prix max → `POST /api/price-alerts`.
+6. `src/components/price-alerts-section.tsx` : liste + suppression
+   des alertes user.
+7. `src/components/new-room-form.tsx` : formulaire complet →
+   `POST /api/rooms`.
+
+### C. Nouvelles pages / refactor pages
+
+- `src/app/dashboard/rooms/new/page.tsx` : hôte ajoute une chambre.
+- `/mon-compte tab security` : intègre `<TwoFactorSection>` +
+  `<DeleteAccountSection>` (retire toggle mort et bouton `<Button>`
+  disabled).
+- `/mon-compte tab notifications` : `<NotificationPrefsSection>` +
+  `<ReferralCard>` (remplace 5 toggles décoratifs + bouton mort).
+- `/reservation` : détection non-auth → mode invité automatique avec
+  bannière ; wallet checkbox si `walletBalance > 0` ; envoie
+  `useWalletCredits` et `isGuestBooking` au POST.
+- `/hebergement/[slug]` : bouton « Voir les disponibilités » devient
+  un vrai `<a href="/reservation?...">` + `<PriceAlertButton>`.
+- `/aide` : retire 2 `href="#"` (articles inexistants → texte simple).
+- `/dashboard/rooms` : bouton Ajouter devient `<Link>` vers
+  `/dashboard/rooms/new`.
+
+### D. APIs mineurement enrichies
+
+- `PATCH /api/users/me` : accepte `priceAlertEnabled: boolean`.
+- `GET /api/auth/me` : expose `priceAlertEnabled` et `timezone`.
 
 ## Preuves (§16)
 
-- 🔍 `REPORTS/analyse_impact_2026-08-20_completude_98pct.md` (rapport
-  stratégique global, exceptions sandbox documentées).
+- 🔍 `REPORTS/analyse_impact_2026-08-21_ui_gaps.md`.
+- 🔍 `REPORTS/analyse_conception_2026-08-21_ui_gaps.md`.
 - 🔨 `npm run typecheck` ✅ 0 erreur.
-- 🔨 `npm run build` ✅ succès (nouveaux endpoints listés :
-  `/api/auth/2fa/{setup,verify,disable}`, `/api/price-alerts`,
-  `/api/price-alerts/[id]`, `/api/users/me/referral`,
-  `DELETE /api/uploads`).
-- 🔨 `npm run lint` ✅ 0 error (18 warnings cosmétiques préexistants).
-- 🧪 `npm test` : **176 passed / 176** (+21 depuis 155 : logger 5,
-  i18n 12, render/mail XSS déjà comptés dans 155, 2fa 4).
-- ▶️ Filtres : amenities=wifi,pool → 4 properties ; guests=6 → 8 ;
-  sort=price_asc top 3 ordonnés croissants (89/89/89) ; sort=price_desc
-  top 3 décroissants (148.33/148.33/118.67) ; checkIn/checkOut →
-  properties dispo ; near=48.85,2.35,50 → 2 (Paris + banlieue).
-- ▶️ Referral GET → `{"code":"5JNQ3AGT"}` (8 chars sans ambiguïté).
-- ▶️ Price alert : POST 201, GET 1 alerte.
-- ▶️ Upload PNG 70B → GET fichier 200 → DELETE 200 → GET après → 404.
-- ▶️ Booking avec walletCredits=true + Level 2 + wallet 50 :
-  subtotal 267, taxes 26.70, **discount 94.06** (bestrewards 15% =
-  44.06 + wallet 50), total 199.64. Wallet DB=0.00 (débité).
-- ▶️ Annulation booking → email `Subject: Réservation annulée
-  MBB-2026-AG1597` généré dans `.data/mails/`.
-- ▶️ Guest booking (sans cookies) → 201 confirmé, user stub créé
-  (`email_verified=false, password_hash IS NULL`).
-- ▶️ Rate-limit bookings : 10×201 puis 429 (comme prévu).
-- ▶️ DELETE users/me customer → 200 `{deleted:true}` → login refusé 401.
-- ▶️ DELETE users/me admin → 400 « Un admin ne peut pas se supprimer ».
-- ▶️ 2FA setup → secret base32 + otpauth URI ; code TOTP calculé via
-  speakeasy → verify 200 `{enabled:true}` → DB reflète
-  `two_factor_enabled=true` ; code invalide → 400 ; disable OK.
-- ▶️ Dark mode : `<html>` contient script pré-app + `skip-link` +
-  `localStorage.getItem('theme')` visibles dans le HTML retourné.
-- ▶️ 15 URL publiques + dashboard → toutes **200**.
+- 🔨 `npm run build` ✅ succès (nouveaux endpoints/pages listés :
+  `/dashboard/rooms/new`, `/api/auth/2fa/*` déjà présents).
+- 🔨 `npm run lint` ✅ 0 error.
+- 🧪 `npm test` : **176 / 176** verts (inchangé, aucune régression).
+- 🧪 `npm run ai:check` : **R18 no_dead_ui ✅**, R15 UI↔API ✅,
+  15 OK · 2 warn attendus · 0 fail.
+- ▶️ `POST /api/auth/2fa/setup` (customer) → secret 32 chars +
+  otpauth URI valide.
+- ▶️ `POST /api/rooms` (host, sur sa property) → chambre 75€ créée.
+- ▶️ `POST /api/price-alerts` (customer) → alerte 201.
+- ▶️ `GET /api/users/me/referral` (customer) → code `BU23WN3L` (8
+  chars alphabet lisible).
+- ▶️ `PATCH /api/users/me { priceAlertEnabled: true }` → 200.
+- ▶️ `DELETE /api/users/me` (admin) → 400 « Un admin ne peut pas se
+  supprimer lui-même ».
+- ▶️ `POST /api/bookings { useWalletCredits: true }` (customer wallet
+  25€ + BestRewards level 2) : subtotal 150, taxes 15, discount
+  **53.05** (wallet 25 + BR 15% de 165 = 28.05), total 111.95.
+- ▶️ `POST /api/bookings { isGuestBooking: true }` sans cookie →
+  201 confirmed, user stub créé.
+- ▶️ Inspection du bundle JS `src_0gi6nkl._.js` (238 KB) confirme
+  la présence des composants : `TwoFactorSection`,
+  `DeleteAccountSection`, `ReferralCard`, « Activer la 2FA »,
+  « SUPPRIMER pour », « Alertes prix favoris », « code de parrainage ».
+- ▶️ Grep post-modification : `href="#"` = **0**, `onClick={()=>{}}` = **0**,
+  `onChange={()=>{}}` = **0**.
 
-## Sandbox-limited (documenté)
+## Non-régression
 
-Ces items **restent 🚧** avec fallback fonctionnel — c'est honnête §16
-(mieux qu'un ✅ menteur) :
+- 176/176 tests inchangés.
+- Signatures API existantes préservées (PATCH users/me accepte
+  `priceAlertEnabled` en plus, les callers actuels continuent de
+  fonctionner).
+- Les 15 URL testées Session 8 répondent toujours 200.
 
-- `next/font/google` : CDN Google indispo au build.
-  Fallback `<link>` préservé.
-- **Playwright Chromium** : CDN Google indispo.
-  Specs prêts dans `tests/e2e/`.
-- **CI GitHub Actions** : token agent sans permission `workflows`.
-  Workflow prêt (`.ai/REPORTS/ci_workflow_a_ajouter.md`).
-- **Sentry / télémétrie applicative** : pas de DSN.
-  `src/lib/logger.ts` fournit la structure JSON, plug direct.
-- **Dependabot** : config UI GitHub, hors code.
-- **Backup DB auto** : dépend de l'hébergeur.
-- **Dockerfile prod** : pas requis pour Vercel/Node.
-- **Rate-limit Redis** : mono-instance sandbox, mémoire suffit.
+## Framework — v1.1.1
 
-## Bilan
-
-| Avant | Après | Écart |
-|---|---|---|
-| ~86 ✅ / ~17 🚧 / ~4 🎯 / ~15 ❌ (**~70 %**) | ~118 ✅ / ~4 🚧 (sandbox) / 0 🎯 / 0 ❌ (**~97 %**) | **+27 pp** |
-
-**Objectif 98 % atteint** aux ~1 pp près, l'écart étant les items
-strictement sandbox-limited documentés.
+- Manifest bumped 1.1.0 → 1.1.1.
+- Blocking rule `dead_ui_link_or_handler` ajoutée.
+- R18 sera opposable à toute future soumission.
 
 ## Étape suivante
 
-Rien de bloquant. Sandbox-limited items → dès que la CI hébergée est
-active, migrer `next/font` + activer Chromium en 1 commit chacun.
+Attente prochaine directive utilisateur.

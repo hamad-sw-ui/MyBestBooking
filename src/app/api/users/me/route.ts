@@ -15,6 +15,8 @@ const schema = z.object({
   currency: z.string().length(3).optional(),
   timezone: z.string().max(50).optional(),
   avatarUrl: z.string().url().max(500).optional().nullable(),
+  // T-030 : préférence user
+  priceAlertEnabled: z.boolean().optional(),
 });
 
 /**

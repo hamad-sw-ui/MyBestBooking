@@ -140,10 +140,10 @@ export default function HelpPage() {
                     <ul className="space-y-2">
                       {cat.articles.map((article) => (
                         <li key={article}>
-                          <a href="#" className="text-sm text-[#1B3A6B] hover:underline flex items-center gap-1">
-                            <ChevronRight className="w-3 h-3" />
+                          <span className="text-sm text-gray-600 flex items-center gap-1">
+                            <ChevronRight className="w-3 h-3 text-gray-400" />
                             {article}
-                          </a>
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -161,14 +161,13 @@ export default function HelpPage() {
         <Card className="mb-12">
           <CardContent className="divide-y divide-gray-100">
             {popularQuestions.map((question, i) => (
-              <a
+              <div
                 key={i}
-                href="#"
-                className="flex items-center justify-between py-4 hover:bg-gray-50 -mx-6 px-6 transition-colors"
+                className="flex items-center justify-between py-4 -mx-6 px-6"
               >
                 <span className="text-gray-900">{question}</span>
-                <ArrowRight className="w-4 h-4 text-gray-400" />
-              </a>
+                <ArrowRight className="w-4 h-4 text-gray-300" />
+              </div>
             ))}
           </CardContent>
         </Card>

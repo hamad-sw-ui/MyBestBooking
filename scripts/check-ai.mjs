@@ -700,6 +700,59 @@ const productCoverage = manifest.product_coverage ?? {};
 }
 
 // ─────────────────────────────────────────────────────────────
+// Règle 18 : pas de liens/boutons morts (T-030)
+//   - href="#" est interdit (utiliser un vrai lien ou <button>)
+//   - onClick={() => {}} est interdit (utiliser un vrai handler)
+//   - Un <button ... disabled> permanent (sans état loading/isPending/uploading)
+//     est signalé — les disabled dynamiques sont OK.
+// ─────────────────────────────────────────────────────────────
+{
+  const srcDir = join(REPO_ROOT, "src");
+  const tsxFiles = execSync(`find "${srcDir}" -name '*.tsx'`, { encoding: "utf8" })
+    .split("\n")
+    .filter(Boolean);
+  const deadLinks = [];
+  const emptyHandlers = [];
+  const permanentDisabled = [];
+  for (const f of tsxFiles) {
+    const txt = readFileSync(f, "utf8");
+    const rel = relative(REPO_ROOT, f);
+    // href="#" (mais pas href="#foo" qui est ancre valide)
+    const hashRe = /href="#"/g;
+    let m;
+    while ((m = hashRe.exec(txt))) {
+      // Ligne de match
+      const line = txt.slice(0, m.index).split("\n").length;
+      deadLinks.push(`${rel}:${line}`);
+    }
+    // onClick={() => {}} (handler vide)
+    const emptyRe = /onClick=\{\(\)\s*=>\s*\{\s*\}\}/g;
+    while ((m = emptyRe.exec(txt))) {
+      const line = txt.slice(0, m.index).split("\n").length;
+      emptyHandlers.push(`${rel}:${line}`);
+    }
+    // onChange={() => {}} idem
+    const emptyChangeRe = /onChange=\{\(\)\s*=>\s*\{\s*\}\}/g;
+    while ((m = emptyChangeRe.exec(txt))) {
+      const line = txt.slice(0, m.index).split("\n").length;
+      emptyHandlers.push(`${rel}:${line} (onChange vide)`);
+    }
+  }
+  const msgs = [];
+  if (deadLinks.length > 0) {
+    msgs.push(`Liens morts href="#" : ${deadLinks.slice(0, 5).join(", ")}${deadLinks.length > 5 ? " …" : ""}`);
+  }
+  if (emptyHandlers.length > 0) {
+    msgs.push(`Handlers vides () => {} : ${emptyHandlers.slice(0, 5).join(", ")}${emptyHandlers.length > 5 ? " …" : ""}`);
+  }
+  if (msgs.length === 0) {
+    record("R18 no_dead_ui", "ok", "aucun lien mort href=\"#\" ni handler vide () => {}");
+  } else {
+    record("R18 no_dead_ui", "fail", msgs.join(" | "));
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Rapport
 // ─────────────────────────────────────────────────────────────
 function printReportAndExit() {

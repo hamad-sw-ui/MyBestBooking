@@ -10,9 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `4489fee` (Session 8 close)
-- **Dernier commit stable référencé** : `4489fee` (Session 8, Sprint 98%)
-- **Version du Framework** : **1.1.0** (AI-DOS Web, hybride + complétude
+- **Dernier commit connu** : à mettre à jour en fin de session en cours
+- **Dernier commit stable référencé** : `669ac9f` (fin Session 8)
+- **Version du Framework** : **1.1.1** (AI-DOS Web, hybride + complétude
   produit — voir `PROCESS_IMPROVEMENTS.md`)
 
 ## 🛠️ État Technique
@@ -82,7 +82,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-029 (29 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-030 (30 tâches)
 
 ## 🏛️ Décisions & ADR
 
@@ -96,7 +96,15 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-20 (Session 8 — **Sprint 98%** T-026 → T-029 :
+- **Date** : 2026-08-21 (Session 9 — **T-030 R18 no_dead_ui** :
+  framework v1.1.1 durci pour bloquer les liens/handlers morts
+  (href="#", onClick={()=>{}}, onChange={()=>{}}) + 7 nouveaux
+  composants client livrés pour combler les UI manquantes (2FA
+  complète, delete account, referral, prefs notif, price alerts, new
+  room form, wallet checkout, guest booking, retrait des liens morts).
+  176/176 tests inchangés, R18 vert)
+
+- **Date précédente** : 2026-08-20 (Session 8 — **Sprint 98%** T-026 → T-029 :
   filtres avancés recherche + emails annulation/message + wallet +
   BestRewards discount + delete account + 2FA TOTP + i18n EN + devise
   dynamique + dark mode + guest booking + pièces jointes + rate-limits
