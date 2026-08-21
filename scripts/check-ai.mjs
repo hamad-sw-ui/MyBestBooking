@@ -45,6 +45,20 @@
 //       compteur sessions_since_last_product_audit dans STATE.md
 //       ≤ max_sessions_without_product_audit (défaut 5).
 //
+// v1.1.1 (T-030) — UI VIVANTE :
+//   R18 no_dead_ui : bloque href="#", onClick={()=>{}}, onChange={()=>{}}.
+//
+// v1.1.2 (T-031) — LIENS RÉELS :
+//   R19 links_target_existing_pages : bloque href="/xxx" pointant vers
+//       une route sans page.tsx correspondant.
+//
+// v1.1.3 (T-032, ADR-008) — PREUVE RUNTIME OBLIGATOIRE :
+//   R20 smoke_manifest_present : scripts/smoke.sh présent, exécutable,
+//       contient un header « @assertions: N ≥ 40 » et les patterns
+//       essentiels (login × 3 rôles, POST /api/bookings, guard
+//       body-check). Bloquant si le fichier disparaît ou est vidé
+//       silencieusement. Le lancement live se fait via `npm run smoke`.
+//
 // Sortie : code 0 si tout passe, code non nul et rapport détaillé sinon.
 // Ne modifie aucun fichier.
 
@@ -833,6 +847,83 @@ const productCoverage = manifest.product_coverage ?? {};
       .map(([h, occ]) => `${h} (${occ.length}× ex: ${occ[0]})`)
       .join(" | ");
     record("R19 links_target_existing_pages", "fail", `${deadHrefs.size} route(s) inexistante(s) référencée(s) : ${details}${deadHrefs.size > 8 ? " …" : ""}`);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Règle 20 : scripts/smoke.sh présent + intègre + patterns clés
+//   Vérifications statiques uniquement (aucune exécution — le lancement
+//   live se fait via `npm run smoke`). Bloquant si smoke absent ou vidé
+//   silencieusement, warn si trop ancien. T-032 (Session 11), ADR-008.
+// ─────────────────────────────────────────────────────────────
+{
+  const smokePath = join(REPO_ROOT, "scripts", "smoke.sh");
+  const fails = [];
+  const warnings = [];
+
+  if (!existsSync(smokePath)) {
+    fails.push("scripts/smoke.sh est absent");
+  } else {
+    // (a) exécutable
+    let mode = 0;
+    try {
+      mode = (execSync(`stat -c '%a' "${smokePath}"`, { encoding: "utf8" }).trim() | 0);
+    } catch {}
+    if (!(mode & 0o111)) {
+      fails.push(`scripts/smoke.sh n'est pas exécutable (mode=${mode.toString(8)})`);
+    }
+
+    const text = readFileSync(smokePath, "utf8");
+
+    // (b) header @assertions:N avec N >= 40
+    const m = text.match(/@assertions:\s*(\d+)/);
+    if (!m) {
+      fails.push("header '# @assertions: N' manquant dans scripts/smoke.sh");
+    } else {
+      const n = parseInt(m[1], 10);
+      if (n < 40) {
+        fails.push(`# @assertions: ${n} < 40 (couverture insuffisante)`);
+      }
+    }
+
+    // (c) patterns essentiels — protection anti-vidage
+    const required = [
+      { re: /admin@mybestbooking\.com/, label: "login admin@" },
+      { re: /host@mybestbooking\.com/, label: "login host@" },
+      { re: /customer@mybestbooking\.com/, label: "login customer@" },
+      { re: /\/api\/bookings/, label: "POST /api/bookings" },
+      { re: /DashboardSidebar|Chargement/, label: "guard body-check" },
+    ];
+    const missing = required.filter((r) => !r.re.test(text)).map((r) => r.label);
+    if (missing.length) {
+      fails.push(`patterns essentiels manquants : ${missing.join(", ")}`);
+    }
+
+    // (e) fraîcheur — warn si smoke.sh n'a pas été touché depuis > 200 commits
+    try {
+      const lastTouch = execSync(
+        `git log -1 --format=%H -- scripts/smoke.sh`,
+        { cwd: REPO_ROOT, encoding: "utf8" }
+      ).trim();
+      if (lastTouch) {
+        const since = execSync(
+          `git rev-list ${lastTouch}..HEAD`,
+          { cwd: REPO_ROOT, encoding: "utf8" }
+        ).trim();
+        const n = since ? since.split("\n").length : 0;
+        if (n > 200) {
+          warnings.push(`scripts/smoke.sh pas touché depuis ${n} commits (couverture peut être périmée)`);
+        }
+      }
+    } catch {}
+  }
+
+  if (fails.length) {
+    record("R20 smoke_manifest_present", "fail", fails.join(" | "));
+  } else if (warnings.length) {
+    record("R20 smoke_manifest_present", "warn", warnings.join(" | "));
+  } else {
+    record("R20 smoke_manifest_present", "ok", "scripts/smoke.sh présent, exécutable, contient les patterns essentiels");
   }
 }
 

@@ -10,10 +10,13 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `11a1873` (T-031, Session 10)
-- **Dernier commit stable référencé** : `11a1873` (Session 10)
-- **Version du Framework** : **1.1.2** (AI-DOS Web, hybride + complétude
-  produit — voir `PROCESS_IMPROVEMENTS.md`)
+- **Dernier commit connu** : à mettre à jour en fin de session
+  (T-032, Session 11)
+- **Dernier commit stable référencé** : à mettre à jour en fin de
+  session
+- **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
+  complétude produit + preuve runtime R20 — voir
+  `PROCESS_IMPROVEMENTS.md`, ADR-008)
 
 ## 🛠️ État Technique
 
@@ -21,8 +24,11 @@
 - **Dernier `npm run build`** : ✅ succès
 - **Dernier `npm test`** : ✅ **176 passed / 176** (0 skipped avec DB
   embarquée démarrée)
-- **Dernier `npm run ai:check`** : ✅ 15 OK · 2 warn attendus · 0 fail
-- **Couverture** : ~118 features ✅ / ~7 sandbox-limited / 0 absent
+- **Dernier `npm run ai:check`** : ✅ **17 OK · 2 warn attendus · 1
+  fail cosmétique R7** (STATE.md pointe vers le HEAD à mettre à jour)
+- **Dernier `npm run smoke`** : ✅ **91 assertions PASS · 0 FAIL**
+  (~30 s, log dans `.ai/REPORTS/smoke_run_2026-08-21_session_11.log`)
+- **Couverture** : ~119 features ✅ / ~7 sandbox-limited / 0 absent
   (**FEATURES.md ✅ ≈ 97 %**)
 
 ## 📈 Compteurs framework (§17, ADR-006)
@@ -82,7 +88,7 @@
   BUG-007, BUG-008, BUG-009, BUG-010, BUG-011, BUG-012, BUG-013, BUG-014,
   BUG-015, **BUG-016** (JWT jti, Session 6), **BUG-003** (paiement,
   infra livrée T-020, credentials Stripe test à fournir)
-- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-031 (31 tâches)
+- **Tâches VALIDÉ** : T-000 v1/v1.1/v1.2/v1.3 + T-001 à T-032 (32 tâches)
 
 ## 🏛️ Décisions & ADR
 
@@ -93,14 +99,19 @@
 - **ADR-005** : Proxy edge d'auth (Session 4)
 - **ADR-006** : Framework étendu à la complétude produit (Session 5)
 - **ADR-007** : Panel d'administration configurable — table `app_settings` (Session 7)
+- **ADR-008** : Smoke HTTP obligatoire (R20) comme preuve runtime (Session 11)
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-21 (Session 10 — **T-031 audit UI brutal + R19** :
-  framework v1.1.2, R19 bloque les liens vers pages inexistantes, 15
-  liens footer morts corrigés, 22 boutons câblés (mailto/Link/actions
-  clients), 4 composants inutilisés retirés/branchés, 2 pages légales
-  livrées, 176/176 tests inchangés, 16 OK 0 fail)
+- **Date** : 2026-08-21 (Session 11 — **T-032 R20 smoke_manifest_present
+  + scripts/smoke.sh** : framework v1.1.3, R20 bloque le retrait /
+  vidage du smoke, script versionné avec 91 assertions HTTP réelles
+  (login × 3 rôles, 39 pages, 7 guards body-check, 8 API + 7 scénarios
+  métier dont POST /api/bookings complet), `npm run smoke` intégré,
+  ADR-008, log capté. Réponse à l'analyse critique de framework qui
+  a révélé qu'aucune règle ne testait le comportement runtime.
+  176/176 tests, 17 OK 2 warn 1 fail cosmétique (R7 STATE HEAD à
+  actualiser au commit))
 
 - **Date précédente** : 2026-08-21 (Session 9 — **T-030 R18 no_dead_ui** :
   framework v1.1.1 durci pour bloquer les liens/handlers morts

@@ -154,6 +154,16 @@ conditions ci-dessous sont réunies :
    est validé par une **implémentation** ET par un **test automatisé
    indépendant** rédigé après ou en parallèle, pas dérivé du même
    raisonnement.
+
+   **§13.5-bis Preuve runtime (v1.1.3, ADR-008)** : pour toute clôture
+   VALIDÉ d'un item S ou C qui touche l'UI ou une route API,
+   `npm run smoke` doit être **rejoué** après le dernier commit et
+   sortir en `exit 0`. La sortie doit être citée dans TRACEABILITY comme
+   preuve ▶️ (« `npm run smoke` : N PASS · 0 FAIL »). Le script
+   lui-même est protégé par la règle R20 : sa disparition ou son vidage
+   fait échouer `npm run ai:check`. Si le smoke actuel ne couvre pas le
+   scénario touché, il **doit être étendu** dans la même tâche (ajouter
+   les assertions et bumper le compteur `@assertions: N`).
 6. **§13.6 Zéro régression** : les fonctionnalités adjacentes ont été
    testées manuellement et n'ont pas dégradé.
 7. **§13.7 Documentation** : `STATE.md`, `PROGRESS.md`, `BACKLOG.md`,

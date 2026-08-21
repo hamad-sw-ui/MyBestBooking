@@ -9,6 +9,107 @@
 
 ---
 
+## Session 11 — 2026-08-21
+
+### Fonctionnalités terminées
+
+- **T-032 (S) VALIDÉ** — R20 smoke_manifest_present + scripts/smoke.sh.
+  Réponse à l'analyse critique du framework de début de session :
+  `analyse_framework_2026-08-21_pourquoi_illusion.md`. Le framework
+  vérifiait des artefacts statiques, jamais le comportement runtime,
+  d'où l'illusion Session 8. R20 ferme la faille #5 identifiée.
+
+### Livrables
+
+- 🔨 `scripts/smoke.sh` — script bash 291 lignes, 91 assertions HTTP
+  réelles (login × 3, 39 pages, 7 guards body-check, 8 API, 7 scénarios
+  métier dont POST /api/bookings complet), démarre/réutilise DB + Next
+  dev, cleanup respectueux, exit non nul si un cas échoue.
+- 🔨 `scripts/check-ai.mjs` — bloc « Règle 20 » : vérifie présence,
+  exécutabilité, header `@assertions ≥ 40`, 5 patterns essentiels
+  (login × 3 rôles, POST /api/bookings, guard body-check).
+- 🔨 `.ai/framework.manifest.json` — bumped **1.1.2 → 1.1.3**, entrée
+  changelog, `blocking_rules.smoke_manifest_present` ajoutée.
+- 🔨 `.ai/ADR/ADR-008_Smoke_HTTP_Preuve_Runtime.md` — décision, rejet
+  Playwright/Vitest E2E/live-in-ai-check, dettes assumées R21-R25.
+- 🔨 `package.json` — nouveau script `smoke` (`bash scripts/smoke.sh`).
+- 🔨 2 rapports §14/§15.1 :
+  `analyse_impact_2026-08-21_T-032_smoke_r20.md` +
+  `analyse_conception_2026-08-21_T-032_smoke_r20.md`.
+
+### Fichiers modifiés
+
+Créés : `scripts/smoke.sh`, `.ai/ADR/ADR-008_Smoke_HTTP_Preuve_Runtime.md`,
+`.ai/REPORTS/analyse_framework_2026-08-21_pourquoi_illusion.md`,
+`.ai/REPORTS/analyse_impact_2026-08-21_T-032_smoke_r20.md`,
+`.ai/REPORTS/analyse_conception_2026-08-21_T-032_smoke_r20.md`,
+`.ai/REPORTS/smoke_run_2026-08-21_session_11.log`,
+`.ai/REPORTS/test_run_2026-08-21_session_11.md`.
+
+Modifiés : `scripts/check-ai.mjs`, `.ai/framework.manifest.json`,
+`package.json`, `.ai/STATE.md`, `.ai/PROGRESS.md`,
+`.ai/CURRENT_TASK.md`, `.ai/TRACEABILITY.md`, `.ai/FEATURES.md`,
+`.ai/BACKLOG.md`, `.ai/CODING_RULES.md`.
+
+Aucun changement de code applicatif `src/**` — pure gouvernance +
+tooling.
+
+### Tests exécutés
+
+- 🔨 `npm run typecheck` — 0 erreur.
+- 🧪 `npm run test` — **176 / 176 verts**, 0 skip (avec DB embarquée
+  démarrée), 10 s.
+- 🔨 `npm run ai:check` — **17 OK · 2 warn attendus · R20 vert · 1
+  fail R7 cosmétique** (STATE.md pointe encore l'ancien HEAD, motif
+  toléré « à mettre à jour en fin de session »).
+- ▶️ `npm run smoke` (Session 11 run #1) — 90 PASS · 1 FAIL (a
+  révélé que POST /api/wishlists sur item existant renvoie 400 avec
+  message « Hébergement déjà dans la liste » — comportement métier
+  correct, script rendu idempotent).
+- ▶️ `npm run smoke` (Session 11 run #2, définitif) — **91 PASS ·
+  0 FAIL** en ~30 s. Log complet dans
+  `.ai/REPORTS/smoke_run_2026-08-21_session_11.log`.
+- ▶️ Test anti-triche R20 : `mv scripts/smoke.sh /tmp/` puis
+  `npm run ai:check` → sort `❌ R20 scripts/smoke.sh est absent`,
+  code exit 1. Restauration → `✅ R20`, code 0.
+
+### Problèmes rencontrés
+
+1. **Faux positif smoke #1** : POST /api/wishlists renvoie 400 sur item
+   déjà en base. Étudié le handler `route.ts` : réponse volontaire (« Hébergement
+   déjà dans la liste »). Rendu idempotent en acceptant 400 + message
+   métier exact — le smoke reste rejouable N fois.
+2. **Découverte Next 16** : `redirect()` dans un Server Component renvoie
+   200 + instruction RSC, pas 307 HTTP. Guard vérifiable uniquement via
+   le body rendu → intégré comme design pattern D3 dans le smoke
+   (7 assertions body-check `DashboardSidebar|Tableau de bord`).
+3. **Cleanup après smoke** : les tests Vitest ont temporairement 17 skip
+   car le smoke a arrêté la DB embarquée à sa sortie. Solution : le
+   smoke ne tue QUE les processes qu'il a lui-même démarrés (`trap` +
+   flags `STARTED_DB` / `STARTED_APP`) — si l'utilisateur avait déjà
+   `db:dev` en cours, il reste après smoke.
+
+### Étape suivante
+
+- Attendre la prochaine directive utilisateur.
+- Roadmap identifiée dans l'analyse framework (rapports R21-R25) si
+  demandée :
+  - **R21 button_effect_trace** — chaque `<Button>` visible doit
+    prouver un effet (onClick référencé, submit ou Link non-#).
+  - **R22 role_guard_effective_test** — automatiser le body-check
+    dans Vitest supertest (redondance avec smoke, plus rapide).
+  - **R23 features_reality_check** — croiser chaque ✅ FEATURES.md
+    avec une preuve smoke ou test.
+  - **R24 evidence_freshness** — chaque preuve TRACE cite un SHA,
+    rétrograde en RÉGRESSION_POTENTIELLE si le code a bougé.
+  - **R25 test_covers_the_claim** — matcher lexical test cité ↔
+    feature VALIDÉ.
+- Ajouter le workflow CI GitHub Actions
+  (`.ai/REPORTS/ci_workflow_a_ajouter.md` déjà prêt) qui lance
+  `npm run smoke` sur PR — permission `workflows` requise.
+
+---
+
 ## 2026-08-21 — Session 10 : T-031 R19 + audit UI brutal
 
 **Trigger utilisateur** : « refaites l'audit maintenant ».

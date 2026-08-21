@@ -2,123 +2,96 @@
 
 ## Identifiant
 
-- **ID** : T-031
-- **Titre** : R19 + audit UI brutal (liens morts, boutons câblés, composants nettoyés)
+- **ID** : T-032
+- **Titre** : R20 smoke_manifest_present + scripts/smoke.sh (preuve runtime obligatoire)
 - **Niveau** : **S**
-- **Ouverte le** : 2026-08-21 (Session 10)
+- **Ouverte le** : 2026-08-21 (Session 11)
 - **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Contexte
 
-Réponse directe à « refaites l'audit maintenant » après T-030.
-L'utilisateur soupçonnait à raison qu'il restait des manquements.
-L'audit brutal a révélé 4 catégories de morts UI : 15 liens footer
-→ 404, 22 boutons sans handler ni Link, 4 composants inutilisés,
-1 formulaire sans method/action explicite.
+Réponse directe à l'analyse critique du framework rédigée en début de
+Session 11 (`REPORTS/analyse_framework_2026-08-21_pourquoi_illusion.md`).
+Le framework `.ai/` v1.1.2, malgré ses 19 règles vertes, ne teste
+**aucun comportement runtime** — c'est ce qui a produit l'illusion en
+Session 8 où 7 features avaient été marquées ✅ VALIDÉ alors que leur
+UI n'existait pas.
+
+Le tag §16 `▶️ EXECUTED` était défini mais ni obligatoire ni
+auto-vérifié. R20 le rend structurel via un script versionné dont
+l'intégrité est contrôlée.
 
 ## Livrables
 
-### A. Framework (v1.1.2)
+### A. Framework (v1.1.3)
 
-- **Nouvelle règle R19** dans `scripts/check-ai.mjs` : bloque
-  `href="/xxx"` qui pointe vers une route sans `page.tsx` existant.
-  Supporte segments dynamiques `[slug]`. Whitelist : `/api/*`,
-  `/uploads/*`, `/_next/*`.
-- **manifest.blocking_rules.link_to_nonexistent_page** ajoutée.
-- Manifest version bumped 1.1.1 → 1.1.2.
+- **Nouvelle règle bloquante R20** dans `scripts/check-ai.mjs` : vérifie
+  statiquement que `scripts/smoke.sh` existe, est exécutable, porte un
+  header `# @assertions: N` avec N ≥ 40, et contient les 5 patterns
+  essentiels (login × 3 rôles, POST /api/bookings, guard body-check).
+  Bloquant en cas de disparition ou vidage silencieux.
+- **manifest.blocking_rules.smoke_manifest_present** ajoutée
+  (blocking=true, verified_by=R20).
+- Manifest version bumped `1.1.2 → 1.1.3`.
+- Entrée changelog manifest.
 
-### B. Footer refondu
+### B. Script versionné `scripts/smoke.sh`
 
-`src/components/layout/footer.tsx` : ne référence plus que des routes
-existantes. Sections : Découvrir, Voyageurs, Hébergeurs, Contact,
-Bottom (mentions-legales + confidentialite).
+- **91 assertions HTTP réelles** en ~30 s.
+- Démarre PostgreSQL embarqué + Next dev si nécessaire, reprend
+  l'existant sinon, cleanup respectueux (`trap EXIT`).
+- Play : login × 3 rôles, 11 pages publiques, 20 pages protégées via
+  proxy, 9 pages customer, 7 guards body-check dashboard, 11 pages
+  host, 9 pages admin, 3 `/api/auth/me`, 8 API protégées, 2 RBAC
+  admin, 7 scénarios métier (`POST /api/bookings` complet inclus).
+- Exit code non nul si un cas échoue → intégrable CI.
 
-### C. 2 pages légales livrées
+### C. ADR-008
 
-- `/mentions-legales` : éditeur, hébergeur, CGU, CGV, IP, droit
-  applicable.
-- `/confidentialite` : RGPD complet (données, cookies, droits,
-  sécurité, sous-traitants, DPO).
+`.ai/ADR/ADR-008_Smoke_HTTP_Preuve_Runtime.md` — décision technique,
+alternatives rejetées (Playwright / Vitest E2E / live dans ai:check),
+conséquences positives et dettes assumées (R21-R25 à venir).
 
-### D. 2 composants clients réutilisables
+### D. `npm run smoke`
 
-- `src/components/booking-row-actions.tsx` : Contacter (mailto),
-  Confirmation (download .txt), Annuler (`PUT /api/bookings/[id]`).
-- `src/components/wishlist-actions.tsx` : Partager (clipboard share
-  URL), Supprimer (`DELETE /api/wishlists?wishlistId=`).
+Ajouté dans `package.json` — commande unique pour lancer le smoke live.
 
-### E. 22 boutons morts câblés
+### E. Docs `.ai/` à jour
 
-- **mailto:** : /aide (chat, email), /messages (support),
-  /mes-reservations (Laisser un avis)
-- **Link** : /dashboard/rooms (Ajouter), /dashboard/promotions
-  (Créer ×2), /dashboard/properties/[id] (Ajouter chambre ×2,
-  Modifier room → calendrier), /mon-compte (Utiliser mon solde)
-- **BookingRowActions** intégré dans /mes-reservations et
-  /dashboard/bookings/[id]
-- **WishlistActions** + **PriceAlertsSection** intégrés dans /mes-favoris
-- **Retirés** : bouton « Appeler » (téléphone non actif) →
-  span « Numéro à activer », bouton « Tout télécharger » dashboard/billing
-  → span « Export CSV via API (v prochaine) »
-
-### F. Composants inutilisés
-
-- **Supprimés** : `ui/modal.tsx`, `ui/skeleton.tsx`,
-  `ui/image-uploader.tsx` (aucun import).
-- **Branché** : `price-alerts-section.tsx` (T-030) intégré dans /mes-favoris.
-
-### G. Formulaire /recherche
-
-Ajout de `method="get"` + `action="/recherche"` explicites.
+STATE, PROGRESS, TRACEABILITY, FEATURES, BACKLOG, CURRENT_TASK,
+CODING_RULES (§13.5-bis), 2 rapports impact/conception + 1 log
+d'exécution capté.
 
 ## Preuves (§16)
 
-- 🔍 `REPORTS/audit_ui_2026-08-21_session_10.md` (rapport détaillé).
-- 🔨 `npm run typecheck` ✅ 0 erreur.
-- 🔨 `npm run build` ✅ succès.
-- 🔨 `npm run lint` ✅ 0 error.
-- 🧪 `npm test` : **176 / 176** inchangé.
-- 🧪 `npm run ai:check` : **16 OK · 2 warn · 0 fail** (R18 ✅, R19 ✅).
-- ▶️ `/mentions-legales` et `/confidentialite` → 200.
-- ▶️ /aide contient uniquement des `mailto:support@mybestbooking.com` et
-  `mailto:partners@mybestbooking.com`, plus aucun bouton mort.
-- ▶️ /mes-favoris : PriceAlertsSection + WishlistActions branchés,
-  détectés dans le HTML rendu.
-- ▶️ /mes-reservations : BookingRowActions branché.
-- ▶️ Annulation booking via UI : `PUT /api/bookings/[id]
-  {status:"cancelled"}` → 200 avec `fee: 0.00` calculé selon policy.
-- ▶️ /dashboard/rooms/new → 200 (formulaire host).
-- ▶️ /dashboard/promotions/new → 200.
+- 🔨 `npm run typecheck` : 0 erreur.
+- 🧪 `npm run test` : 176/176 verts (0 skip avec DB).
+- 🔨 `npm run ai:check` : **17 OK · 2 warn attendus · R20 vert · fail cosmétique R7 (STATE HEAD)**.
+- ▶️ `npm run smoke` : **91 PASS · 0 FAIL** — log capté dans
+  `.ai/REPORTS/smoke_run_2026-08-21_session_11.log`.
+- ▶️ Test anti-triche R20 : `mv scripts/smoke.sh /tmp/` → `ai:check`
+  sort `❌ R20 scripts/smoke.sh est absent`. Restauration → `✅`.
 
-## Grep final (audit reproductible)
+## Rapports associés
 
-Vous pouvez rejouer :
-```bash
-# 1. Liens footer/header morts
-grep -rhoE 'href="/[a-z][a-z0-9/_-]*"' src/components/layout src/app \
-  | sort -u | sed 's/href="//;s/"//' > /tmp/all_hrefs.txt
-find src/app -name page.tsx -not -path "*api*" \
-  | sed 's|src/app||;s|/page.tsx||;s|/(main)||;s|/(auth)||;s|/\[[a-z]*\]|/:id|g' \
-  | sort -u > /tmp/pages_exist.txt
-comm -23 <(grep -vE "^/api/|/uploads/|^/#" /tmp/all_hrefs.txt) /tmp/pages_exist.txt
-# → 0
+- `REPORTS/analyse_framework_2026-08-21_pourquoi_illusion.md` (motif)
+- `REPORTS/analyse_impact_2026-08-21_T-032_smoke_r20.md` (§14, 9 questions)
+- `REPORTS/analyse_conception_2026-08-21_T-032_smoke_r20.md` (§15.1)
+- `REPORTS/smoke_run_2026-08-21_session_11.log` (preuve ▶️)
+- `.ai/ADR/ADR-008_Smoke_HTTP_Preuve_Runtime.md` (décision)
 
-# 2-3. href="#" + handlers vides (couvert par R18)
-grep -rn 'href="#"' src/app src/components  # → 0
+## Prochaines étapes proposées (hors T-032)
 
-# 4. Boutons sans handler ni Link (analyse contextuelle Python)
-# → 0
+R21-R25 identifiées dans l'analyse framework restent à livrer si
+l'utilisateur en décide (chaque règle = 1 tâche S) :
 
-# 5. Composants inutilisés
-# ui/modal ui/skeleton ui/image-uploader supprimés
-# price-alerts-section branché dans /mes-favoris
-# → 0
-
-# 6. Forms sans onSubmit/method/action
-grep -rn "<form\b" src/app | grep -vE "onSubmit|method=|action="  # → 0
-```
-
-## Étape suivante
-
-Rien de bloquant restant. Toute future soumission R18+R19 bloque
-les nouvelles régressions de liens/handlers morts.
+- **R21 button_effect_trace** : chaque `<Button>` visible doit
+  prouver un effet (onClick référencé, submit ou Link non-#).
+- **R22 role_guard_effective_test** : automatiser le body-check
+  aujourd'hui dans le smoke via Vitest supertest.
+- **R23 features_reality_check** : croiser chaque ✅ de FEATURES.md
+  avec le rapport smoke.
+- **R24 evidence_freshness** : preuves TRACEABILITY doivent citer un
+  SHA, dégrader en RÉGRESSION_POTENTIELLE si le code touché depuis.
+- **R25 test_covers_the_claim** : matcher lexical entre tests cités
+  et fonctionnalité VALIDÉ.

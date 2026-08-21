@@ -221,6 +221,7 @@ modification de code.
 | Test d'intégration `/api/promotions/apply`, `/api/wishlists/shared`, `/api/seed` | ✅ | Chacun 5-7 cas DB-backed | T-019 |
 | Tests composants React | ✅ | Tests intégration DB-backed via handlers pour les workflows critiques (moderate 5, bookings 4, promotions 6, wishlists 2, seed 7). Tests unitaires libs (176 total) | T-023, T-024 |
 | **Playwright E2E** | 🚧 | 5 specs prêts (smoke, PAR-002, PAR-003, PAR-005, PAR-030). **Sandbox-limited** : Chromium indispo (CDN Google). Exécution CI hébergée | T-019 |
+| **Smoke HTTP reproductible (`npm run smoke`)** | ✅ | 91 assertions HTTP réelles en ~30 s : login × 3 rôles, 11 pages publiques, 20 pages protégées, 9 pages customer, 7 guards body-check dashboard, 11 pages host, 9 pages admin, 8 API protégées, 2 RBAC admin, POST /api/bookings complet. Exit non nul si un cas échoue. **Bloque le framework via R20** (`scripts/check-ai.mjs`) si le script disparaît ou est vidé. Log `.ai/REPORTS/smoke_run_2026-08-21_session_11.log` | **T-032**, ADR-008 |
 | Couverture code mesurée | ✅ | `vitest --coverage` installé (vitest v4 built-in). Exécutable localement, à automatiser en CI | T-019 |
 | CI GitHub Actions | 🚧 | **Sandbox-limited** : token agent sans permission `workflows`. Fichier prêt dans REPORTS/, install manuel côté GitHub | 🎯 manuel |
 | Dependabot | 🚧 | **Sandbox-limited** : configuration UI GitHub, hors code. Activable en 1 clic dans Settings > Security | 🎯 GitHub UI |

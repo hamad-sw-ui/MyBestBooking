@@ -8,6 +8,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "ai:check": "node scripts/check-ai.mjs",
+    "smoke": "bash scripts/smoke.sh",
     "db:dev": "node scripts/dev-db.mjs",
     "db:push": "drizzle-kit push",
     "db:generate": "drizzle-kit generate",
