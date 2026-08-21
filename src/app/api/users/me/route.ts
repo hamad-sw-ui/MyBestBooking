@@ -39,6 +39,7 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({
       user: {
         id: updated.id,
+        email: updated.email,
         firstName: updated.firstName,
         lastName: updated.lastName,
         phone: updated.phone,
@@ -47,6 +48,11 @@ export async function PATCH(request: NextRequest) {
         currency: updated.currency,
         timezone: updated.timezone,
         avatarUrl: updated.avatarUrl,
+        // BUG-017 (T-032, Session 11) : exposer les préférences que la
+        // route PATCH accepte, sinon l'UI ne peut pas confirmer le
+        // toggle sans recharger. Détecté par scripts/deep_sim.py.
+        priceAlertEnabled: updated.priceAlertEnabled,
+        twoFactorEnabled: updated.twoFactorEnabled,
       },
     });
   } catch (error) {

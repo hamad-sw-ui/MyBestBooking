@@ -10,8 +10,10 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `5549b3d` (T-032, Session 11)
-- **Dernier commit stable référencé** : `5549b3d` (Session 11)
+- **Dernier commit connu** : à mettre à jour en fin de session
+  (T-032 + BUG-017, Session 11 bis)
+- **Dernier commit stable référencé** : à mettre à jour en fin de
+  session
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
@@ -26,6 +28,13 @@
   fail cosmétique R7** (STATE.md pointe vers le HEAD à mettre à jour)
 - **Dernier `npm run smoke`** : ✅ **91 assertions PASS · 0 FAIL**
   (~30 s, log dans `.ai/REPORTS/smoke_run_2026-08-21_session_11.log`)
+- **Dernier `python3 scripts/deep_sim.py`** : ✅ **81 contrôles
+  profonds PASS · 0 KO** en ~15 s (21 sections : chemins d'erreur,
+  flux 2FA/upload/booking/annulation/propriété/suspend, effets DB +
+  emails, rate-limits, RBAC). Rapport dans
+  `.ai/REPORTS/simulation_deep_2026-08-21_session_11.md`
+- **BUG trouvé + corrigé Session 11 bis** : BUG-017 (PATCH /api/users/me
+  n'exposait pas priceAlertEnabled dans le retour)
 - **Couverture** : ~119 features ✅ / ~7 sandbox-limited / 0 absent
   (**FEATURES.md ✅ ≈ 97 %**)
 

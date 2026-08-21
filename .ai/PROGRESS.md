@@ -9,6 +9,45 @@
 
 ---
 
+## Session 11 — 2026-08-21 (bis : simulation profonde + BUG-017)
+
+### Complément T-032 : simulation PROFONDE
+
+Après la simulation surface (68 scénarios), l'utilisateur a souligné à
+raison que je négligeais l'intérieur de chaque interface. Livré :
+
+- 🔨 `scripts/deep_sim.py` (~700 lignes Python) : 21 sections, **81
+  contrôles profonds** en 15 s, couvrant chemins d'erreur (payloads
+  invalides, doubles, permissions), flux multi-étapes (2FA
+  setup→verify→disable avec **vrai TOTP** via speakeasy Node,
+  upload→GET→ownership→DELETE→404), contenus **profonds** (composants
+  branchés dans page.tsx pour pages client + patterns HTML pour pages
+  server), effets de bord (emails, audit log, paymentStatus),
+  rate-limits, guest booking, wallet+BR+promo combinés,
+  propriété→validation admin, suspension user→sessions killed,
+  delete account complet.
+- 🔨 `.ai/REPORTS/simulation_deep_2026-08-21_session_11.md` (rapport
+  détaillé)
+- 🔨 **BUG-017 découvert et corrigé** : `PATCH /api/users/me`
+  n'exposait pas `priceAlertEnabled` / `twoFactorEnabled` dans la
+  réponse alors qu'il les acceptait en entrée →
+  `<NotificationPrefsSection>` (T-030) affichait un toggle
+  potentiellement désynchronisé. Correctif : ajout de `email`,
+  `priceAlertEnabled`, `twoFactorEnabled` dans le retour de
+  `/api/users/me/route.ts`.
+- 🔨 `.ai/BUGS.md` : entrée BUG-017 avec preuves + explication
+  méthodologique (ni R18/R19/R20/tests unitaires n'auraient trouvé
+  ce bug — il faut aussi vérifier le **shape** des réponses).
+
+### Résultat final Session 11
+
+- **81 / 81 contrôles profonds OK**
+- **1 vrai bug trouvé et corrigé** (BUG-017)
+- **176 / 176 tests unitaires verts**
+- **`ai:check` : 17 OK · 2 warn · 1 fail cosmétique R7** (résolu au commit)
+
+---
+
 ## Session 11 — 2026-08-21
 
 ### Fonctionnalités terminées

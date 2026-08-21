@@ -16,6 +16,22 @@ _Aucun bug critique ouvert._ Le seul point restant est **BUG-003
 
 ## Corrigés
 
+- [x] **2026-08-21 — BUG-017** (découvert Session 11 par
+  `scripts/deep_sim.py`) : `PATCH /api/users/me` accepte
+  `priceAlertEnabled` (et `twoFactorEnabled` en lecture indirecte) en
+  entrée mais **ne les renvoie pas** dans la réponse `user`. Le
+  composant `<NotificationPrefsSection>` (T-030) qui affiche le
+  résultat du PATCH ne pouvait donc pas confirmer visuellement le
+  toggle sans forcer un `/api/auth/me`. Correctif : ajout de
+  `email`, `priceAlertEnabled`, `twoFactorEnabled` dans la sélection
+  du retour. Preuves : ▶️ `curl PATCH priceAlertEnabled=true` renvoie
+  désormais `"priceAlertEnabled": true` (validé). Ce bug avait
+  échappé aux 176 tests Vitest + R18 + R19 + `npm run smoke` — il
+  n'est visible qu'en jouant le PATCH et en lisant la structure du
+  retour, pas juste le code HTTP. **C'est exactement pourquoi R20
+  smoke n'est pas suffisant : il faut aussi vérifier le SHAPE des
+  réponses, pas seulement leur code HTTP.** À noter pour R21+.
+
 - [x] **2026-08-20 — BUG-016** (découvert Session 6) : deux
   `createSession()` du même user à la même seconde généraient le même
   JWT → violation de `sessions_token_unique`. Corrigé par ajout d'un
