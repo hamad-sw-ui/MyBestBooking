@@ -10,10 +10,9 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `d49c8f6` (docs sync T-033) — sera mis à
-  jour au commit T-034 (Session 13)
-- **Dernier commit stable référencé** : `d49c8f6` (Session 12/13
-  transition, T-033 livré, T-034 en préparation avant push)
+- **Dernier commit connu** : `4c39523` (T-034 dashboards bulk étendus,
+  Session 13)
+- **Dernier commit stable référencé** : `4c39523` (Session 13)
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
