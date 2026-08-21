@@ -22,7 +22,7 @@ import subprocess, json, os, re, time, sys, glob
 BASE = "http://127.0.0.1:3000"
 JAR = "/tmp/dashsim"
 REPO = "/home/user/MyBestBooking"
-OUT = f"{REPO}/.ai/REPORTS/simulation_dashboards_2026-08-21_session_12.md"
+OUT = f"{REPO}/.ai/REPORTS/simulation_dashboards_2026-08-21_session_13.md"
 
 os.makedirs(JAR, exist_ok=True)
 
@@ -109,6 +109,11 @@ for route, mgr in [
     ("dashboard/properties", "PropertiesManager"),
     ("dashboard/reviews",    "ReviewsManager"),
     ("dashboard/bookings",   "BookingsManager"),
+    # T-034 : nouveaux dashboards
+    ("dashboard/rooms",      "RoomsManager"),
+    ("dashboard/promotions", "PromotionsManager"),
+    ("dashboard/messages",   "MessagesManager"),
+    ("dashboard/audit",      "AuditFilter"),
 ]:
     path = f"{REPO}/src/app/{route}/page.tsx"
     if not os.path.exists(path):
@@ -138,6 +143,22 @@ for f, must_have in [
     ("src/components/bulk/bookings-manager.tsx",
      ["BookingsManager", "BulkToolbar", "type=\"checkbox\"", "statusFilter",
       "dateFrom", "dateTo", "toggleAll", "cancel"]),
+    # T-034 NEW
+    ("src/components/bulk/rooms-manager.tsx",
+     ["RoomsManager", "BulkToolbar", "type=\"checkbox\"", "statusFilter",
+      "typeFilter", "toggleAll", "activate", "deactivate", "delete",
+      "RowDeleteButton"]),
+    ("src/components/bulk/promotions-manager.tsx",
+     ["PromotionsManager", "BulkToolbar", "type=\"checkbox\"",
+      "statusFilter", "typeFilter", "toggleAll", "activate",
+      "deactivate", "delete", "RowDeleteButton"]),
+    ("src/components/bulk/messages-manager.tsx",
+     ["MessagesManager", "statusFilter", "searchRef", "unread"]),
+    ("src/components/bulk/audit-filter.tsx",
+     ["AuditFilter", "actionFilter", "entityFilter", "searchRef"]),
+    ("src/components/bulk/row-delete-button.tsx",
+     ["RowDeleteButton", "/api/admin/bulk", "confirm", "router.refresh",
+      "row-delete-"]),
 ]:
     path = os.path.join(REPO, f)
     if not os.path.exists(path):
@@ -407,9 +428,208 @@ record(S, f"GET /api/admin/audit contient {len(bulk_entries)} entrée(s) 'bulk.a
 S = "12. Pages dashboards HTTP 200 pour l'admin"
 
 for path in ["/dashboard/users", "/dashboard/properties",
-             "/dashboard/reviews", "/dashboard/bookings"]:
+             "/dashboard/reviews", "/dashboard/bookings",
+             "/dashboard/rooms", "/dashboard/promotions",
+             "/dashboard/messages", "/dashboard/audit"]:
     code, _ = curl(BASE + path, jar="admin")
     record(S, f"GET {path} → 200", "OK" if code == 200 else "KO", f"code={code}")
+
+# ═══════════════════════════════════════════════════════════════
+S = "12bis. T-034 : icônes de suppression par ligne (data-testid row-delete-*)"
+
+# Vérifier la présence du data-testid dans le HTML rendu
+for path, needle in [
+    ("/dashboard/users", "row-delete-users"),
+    ("/dashboard/properties", "row-delete-properties"),
+    ("/dashboard/reviews", "row-delete-reviews"),
+    ("/dashboard/rooms", "row-delete-rooms"),
+    ("/dashboard/promotions", "row-delete-promotions"),
+]:
+    _, body = curl(BASE + path, jar="admin")
+    has_delete = needle in body
+    record(S, f"{path} contient au moins un bouton {needle}",
+           "OK" if has_delete else "KO",
+           f"needle '{needle}' {'trouvé' if has_delete else 'absent'} dans le HTML")
+
+# ═══════════════════════════════════════════════════════════════
+S = "12ter. T-034 : bulk sur rooms + promotions"
+
+# Créer 2 rooms test via API interne
+db_query("UPDATE users SET two_factor_enabled=false WHERE email LIKE '%@mybestbooking.com'")
+prop = db_query("SELECT id FROM properties WHERE status='active' LIMIT 1")
+if prop and isinstance(prop, list) and prop:
+    prop_id = prop[0]["id"]
+    ts = int(time.time())
+    room_ids = []
+    for i in range(2):
+        r = db_query(f"""INSERT INTO rooms (property_id, name, room_type, max_occupancy, max_adults, quantity, base_price, currency, is_active)
+            VALUES ('{prop_id}', 'T034Room{ts}_{i}', 'double', 2, 2, 1, 100.00, 'EUR', true)
+            RETURNING id""")
+        if r and isinstance(r, list) and r:
+            room_ids.append(r[0]["id"])
+
+    if len(room_ids) == 2:
+        ids_json = json.dumps(room_ids)
+        # activate → ok
+        code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+            data=f'{{"entity":"rooms","action":"activate","ids":{ids_json}}}')
+        try: succ = json.loads(body).get("succeeded", 0)
+        except: succ = 0
+        record(S, f"Bulk activate 2 rooms → succeeded={succ}",
+               "OK" if code == 200 and succ == 2 else "KO", body[:250])
+
+        # deactivate → ok
+        code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+            data=f'{{"entity":"rooms","action":"deactivate","ids":{ids_json}}}')
+        try: succ = json.loads(body).get("succeeded", 0)
+        except: succ = 0
+        record(S, f"Bulk deactivate 2 rooms → succeeded={succ}",
+               "OK" if code == 200 and succ == 2 else "KO", body[:250])
+
+        # Vérifier DB : les 2 rooms sont bien is_active=false
+        chk = db_query(f"SELECT count(*) as n FROM rooms WHERE id = ANY(ARRAY[{','.join([repr(x) for x in room_ids])}]::uuid[]) AND is_active=false")
+        n = int(chk[0]["n"]) if chk and isinstance(chk, list) else 0
+        record(S, f"DB check : {n}/2 rooms inactives",
+               "OK" if n == 2 else "KO", "")
+
+        # delete → ok (aucun booking futur)
+        code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+            data=f'{{"entity":"rooms","action":"delete","ids":{ids_json}}}')
+        try: succ = json.loads(body).get("succeeded", 0)
+        except: succ = 0
+        record(S, f"Bulk delete 2 rooms → succeeded={succ}",
+               "OK" if code == 200 and succ == 2 else "KO", body[:250])
+
+        # Vérifier DB : rooms n'existent plus
+        chk = db_query(f"SELECT count(*) as n FROM rooms WHERE id = ANY(ARRAY[{','.join([repr(x) for x in room_ids])}]::uuid[])")
+        n = int(chk[0]["n"]) if chk and isinstance(chk, list) else 999
+        record(S, f"DB check : rooms supprimées (count=0)",
+               "OK" if n == 0 else "KO", f"count={n}")
+
+# Créer 2 promotions test
+ts = int(time.time())
+promo_ids = []
+for i in range(2):
+    code_str = f"SIMT034_{ts}_{i}"
+    r = db_query(f"""INSERT INTO promotions (code, name, type, value, valid_from, valid_until, max_uses, current_uses, is_active)
+        VALUES ('{code_str}', 'T-034 sim {i}', 'percentage', 10, NOW(), NOW() + INTERVAL '30 days', 100, 0, true)
+        RETURNING id""")
+    if r and isinstance(r, list) and r:
+        promo_ids.append(r[0]["id"])
+
+if len(promo_ids) == 2:
+    ids_json = json.dumps(promo_ids)
+    code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+        data=f'{{"entity":"promotions","action":"deactivate","ids":{ids_json}}}')
+    try: succ = json.loads(body).get("succeeded", 0)
+    except: succ = 0
+    record(S, f"Bulk deactivate 2 promotions → succeeded={succ}",
+           "OK" if code == 200 and succ == 2 else "KO", body[:250])
+
+    code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+        data=f'{{"entity":"promotions","action":"activate","ids":{ids_json}}}')
+    try: succ = json.loads(body).get("succeeded", 0)
+    except: succ = 0
+    record(S, f"Bulk activate 2 promotions → succeeded={succ}",
+           "OK" if code == 200 and succ == 2 else "KO", body[:250])
+
+    code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+        data=f'{{"entity":"promotions","action":"delete","ids":{ids_json}}}')
+    try: succ = json.loads(body).get("succeeded", 0)
+    except: succ = 0
+    record(S, f"Bulk delete 2 promotions non utilisées → succeeded={succ}",
+           "OK" if code == 200 and succ == 2 else "KO", body[:250])
+
+# Refus de delete si promotion déjà utilisée
+r = db_query(f"""INSERT INTO promotions (code, name, type, value, valid_from, valid_until, max_uses, current_uses, is_active)
+    VALUES ('SIMT034USED_{ts}', 'T-034 used', 'percentage', 10, NOW(), NOW() + INTERVAL '30 days', 100, 3, true)
+    RETURNING id""")
+if r and isinstance(r, list) and r:
+    used_id = r[0]["id"]
+    code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+        data=f'{{"entity":"promotions","action":"delete","ids":["{used_id}"]}}')
+    try:
+        d = json.loads(body)
+        ok = code == 200 and d.get("succeeded") == 0 and len(d.get("skipped", [])) == 1
+    except: ok = False
+    record(S, "Bulk delete promotion déjà utilisée → skipped",
+           "OK" if ok else "KO", body[:250])
+    db_query(f"DELETE FROM promotions WHERE id='{used_id}'")
+
+# ═══════════════════════════════════════════════════════════════
+S = "12quater. T-034 : action=delete sur users/reviews/properties"
+
+# reviews delete : créer un booking + review, puis delete
+db_query("UPDATE users SET two_factor_enabled=false WHERE email LIKE '%@mybestbooking.com'")
+# Create test review via DB (host reply not needed)
+user_row = db_query("SELECT id FROM users WHERE email='customer@mybestbooking.com'")
+prop_row = db_query("SELECT id FROM properties WHERE status='active' LIMIT 1")
+if user_row and prop_row and isinstance(user_row, list) and isinstance(prop_row, list):
+    uid = user_row[0]["id"]
+    pid = prop_row[0]["id"]
+    ts = int(time.time())
+    # Trouver room ou en créer une
+    room_row = db_query(f"SELECT id FROM rooms WHERE property_id='{pid}' LIMIT 1")
+    if room_row and isinstance(room_row, list) and room_row:
+        rid = room_row[0]["id"]
+        # Créer un booking passé (completed) pour permettre une review
+        past_ref = f"T034PAST{ts}"
+        bk = db_query(f"""INSERT INTO bookings (booking_reference, user_id, property_id, room_id, check_in, check_out, num_nights, num_adults, num_children, guest_first_name, guest_last_name, guest_email, guest_country, subtotal, taxes, fees, total, currency, commission_rate, commission_amount, net_to_host, status, payment_status)
+            VALUES ('{past_ref}', '{uid}', '{pid}', '{rid}', CURRENT_DATE - INTERVAL '10 days', CURRENT_DATE - INTERVAL '8 days', 2, 2, 0, 'DeleteTest', 'Sim', 'delete-sim@t.local', 'FR', 200, 20, 10, 230, 'EUR', 15.00, 34.5, 195.5, 'completed', 'paid') RETURNING id""")
+        if bk and isinstance(bk, list) and bk:
+            bid = bk[0]["id"]
+            rev = db_query(f"""INSERT INTO reviews (booking_id, user_id, property_id, overall_rating, positive_comment, status)
+                VALUES ('{bid}', '{uid}', '{pid}', 9.0, 'T-034 test', 'approved') RETURNING id""")
+            if rev and isinstance(rev, list) and rev:
+                rev_id = rev[0]["id"]
+                code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+                    data=f'{{"entity":"reviews","action":"delete","ids":["{rev_id}"]}}')
+                try: succ = json.loads(body).get("succeeded", 0)
+                except: succ = 0
+                record(S, f"Bulk delete 1 review → succeeded={succ}",
+                       "OK" if code == 200 and succ == 1 else "KO", body[:250])
+                # Vérifier DB
+                chk = db_query(f"SELECT count(*) as n FROM reviews WHERE id='{rev_id}'")
+                n = int(chk[0]["n"]) if chk and isinstance(chk, list) else 999
+                record(S, "DB check : review supprimée",
+                       "OK" if n == 0 else "KO", f"count={n}")
+            # Nettoyer booking test
+            db_query(f"DELETE FROM bookings WHERE id='{bid}'")
+
+# users delete = alias anonymize
+ts = int(time.time())
+new_email = f"t034del{ts}@t.local"
+r_code, r_body = curl(BASE + "/api/auth/register", "POST",
+    data=json.dumps({"email":new_email,"password":"T034Del123!","firstName":"T034","lastName":"Del"}))
+try: new_id = json.loads(r_body)["user"]["id"]
+except: new_id = None
+if new_id:
+    code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+        data=f'{{"entity":"users","action":"delete","ids":["{new_id}"]}}')
+    try: succ = json.loads(body).get("succeeded", 0)
+    except: succ = 0
+    record(S, f"Bulk delete 1 user (alias anonymize) → succeeded={succ}",
+           "OK" if code == 200 and succ == 1 else "KO", body[:250])
+    chk = db_query(f"SELECT email FROM users WHERE id='{new_id}'")
+    email_after = chk[0]["email"] if chk and isinstance(chk, list) and chk else ""
+    record(S, f"DB check : user email anonymisé → {email_after}",
+           "OK" if "@anonymized.local" in email_after else "KO", email_after)
+
+# properties delete refusé si booking actif → déjà couvert par API,
+# on vérifie seulement le happy path avec une property sans booking futur
+ts = int(time.time())
+new_prop = db_query(f"""INSERT INTO properties (host_id, name, slug, type, city, country, status, timezone)
+    VALUES ((SELECT id FROM users WHERE email='host@mybestbooking.com'),
+            'T034DelProp{ts}', 't034-del-prop-{ts}', 'villa', 'Nice', 'FR', 'draft', 'Europe/Paris')
+    RETURNING id""")
+if new_prop and isinstance(new_prop, list) and new_prop:
+    prop_id = new_prop[0]["id"]
+    code, body = curl(BASE + "/api/admin/bulk", "POST", jar="admin",
+        data=f'{{"entity":"properties","action":"delete","ids":["{prop_id}"]}}')
+    try: succ = json.loads(body).get("succeeded", 0)
+    except: succ = 0
+    record(S, f"Bulk delete 1 property sans booking → succeeded={succ}",
+           "OK" if code == 200 and succ == 1 else "KO", body[:250])
 
 # ═══════════════════════════════════════════════════════════════
 S = "13. Bulk API : audit log inclut metadata complète"
@@ -452,7 +672,7 @@ with open(OUT, "w") as f:
     f.write(f"""# 🎛️ Simulation dashboards — filtres / sélection / actions groupées
 
 **Généré le** : {now}
-**T-033 (Session 12)**
+**T-033 (Session 12) + T-034 (Session 13)**
 
 Vérifie l'implémentation des raccourcis dashboards :
 - Filtres de recherche + statut par entité

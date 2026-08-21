@@ -1,49 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { users, properties, reviews, bookings, sessions } from "@/db/schema";
+import {
+  users,
+  properties,
+  reviews,
+  bookings,
+  sessions,
+  rooms,
+  promotions,
+  wishlistItems,
+  priceAlerts,
+  ratePlans,
+  roomAvailability,
+  conversations,
+  messages,
+} from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
-import { eq, inArray, and, ne } from "drizzle-orm";
+import { eq, inArray, and, ne, or, sql, gte } from "drizzle-orm";
 import { createHash } from "node:crypto";
 
 /**
- * POST /api/admin/bulk (T-033, Session 12)
+ * POST /api/admin/bulk (T-033, étendu T-034)
  *
  * Actions groupées pour les dashboards. Admin-only.
  *
  * Body :
  *   {
- *     entity: "users" | "properties" | "reviews" | "bookings",
+ *     entity: "users" | "properties" | "reviews" | "bookings"
+ *            | "rooms" | "promotions",
  *     action: string,
  *     ids: string[]  // UUIDs, max 100 par batch
  *   }
  *
  * Actions supportées par entité :
- *   users     : suspend, reactivate, anonymize
- *   properties: approve, reject, suspend
- *   reviews   : approve, hide, reject
+ *   users     : suspend, reactivate, anonymize, delete (alias anonymize)
+ *   properties: approve, reject, suspend, delete
+ *   reviews   : approve, hide, reject, delete
  *   bookings  : cancel
+ *   rooms     : activate, deactivate, delete  (T-034)
+ *   promotions: activate, deactivate, delete  (T-034)
  *
- * Contrat de retour :
- *   {
- *     entity, action,
- *     requested: N,
- *     succeeded: N,
- *     skipped:   [{ id, reason }],
- *     failed:    [{ id, error }]
- *   }
- *
- * Sécurité :
- *   - Admin uniquement (403 sinon)
- *   - Max 100 IDs par appel
- *   - Un admin ne peut pas s'auto-suspendre/anonymize via bulk
- *   - Chaque item est traité en isolation (une erreur n'annule pas les autres)
- *   - Audit log : une entrée `bulk.action` avec metadata { entity, action, ids, results }
+ * Contrat de retour identique T-033 :
+ *   { entity, action, requested, succeeded, skipped[], failed[] }
  */
 
 const bulkSchema = z.object({
-  entity: z.enum(["users", "properties", "reviews", "bookings"]),
+  entity: z.enum([
+    "users",
+    "properties",
+    "reviews",
+    "bookings",
+    "rooms",
+    "promotions",
+  ]),
   action: z.string().min(1).max(50),
   ids: z.array(z.string().uuid()).min(1).max(100),
 });
@@ -57,24 +68,21 @@ type Result = {
   failed: Array<{ id: string; error: string }>;
 };
 
+function emptyResult(entity: string, action: string, requested: number): Result {
+  return { entity, action, requested, succeeded: 0, skipped: [], failed: [] };
+}
+
 async function bulkUsers(
   action: string,
   ids: string[],
   adminId: string,
 ): Promise<Result> {
-  const r: Result = {
-    entity: "users",
-    action,
-    requested: ids.length,
-    succeeded: 0,
-    skipped: [],
-    failed: [],
-  };
+  const r = emptyResult("users", action, ids.length);
+  const effective = action === "delete" ? "anonymize" : action;
   const validActions = ["suspend", "reactivate", "anonymize"];
-  if (!validActions.includes(action)) {
+  if (!validActions.includes(effective)) {
     throw new Error(`Action invalide pour users : ${action}`);
   }
-  // Protection : ne jamais suspendre / anonymize l'admin lui-même
   const filtered = ids.filter((id) => {
     if (id === adminId) {
       r.skipped.push({ id, reason: "L'admin ne peut pas s'auto-modifier via bulk" });
@@ -84,7 +92,7 @@ async function bulkUsers(
   });
   for (const id of filtered) {
     try {
-      if (action === "suspend") {
+      if (effective === "suspend") {
         const [row] = await db
           .update(users)
           .set({ deletedAt: new Date(), updatedAt: new Date() })
@@ -96,7 +104,7 @@ async function bulkUsers(
         }
         await db.delete(sessions).where(eq(sessions.userId, id));
         r.succeeded++;
-      } else if (action === "reactivate") {
+      } else if (effective === "reactivate") {
         const [row] = await db
           .update(users)
           .set({ deletedAt: null, updatedAt: new Date() })
@@ -107,7 +115,7 @@ async function bulkUsers(
           continue;
         }
         r.succeeded++;
-      } else if (action === "anonymize") {
+      } else if (effective === "anonymize") {
         const [existing] = await db
           .select({ email: users.email, role: users.role })
           .from(users)
@@ -156,14 +164,70 @@ async function bulkProperties(
   ids: string[],
   adminId: string,
 ): Promise<Result> {
-  const r: Result = {
-    entity: "properties",
-    action,
-    requested: ids.length,
-    succeeded: 0,
-    skipped: [],
-    failed: [],
-  };
+  const r = emptyResult("properties", action, ids.length);
+  if (action === "delete") {
+    for (const id of ids) {
+      try {
+        // Refus si booking actif (pending/confirmed)
+        const [act] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.propertyId, id),
+              or(eq(bookings.status, "pending"), eq(bookings.status, "confirmed")),
+            ),
+          );
+        if ((act?.count ?? 0) > 0) {
+          r.skipped.push({
+            id,
+            reason: `${act.count} réservation(s) active(s) — impossible de supprimer`,
+          });
+          continue;
+        }
+        // Nettoyer les FK enfants avant hard delete
+        const roomIds = (
+          await db.select({ id: rooms.id }).from(rooms).where(eq(rooms.propertyId, id))
+        ).map((x) => x.id);
+        if (roomIds.length) {
+          await db.delete(roomAvailability).where(inArray(roomAvailability.roomId, roomIds));
+          await db.delete(ratePlans).where(inArray(ratePlans.roomId, roomIds));
+        }
+        await db.delete(rooms).where(eq(rooms.propertyId, id));
+        await db.delete(wishlistItems).where(eq(wishlistItems.propertyId, id));
+        await db.delete(priceAlerts).where(eq(priceAlerts.propertyId, id));
+        await db.delete(reviews).where(eq(reviews.propertyId, id));
+        // Conversations & messages
+        const convIds = (
+          await db.select({ id: conversations.id })
+            .from(conversations)
+            .where(eq(conversations.propertyId, id))
+        ).map((x) => x.id);
+        if (convIds.length) {
+          await db.delete(messages).where(inArray(messages.conversationId, convIds));
+          await db.delete(conversations).where(inArray(conversations.id, convIds));
+        }
+        // Bookings terminaux (cancelled/completed/no_show) : on ne les supprime
+        // pas — on les orphelinise avec propertyId conservé. Alternative :
+        // supprimer aussi (perte d'historique). On garde l'historique.
+        const [row] = await db
+          .delete(properties)
+          .where(eq(properties.id, id))
+          .returning({ id: properties.id });
+        if (!row) {
+          r.skipped.push({ id, reason: "property introuvable" });
+          continue;
+        }
+        r.succeeded++;
+      } catch (err) {
+        r.failed.push({
+          id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return r;
+  }
   const map: Record<string, string> = {
     approve: "active",
     reject: "draft",
@@ -204,14 +268,28 @@ async function bulkProperties(
 }
 
 async function bulkReviews(action: string, ids: string[]): Promise<Result> {
-  const r: Result = {
-    entity: "reviews",
-    action,
-    requested: ids.length,
-    succeeded: 0,
-    skipped: [],
-    failed: [],
-  };
+  const r = emptyResult("reviews", action, ids.length);
+  if (action === "delete") {
+    for (const id of ids) {
+      try {
+        const [row] = await db
+          .delete(reviews)
+          .where(eq(reviews.id, id))
+          .returning({ id: reviews.id });
+        if (!row) {
+          r.skipped.push({ id, reason: "review introuvable" });
+          continue;
+        }
+        r.succeeded++;
+      } catch (err) {
+        r.failed.push({
+          id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return r;
+  }
   const map: Record<string, string> = {
     approve: "approved",
     hide: "hidden",
@@ -245,20 +323,12 @@ async function bulkReviews(action: string, ids: string[]): Promise<Result> {
 }
 
 async function bulkBookings(action: string, ids: string[]): Promise<Result> {
-  const r: Result = {
-    entity: "bookings",
-    action,
-    requested: ids.length,
-    succeeded: 0,
-    skipped: [],
-    failed: [],
-  };
+  const r = emptyResult("bookings", action, ids.length);
   if (action !== "cancel") {
     throw new Error(`Action invalide pour bookings : ${action}`);
   }
   for (const id of ids) {
     try {
-      // Machine à états (BUG-022) : seuls pending/confirmed peuvent être cancelled
       const [existing] = await db
         .select({ status: bookings.status })
         .from(bookings)
@@ -282,6 +352,144 @@ async function bulkBookings(action: string, ids: string[]): Promise<Result> {
           updatedAt: new Date(),
         })
         .where(eq(bookings.id, id));
+      r.succeeded++;
+    } catch (err) {
+      r.failed.push({
+        id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return r;
+}
+
+async function bulkRooms(action: string, ids: string[]): Promise<Result> {
+  const r = emptyResult("rooms", action, ids.length);
+  const valid = ["activate", "deactivate", "delete"];
+  if (!valid.includes(action)) {
+    throw new Error(`Action invalide pour rooms : ${action}`);
+  }
+  if (action === "delete") {
+    const today = new Date().toISOString().slice(0, 10);
+    for (const id of ids) {
+      try {
+        // Refus si des bookings futurs (checkOut >= aujourd'hui) sur cette room
+        const [act] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(bookings)
+          .where(
+            and(
+              eq(bookings.roomId, id),
+              gte(bookings.checkOut, today),
+              or(eq(bookings.status, "pending"), eq(bookings.status, "confirmed")),
+            ),
+          );
+        if ((act?.count ?? 0) > 0) {
+          r.skipped.push({
+            id,
+            reason: `${act.count} réservation(s) future(s) — impossible de supprimer`,
+          });
+          continue;
+        }
+        // Nettoyer FK
+        await db.delete(roomAvailability).where(eq(roomAvailability.roomId, id));
+        await db.delete(ratePlans).where(eq(ratePlans.roomId, id));
+        const [row] = await db
+          .delete(rooms)
+          .where(eq(rooms.id, id))
+          .returning({ id: rooms.id });
+        if (!row) {
+          r.skipped.push({ id, reason: "room introuvable" });
+          continue;
+        }
+        r.succeeded++;
+      } catch (err) {
+        r.failed.push({
+          id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return r;
+  }
+  const isActive = action === "activate";
+  for (const id of ids) {
+    try {
+      const [row] = await db
+        .update(rooms)
+        .set({ isActive, updatedAt: new Date() })
+        .where(eq(rooms.id, id))
+        .returning({ id: rooms.id });
+      if (!row) {
+        r.skipped.push({ id, reason: "room introuvable" });
+        continue;
+      }
+      r.succeeded++;
+    } catch (err) {
+      r.failed.push({
+        id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+  return r;
+}
+
+async function bulkPromotions(action: string, ids: string[]): Promise<Result> {
+  const r = emptyResult("promotions", action, ids.length);
+  const valid = ["activate", "deactivate", "delete"];
+  if (!valid.includes(action)) {
+    throw new Error(`Action invalide pour promotions : ${action}`);
+  }
+  if (action === "delete") {
+    for (const id of ids) {
+      try {
+        // Refus si déjà utilisée (garde l'historique)
+        const [existing] = await db
+          .select({ currentUses: promotions.currentUses })
+          .from(promotions)
+          .where(eq(promotions.id, id));
+        if (!existing) {
+          r.skipped.push({ id, reason: "promotion introuvable" });
+          continue;
+        }
+        if ((existing.currentUses ?? 0) > 0) {
+          r.skipped.push({
+            id,
+            reason: `promotion déjà utilisée (${existing.currentUses}× ) — désactivez plutôt`,
+          });
+          continue;
+        }
+        const [row] = await db
+          .delete(promotions)
+          .where(eq(promotions.id, id))
+          .returning({ id: promotions.id });
+        if (!row) {
+          r.skipped.push({ id, reason: "promotion introuvable" });
+          continue;
+        }
+        r.succeeded++;
+      } catch (err) {
+        r.failed.push({
+          id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
+    }
+    return r;
+  }
+  const isActive = action === "activate";
+  for (const id of ids) {
+    try {
+      const [row] = await db
+        .update(promotions)
+        .set({ isActive })
+        .where(eq(promotions.id, id))
+        .returning({ id: promotions.id });
+      if (!row) {
+        r.skipped.push({ id, reason: "promotion introuvable" });
+        continue;
+      }
       r.succeeded++;
     } catch (err) {
       r.failed.push({
@@ -327,6 +535,12 @@ export async function POST(request: NextRequest) {
       case "bookings":
         result = await bulkBookings(data.action, data.ids);
         break;
+      case "rooms":
+        result = await bulkRooms(data.action, data.ids);
+        break;
+      case "promotions":
+        result = await bulkPromotions(data.action, data.ids);
+        break;
     }
   } catch (err) {
     return NextResponse.json(
@@ -335,7 +549,6 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Audit
   await recordAudit({
     actorId: user.id,
     actorEmail: user.email,

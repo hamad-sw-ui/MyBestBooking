@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Mail } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
+import { RowDeleteButton } from "./row-delete-button";
 import { UserSuspendActions } from "@/components/admin/user-suspend-actions";
 
 export interface UserRow {
@@ -304,6 +305,12 @@ export function UsersManager({ users, currentUserId }: Props) {
                           userId={u.id}
                           suspended={suspended}
                           disabled={isSelf}
+                        />
+                        <RowDeleteButton
+                          entity="users"
+                          id={u.id}
+                          label={`l'utilisateur ${u.email}`}
+                          disabled={isSelf || u.role === "admin"}
                         />
                         {isSelf && (
                           <span className="text-[10px] text-gray-400">(vous)</span>

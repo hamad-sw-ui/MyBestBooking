@@ -9,6 +9,102 @@
 
 ---
 
+## Session 13 — 2026-08-21 : T-034 dashboards bulk étendus (rooms/promotions/messages/audit + delete icons)
+
+### Contexte utilisateur
+
+Directive après T-033 :
+> « J'espère que chaque interface dashboard nécessitant ces
+> fonctionnalités possède ces nouvelles arrangements sinon faites
+> l'implémentation et passer les tests avec succès. je veux aussi des
+> icônes de suppression dans les listes intervenants dans ces
+> interfaces. arrêtez vous uniquement si tous les tests passe avec
+> succès »
+
+### Fonctionnalité livrée
+
+Les 4 dashboards restants gagnent les mêmes fonctionnalités que T-033
++ une icône corbeille par ligne dans les listes mutables :
+
+- 🔨 **API `POST /api/admin/bulk` étendue** :
+  - entities `rooms` (activate/deactivate/delete) et `promotions`
+    (activate/deactivate/delete)
+  - action `delete` pour users (alias anonymize RGPD), properties
+    (refuse si booking actif), reviews (hard)
+  - Guards : delete room refuse si booking futur, delete promotion
+    refuse si `currentUses > 0`, delete property nettoie 8 tables FK
+- 🔨 **`<RowDeleteButton>`** : icône corbeille rouge + `window.confirm()`
+  + fetch bulk + `router.refresh()` + affichage erreur inline.
+  `data-testid="row-delete-<entity>-<id>"`.
+- 🔨 **4 nouveaux Managers Client** :
+  - `RoomsManager` : recherche + filtre statut (active/inactive) + type
+    de chambre + bulk + delete icon
+  - `PromotionsManager` : recherche + filtre statut/type + bulk +
+    delete icon
+  - `MessagesManager` : recherche + filtre lu/non-lu (raccourci `/`)
+  - `AuditFilter` : recherche + filtres action/entity (raccourci `/`)
+- 🔨 Icônes corbeille ajoutées à `users-manager`, `properties-manager`,
+  `reviews-manager` (T-033) + `rooms-manager`, `promotions-manager`
+  (T-034) → **5 dashboards mutables** avec icône par ligne
+- 🔨 Pages refactorées en Server Components qui délèguent au Manager
+  Client : `dashboard/rooms/page.tsx`, `dashboard/promotions/page.tsx`,
+  `dashboard/messages/page.tsx`, `dashboard/audit/page.tsx`
+
+### Tests
+
+- 🧪 `route.test.ts` étendu à 12 cas (vs 6 T-033) : nouveaux cas
+  rooms/promotions/delete pour users/reviews/properties
+- 🧪 `dashboards_sim.py` étendu à **69 assertions** (vs 37 T-033) :
+  couvre les 8 dashboards + 5 icônes corbeille dans le HTML + bulk
+  rooms/promotions/delete + guards (booking futur, promotion utilisée)
+- ▶️ **6 suites cumulées : 472/472 · 0 KO · 0 WARN** :
+  - smoke 91 · surface 68 · deep 81 · xtreme 89 · paranoid 74 ·
+    dashboards 69 (+32 vs T-033)
+- 🧪 `npm test` : **188/188 verts** (+6 vs T-033)
+- 🔨 `npm run ai:check` : 17 OK · 2 warn · 1 fail cosmétique (R7 HEAD
+  à mettre à jour au commit)
+
+### Fichiers créés (nouveaux)
+
+- `src/components/bulk/row-delete-button.tsx` (115 LOC)
+- `src/components/bulk/rooms-manager.tsx` (305 LOC)
+- `src/components/bulk/promotions-manager.tsx` (345 LOC)
+- `src/components/bulk/messages-manager.tsx` (240 LOC)
+- `src/components/bulk/audit-filter.tsx` (230 LOC)
+- `.ai/REPORTS/analyse_impact_2026-08-21_T-034_bulk_extension.md`
+- `.ai/REPORTS/analyse_conception_2026-08-21_T-034_bulk_extension.md`
+- `.ai/REPORTS/simulation_dashboards_2026-08-21_session_13.md`
+
+### Fichiers modifiés
+
+- `src/app/api/admin/bulk/route.ts` (+200 LOC : bulkRooms +
+  bulkPromotions + action delete par entité)
+- `src/app/api/admin/bulk/route.test.ts` (+6 cas)
+- `src/components/bulk/bulk-toolbar.tsx` (type entity étendu)
+- `src/components/bulk/users-manager.tsx` (import + row delete)
+- `src/components/bulk/properties-manager.tsx` (import + row delete)
+- `src/components/bulk/reviews-manager.tsx` (import + row delete)
+- `src/app/dashboard/rooms/page.tsx` (refactor Server → RoomsManager)
+- `src/app/dashboard/promotions/page.tsx` (refactor → PromotionsManager)
+- `src/app/dashboard/messages/page.tsx` (refactor → MessagesManager)
+- `src/app/dashboard/audit/page.tsx` (refactor → AuditFilter)
+- `scripts/dashboards_sim.py` (sections 12bis + 12ter + 12quater)
+- `scripts/reset_test_db.mjs` (patterns BulkTest%/Dash%/T034% ajoutés)
+
+### Problèmes rencontrés
+
+- Le pattern `reset_test_db.mjs` ne nettoyait pas les properties
+  `BulkTest*` créées par les scripts précédents → smoke a échoué la
+  première fois (property sans room). Patch : ajouter les patterns.
+- Pas d'autre incident.
+
+### Étape suivante
+
+Attente de la prochaine directive utilisateur. Aucune tâche automatique
+en cours.
+
+---
+
 ## Session 12 — 2026-08-21 : T-033 dashboards bulk actions
 
 ### Fonctionnalité livrée

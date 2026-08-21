@@ -187,6 +187,132 @@ serverTest("POST /api/admin/bulk (T-033)", () => {
     expect(body.skipped[0].reason).toMatch(/introuvable/i);
   });
 
+  it("T-034: entity=rooms action=activate id inexistant → 200 skipped", async () => {
+    if (!adminCookie) return;
+    const r = await fetch("http://127.0.0.1:3000/api/admin/bulk", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `session=${adminCookie}`,
+        "X-Forwarded-For": `10.98.11.${Math.floor(Math.random() * 250)}`,
+      },
+      body: JSON.stringify({
+        entity: "rooms",
+        action: "activate",
+        ids: ["00000000-0000-0000-0000-000000000000"],
+      }),
+    });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.entity).toBe("rooms");
+    expect(body.action).toBe("activate");
+    expect(body.skipped[0].reason).toMatch(/introuvable/i);
+  });
+
+  it("T-034: entity=promotions action=deactivate id inexistant → 200 skipped", async () => {
+    if (!adminCookie) return;
+    const r = await fetch("http://127.0.0.1:3000/api/admin/bulk", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `session=${adminCookie}`,
+        "X-Forwarded-For": `10.98.22.${Math.floor(Math.random() * 250)}`,
+      },
+      body: JSON.stringify({
+        entity: "promotions",
+        action: "deactivate",
+        ids: ["00000000-0000-0000-0000-000000000000"],
+      }),
+    });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.entity).toBe("promotions");
+    expect(body.skipped[0].reason).toMatch(/introuvable/i);
+  });
+
+  it("T-034: entity=rooms action=pwn → 400 action invalide", async () => {
+    if (!adminCookie) return;
+    const r = await fetch("http://127.0.0.1:3000/api/admin/bulk", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `session=${adminCookie}`,
+        "X-Forwarded-For": `10.98.33.${Math.floor(Math.random() * 250)}`,
+      },
+      body: JSON.stringify({
+        entity: "rooms",
+        action: "pwn",
+        ids: ["00000000-0000-0000-0000-000000000000"],
+      }),
+    });
+    expect(r.status).toBe(400);
+    const body = await r.json();
+    expect(body.error).toMatch(/invalide/i);
+  });
+
+  it("T-034: entity=users action=delete (alias anonymize) id inexistant → 200 skipped", async () => {
+    if (!adminCookie) return;
+    const r = await fetch("http://127.0.0.1:3000/api/admin/bulk", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `session=${adminCookie}`,
+        "X-Forwarded-For": `10.98.44.${Math.floor(Math.random() * 250)}`,
+      },
+      body: JSON.stringify({
+        entity: "users",
+        action: "delete",
+        ids: ["00000000-0000-0000-0000-000000000000"],
+      }),
+    });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.action).toBe("delete");
+    expect(body.skipped[0].reason).toMatch(/introuvable/i);
+  });
+
+  it("T-034: entity=reviews action=delete id inexistant → 200 skipped", async () => {
+    if (!adminCookie) return;
+    const r = await fetch("http://127.0.0.1:3000/api/admin/bulk", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `session=${adminCookie}`,
+        "X-Forwarded-For": `10.98.55.${Math.floor(Math.random() * 250)}`,
+      },
+      body: JSON.stringify({
+        entity: "reviews",
+        action: "delete",
+        ids: ["00000000-0000-0000-0000-000000000000"],
+      }),
+    });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.action).toBe("delete");
+    expect(body.skipped[0].reason).toMatch(/introuvable/i);
+  });
+
+  it("T-034: entity=properties action=delete id inexistant → 200 skipped", async () => {
+    if (!adminCookie) return;
+    const r = await fetch("http://127.0.0.1:3000/api/admin/bulk", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: `session=${adminCookie}`,
+        "X-Forwarded-For": `10.98.66.${Math.floor(Math.random() * 250)}`,
+      },
+      body: JSON.stringify({
+        entity: "properties",
+        action: "delete",
+        ids: ["00000000-0000-0000-0000-000000000000"],
+      }),
+    });
+    expect(r.status).toBe(200);
+    const body = await r.json();
+    expect(body.action).toBe("delete");
+    expect(body.skipped[0].reason).toMatch(/introuvable/i);
+  });
+
   it("customer ne peut pas appeler l'API → 403", async () => {
     // Login customer
     const rlogin = await fetch("http://127.0.0.1:3000/api/auth/login", {

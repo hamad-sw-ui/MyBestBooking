@@ -10,8 +10,10 @@
 - **Projet** : MyBestBooking
 - **Dépôt** : `hamad-sw-ui/MyBestBooking`
 - **Branche de session** : `arena/01a01eee-mybestbooking`
-- **Dernier commit connu** : `fefc9c3` (T-033 dashboards bulk, Session 12)
-- **Dernier commit stable référencé** : `fefc9c3` (Session 12)
+- **Dernier commit connu** : `d49c8f6` (docs sync T-033) — sera mis à
+  jour au commit T-034 (Session 13)
+- **Dernier commit stable référencé** : `d49c8f6` (Session 12/13
+  transition, T-033 livré, T-034 en préparation avant push)
 - **Version du Framework** : **1.1.3** (AI-DOS Web, hybride +
   complétude produit + preuve runtime R20 — voir
   `PROCESS_IMPROVEMENTS.md`, ADR-008)
@@ -20,10 +22,12 @@
 
 - **Dernier `npm run typecheck`** : ✅ 0 erreur
 - **Dernier `npm run build`** : ✅ succès
-- **Dernier `npm test`** : ✅ **176 passed / 176** (0 skipped avec DB
-  embarquée démarrée)
+- **Dernier `npm test`** : ✅ **188 passed / 188** (Session 13, +6 vs
+  Session 12 grâce à T-034 : 6 nouveaux tests bulk rooms/promotions/
+  delete)
 - **Dernier `npm run ai:check`** : ✅ **17 OK · 2 warn attendus · 1
-  fail cosmétique R7** (STATE.md pointe vers le HEAD à mettre à jour)
+  fail cosmétique R7** (STATE.md pointe vers le HEAD à mettre à jour
+  au commit T-034)
 - **Dernier `npm run smoke`** : ✅ **91 assertions PASS · 0 FAIL**
   (~30 s, log dans `.ai/REPORTS/smoke_run_2026-08-21_session_11.log`)
 - **Dernier `python3 scripts/deep_sim.py`** : ✅ **81 contrôles
@@ -82,6 +86,35 @@
   Prochain audit dû ≤ 5 sessions.
 
 ## 📋 Sessions
+
+- **Session 13** (2026-08-21, en cours) : **T-034 dashboards bulk
+  étendus** — l'utilisateur a exigé après T-033 : « J'espère que
+  chaque interface dashboard nécessitant ces fonctionnalités possède
+  ces nouvelles arrangements sinon faites l'implémentation ». Livré :
+  - API `POST /api/admin/bulk` étendue : ajout entités `rooms` et
+    `promotions` (activate/deactivate/delete) + action `delete` sur
+    users (alias anonymize), properties (refuse booking actif),
+    reviews (hard)
+  - `<RowDeleteButton>` réutilisable (icône corbeille + confirm +
+    fetch bulk + router.refresh, `data-testid="row-delete-<entity>-<id>"`)
+  - 4 nouveaux Managers : `RoomsManager`, `PromotionsManager`,
+    `MessagesManager`, `AuditFilter`
+  - Refactor pages : `/dashboard/rooms`, `/dashboard/promotions`,
+    `/dashboard/messages`, `/dashboard/audit` en shells serveur →
+    Manager client
+  - Icônes corbeille ajoutées à `users/properties/reviews/rooms/
+    promotions` managers
+  - +6 tests intégration `route.test.ts` (12 total pour la route bulk)
+  - `dashboards_sim.py` étendu à **69 assertions** (vs 37 T-033) :
+    couvre les 8 dashboards + présence des `row-delete-*` dans HTML
+  - **6 suites cumulées : 472/472 · 0 KO · 0 WARN** (smoke 91 +
+    surface 68 + deep 81 + xtreme 89 + paranoid 74 + dashboards 69)
+
+- **Session 12** (2026-08-21) : **T-033 dashboards bulk** — filtres,
+  sélection multiple, actions groupées, raccourcis clavier (/, Ctrl+A,
+  Escape) pour users/properties/reviews/bookings. API POST
+  /api/admin/bulk avec 4 entités × 3-4 actions. Audit log
+  `bulk.action`. 6 suites en séquence : **440/440 · 0 KO · 0 WARN**.
 
 - **Session 1** (2026-08-20) : réécriture `.ai/` (v0 aide-mémoire).
 - **Session 2** (2026-08-20) : framework v1.0.0 gouvernance.
@@ -147,7 +180,15 @@
 
 ## 🕒 Dernière Mise à jour
 
-- **Date** : 2026-08-21 (Session 11 — **T-032 R20 smoke_manifest_present
+- **Date** : 2026-08-21 (Session 13 — **T-034 dashboards bulk étendus** :
+  API bulk supporte `rooms` + `promotions` + action `delete` pour
+  users/properties/reviews. Composant `<RowDeleteButton>` réutilisable
+  avec confirm + refresh. 4 nouveaux Managers (rooms/promotions/
+  messages/audit). Icônes corbeille ajoutées à 5 dashboards. Tests :
+  188/188 (+6). Suites cumulées : 472/472 · 0 KO · 0 WARN. R7 fail
+  cosmétique à mettre à jour au commit)
+
+- **Date précédente** : 2026-08-21 (Session 11 — **T-032 R20 smoke_manifest_present
   + scripts/smoke.sh** : framework v1.1.3, R20 bloque le retrait /
   vidage du smoke, script versionné avec 91 assertions HTTP réelles
   (login × 3 rôles, 39 pages, 7 guards body-check, 8 API + 7 scénarios

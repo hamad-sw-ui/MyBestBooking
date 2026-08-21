@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Star, MessageSquare } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
+import { RowDeleteButton } from "./row-delete-button";
 import { HostReplyForm } from "@/components/host-reply-form";
 import { ReviewModerateActions } from "@/components/admin/review-moderate-actions";
 
@@ -308,10 +309,17 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                         </div>
                       )}
                       {isAdmin && (
-                        <ReviewModerateActions
-                          reviewId={r.review.id}
-                          currentStatus={st}
-                        />
+                        <div className="flex items-start gap-2">
+                          <ReviewModerateActions
+                            reviewId={r.review.id}
+                            currentStatus={st}
+                          />
+                          <RowDeleteButton
+                            entity="reviews"
+                            id={r.review.id}
+                            label={`l'avis de ${r.user?.firstName ?? "l'utilisateur"} ${r.user?.lastName ?? ""}`.trim()}
+                          />
+                        </div>
                       )}
                     </div>
                   </div>

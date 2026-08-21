@@ -25,7 +25,7 @@ await c.connect();
 // 1. Cleanup properties test
 const testProps = (
   await c.query(
-    "SELECT id FROM properties WHERE name LIKE 'Deep Villa%' OR name LIKE 'Race%' OR name LIKE 'Sim%' OR name LIKE 'Test%'",
+    "SELECT id FROM properties WHERE name LIKE 'Deep Villa%' OR name LIKE 'Race%' OR name LIKE 'Sim%' OR name LIKE 'Test%' OR name LIKE 'BulkTest%' OR name LIKE 'Dash%' OR name LIKE 'T034%'",
   )
 ).rows.map((r) => r.id);
 

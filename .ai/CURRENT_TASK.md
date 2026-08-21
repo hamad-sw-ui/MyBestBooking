@@ -2,113 +2,102 @@
 
 ## Identifiant
 
-- **ID** : T-033
-- **Titre** : Dashboards — filtres, sélection multiple, actions groupées, raccourcis clavier
+- **ID** : T-034
+- **Titre** : Dashboards — extension bulk à rooms/promotions/messages/audit + icône suppression par ligne
 - **Niveau** : **S**
-- **Ouverte le** : 2026-08-21 (Session 12)
+- **Ouverte le** : 2026-08-21 (Session 13)
 - **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Contexte
 
-Demande utilisateur :
-> « Est-ce que selon vous les utilisateurs peuvent utiliser les
-> dashboards en utilisant des raccourcis EN FAISANT DES FILTRES POUR
-> LES RECHERCHES ET SELECTIONS POUR LES ELEMENTS DONNE NOUS VOUS FAIRE
-> DES ACTION GROUPÉ ? Faites tous et n'arrêter que si tous est
-> implémenté et testé avec succès »
+Demande utilisateur (après T-033) :
+> « J'espère que chaque interface dashboard nécessitant ces
+> fonctionnalités possède ces nouvelles arrangements si non faites
+> l'implémentation et passer les testes avec succès. je veux aussi des
+> icônes de suppression dans les listes intervenants dans ces
+> interfaces. arrêtez vous uniquement si tous les tests passe avec
+> succès »
 
-Avant cette tâche, les 4 dashboards (users / properties / reviews /
-bookings) rendaient toute la liste sans filtre, sans sélection multiple,
-sans action groupée. Un admin devait suspendre 20 utilisateurs un à un.
+T-033 avait couvert 4 dashboards (users, properties, reviews, bookings).
+Restaient 4 dashboards sans filtres/bulk :
+
+| Dashboard | État avant T-034 |
+|---|---|
+| `/dashboard/rooms` | Grille brute sans filtres ni sélection |
+| `/dashboard/promotions` | Boutons Edit/Trash **inertes** |
+| `/dashboard/messages` | Champ recherche visuel non branché |
+| `/dashboard/audit` | Table sans filtre |
 
 ## Livrables
 
-### A. API bulk générique
+### A. Extension API bulk (`/api/admin/bulk`)
 
-`src/app/api/admin/bulk/route.ts` — endpoint POST admin-only.
+- `entity="rooms"` : actions `activate`, `deactivate`, `delete`
+  (refuse si booking futur pending/confirmed)
+- `entity="promotions"` : actions `activate`, `deactivate`, `delete`
+  (refuse si `currentUses > 0`)
+- `entity="users"` : action `delete` (alias de `anonymize`)
+- `entity="properties"` : action `delete` (refuse si booking actif,
+  nettoie FK rooms/ratePlans/roomAvailability/wishlistItems/priceAlerts/
+  reviews/messages/conversations)
+- `entity="reviews"` : action `delete` (hard)
 
-Contrat :
-```
-POST /api/admin/bulk
-{ entity: "users"|"properties"|"reviews"|"bookings",
-  action: string, ids: string[] (1..100) }
+### B. Composant réutilisable `<RowDeleteButton>`
 
-→ { entity, action, requested, succeeded, skipped[], failed[] }
-```
+`src/components/bulk/row-delete-button.tsx` :
+- Icône corbeille rouge
+- `window.confirm()` avant l'action
+- Fetch POST `/api/admin/bulk { action: "delete", ids: [id] }`
+- `router.refresh()` en cas de succès
+- Affichage inline de l'erreur en cas de skipped/failed
+- `data-testid="row-delete-<entity>-<id>"`
 
-Actions par entité :
-- **users** : `suspend` / `reactivate` / `anonymize` (RGPD hash email)
-- **properties** : `approve` / `reject` / `suspend`
-- **reviews** : `approve` / `hide` / `reject`
-- **bookings** : `cancel` (respecte machine à états BUG-022)
+### C. Nouveaux Managers Client
 
-Sécurité :
-- 403 sans rôle admin
-- Max 100 IDs par batch
-- Admin ne peut pas s'auto-modifier
-- Bulk suspend/anonymize refuse les autres admins (ne(role, "admin"))
-- Chaque item traité en isolation → skipped/failed granulaire
-- Audit log `bulk.action` avec metadata complète (ids, requested, succeeded)
+- `rooms-manager.tsx` : recherche + filtre statut/type + bulk + delete icon
+- `promotions-manager.tsx` : recherche + filtre statut/type + bulk + delete icon
+- `messages-manager.tsx` : recherche + filtre lu/non-lu (pas de bulk)
+- `audit-filter.tsx` : recherche + filtres action/entity (pas de bulk)
 
-### B. Composant `<BulkToolbar>` réutilisable
+### D. Icône corbeille dans les 3 Managers T-033
 
-`src/components/bulk/bulk-toolbar.tsx` :
-- Barre de recherche avec raccourci `/`
-- Filtre statut dropdown
-- Bandeau actions groupées (visible si sélection > 0)
-- Confirmations métier (`window.confirm`)
-- Feedback aria-live (succès/erreur)
-- Raccourcis clavier globaux : `/`, `Ctrl+A`, `Ctrl+D`, `Escape`
+Ajout d'un `<RowDeleteButton>` dans la colonne « Actions » de :
+`users-manager`, `properties-manager`, `reviews-manager`.
+(bookings-manager : pas de delete, cancel existant via bulk).
 
-### C. Manager par entité (composants clients)
+### E. Refactor pages Server → Manager Client
 
-- `src/components/bulk/users-manager.tsx` : filtres statut (active/suspended/verified) + rôle, checkboxes, 3 actions bulk
-- `src/components/bulk/properties-manager.tsx` : filtres statut + type, checkboxes, 3 actions bulk (approve/reject/suspend)
-- `src/components/bulk/reviews-manager.tsx` : filtre statut, checkboxes, 3 actions bulk (approve/hide/reject)
-- `src/components/bulk/bookings-manager.tsx` : filtre statut + date check-in/check-out, checkboxes désactivées sur statuts terminaux, 1 action bulk (cancel)
+- `src/app/dashboard/rooms/page.tsx` → `<RoomsManager />`
+- `src/app/dashboard/promotions/page.tsx` → `<PromotionsManager />`
+- `src/app/dashboard/messages/page.tsx` → `<MessagesManager />`
+- `src/app/dashboard/audit/page.tsx` conservé Server + `<AuditFilter />`
 
-### D. Pages dashboard shell refactorées
+### F. Tests
 
-`src/app/dashboard/{users,properties,reviews,bookings}/page.tsx`
-→ Server Component minimal qui délègue au `*Manager` client.
+- `route.test.ts` : 12 cas (vs 6 T-033), couvre rooms/promotions/delete
+- `dashboards_sim.py` : 69 assertions (vs 37 T-033), couvre les 8
+  dashboards + les 5 icônes corbeille dans le HTML
 
-### E. Tests
+## Critères d'acceptation (validation)
 
-- `src/app/api/admin/bulk/route.test.ts` : 6 tests (RBAC, payload,
-  action invalide, id inexistant, > 100 ids, customer refusé)
-- `scripts/dashboards_sim.py` : 37 contrôles E2E dédiés
+- ✅ `POST /api/admin/bulk` supporte `entity=rooms` avec 3 actions
+- ✅ `POST /api/admin/bulk` supporte `entity=promotions` avec 3 actions
+- ✅ `POST /api/admin/bulk` supporte `action=delete` pour users/properties/reviews
+- ✅ `<RowDeleteButton>` opérationnel avec confirm + refresh
+- ✅ Les 8 dashboards ont filtres + recherche
+- ✅ 5 dashboards (users/properties/reviews/rooms/promotions) ont l'icône corbeille par ligne
+- ✅ `npm run smoke` : 91/91
+- ✅ Les 6 suites de simulation : 472/472 · 0 KO · 0 WARN cumulés
+  (smoke 91 + surface 68 + deep 81 + xtreme 89 + paranoid 74 +
+  dashboards 69)
+- ✅ `npm run ai:check` : 17 OK · warn · 0 fail
+- ✅ `npm test` : 188/188 verts
 
-### F. Nouveau utilitaire
+## Preuve runtime
 
-`scripts/reset_test_db.mjs` : reset DB aux valeurs seed
-(supprime properties test, bookings test, promos test, restore 2FA off,
-wallet 25€, BR level 2, reviews approved, promo BIENVENUE10 active).
-Nécessaire pour rejouer les 6 suites en séquence sans faux positifs.
-
-## Preuves (§16)
-
-- 🔨 `npm run typecheck` : 0 erreur
-- 🧪 `npm run test` : **182/182 verts** (176 précédents + 6 nouveaux
-  bulk)
-- 🔨 `npm run ai:check` : 17 OK · 2 warn · 1 fail cosmétique R7
-- ▶️ **6 suites en séquence · 440/440 assertions · 0 KO** :
-  - smoke 91/91 ✅
-  - surface 68/68 ✅
-  - deep 81/81 ✅
-  - xtreme 89/89 ✅
-  - paranoid 74/74 ✅
-  - **dashboards 37/37 ✅** (NEW)
-- ▶️ E2E manuel bulk : create 3 users → suspend batch → reactivate batch
-  → anonymize batch → DB vérifiée à chaque étape
-- ▶️ Audit log : 17+ entrées `bulk.action` avec metadata complète
-
-## Rapport associé
-
-`.ai/REPORTS/simulation_dashboards_2026-08-21_session_12.md`
-
-## Raccourcis clavier documentés
-
-- `/` — Focus barre de recherche
-- `Ctrl+A` — Sélectionner tous les items visibles (filtrés)
-- `Ctrl+D` — Désélectionner tout
-- `Escape` — Vider la sélection ou perdre le focus recherche
+- 🔨 build : Turbopack compile toutes les nouvelles pages en < 400 ms
+- 🧪 tests : `npx vitest run` → 188 passed
+- ▶️ smoke : `bash scripts/smoke.sh` → 91/91
+- ▶️ dashboards_sim : `python3 scripts/dashboards_sim.py` → 69/69 KO 0
+- ▶️ API bulk rooms/promotions activate/deactivate/delete testé sur DB seed
+- ▶️ Guards testés : rooms avec booking futur refusé, promotion utilisée refusée

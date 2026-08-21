@@ -43,7 +43,13 @@ export interface StatusOption {
 }
 
 interface Props {
-  entity: "users" | "properties" | "reviews" | "bookings";
+  entity:
+    | "users"
+    | "properties"
+    | "reviews"
+    | "bookings"
+    | "rooms"
+    | "promotions";
   actions: BulkAction[];
   selectedIds: string[];
   onClear: () => void;

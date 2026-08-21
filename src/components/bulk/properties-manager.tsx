@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { getPropertyTypeLabel, getStatusBadgeColor } from "@/lib/utils";
 import { Building2, MapPin, Star, Pencil, Eye } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
+import { RowDeleteButton } from "./row-delete-button";
 import { PropertyValidateActions } from "@/components/property-validate-actions";
 
 export interface PropertyRow {
@@ -324,10 +325,17 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                           <Pencil className="w-4 h-4 text-gray-500" />
                         </Link>
                         {isAdmin && (
-                          <PropertyValidateActions
-                            propertyId={property.id}
-                            currentStatus={property.status ?? "pending"}
-                          />
+                          <>
+                            <PropertyValidateActions
+                              propertyId={property.id}
+                              currentStatus={property.status ?? "pending"}
+                            />
+                            <RowDeleteButton
+                              entity="properties"
+                              id={property.id}
+                              label={`l'hébergement « ${property.name} »`}
+                            />
+                          </>
                         )}
                       </div>
                     </td>

@@ -1,6 +1,6 @@
 # 🎬 Simulation utilisateur exhaustive — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-21 12:31
+**Généré le** : 2026-08-21 13:07
 **Base URL testée** : `http://127.0.0.1:3000` (Next.js 16 dev, PostgreSQL embarqué :55432)
 **Comptes utilisés** :
 
@@ -461,7 +461,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-favoris
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes favoris 5 hébergement s sauvegardé s Alertes prix Chargement… Vos alertes prix sont gérées ci-dessus.  …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes favoris 6 hébergement s sauvegardé s Alertes prix Chargement… Vos alertes prix sont gérées ci-dessus.  …
 
 ---
 
@@ -674,7 +674,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur mybestbooking Hébergements 8 8 actifs Réservations 58 58 ce mois Revenus 23 728,92 € 23 728,92 € ce mois Avis 20 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-EBVZLX Marie Martin B&B Toscana Florence 15 janv. 2027 → 18 janv. 2027 243,77 € Confirmée MBB-2026-EMQBJ4 Marie …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur mybestbooking Hébergements 8 8 actifs Réservations 62 62 ce mois Revenus 24 654,62 € 24 654,62 € ce mois Avis 20 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-9L3BYK Marie Martin B&B Toscana Florence 15 janv. 2027 → 18 janv. 2027 243,77 € Confirmée MBB-2026-TIWOBP Marie …
 
 ---
 
@@ -693,7 +693,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Réservations Réservations de vos hébergements — filtres et recherche. Total 58 Confirmées 20 En attente 0 Revenus 23 729 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 58 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-EBVZLX Smoke Test customer@mybestboo …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Réservations Réservations de vos hébergements — filtres et recherche. Total 62 Confirmées 19 En attente 0 Revenus 24 655 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 62 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-9L3BYK Smoke Test customer@mybestboo …
 
 ---
 
@@ -731,7 +731,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total chambres 29 Actives 29 Unités totales 95 Prix moyen 149,54 € Chambre Test T-030 Hôtel Le Magnifique Double 2 pers. — m² 75,00 € par nuit • 1 unité Calendrier Chambre Supérieure Hôtel Le Magnifique Double 2 pers. 46.63 m² 172,00 € par nuit • 2 unité s Calendrier Chambre Standard Hôtel Le Magnifique Double 2 per …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total 32 Actives 32 Unités 98 Prix moyen 144,89 € Rechercher (tapez « / ») Filtrer Toutes Actives Inactives Tous types Double Familiale Suite 32 chambre s affichée s Sim T-034 room2 Hôtel Le Magnifique Double 2 pers. — m² 100,00 € par nuit · 1 unité Calendrier Sim T-034 room2 Hôtel Le Magnifique Double 2 pers. — m²  …
 
 ---
 
@@ -788,7 +788,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/messages
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Messages Communiquez avec vos voyageurs Non lus 0 Total conversations 0 Temps de réponse < 2h Aucune conversation Les messages de vos voyageurs apparaîtront ici Temps de réponse Répondez rapidement à vos voyageurs ! Un temps de réponse inférieur à 2 heures améliore votre score de fiche et votre visibilité sur mybestbooking.
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Messages Communiquez avec vos voyageurs Rechercher (tapez « / ») Filtrer Toutes Non lues Lues Non lus 0 Total conversations 0 Temps de réponse < 2h 0 conversation affichée Aucune conversation Les messages de vos voyageurs apparaîtront ici (ou ajustez vos filtres). Temps de réponse Répondez rapidement à vos voyageurs ! Un temps de réponse inférieur à 2 heures améliore votre score de  …
 
 ---
 
@@ -845,7 +845,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 23 728,92 € Revenus (30j) 100.0 % 58 Réservations (30j) 0.0 % 409,12 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 B&B Toscana 30 réservations 6 789,90 € 2 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 3 Riad Jardin Secret 4 réservations 3 217,89 € 4 Hôtel Le …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 654,62 € Revenus (30j) 100.0 % 62 Réservations (30j) 0.0 % 397,66 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 B&B Toscana 34 réservations 7 715,60 € 2 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 3 Riad Jardin Secret 4 réservations 3 217,89 € 4 Hôtel Le …
 
 ---
 
@@ -864,7 +864,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/billing
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 20 169,51 € 58 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 20 169,51 € 58 réservation s au total Factures Export CSV via API (v prochaine) août 2026 58 réservation s 20 169,51 € En attente Transactions récentes MBB-2026-EBVZLX B&B Toscana 21 août 2026 + 207,20 € Commission: 36,57  …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 20 956,34 € 62 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 20 956,34 € 62 réservation s au total Factures Export CSV via API (v prochaine) août 2026 62 réservation s 20 956,34 € En attente Transactions récentes MBB-2026-9L3BYK B&B Toscana 21 août 2026 + 207,20 € Commission: 36,57  …
 
 ---
 
@@ -885,7 +885,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/users
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Utilisateurs Gérez les utilisateurs de la plateforme — filtres, recherche, actions groupées Total 178 Clients 176 Hébergeurs 1 Admins 1 Rechercher (tapez « / ») Filtrer Tous les statuts Actifs Suspendus Email vérifié Email non vérifié Tous les rôles Client Hébergeur Admin 178 utilisateur s affiché s Utilisateur Email Rôle BestRewards Inscrit Derni …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Utilisateurs Gérez les utilisateurs de la plateforme — filtres, recherche, actions groupées Total 210 Clients 208 Hébergeurs 1 Admins 1 Rechercher (tapez « / ») Filtrer Tous les statuts Actifs Suspendus Email vérifié Email non vérifié Tous les rôles Client Hébergeur Admin 210 utilisateur s affiché s Utilisateur Email Rôle BestRewards Inscrit Derni …
 
 ---
 
@@ -904,7 +904,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/audit
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations). Date Acteur Action Entité Détails 21 août 2026, 12:28 admin@mybestbooking.com bulk.action users { "ids": [ "a2e403af-df00-4046-9f8c-276df6859187" ], "failed": 0, "skipped": 0, "operation": "suspend", "requested": 1, "succeeded": 1 } 21 août 202 …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations, actions groupées). Rechercher (tapez « / ») Action Toutes actions Action groupée Property rejetée Property validée Avis modéré Utilisateur suspendu Entité Toutes entités bookings promotions properties property review reviews rooms user users 100 …
 
 ---
 
@@ -942,7 +942,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 23 728,92 € Revenus (30j) 100.0 % 58 Réservations (30j) 0.0 % 409,12 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 B&B Toscana 30 réservations 6 789,90 € 2 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 3 Riad Jardin Secret  …
+> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 654,62 € Revenus (30j) 100.0 % 62 Réservations (30j) 0.0 % 397,66 € Panier moyen 8.6/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 B&B Toscana 34 réservations 7 715,60 € 2 Villa Azure Côte d'Azur 5 réservations 3 760,13 € 3 Riad Jardin Secret  …
 
 ---
 
@@ -1007,13 +1007,13 @@ curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/dar-el-medina
 
 ## H. Partage public d'une wishlist — /wishlists/share/[token]
 
-### 1. `GET /wishlists/share/15308e03-52be-4880-aa01-549df4e6e342`
+### 1. `GET /wishlists/share/7ab2a2fc-dec7-4bd6-83f6-8566d1da5dc8`
 
 **Scénario** : Le voyageur envoie le lien à un ami. L'ami (non connecté) ouvre la wishlist publique.
 
 **Requête simulée** :
 ```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/15308e03-52be-4880-aa01-549df4e6e342
+curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/7ab2a2fc-dec7-4bd6-83f6-8566d1da5dc8
 ```
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
@@ -1119,7 +1119,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> ref=MBB-2026-S8WEL8 · status=confirmed · discount=49.93 € · total=243.77 €
+> ref=MBB-2026-7X0AGR · status=confirmed · discount=49.93 € · total=243.77 €
 
 ---
 
@@ -1138,7 +1138,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/wishlists
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"item":{"id":"ae79f3d8-bd4b-4701-b3b7-4e7fb2838c4f","wishlistId":"760d7544-e3a0-4157-944f-2c5d70f3abf6","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","addedAt":"2026-08-21T12:31:38.993Z","price
+> {"item":{"id":"3545feaa-fd88-4f40-b148-93d4b82075ce","wishlistId":"05a9f287-16a6-4e89-91d7-e9588dd012cf","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","addedAt":"2026-08-21T13:07:28.231Z","price
 
 ---
 
@@ -1157,7 +1157,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/price-alerts
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"alert":{"id":"891708f4-260f-473c-a7d9-bd235515bfa8","userId":"24d0799c-915b-4e12-be22-fd93eddcc15b","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","maxPrice":"100.00","currency":"EUR","active":
+> {"alert":{"id":"5d71be10-d952-4e04-8680-39637d8a3ad8","userId":"24d0799c-915b-4e12-be22-fd93eddcc15b","propertyId":"941a231d-fa07-49e5-8b35-eadd4a0eb1b6","maxPrice":"100.00","currency":"EUR","active":
 
 ---
 
@@ -1182,7 +1182,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/api/users/me/referral
 
 ### 9. `POST /api/auth/register`
 
-**Scénario** : Un nouveau visiteur crée un compte sim1787315499@test.local.
+**Scénario** : Un nouveau visiteur crée un compte sim1787317648@test.local.
 
 **Requête simulée** :
 ```bash
@@ -1195,7 +1195,7 @@ curl -X POST (anonyme) http://127.0.0.1:3000/api/auth/register
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"message":"Inscription réussie","user":{"id":"4d491df0-13dc-45da-a671-b97ff189d7d8","email":"sim1787315499@test.local","firstName":"Sim","lastName":"User","role":"customer"}}
+> {"message":"Inscription réussie","user":{"id":"0e6882fa-a943-4be7-a92a-b35ef0c02dcb","email":"sim1787317648@test.local","firstName":"Sim","lastName":"User","role":"customer"}}
 
 ---
 
