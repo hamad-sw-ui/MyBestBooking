@@ -27,10 +27,13 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 - 🔴 **T-109 (C)** — saga d’annulation/reprise paiement, outbox unifiée,
   claim checkout invité, messagerie hôte et politique de timezone/devise. Couvre
   le noyau financier et compte de BUG-038.
-- 🟠 **T-110 (S)** — vérité UI/produit : quote checkout/alertes, recherche sur
-  une même room, BestRewards/referral/promos, actions de fiche, reporting,
-  contrats de listes, capacité room, bornes dates et upgrade dépendances. Voir
-  les rapports d’audit profond et addendum post T-107.
+- 🔴 **T-110 (S/P0)** — JSON-LD script-safe, journal refund crash-safe,
+  consommation claim atomique et retrait des promesses commerciales non
+  implémentées. Voir audit profond post T-109.
+- 🟠 **T-111 (C/P1)** — chiffrement TOTP, devise/ledger, timezone/dates,
+  inventaire compatible booking et settings réellement appliqués.
+- 🟠 **T-112 (S/P2)** — referral/promos, conversations uniques, rétention,
+  support/ticketing, UX restantes, navigateur CI et upgrade dépendances.
 
 ### Chantiers Sessions 5-7 (livrés)
 

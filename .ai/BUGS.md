@@ -9,6 +9,10 @@ suivante.
 
 ## Ouverts
 
+- [ ] **2026-08-23 — BUG-040** (P0, AUD-110-01/02) : JSON-LD property injecté
+  sans sérialisation script-safe et fenêtre de crash entre refund PSP et commit
+  DB. Risque XSS hôte/public et refund sans trace. À traiter avant production.
+
 - [ ] **2026-08-23 — BUG-037** (S résiduel, T-108 partiel,
   AUD-108-07) : les réglages notifications et certains réglages sécurité
   administrateur restent non consommés par le runtime. La sous-partie TOTP est
