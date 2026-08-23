@@ -3,6 +3,19 @@
 > ⚠️ Ce document décrit Room/SQLCipher et ne s'applique pas à MyBestBooking.
 > Le schéma actuel est dans `src/db/schema.ts` et est décrit dans `PROJECT.md`.
 
+## État Next.js / PostgreSQL (normatif)
+
+- Schéma Drizzle : `src/db/schema.ts`; migrations SQL additives `0000` à
+  `0013_orchestration-resilience.sql`.
+- T-107 ajoute `bookings.benefits_released_at`,
+  `email_outbox.provider_message_id` et remplace les FK `review_votes` par
+  `ON DELETE CASCADE`. La migration ne réécrit aucune réservation historique.
+- Les bookings sont le journal du hold paiement : `payment_expires_at`, intent,
+  remboursement et libération d’avantages restent persistés/rejouables.
+- Toute migration future doit rester additive, être appliquée sur une chaîne
+  fraîche et vérifier les contraintes/FK avec PostgreSQL réel.
+
+
 | Élément | Valeur |
 |---|---|
 | Moteur | **Room 2.7.0-alpha12** (KSP) sur **SQLCipher 4.5.4** |

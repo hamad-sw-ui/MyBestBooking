@@ -9,6 +9,35 @@
 
 ---
 
+## Session 15 — 2026-08-23 : T-107 orchestration paiement et parcours opérationnels
+
+### Livré
+
+- 🔨 Booking : hold transactionnel court, création/rattachement de l’intent PSP après commit avec clé d’idempotence et reprise cron avant TTL.
+- 🔨 Paiement tardif : le booking expiré reste annulé et est automatiquement remboursé de manière rejouable ; promo/wallet retenus sont libérés une seule fois.
+- 🔨 Outbox : clé `eventKey` transmise à Resend/ConsoleMailer, message id fournisseur persisté ; retry après lease sans doublon Console.
+- 🔨 Admin : suppression d’avis voté sûre, keyring primaire/précédent et réchiffrement provider contrôlé sans secret HTTP.
+- 🔨 Produit : quote prix réellement réservable, count/ordre pagination stable, calendrier >90 jours navigable, plans tarifaires modifiables avec aperçu.
+
+### Preuves
+
+- ▶️ chaîne migration fraîche `0000…0013`, FK cascade et colonnes T-107 contrôlées.
+- 🧪 `npm test` : **218/218** ; dont keyring DB, ConsoleMailer idempotent et headers Stripe.
+- 🔨 `npm run typecheck`, `npm run lint` (0 erreur, 16 warnings historiques), `npm run build` : succès.
+- ▶️ booking post-commit, webhook tardif refundé, retry outbox, bulk review/vote, quote séjour 198, PATCH plan et pagination hors bornes : succès.
+- ▶️ `npm run smoke` : **91/91**.
+
+### Limites
+
+- ❓ Aucun provider Stripe/Resend/S3 réel n’a été appelé faute de credentials test; aucune validation fournisseur réelle n’est déclarée.
+- ❓ Playwright Chromium reste indisponible dans le sandbox; validations HTTP/API/build ne valent pas E2E navigateur.
+
+### Références
+
+`REPORTS/analyse_impact_2026-08-23_resilience_orchestrations.md`, conception/débat/opportunités, post-correction et `validation_T-107_2026-08-23.md`; ADR-012.
+
+---
+
 ## Session 14 — 2026-08-23 : audit fonctionnel runtime et synchronisation `.ai/`
 
 ### Livré

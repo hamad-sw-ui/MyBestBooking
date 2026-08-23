@@ -5,9 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { generateBookingReference } from "@/lib/utils";
 import { eq, and, or, desc, lt, gt, gte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
-import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
 import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
-import { getPaymentProvider } from "@/lib/payment";
 import { getSetting } from "@/lib/settings";
 import {
   assertNotMaintenance,
@@ -16,6 +14,7 @@ import {
 } from "@/lib/maintenance";
 import { rateLimit } from "@/lib/rate-limit";
 import { evaluateBookingRules } from "@/lib/booking-rules";
+import { createPaymentIntentForBooking } from "@/lib/payment-intents";
 
 const bookingSchema = z
   .object({
@@ -163,11 +162,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     const bookingReference = generateBookingReference();
-    let clientSecret: string | null = null;
-    let paymentKind: "mock" | "stripe" = "mock";
-    let paymentStatus: string = "pending";
     let createdBooking: typeof bookings.$inferSelect;
-    let finalTotal = 0;
 
     try {
       createdBooking = await db.transaction(async (tx) => {
@@ -287,18 +282,6 @@ export async function POST(request: NextRequest) {
           }
         }
 
-        const provider = await getPaymentProvider();
-        const intent = await provider.create({
-          amount: Math.round(total * 100),
-          currency: (room.currency || "EUR").toUpperCase(),
-          bookingReference,
-          guestEmail: data.guestEmail,
-        });
-        clientSecret = intent.clientSecret;
-        paymentKind = provider.kind;
-        paymentStatus = intent.status === "succeeded" ? "succeeded" : "pending";
-        finalTotal = total;
-
         const commissionRate = Number(property.commissionRate || "15");
         const commissionAmount = total * (commissionRate / 100);
         const netToHost = total - commissionAmount;
@@ -309,7 +292,9 @@ export async function POST(request: NextRequest) {
             userId: lockedUser.id,
             propertyId: data.propertyId,
             roomId: data.roomId,
-            status: intent.status === "succeeded" ? "confirmed" : "pending",
+            // L’intent PSP est créé uniquement après ce commit, jamais sous
+            // les verrous room/user. Le TTL protège ce hold si le process tombe.
+            status: "pending",
             checkIn: data.checkIn,
             checkOut: data.checkOut,
             numNights: rules.nights.length,
@@ -328,10 +313,10 @@ export async function POST(request: NextRequest) {
             discount: discount.toFixed(2),
             total: total.toFixed(2),
             currency: room.currency || "EUR",
-            paymentStatus: intent.status === "succeeded" ? "paid" : "pending",
-            paymentMethod: provider.kind === "stripe" ? "stripe" : "mock_card",
-            paymentIntentId: intent.id,
-            paymentExpiresAt: intent.status === "succeeded" ? null : new Date(Date.now() + 15 * 60 * 1000),
+            paymentStatus: "pending",
+            paymentMethod: null,
+            paymentIntentId: null,
+            paymentExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
             promotionId: appliedPromoId,
             walletCreditsUsed: walletUsed.toFixed(2),
             ratePlanId: selectedRatePlan?.id ?? null,
@@ -373,26 +358,33 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
-    // Mock réussi : confirmation immédiate. Stripe pending sera confirmé et
-    // notifié par le webhook, via le même service idempotent.
-    if (paymentStatus === "succeeded") {
-      try {
-        await sendBookingConfirmationIfNeeded(createdBooking.id);
-      } catch (mailErr) {
-        console.error("[booking] confirmation mail failed:", mailErr);
-      }
+    // Effet externe hors transaction. La référence booking est la clé
+    // d’idempotence du PSP, et le cron reprend un intent non rattaché.
+    let payment;
+    try {
+      payment = await createPaymentIntentForBooking(createdBooking.id);
+    } catch (paymentError) {
+      console.error("[booking] payment intent setup failed:", paymentError);
+      return NextResponse.json({
+        error: "La réservation est temporairement retenue, mais le paiement sécurisé n'a pas pu être préparé. Réessayez dans quelques instants.",
+        booking: createdBooking,
+      }, { status: 503 });
     }
+    if (!payment) {
+      return NextResponse.json({ error: "La réservation a expiré avant la préparation du paiement" }, { status: 409 });
+    }
+    createdBooking = payment.booking;
 
     return NextResponse.json(
       {
         booking: createdBooking,
         // Champ historique maintenu le temps de la migration UI.
-        clientSecret,
+        clientSecret: payment.clientSecret,
         payment: {
-          provider: paymentKind,
-          status: paymentStatus,
-          clientSecret,
-          requiresConfirmation: paymentStatus !== "succeeded",
+          provider: payment.provider,
+          status: payment.status,
+          clientSecret: payment.clientSecret,
+          requiresConfirmation: payment.status !== "succeeded",
         },
       },
       { status: 201 },

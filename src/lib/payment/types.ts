@@ -11,6 +11,8 @@ export interface CreateIntentParams {
   currency: string;
   bookingReference: string;
   guestEmail: string;
+  /** Clé stable : une reprise après timeout doit retrouver le même intent PSP. */
+  idempotencyKey?: string;
 }
 
 export type WebhookEvent =
@@ -41,8 +43,11 @@ export interface PaymentProvider {
   create(params: CreateIntentParams): Promise<PaymentIntent>;
   /** Annule un intent encore en attente afin qu'il ne soit pas capturé plus tard. */
   cancel(paymentIntentId: string): Promise<"succeeded" | "pending" | "failed">;
-  /** Rembourse un PaymentIntent, sans jamais accepter de montant navigateur. */
-  refund(paymentIntentId: string, amount: number): Promise<RefundResult>;
+  /**
+   * Rembourse un PaymentIntent, sans accepter de montant navigateur. La clé
+   * rend la compensation rejouable après un timeout réseau du PSP.
+   */
+  refund(paymentIntentId: string, amount: number, idempotencyKey?: string): Promise<RefundResult>;
   verifyWebhook(
     payload: string,
     signature: string | null,

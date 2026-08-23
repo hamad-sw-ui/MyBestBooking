@@ -8,33 +8,46 @@ import type {
 } from "./types";
 
 /**
- * MockPaymentProvider (T-020) — utilisé quand STRIPE_SECRET_KEY est
- * absent (dev, tests, sandbox). Simule un paiement immédiatement
- * réussi. Compatible avec le comportement historique (avant Stripe).
+ * MockPaymentProvider — utilisé uniquement sans configuration Stripe en dev/test.
+ * Les maps statiques reproduisent l'idempotence fournisseur lors d'une reprise.
  */
 export class MockPaymentProvider implements PaymentProvider {
   readonly kind = "mock" as const;
+  private static intentsByKey = new Map<string, PaymentIntent>();
+  private static refundsByKey = new Map<string, RefundResult>();
 
   async create(params: CreateIntentParams): Promise<PaymentIntent> {
-    return {
+    if (params.idempotencyKey) {
+      const previous = MockPaymentProvider.intentsByKey.get(params.idempotencyKey);
+      if (previous) return previous;
+    }
+    const intent: PaymentIntent = {
       id: `pi_mock_${randomUUID()}`,
       clientSecret: null,
       status: "succeeded",
       amount: params.amount,
       currency: params.currency,
     };
+    if (params.idempotencyKey) MockPaymentProvider.intentsByKey.set(params.idempotencyKey, intent);
+    return intent;
   }
 
   async cancel(_paymentIntentId: string): Promise<"succeeded"> {
     return "succeeded";
   }
 
-  async refund(_paymentIntentId: string, amount: number): Promise<RefundResult> {
-    return {
+  async refund(_paymentIntentId: string, amount: number, idempotencyKey?: string): Promise<RefundResult> {
+    if (idempotencyKey) {
+      const previous = MockPaymentProvider.refundsByKey.get(idempotencyKey);
+      if (previous) return previous;
+    }
+    const refund: RefundResult = {
       id: `re_mock_${randomUUID()}`,
       status: "succeeded",
       amount,
     };
+    if (idempotencyKey) MockPaymentProvider.refundsByKey.set(idempotencyKey, refund);
+    return refund;
   }
 
   async verifyWebhook(payload: string): Promise<WebhookEvent | null> {

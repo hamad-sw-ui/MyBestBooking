@@ -52,6 +52,14 @@ describe("ConsoleMailer (T-013, §13.5)", () => {
     expect(id).not.toContain("/");
     expect(id).not.toContain("..");
   });
+
+  it("réutilise un identifiant stable pour la même clé outbox", async () => {
+    const m = new ConsoleMailer(tmp);
+    const first = await m.send({ to: "test@example.com", subject: "x", html: "x", text: "x", idempotencyKey: "outbox:event:1" });
+    const second = await m.send({ to: "test@example.com", subject: "x", html: "x", text: "x", idempotencyKey: "outbox:event:1" });
+    expect(first.id).toBe(second.id);
+    expect(require("node:fs").readdirSync(tmp)).toHaveLength(1);
+  });
 });
 
 describe("templates (T-013 + T-025)", () => {

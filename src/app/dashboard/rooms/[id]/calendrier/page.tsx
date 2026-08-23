@@ -92,6 +92,7 @@ export default async function RoomCalendarPage({
       }} />
       <RatePlansSection
         roomId={id}
+        basePrice={row.room.basePrice}
         initialRatePlans={plans.map((plan) => ({
           id: plan.id,
           name: plan.name,

@@ -74,3 +74,55 @@ dbTest("provider credentials vault", () => {
     expect(metadata.fields.find((field) => field.name === "apiKey")?.stored).toBe(true);
   });
 });
+
+dbTest("provider credentials rotation", () => {
+  let db: typeof import("@/db").db;
+  let schema: typeof import("@/db/schema");
+  let userId = "";
+
+  beforeAll(async () => {
+    const dbMod = await import("@/db");
+    db = dbMod.db;
+    schema = await import("@/db/schema");
+    const [user] = await db.insert(schema.users).values({
+      email: `provider-rotation-${Date.now()}@test.local`, firstName: "Rotation", lastName: "Vault", role: "admin", passwordHash: null,
+    }).returning();
+    userId = user.id;
+  });
+
+  afterAll(async () => {
+    const { removeProviderCredentials, clearProviderCredentialsCache } = await import("./provider-credentials");
+    await removeProviderCredentials("resend");
+    clearProviderCredentialsCache();
+    if (userId) {
+      const { eq } = await import("drizzle-orm");
+      await db.delete(schema.users).where(eq(schema.users.id, userId));
+    }
+    delete process.env.CREDENTIALS_ENCRYPTION_KEY_PREVIOUS;
+  });
+
+  it("lit l’ancienne clé pendant la rotation puis réchiffre avec la nouvelle", async () => {
+    const {
+      clearProviderCredentialsCache,
+      resolveProviderCredentials,
+      rotateProviderCredentialEncryption,
+      saveProviderCredentials,
+    } = await import("./provider-credentials");
+    const oldKey = "b".repeat(64);
+    const newKey = "c".repeat(64);
+    process.env.CREDENTIALS_ENCRYPTION_KEY = oldKey;
+    delete process.env.CREDENTIALS_ENCRYPTION_KEY_PREVIOUS;
+    clearProviderCredentialsCache();
+    await saveProviderCredentials("resend", { apiKey: "re_rotation_secret" }, userId);
+
+    process.env.CREDENTIALS_ENCRYPTION_KEY = newKey;
+    process.env.CREDENTIALS_ENCRYPTION_KEY_PREVIOUS = oldKey;
+    clearProviderCredentialsCache();
+    await expect(resolveProviderCredentials("resend")).resolves.toMatchObject({ apiKey: "re_rotation_secret" });
+    await expect(rotateProviderCredentialEncryption()).resolves.toMatchObject({ reencrypted: 1 });
+
+    delete process.env.CREDENTIALS_ENCRYPTION_KEY_PREVIOUS;
+    clearProviderCredentialsCache();
+    await expect(resolveProviderCredentials("resend")).resolves.toMatchObject({ apiKey: "re_rotation_secret" });
+  });
+});

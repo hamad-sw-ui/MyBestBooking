@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 interface Day {
   date: string;
@@ -9,6 +9,8 @@ interface Day {
   stopSell: boolean | null;
   minStay: number | null;
 }
+
+const DAYS_PER_PAGE = 90;
 
 interface Props {
   roomId: string;
@@ -41,6 +43,7 @@ export function AvailabilityCalendar({
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [visiblePage, setVisiblePage] = useState(0);
 
   const dateList = useMemo(() => {
     const list: string[] = [];
@@ -51,6 +54,12 @@ export function AvailabilityCalendar({
     }
     return list;
   }, [from, to]);
+
+  const pageCount = Math.max(1, Math.ceil(dateList.length / DAYS_PER_PAGE));
+  // Le range peut rétrécir après une saisie : borner la vue dérivée évite une
+  // tranche vide sans synchroniser artificiellement un second state React.
+  const currentPage = Math.min(visiblePage, pageCount - 1);
+  const visibleDates = dateList.slice(currentPage * DAYS_PER_PAGE, (currentPage + 1) * DAYS_PER_PAGE);
 
   function getDay(date: string): Day {
     return (
@@ -70,11 +79,18 @@ export function AvailabilityCalendar({
   }
 
   async function reload() {
-    const res = await fetch(`/api/rooms/${roomId}/availability?from=${from}&to=${to}`);
-    const data = await res.json();
-    const m: Record<string, Day> = {};
-    for (const d of data.days) m[d.date] = d;
-    setDays(m);
+    setError(null);
+    try {
+      const res = await fetch(`/api/rooms/${roomId}/availability?from=${from}&to=${to}`);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Impossible de recharger le calendrier");
+      const m: Record<string, Day> = {};
+      for (const d of data.days ?? []) m[d.date] = d;
+      setDays(m);
+      setVisiblePage(0);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Erreur de rechargement");
+    }
   }
 
   async function save() {
@@ -89,8 +105,8 @@ export function AvailabilityCalendar({
         return;
       }
       // Chunker à 90 max côté API
-      for (let i = 0; i < changed.length; i += 90) {
-        const chunk = changed.slice(i, i + 90).map((d) => ({
+      for (let i = 0; i < changed.length; i += DAYS_PER_PAGE) {
+        const chunk = changed.slice(i, i + DAYS_PER_PAGE).map((d) => ({
           date: d.date,
           availableCount: Number(d.availableCount),
           price: d.price != null && d.price !== "" ? Number(d.price) : null,
@@ -118,17 +134,17 @@ export function AvailabilityCalendar({
       <div className="flex items-end gap-3 flex-wrap">
         <div>
           <label htmlFor="cal-from" className="block text-xs text-gray-500 mb-1">Du</label>
-          <input id="cal-from" type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg" />
+          <input id="cal-from" type="date" value={from} onChange={(e) => { setFrom(e.target.value); setVisiblePage(0); }} className="px-3 py-2 border border-gray-200 rounded-lg" />
         </div>
         <div>
           <label htmlFor="cal-to" className="block text-xs text-gray-500 mb-1">Au</label>
-          <input id="cal-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} className="px-3 py-2 border border-gray-200 rounded-lg" />
+          <input id="cal-to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setVisiblePage(0); }} className="px-3 py-2 border border-gray-200 rounded-lg" />
         </div>
         <button type="button" onClick={reload} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
           Recharger
         </button>
         <div className="text-xs text-gray-500">
-          {dateList.length} jour{dateList.length > 1 ? "s" : ""} — max 90 par batch.
+          {dateList.length} jour{dateList.length > 1 ? "s" : ""} — vue {currentPage + 1}/{pageCount}, 90 max par batch.
         </div>
       </div>
 
@@ -144,7 +160,7 @@ export function AvailabilityCalendar({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {dateList.slice(0, 90).map((date) => {
+            {visibleDates.map((date) => {
               const d = getDay(date);
               const dt = new Date(date);
               const weekend = dt.getDay() === 0 || dt.getDay() === 6;
@@ -195,6 +211,14 @@ export function AvailabilityCalendar({
           </tbody>
         </table>
       </div>
+
+      {pageCount > 1 && (
+        <nav aria-label="Tranches du calendrier" className="flex flex-wrap items-center gap-2 text-sm">
+          <button type="button" onClick={() => setVisiblePage(Math.max(0, currentPage - 1))} disabled={currentPage === 0 || loading} className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50">90 jours précédents</button>
+          <span className="text-gray-600">Jours {currentPage * DAYS_PER_PAGE + 1}–{Math.min((currentPage + 1) * DAYS_PER_PAGE, dateList.length)}</span>
+          <button type="button" onClick={() => setVisiblePage(Math.min(pageCount - 1, currentPage + 1))} disabled={currentPage >= pageCount - 1 || loading} className="px-3 py-2 border border-gray-300 rounded-lg disabled:opacity-50">90 jours suivants</button>
+        </nav>
+      )}
 
       <div className="flex items-center gap-3">
         <button

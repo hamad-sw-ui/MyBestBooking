@@ -15,6 +15,7 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { getMailer, templates } from "@/lib/mail";
+import { releaseBookingBenefits } from "@/lib/booking-benefits";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
@@ -119,6 +120,7 @@ export async function PUT(
         const refund = await (await getPaymentProvider()).refund(
           existing.booking.paymentIntentId,
           Math.round(refundAmount * 100),
+          `booking-cancellation-refund:${existing.booking.id}`,
         );
         if (refund.status === "failed") {
           return NextResponse.json({ error: "Le remboursement a été refusé ; la réservation reste active" }, { status: 502 });
@@ -194,6 +196,12 @@ export async function PUT(
         .returning();
       return updated;
     });
+
+    // Une annulation avant capture relâche promo/wallet une seule fois. Une
+    // capture tardive reste protégée par l’inbox qui la rembourse ensuite.
+    if (data.status === "cancelled" && updatedBooking.paymentStatus !== "paid") {
+      await releaseBookingBenefits(updatedBooking.id);
+    }
 
     if (data.status === "cancelled" && existing.booking.guestEmail) {
       try {

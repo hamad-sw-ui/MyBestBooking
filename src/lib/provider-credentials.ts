@@ -1,5 +1,5 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { providerCredentials, providerTestLogs } from "@/db/schema";
 
@@ -25,16 +25,24 @@ const CACHE_TTL_MS = 60_000;
 
 export class ProviderCredentialsError extends Error {}
 
-function masterKey(): Buffer | null {
-  const raw = process.env.CREDENTIALS_ENCRYPTION_KEY;
+function parseMasterKey(raw: string | undefined, envName: string): Buffer | null {
   if (!raw) return null;
   const value = /^[a-fA-F0-9]{64}$/.test(raw)
     ? Buffer.from(raw, "hex")
     : Buffer.from(raw, "base64");
   if (value.length !== 32) {
-    throw new ProviderCredentialsError("CREDENTIALS_ENCRYPTION_KEY doit encoder exactement 32 octets");
+    throw new ProviderCredentialsError(`${envName} doit encoder exactement 32 octets`);
   }
   return value;
+}
+
+function masterKey(): Buffer | null {
+  return parseMasterKey(process.env.CREDENTIALS_ENCRYPTION_KEY, "CREDENTIALS_ENCRYPTION_KEY");
+}
+
+/** Clé temporaire de rotation, jamais envoyée à l’UI ni stockée en DB. */
+function previousMasterKey(): Buffer | null {
+  return parseMasterKey(process.env.CREDENTIALS_ENCRYPTION_KEY_PREVIOUS, "CREDENTIALS_ENCRYPTION_KEY_PREVIOUS");
 }
 
 function envValues(provider: ProviderName): ProviderValues {
@@ -83,6 +91,16 @@ function decrypt(input: { ciphertext: string; iv: string; authTag: string }, key
   }
 }
 
+/** Essaie la clé active, puis la clé précédente uniquement pendant une rotation. */
+function decryptWithKeyring(input: { ciphertext: string; iv: string; authTag: string }, current: Buffer, previous: Buffer | null): string {
+  try {
+    return decrypt(input, current);
+  } catch (currentError) {
+    if (!previous) throw currentError;
+    return decrypt(input, previous);
+  }
+}
+
 export function clearProviderCredentialsCache(provider?: ProviderName): void {
   if (provider) cache.delete(provider);
   else cache.clear();
@@ -95,13 +113,14 @@ export async function resolveProviderCredentials(provider: ProviderName): Promis
 
   const values: ProviderValues = { ...envValues(provider) };
   const key = masterKey();
+  const previous = previousMasterKey();
   if (key) {
     const rows = await db
       .select()
       .from(providerCredentials)
       .where(eq(providerCredentials.provider, provider));
     for (const row of rows) {
-      values[row.name] = decrypt(row, key);
+      values[row.name] = decryptWithKeyring(row, key, previous);
     }
   }
   cache.set(provider, { value: values, expiresAt: Date.now() + CACHE_TTL_MS });
@@ -141,6 +160,7 @@ export interface ProviderMetadata {
   provider: ProviderName;
   configured: boolean;
   encryptionReady: boolean;
+  previousKeyConfigured: boolean;
   source: "database" | "environment" | "none";
   fields: { name: string; stored: boolean; environment: boolean; updatedAt: string | null }[];
   lastTest: { status: string; message: string | null; createdAt: string } | null;
@@ -162,6 +182,7 @@ export async function providerMetadata(provider: ProviderName): Promise<Provider
     updatedAt: stored.get(name)?.toISOString() ?? null,
   }));
   const encryptionReady = Boolean(masterKey());
+  const previousKeyConfigured = Boolean(previousMasterKey());
   const configured = REQUIRED_FIELDS[provider].every((name) =>
     (encryptionReady && stored.has(name)) || Boolean(env[name]),
   );
@@ -169,10 +190,41 @@ export async function providerMetadata(provider: ProviderName): Promise<Provider
     provider,
     configured,
     encryptionReady,
+    previousKeyConfigured,
     source: encryptionReady && stored.size ? "database" : configured ? "environment" : "none",
     fields,
     lastTest: lastTest ? { status: lastTest.status, message: lastTest.message, createdAt: lastTest.createdAt.toISOString() } : null,
   };
+}
+
+/**
+ * Réchiffre chaque override DB avec la clé primaire. La procédure est
+ * intentionnellement opérée par l’infrastructure : nouvelle clé dans
+ * CREDENTIALS_ENCRYPTION_KEY, ancienne dans *_PREVIOUS, puis appel admin.
+ */
+export async function rotateProviderCredentialEncryption(): Promise<{ reencrypted: number }> {
+  const current = masterKey();
+  const previous = previousMasterKey();
+  if (!current || !previous) {
+    throw new ProviderCredentialsError("La rotation exige CREDENTIALS_ENCRYPTION_KEY et CREDENTIALS_ENCRYPTION_KEY_PREVIOUS côté serveur");
+  }
+  const rows = await db.select().from(providerCredentials);
+  // Déchiffrer tout avant toute écriture : une clé erronée ne produit aucun
+  // coffre partiellement tourné.
+  const replacements = rows.map((row) => ({
+    provider: row.provider,
+    name: row.name,
+    sealed: encrypt(decryptWithKeyring(row, current, previous), current),
+  }));
+  await db.transaction(async (tx) => {
+    for (const replacement of replacements) {
+      await tx.update(providerCredentials)
+        .set({ ...replacement.sealed, updatedAt: new Date() })
+        .where(and(eq(providerCredentials.provider, replacement.provider), eq(providerCredentials.name, replacement.name)));
+    }
+  });
+  clearProviderCredentialsCache();
+  return { reencrypted: replacements.length };
 }
 
 export async function allProviderMetadata(): Promise<ProviderMetadata[]> {

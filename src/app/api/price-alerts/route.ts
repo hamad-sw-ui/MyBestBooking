@@ -13,7 +13,10 @@ const schema = z.object({
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   numAdults: z.number().int().min(1).optional(),
   numChildren: z.number().int().min(0).optional(),
-}).refine((data) => !data.checkIn || !data.checkOut || data.checkOut > data.checkIn, { message: "La date de départ doit être postérieure à l'arrivée", path: ["checkOut"] });
+}).refine((data) => !data.checkIn || !data.checkOut || data.checkOut > data.checkIn, { message: "La date de départ doit être postérieure à l'arrivée", path: ["checkOut"] }).refine((data) => {
+  const hasContext = [data.checkIn, data.checkOut, data.numAdults, data.numChildren].some((value) => value !== undefined);
+  return !hasContext || (data.checkIn !== undefined && data.checkOut !== undefined && data.numAdults !== undefined && data.numChildren !== undefined);
+}, { message: "Pour suivre un séjour, indiquez arrivée, départ, adultes et enfants", path: ["checkIn"] });
 
 /**
  * GET /api/price-alerts (T-026) — liste des alertes de l'user courant.

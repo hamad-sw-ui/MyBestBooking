@@ -9,12 +9,21 @@ suivante.
 
 ## Ouverts
 
-_Aucun bug critique ouvert._ Le seul point restant est **BUG-003
-(paiement non implémenté)** qui a été **déplacé dans
-`KNOWN_LIMITATIONS.md`** en attendant qu'un fournisseur de paiement
-(Stripe test key, etc.) soit disponible dans l'environnement.
+_Aucun bug critique ouvert._ Le point historique **BUG-003 (paiement non
+implémenté)** reste déplacé dans `KNOWN_LIMITATIONS.md` : une validation Stripe
+réelle exige toujours des clés fournisseur de test dans l’environnement.
 
 ## Corrigés
+
+- [x] **2026-08-23 — BUG-034** (T-107) : un succès de paiement après
+  expiration était consommé sans compensation, l’intent PSP restait sous
+  transaction, les votes pouvaient bloquer le bulk delete et plusieurs
+  parcours annonçaient une capacité partielle. Correctif : hold+TTL puis
+  intent idempotent hors transaction/reprise cron, refund tardif sans
+  résurrection, outbox provider-aware, cascade votes, quote alerte réel,
+  navigation calendrier, count/ordre recherche, édition rate plan et keyring
+  rotation. ▶️ migration 0013, webhook tardif refundé, lease mail, bulk vote,
+  quote 198, PATCH plan ; 🧪 218/218 ; smoke 91/91.
 
 - [x] **2026-08-23 — BUG-033** (T-105) : aide décorative, confirmation email
   non retryable, votes mémoire, uploads orphelins, rate plans incomplets et

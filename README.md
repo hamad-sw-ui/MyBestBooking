@@ -57,8 +57,12 @@ une clé maître d'infrastructure `CREDENTIALS_ENCRYPTION_KEY` (32 octets en hex
 ou Base64), à définir uniquement dans l'environnement de déploiement.
 
 Les variables `.env.local` restent compatibles comme fallback : elles sont
-recommandées pour le bootstrap, la récupération et la rotation de secrets.
-Voir `.env.example` et `.ai/SECURITY.md`.
+recommandées pour le bootstrap et la récupération. La rotation contrôlée est
+opérationnelle : définir la nouvelle clé dans `CREDENTIALS_ENCRYPTION_KEY`,
+l’ancienne temporairement dans `CREDENTIALS_ENCRYPTION_KEY_PREVIOUS`, utiliser
+« Providers externes sécurisés » → « Réchiffrer le coffre », vérifier, puis
+retirer la variable précédente. Aucune clé ne transite par le navigateur.
+Voir `.env.example`, ADR-012 et `.ai/SECURITY.md`.
 
 ## 📚 Documentation
 

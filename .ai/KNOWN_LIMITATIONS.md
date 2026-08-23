@@ -26,11 +26,12 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   vérification best-effort et crée la session immédiatement. Le produit ne
   bloque pas encore les actions sensibles tant que `emailVerified` est faux.
 
-- **Rotation de la clé maître providers manuelle.** Les overrides Stripe,
-  Resend et S3 saisis dans `/dashboard/settings` sont chiffrés AES-GCM. La
-  perte de `CREDENTIALS_ENCRYPTION_KEY` rend ces valeurs DB illisibles ; une
-  procédure de double chiffrement/rotation reste à concevoir. Les env restent
-  un fallback et doivent être conservés comme sauvegarde opérationnelle.
+- **Rotation provider assistée mais opérée par l’infrastructure.** Les overrides
+  Stripe, Resend et S3 sont chiffrés AES-GCM et peuvent être réchiffrés via le
+  keyring temporaire documenté dans ADR-012. La clé primaire et l’ancienne
+  restent exclusivement des variables d’environnement : leur perte avant
+  rotation rend toujours les données chiffrées illisibles. Une sauvegarde
+  sécurisée des secrets et une procédure d’incident restent indispensables.
 
 - **Rate-limit en mémoire (mono-instance).** `src/lib/rate-limit.ts` de
   T-009 utilise une Map process-local. En déploiement multi-instance
@@ -62,8 +63,6 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   (BUG-002).
 - **Rate-limit en mémoire** : présent sur les routes critiques, mais non
   distribué entre plusieurs instances. Voir la limite produit ci-dessus.
-- **Pagination recherche à consolider** : les filtres de disponibilité et de
-  prix sont appliqués, mais le total paginé doit encore être calculé en SQL.
 
 ## Framework
 

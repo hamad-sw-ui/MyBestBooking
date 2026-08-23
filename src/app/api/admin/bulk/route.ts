@@ -15,6 +15,7 @@ import {
   roomAvailability,
   conversations,
   messages,
+  reviewVotes,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
@@ -196,6 +197,10 @@ async function bulkProperties(
         await db.delete(rooms).where(eq(rooms.propertyId, id));
         await db.delete(wishlistItems).where(eq(wishlistItems.propertyId, id));
         await db.delete(priceAlerts).where(eq(priceAlerts.propertyId, id));
+        const propertyReviewIds = (await db.select({ id: reviews.id }).from(reviews).where(eq(reviews.propertyId, id))).map((review) => review.id);
+        // Explicite même si la migration 0013 ajoute CASCADE : compatible avec
+        // une base en cours de déploiement et lisible dans ce cleanup admin.
+        if (propertyReviewIds.length) await db.delete(reviewVotes).where(inArray(reviewVotes.reviewId, propertyReviewIds));
         await db.delete(reviews).where(eq(reviews.propertyId, id));
         // Conversations & messages
         const convIds = (
@@ -272,10 +277,15 @@ async function bulkReviews(action: string, ids: string[]): Promise<Result> {
   if (action === "delete") {
     for (const id of ids) {
       try {
-        const [row] = await db
-          .delete(reviews)
-          .where(eq(reviews.id, id))
-          .returning({ id: reviews.id });
+        const row = await db.transaction(async (tx) => {
+          // La suppression explicite évite que l’action bulk dépende d’un FK
+          // déployé partiellement; la cascade DB reste un filet de sécurité.
+          await tx.delete(reviewVotes).where(eq(reviewVotes.reviewId, id));
+          const [deleted] = await tx.delete(reviews)
+            .where(eq(reviews.id, id))
+            .returning({ id: reviews.id });
+          return deleted;
+        });
         if (!row) {
           r.skipped.push({ id, reason: "review introuvable" });
           continue;

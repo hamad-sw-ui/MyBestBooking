@@ -1,11 +1,11 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Email, Mailer } from "./types";
 
 /**
- * ConsoleMailer — écrit l'email dans .data/mails/<timestamp>-<to>.txt
- * en dev/test. Aucune dépendance externe. Utilisé automatiquement
- * quand RESEND_API_KEY n'est pas défini.
+ * ConsoleMailer — écrit dans .data/mails en dev/test. Avec une clé outbox,
+ * le nom de fichier est stable : une reprise ne crée pas une seconde copie.
  */
 export class ConsoleMailer implements Mailer {
   private dir: string;
@@ -25,7 +25,10 @@ export class ConsoleMailer implements Mailer {
     const safeTo = email.to
       .replace(/[^a-zA-Z0-9@_-]/g, "_")
       .replace(/_+/g, "_");
-    const id = `${ts}-${this.counter++}-${safeTo}`;
+    const keyHash = email.idempotencyKey
+      ? createHash("sha256").update(email.idempotencyKey).digest("hex").slice(0, 24)
+      : null;
+    const id = keyHash ? `console_${keyHash}` : `${ts}-${this.counter++}-${safeTo}`;
     const path = join(this.dir, `${id}.txt`);
     const content =
       `To: ${email.to}\n` +
@@ -35,7 +38,8 @@ export class ConsoleMailer implements Mailer {
       `\n${email.text}\n\n` +
       `--- HTML ---\n${email.html}\n`;
     try {
-      writeFileSync(path, content, "utf8");
+      // Une reprise du même eventKey représente déjà un envoi accepté.
+      if (!existsSync(path)) writeFileSync(path, content, "utf8");
       // eslint-disable-next-line no-console
       console.log(`[mail:console] Sent to ${email.to} → ${path}`);
     } catch (e) {

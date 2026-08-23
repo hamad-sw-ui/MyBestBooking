@@ -79,8 +79,8 @@ export const priceAlerts = pgTable("price_alerts", {
 // ═══════════════════════════════════════════════
 export const reviewVotes = pgTable("review_votes", {
   id: uuid("id").defaultRandom().primaryKey(),
-  reviewId: uuid("review_id").references(() => reviews.id).notNull(),
-  userId: uuid("user_id").references(() => users.id).notNull(),
+  reviewId: uuid("review_id").references(() => reviews.id, { onDelete: "cascade" }).notNull(),
+  userId: uuid("user_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("uniq_review_votes_review_user").on(table.reviewId, table.userId),
@@ -112,6 +112,7 @@ export const emailOutbox = pgTable("email_outbox", {
   status: varchar("status", { length: 20 }).default("pending").notNull(),
   attempts: integer("attempts").default(0).notNull(),
   claimedAt: timestamp("claimed_at"),
+  providerMessageId: varchar("provider_message_id", { length: 255 }),
   sentAt: timestamp("sent_at"),
   failedAt: timestamp("failed_at"),
   lastError: text("last_error"),
@@ -309,6 +310,9 @@ export const bookings = pgTable("bookings", {
   paymentExpiresAt: timestamp("payment_expires_at"),
   promotionId: uuid("promotion_id"),
   walletCreditsUsed: decimal("wallet_credits_used", { precision: 10, scale: 2 }).default("0"),
+  // Marque de compensation des avantages (promo/wallet) libérés après un
+  // paiement non finalisé, afin qu’un retry ne recrédite jamais deux fois.
+  benefitsReleasedAt: timestamp("benefits_released_at"),
   confirmationEmailSentAt: timestamp("confirmation_email_sent_at"),
   refundProviderId: varchar("refund_provider_id", { length: 255 }),
   // Snapshot du rate plan choisi : les modifications ultérieures d'un plan

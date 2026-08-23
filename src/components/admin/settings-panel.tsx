@@ -663,6 +663,7 @@ type ProviderMetadata = {
   provider: ProviderKey;
   configured: boolean;
   encryptionReady: boolean;
+  previousKeyConfigured: boolean;
   source: "database" | "environment" | "none";
   fields: { name: string; stored: boolean; environment: boolean; updatedAt: string | null }[];
   lastTest: { status: string; message: string | null; createdAt: string } | null;
@@ -700,7 +701,7 @@ const PROVIDER_UI: Record<ProviderKey, { name: string; fields: { key: string; la
 function ProvidersSection({ providers }: { providers: Providers }) {
   const [metadata, setMetadata] = useState<ProviderMetadata[] | null>(null);
   const [values, setValues] = useState<Record<ProviderKey, Record<string, string>>>({ stripe: {}, resend: {}, s3: {} });
-  const [busy, setBusy] = useState<ProviderKey | null>(null);
+  const [busy, setBusy] = useState<ProviderKey | "rotation" | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -760,6 +761,22 @@ function ProvidersSection({ providers }: { providers: Providers }) {
     } finally { setBusy(null); }
   }
 
+  async function rotateCredentials() {
+    if (!window.confirm("Réchiffrer tous les overrides avec la nouvelle clé maître ? Vérifiez que CREDENTIALS_ENCRYPTION_KEY est la nouvelle clé et CREDENTIALS_ENCRYPTION_KEY_PREVIOUS l’ancienne.")) return;
+    setBusy("rotation"); setError(null); setSuccess(null);
+    try {
+      const response = await fetch("/api/admin/providers/rotation", {
+        method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ confirm: "ROTATE_CREDENTIALS" }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "Impossible de réchiffrer le coffre");
+      setSuccess(`Coffre réchiffré : ${body.reencrypted} valeur(s). Vérifiez les providers puis retirez CREDENTIALS_ENCRYPTION_KEY_PREVIOUS.`);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Erreur");
+    } finally { setBusy(null); }
+  }
+
   async function reset(provider: ProviderKey) {
     if (!window.confirm(`Retirer les overrides chiffrés ${PROVIDER_UI[provider].name} et revenir aux variables d’environnement ?`)) return;
     setBusy(provider); setError(null); setSuccess(null);
@@ -783,6 +800,13 @@ function ProvidersSection({ providers }: { providers: Providers }) {
       </CardHeader>
       <CardContent className="space-y-6">
         <p className="text-sm text-gray-600">Les valeurs saisies sont chiffrées côté serveur avec une clé maître hors base de données. Elles ne sont jamais affichées, même à un administrateur. Les champs vides conservent la valeur actuelle.</p>
+        {metadata?.some((provider) => provider.previousKeyConfigured) && (
+          <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+            <p className="font-medium">Rotation de clé prête</p>
+            <p className="mt-1">La clé précédente est détectée côté serveur. Après sauvegarde de la nouvelle clé primaire, réchiffrez le coffre, testez les providers, puis retirez la variable précédente.</p>
+            <Button size="sm" className="mt-3" variant="outline" onClick={rotateCredentials} disabled={busy !== null}>{busy === "rotation" ? "Réchiffrement…" : "Réchiffrer le coffre"}</Button>
+          </div>
+        )}
         {(Object.keys(PROVIDER_UI) as ProviderKey[]).map((provider) => {
           const meta = metadata?.find((item) => item.provider === provider);
           const fallbackConfigured = providers[provider];

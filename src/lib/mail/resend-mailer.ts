@@ -2,8 +2,8 @@ import type { Email, Mailer } from "./types";
 
 /**
  * ResendMailer — envoie via l'API https://api.resend.com.
- * Activé automatiquement quand `RESEND_API_KEY` est défini.
- * Aucune dépendance npm (fetch natif Node 20+).
+ * `Idempotency-Key` évite le doublon si le worker a été interrompu après
+ * l'acceptation par Resend mais avant la mise à jour de l'outbox.
  */
 export class ResendMailer implements Mailer {
   constructor(
@@ -17,6 +17,7 @@ export class ResendMailer implements Mailer {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json",
+        ...(email.idempotencyKey ? { "Idempotency-Key": email.idempotencyKey } : {}),
       },
       body: JSON.stringify({
         from: this.from,

@@ -21,7 +21,11 @@
   `CREDENTIALS_ENCRYPTION_KEY` reste exclusivement en variable d'environnement,
   hors DB et hors UI ; les endpoints admin ne retournent que des métadonnées.
 - Les variables d'environnement restent le fallback compatible si aucun
-  override chiffré n'est enregistré.
+  override chiffré n'est enregistré. La rotation utilise temporairement un
+  keyring : nouvelle clé `CREDENTIALS_ENCRYPTION_KEY`, ancienne clé
+  `CREDENTIALS_ENCRYPTION_KEY_PREVIOUS`, réchiffrement admin explicite,
+  vérification des providers, puis retrait de la clé précédente. Aucune clé
+  ne transite en HTTP, dans l’UI, les audits ou les logs.
 - Les nouvelles pièces jointes de messagerie sont privées et ne sont servies
   qu'après vérification du participant ; les images publiques d'hébergement
   restent un domaine distinct.

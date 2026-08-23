@@ -4,54 +4,61 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a02dbb-mybestbooking`
-- **HEAD validé T-105** : `7534186`
+- **HEAD à synchroniser après commit T-107** : `0cd0ddb`
 - **Version Framework** : AI-DOS 3.0.0
-- **Dernière tâche validée** : T-106 — résilience paiement, inbox et outbox
+- **Dernière tâche validée** : T-107 — orchestration paiement, outbox et parcours opérationnels
 
-## 🛠️ État technique T-102
+## 🛠️ État technique
 
-- Règles transactionnelles : capacité voyageurs, stock par nuit, stop-sell et
-  minStay sont évalués côté serveur dans `POST /api/bookings`.
-- Cycle de vie : le voyageur annule uniquement ; clôture après départ par hôte,
-  admin ou tâche planifiée ; avis après séjour terminé.
-- Paiement : Stripe pending n’est pas présenté comme payé ; Stripe Elements est
-  intégré conditionnellement ; mock limité dev/test ; remboursement/cancel
-  tracés par migration `0008_booking-integrity-finance.sql`.
-- Parcours : CTA de réservation unifié avec compatibilité legacy, checkout
-  invité, reprise post-login sûre, navigation mobile authentifiée, conversation
-  depuis réservation, pièces jointes visibles et wishlists partageables.
-- Exploitation : cron idempotent prix + clôture des séjours, protégé par
-  `CRON_SECRET` en production et planifié via `vercel.json`.
-- Providers : coffre admin AES-256-GCM pour Stripe, Resend et S3, master key
-  hors DB, métadonnées sans fuite, test explicite et fallback variables d’environnement.
-- Messages : nouvelles pièces jointes privées, lisibles seulement par un
-  participant ; rate plans snapshotés au booking et post-actions Stripe suivies.
+- Réservation : capacité, stock journalier, stop-sell, minStay, prix journalier,
+  promo, wallet et snapshots sont contrôlés serveur sous verrou transactionnel.
+  Le hold est committé avant tout appel PSP, possède un TTL et l’intent est
+  idempotent/repris par le cron.
+- Paiement : un webhook précoce reste en inbox. Un succès reçu après annulation
+  ne confirme jamais le séjour : paiement/refund restent tracés et la
+  compensation est rejouable avec une clé fournisseur stable.
+- Avantages : la restauration promo/wallet des tentatives non payées est
+  marquée `benefitsReleasedAt` afin d’être exactement une fois.
+- Outbox : leases retryables, event key transmise au mailer/provider, message id
+  fournisseur persisté. Les appels PSP/mailer sont hors transaction DB.
+- Recherche/alertes : recherche countée et triée de manière stable; les alertes
+  contextualisées évaluent les vraies règles de séjour, les autres restent
+  explicitement des prix de base.
+- Exploitation : calendrier hôte navigable par tranches de 90 jours, rate plans
+  éditables sans toucher aux snapshots, bulk avis compatible votes, providers
+  AES-GCM avec keyring de rotation contrôlé.
 
-## ✅ Preuves du cycle
+## ✅ Preuves du cycle T-107
 
-- 🔨 `npm run typecheck` : succès.
-- 🧪 `npm test` avec PostgreSQL embarqué et serveur : **215/215** tests réussis.
-- 🔨 `npm run build` : succès ; route cron et checkout compilés.
-- ▶️ Tests HTTP/API réels : stock journalier/minStay, capacité, transition
-  voyageur, avis futur, conversation, pièce jointe, wishlist publique, cron
-  idempotent, remboursement mock et clôture/fidélité cron validés.
-- ❓ Stripe test-mode live reste à valider avec des clés fournisseur, non
-  disponibles dans ce sandbox ; voir `KNOWN_LIMITATIONS.md`.
+- 🔨 `npx drizzle-kit migrate` : chaîne fraîche `0000…0013` appliquée ;
+  colonnes et cascade votes contrôlées.
+- 🔨 `npm run typecheck` et `npm run build` : succès.
+- 🔨 `npm run lint` : 0 erreur, 16 warnings historiques non bloquants.
+- 🧪 `npm test` : **218/218** réussis.
+- ▶️ `npm run smoke` : **91/91** assertions.
+- ▶️ Scénarios runtime : booking post-commit, webhook tardif refundé,
+  outbox lease sans doublon, deletion review/vote, quote séjour 198,
+  pagination hors bornes et PATCH rate plan.
+- 🔨 `npm run ai:check` : 18 OK · 2 warn · 0 fail (avant synchronisation
+  auto-référentielle du prochain HEAD).
 
-## Risques/limites résiduels
+## Limites résiduelles explicites
 
-- Une facture légale et un vrai ledger de payout hôte restent à concevoir.
-- Les tests E2E Chromium ne sont pas exécutables ici car le navigateur ne peut
-  pas être téléchargé ; smoke HTTP et build production ont été exécutés.
-- Quelques `<img>` natifs et l’amélioration responsive des tableaux dashboard
-  restent des dettes P2.
+- La validation réelle Stripe, Resend et S3/R2 attend des credentials de test
+  fournisseur; aucun succès externe n’est affirmé dans ce sandbox.
+- Chromium Playwright ne peut pas être téléchargé ici : smoke HTTP/API, build
+  et tests DB sont des preuves complémentaires, pas un E2E navigateur.
+- Facture légale/payout, ticket support et réimport automatisé des anciennes
+  pièces jointes restent hors périmètre; voir `KNOWN_LIMITATIONS.md`/backlog.
 
 ## Documents de référence
 
-- `REPORTS/audit_execution_fonctionnel_2026-08-23.md`
-- `REPORTS/analyse_impact_2026-08-23_remediation_audit_runtime.md`
-- `REPORTS/analyse_conception_2026-08-23_remediation_audit_runtime.md`
-- `ADR/ADR-009_Integrite_reservation_paiement_et_cycle_de_vie.md`
+- `REPORTS/analyse_impact_2026-08-23_resilience_orchestrations.md`
+- `REPORTS/analyse_conception_2026-08-23_resilience_orchestrations.md`
+- `REPORTS/debat_technique_2026-08-23_resilience_orchestrations.md`
+- `REPORTS/analyse_impact_post_2026-08-23_resilience_orchestrations.md`
+- `REPORTS/validation_T-107_2026-08-23.md`
+- `ADR/ADR-012_Orchestration_paiement_outbox_et_rotation.md`
 
 ---
-*Mis à jour le 2026-08-23, T-102 validée.*
+*Mis à jour le 2026-08-23, T-107 validée; SHA à synchroniser après commit.*

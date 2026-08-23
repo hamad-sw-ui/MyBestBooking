@@ -17,7 +17,11 @@ export async function enqueueEmail(email: OutboxEmail): Promise<void> {
   await db.insert(emailOutbox).values(email).onConflictDoNothing({ target: emailOutbox.eventKey });
 }
 
-/** Claim à durée limitée : un crash ne laisse pas un email bloqué en sending. */
+/**
+ * Claim à durée limitée : un crash ne laisse pas un email bloqué en sending.
+ * Le second niveau d'idempotence est transmis au mailer : la reprise après un
+ * timeout post-acceptation ne doit pas créer un second effet fournisseur.
+ */
 export async function deliverEmail(eventKey: string): Promise<boolean> {
   const staleBefore = new Date(Date.now() - LEASE_MS);
   const [claimed] = await db
@@ -31,8 +35,21 @@ export async function deliverEmail(eventKey: string): Promise<boolean> {
     .returning();
   if (!claimed) return false;
   try {
-    await (await getMailer()).send({ to: claimed.to, subject: claimed.subject, html: claimed.html, text: claimed.text });
-    await db.update(emailOutbox).set({ status: "sent", sentAt: new Date(), claimedAt: null, lastError: null, updatedAt: new Date() }).where(eq(emailOutbox.id, claimed.id));
+    const delivery = await (await getMailer()).send({
+      to: claimed.to,
+      subject: claimed.subject,
+      html: claimed.html,
+      text: claimed.text,
+      idempotencyKey: claimed.eventKey,
+    });
+    await db.update(emailOutbox).set({
+      status: "sent",
+      sentAt: new Date(),
+      claimedAt: null,
+      providerMessageId: delivery.id.slice(0, 255),
+      lastError: null,
+      updatedAt: new Date(),
+    }).where(eq(emailOutbox.id, claimed.id));
     return true;
   } catch (error) {
     const attempts = (claimed.attempts ?? 0);

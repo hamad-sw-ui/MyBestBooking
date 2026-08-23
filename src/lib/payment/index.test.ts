@@ -89,6 +89,19 @@ describe("StripePaymentProvider — verifyWebhook (§13.5)", () => {
     const payload = JSON.stringify({ type: "x", data: { object: { id: "y" } } });
     expect(await provider.verifyWebhook(payload, sign(payload, old))).toBeNull();
   });
+
+  it("porte la même clé d’idempotence sur création et remboursement", async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "pi_idem", client_secret: "secret", status: "requires_payment_method" }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ id: "re_idem", status: "succeeded", amount: 500 }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+    const p = new StripePaymentProvider("sk_test_dummy", secret);
+    await p.create({ amount: 500, currency: "EUR", bookingReference: "MBB-IDEM", guestEmail: "x@example.test", idempotencyKey: "booking-intent:MBB-IDEM" });
+    await p.refund("pi_idem", 500, "late-capture-refund:booking");
+    expect(fetchMock.mock.calls[0][1].headers["Idempotency-Key"]).toBe("booking-intent:MBB-IDEM");
+    expect(fetchMock.mock.calls[1][1].headers["Idempotency-Key"]).toBe("late-capture-refund:booking");
+    vi.unstubAllGlobals();
+  });
 });
 
 describe("getPaymentProvider factory", () => {

@@ -92,6 +92,13 @@
       "when": 1787496488067,
       "tag": "0012_payment-resilience",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1787498475339,
+      "tag": "0013_orchestration-resilience",
+      "breakpoints": true
     }
   ]
 }

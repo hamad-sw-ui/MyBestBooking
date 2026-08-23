@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
 import { bookings, properties, rooms } from "@/db/schema";
-import { eq, and, ilike, or, desc, sql, min } from "drizzle-orm";
+import { asc, count, eq, and, ilike, or, desc, sql, min } from "drizzle-orm";
 
 export const metadata: Metadata = {
   title: "Recherche d'hébergements",
@@ -9,7 +9,6 @@ export const metadata: Metadata = {
 };
 import { PropertyCard } from "@/components/property-card";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
@@ -103,33 +102,46 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
     )`);
   }
 
-  const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const [{ total }] = await db
+    .select({ total: count() })
+    .from(properties)
+    .where(and(...conditions));
+  const totalPages = Math.max(1, Math.ceil(total / 20));
+  // Une URL trop grande revient sur la dernière page existante, jamais sur une
+  // page vide. L’ID est le tie-breaker stable pour les égalités de prix/avis.
+  const page = Math.min(requestedPage, totalPages);
   const order = params.sort === "price_asc"
-    ? sql`MIN(${rooms.basePrice}) ASC`
+    ? [sql`MIN(${rooms.basePrice}) ASC`, asc(properties.id)]
     : params.sort === "price_desc"
-      ? sql`MIN(${rooms.basePrice}) DESC`
-      : desc(properties.averageRating);
-  const results = await db
+      ? [sql`MIN(${rooms.basePrice}) DESC`, asc(properties.id)]
+      : [desc(properties.averageRating), asc(properties.id)];
+  const rows = await db
     .select({ property: properties, minPrice: min(rooms.basePrice), minCurrency: min(rooms.currency) })
     .from(properties)
     .leftJoin(rooms, and(eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)))
     .where(and(...conditions))
     .groupBy(properties.id)
-    .orderBy(order)
+    .orderBy(...order)
     .limit(20)
     .offset((page - 1) * 20);
 
-  return results.map(({ property, minPrice, minCurrency }) => ({
-    ...property,
-    minPrice: minPrice === null ? null : Number(minPrice),
-    minCurrency,
-  }));
+  return {
+    total,
+    page,
+    totalPages,
+    results: rows.map(({ property, minPrice, minCurrency }) => ({
+      ...property,
+      minPrice: minPrice === null ? null : Number(minPrice),
+      minCurrency,
+    })),
+  };
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
-  const results = await searchProperties(params);
-  const currentPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const search = await searchProperties(params);
+  const { results, total, page: currentPage, totalPages } = search;
   const pageQuery = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (value && key !== "page") pageQuery.set(key, value);
   function pageHref(page: number) {
@@ -264,7 +276,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               )}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {results.length} résultat{results.length !== 1 ? "s" : ""} affiché{results.length !== 1 ? "s" : ""} · page {currentPage}
+              {total} résultat{total !== 1 ? "s" : ""} · page {currentPage} sur {totalPages}
             </p>
           </div>
         </div>
@@ -293,7 +305,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             </div>
             <nav aria-label="Pagination des résultats" className="mt-8 flex justify-center gap-3">
               {currentPage > 1 && <Link href={pageHref(currentPage - 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Précédent</Link>}
-              {results.length === 20 && <Link href={pageHref(currentPage + 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Suivant</Link>}
+              {currentPage < totalPages && <Link href={pageHref(currentPage + 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Suivant</Link>}
             </nav>
           </>
         )}

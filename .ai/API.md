@@ -43,14 +43,14 @@ Authentification :
 | GET | `/api/rooms/[id]` | 🔓 | Détail room. |
 | PATCH | `/api/rooms/[id]` | 👤 host propriétaire ou `admin` | Mise à jour partielle. |
 | DELETE | `/api/rooms/[id]` | 👤 host propriétaire ou `admin` | Suppression. |
-| GET/POST | `/api/rooms/[id]/rate-plans` | 👤 host propriétaire ou admin | Liste/crée des plans tarifaires qui peuvent être sélectionnés et snapshotés au booking. |
+| GET/POST/PATCH | `/api/rooms/[id]/rate-plans` | 👤 host propriétaire ou admin | Liste, crée, archive/réactive ou édite les plans proposés. Les modifications n’altèrent jamais les snapshots des bookings existants. |
 
 ## Bookings
 
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
 | GET | `/api/bookings` | 🔒 | Filtré selon rôle : `customer` → siennes, `host` → sur ses properties, `admin` → toutes. Filtres additionnels : `status`, `propertyId`. Joint property, room, user. |
-| POST | `/api/bookings` | 🔒 ou 👤 invité | Crée une réservation après validation transactionnelle : dates, capacité adultes/enfants, stock par nuit, stop-sell et `minStay`. Prix journalier override, TVA/réductions/wallet sont recalculés serveur. Réponse `payment` distingue mock confirmé et Stripe `pending`. |
+| POST | `/api/bookings` | 🔒 ou 👤 invité | Crée le hold après validation transactionnelle : dates, capacité adultes/enfants, stock par nuit, stop-sell et `minStay`. Prix journalier, TVA/réductions/wallet sont recalculés serveur. L’intent PSP est créé **après** commit avec clé d’idempotence ; le cron reprend un intent non rattaché avant TTL. Réponse `payment` distingue mock/wallet confirmés et Stripe `pending`. |
 | GET | `/api/bookings/[id]` | 🔒 propriétaire, host de la property, ou admin | Détail booking, y compris états paiement/remboursement. |
 | PUT | `/api/bookings/[id]` | 🔒 même règle | Voyageur : annulation uniquement. Hôte/admin : clôture contrôlée après départ. Annulation calcule frais et remboursement provider idempotent. |
 
@@ -72,7 +72,7 @@ Authentification :
 | GET/POST | `/api/conversations` | 🔒 | Liste les fils accessibles ou ouvre/récupère le fil voyageur-hôte associé à une réservation. |
 | GET/POST | `/api/messages` | 🔒 participant | Liste ou envoie les messages ; les nouvelles pièces jointes utilisent `attachmentKey` privé. |
 | GET | `/api/messages/attachments/[id]` | 🔒 participant | Sert une pièce jointe privée après vérification conversation. |
-| GET | `/api/cron/price-alerts` | 🔒 cron | Évalue alertes prix et clôture les séjours payés terminés ; secret `CRON_SECRET` obligatoire en production. |
+| GET | `/api/cron/price-alerts` | 🔒 cron | Évalue alertes prix (quote de séjour si dates/voyageurs fournis, sinon prix de base), clôture séjours payés, reprend intents sans rattachement, expire holds, compense paiements tardifs et traite outbox/uploads ; `CRON_SECRET` obligatoire en production. |
 
 ## Administration des providers
 
@@ -83,6 +83,7 @@ Authentification :
 | POST | `/api/admin/providers/[provider]` | 👤 admin | Test explicite : intent Stripe annulé, email Resend administrateur ou objet S3 temporaire supprimé. Aucune valeur retournée. |
 | PUT | `/api/admin/providers/[provider]` | 👤 admin | Chiffre et stocke les champs saisis pour `stripe`, `resend` ou `s3`. Requiert `CREDENTIALS_ENCRYPTION_KEY` côté serveur. |
 | DELETE | `/api/admin/providers/[provider]` | 👤 admin | Retire les overrides chiffrés après confirmation et repasse au fallback variables d’environnement. |
+| POST | `/api/admin/providers/rotation` | 👤 admin | Réchiffre les overrides DB avec la clé primaire, après configuration temporaire de `CREDENTIALS_ENCRYPTION_KEY_PREVIOUS`. Ne reçoit ni ne retourne aucun secret. |
 
 | GET | `/api/dashboard/billing/export` | 👤 host/admin | Télécharge un CSV privé des bookings payés non annulés ; ce n’est pas une facture légale. |
 

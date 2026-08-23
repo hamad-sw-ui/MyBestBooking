@@ -54,6 +54,7 @@ export const AUDIT_ACTIONS = {
   bulkAction: "bulk.action",
   providerCredentialsUpdate: "provider_credentials.update",
   providerCredentialsRemove: "provider_credentials.remove",
+  providerCredentialsRotate: "provider_credentials.rotate",
   providerConnectionTest: "provider_credentials.test",
 } as const;
 

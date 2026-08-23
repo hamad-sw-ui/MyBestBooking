@@ -38,6 +38,7 @@ export class StripePaymentProvider implements PaymentProvider {
       headers: {
         Authorization: `Bearer ${this.secretKey}`,
         "Content-Type": "application/x-www-form-urlencoded",
+        ...(params.idempotencyKey ? { "Idempotency-Key": params.idempotencyKey } : {}),
       },
       body,
     });
@@ -69,7 +70,7 @@ export class StripePaymentProvider implements PaymentProvider {
     return data.status === "canceled" ? "succeeded" : "pending";
   }
 
-  async refund(paymentIntentId: string, amount: number): Promise<RefundResult> {
+  async refund(paymentIntentId: string, amount: number, idempotencyKey?: string): Promise<RefundResult> {
     const body = new URLSearchParams({
       payment_intent: paymentIntentId,
       amount: String(amount),
@@ -79,6 +80,7 @@ export class StripePaymentProvider implements PaymentProvider {
       headers: {
         Authorization: `Bearer ${this.secretKey}`,
         "Content-Type": "application/x-www-form-urlencoded",
+        ...(idempotencyKey ? { "Idempotency-Key": idempotencyKey } : {}),
       },
       body,
     });
