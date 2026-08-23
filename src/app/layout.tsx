@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     template: "%s | mybestbooking",
   },
   description:
-    "Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, 0 frais cachés.",
+    "Trouvez des hébergements, consultez les avis vérifiés et comparez les offres disponibles.",
   keywords: [
     "réservation",
     "hôtel",
@@ -31,7 +31,7 @@ export const metadata: Metadata = {
     siteName: "mybestbooking",
     title: "mybestbooking — Réservez mieux. Voyagez plus.",
     description:
-      "Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, 0 frais cachés.",
+      "Trouvez des hébergements, consultez les avis vérifiés et comparez les offres disponibles.",
   },
   twitter: {
     card: "summary_large_image",

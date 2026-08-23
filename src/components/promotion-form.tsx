@@ -102,7 +102,6 @@ export function PromotionForm() {
           >
             <option value="percentage">Pourcentage (%)</option>
             <option value="fixed_amount">Montant fixe (€)</option>
-            <option value="free_night">Nuit gratuite</option>
           </select>
         </div>
         <div>

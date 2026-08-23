@@ -8,7 +8,7 @@ import { desc, eq } from "drizzle-orm";
 const createSchema = z.object({
   code: z.string().min(3).max(50).regex(/^[A-Z0-9_-]+$/, "Code alphanumérique majuscule"),
   name: z.string().min(3).max(100),
-  type: z.enum(["percentage", "fixed_amount", "free_night"]),
+  type: z.enum(["percentage", "fixed_amount"]),
   value: z.number().positive(),
   minBookingAmount: z.number().min(0).optional(),
   maxDiscount: z.number().positive().optional(),

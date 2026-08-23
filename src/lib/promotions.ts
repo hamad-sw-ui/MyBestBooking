@@ -6,7 +6,7 @@
 
 export interface PromotionLike {
   code: string;
-  type: string; // "percentage" | "fixed_amount" | "free_night"
+  type: string; // "percentage" | "fixed_amount" (legacy free_night refusée)
   value: string; // decimal(10,2) → string
   minBookingAmount: string | null;
   maxDiscount: string | null;
@@ -52,10 +52,10 @@ export function applyPromoToTotal(
     discount = total * (value / 100);
   } else if (p.type === "fixed_amount") {
     discount = value;
-  } else if (p.type === "free_night") {
-    // Approximation : traité comme fixed_amount = value (le calcul
-    // "1 nuit gratuite" nécessite le prix par nuit, hors périmètre).
-    discount = value;
+  } else {
+    // Les données legacy free_night restent lisibles mais ne peuvent pas être
+    // appliquées approximativement comme un montant fixe.
+    return { error: "Ce type de promotion nécessite un calcul par nuit et n'est pas encore disponible" };
   }
   const max = p.maxDiscount != null ? parseFloat(p.maxDiscount) : null;
   if (max !== null && discount > max) discount = max;

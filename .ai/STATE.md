@@ -4,7 +4,7 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a02dbb-mybestbooking`
-- **HEAD à synchroniser après commit T-109** : `cbbb4a7`
+- **HEAD audit post-T-109** : `400e37b`
 - **Version Framework** : AI-DOS 3.0.0
 - **Dernière tâche validée** : T-109 — claim invité et reprise opérationnelle
 
@@ -45,7 +45,8 @@
 - `REPORTS/debat_technique_2026-08-23_T109_claim_resume_operational.md`
 - `REPORTS/analyse_impact_post_2026-08-23_T109_claim_resume_operational.md`
 - `REPORTS/validation_T-109_2026-08-23.md`
+- `REPORTS/audit_execution_deep_post_T109_2026-08-23.md`
 - `ADR/ADR-014_Claim_invite_reprise_paiement_et_webhooks.md`
 
 ---
-*Mis à jour le 2026-08-23, T-109 validée; SHA à synchroniser après commit.*
+*Mis à jour le 2026-08-23, T-109 validée; audit post-T-109 sur `400e37b`.*

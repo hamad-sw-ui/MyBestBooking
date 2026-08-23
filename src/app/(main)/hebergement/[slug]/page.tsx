@@ -6,6 +6,7 @@ import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+import { safeJsonForScript } from "@/lib/safe-json-ld";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
@@ -257,16 +258,16 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
               <CardContent>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-[#F5A623] text-xl">✦</span>
-                  <span className="font-semibold text-[#1B3A6B]">La Promesse mybestbooking</span>
+                  <span className="font-semibold text-[#1B3A6B]">Informations mybestbooking</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-[#1B3A6B]" />
-                    <span>Prix garanti</span>
+                    <span>Prix vérifié au paiement</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-[#00A699]" />
-                    <span>0 frais cachés</span>
+                    <span>Frais affichés avant confirmation</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="w-4 h-4 text-[#F5A623]" />
@@ -274,7 +275,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                   </div>
                   <div className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4 text-[#1B3A6B]" />
-                    <span>Support 24/7</span>
+                    <span>Contact support par email</span>
                   </div>
                 </div>
               </CardContent>

@@ -67,7 +67,7 @@ export default async function HomePage() {
             </h1>
             <p className="text-xl text-white/80 mb-8">
               Trouvez les meilleurs hébergements au meilleur prix.<br />
-              Prix garantis, avis vérifiés, zéro frais cachés.
+              Offres affichées, avis vérifiés et frais présentés avant confirmation.
             </p>
             
             {/* Search Box */}
@@ -118,7 +118,7 @@ export default async function HomePage() {
             <div className="flex flex-wrap gap-6 mt-8 text-sm">
               <span className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-[#F5A623]" />
-                Prix garantis
+                Prix vérifiés au paiement
               </span>
               <span className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-[#F5A623]" />
@@ -216,7 +216,7 @@ export default async function HomePage() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#1B3A6B]/10 flex items-center justify-center">
                 <Shield className="w-8 h-8 text-[#1B3A6B]" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Prix Garantis</h3>
+              <h3 className="text-lg font-semibold mb-2">Prix vérifiés au paiement</h3>
               <p className="text-gray-600">
                 Trouvé moins cher ailleurs ? On vous rembourse la différence. C&apos;est notre engagement.
               </p>
@@ -236,7 +236,7 @@ export default async function HomePage() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#00A699]/10 flex items-center justify-center">
                 <MessageCircle className="w-8 h-8 text-[#00A699]" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Support 24/7</h3>
+              <h3 className="text-lg font-semibold mb-2">Support par email</h3>
               <p className="text-gray-600">
                 Une équipe humaine disponible à tout moment pour vous aider. Pas des bots.
               </p>

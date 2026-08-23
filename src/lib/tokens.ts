@@ -54,9 +54,11 @@ export async function consumeToken(
   purpose: TokenPurpose,
 ): Promise<string | null> {
   const hash = hashToken(clear);
+  // Une seule UPDATE conditionnelle : deux claims/reset concurrents ne peuvent
+  // jamais tous deux lire un token non consommé avant son marquage.
   const [row] = await db
-    .select()
-    .from(verificationTokens)
+    .update(verificationTokens)
+    .set({ usedAt: new Date() })
     .where(
       and(
         eq(verificationTokens.tokenHash, hash),
@@ -65,11 +67,6 @@ export async function consumeToken(
         gt(verificationTokens.expiresAt, new Date()),
       ),
     )
-    .limit(1);
-  if (!row) return null;
-  await db
-    .update(verificationTokens)
-    .set({ usedAt: new Date() })
-    .where(eq(verificationTokens.id, row.id));
-  return row.userId;
+    .returning({ userId: verificationTokens.userId });
+  return row?.userId ?? null;
 }

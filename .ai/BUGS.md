@@ -9,7 +9,9 @@ suivante.
 
 ## Ouverts
 
-- [ ] **2026-08-23 — BUG-040** (P0, AUD-110-01/02) : JSON-LD property injecté
+- [x] **2026-08-23 — BUG-040** (P0, T-110) : JSON-LD script-safe et cancellation persist-first. ▶️ safe JSON, 224/224, build/smoke validés.
+
+- [ ] **2026-08-23 — BUG-037** : JSON-LD property injecté
   sans sérialisation script-safe et fenêtre de crash entre refund PSP et commit
   DB. Risque XSS hôte/public et refund sans trace. À traiter avant production.
 

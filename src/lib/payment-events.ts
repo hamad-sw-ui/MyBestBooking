@@ -48,7 +48,7 @@ export async function refundLateCapturedPayment(bookingId: string): Promise<bool
     const refund = await (await getPaymentProvider()).refund(
       candidate.paymentIntentId,
       Math.round(candidate.amount * 100),
-      `late-capture-refund:${candidate.id}`,
+      `booking-refund:${candidate.id}`,
     );
     // Ne jamais écraser une confirmation webhook de remboursement arrivée
     // pendant l’appel réseau.

@@ -725,7 +725,7 @@ function ReservationPageInner() {
 
                   <div className="mt-4 space-y-2 text-xs text-gray-500">
                     <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Annulation gratuite</p>
-                    <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Prix garanti</p>
+                    <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Prix confirmé avant paiement</p>
                     <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Paiement sécurisé</p>
                   </div>
                 </CardContent>
