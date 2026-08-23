@@ -3,7 +3,7 @@
 **Tâche :** Aligner session/JWT, bornes temporelles, nettoyage TOTP et vérité des settings admin.
 **ID** : T-111
 **Niveau** : **S** — sécurité de session et limites opérationnelles.
-**Statut** : **EN COURS**
+**Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Périmètre
 
@@ -12,6 +12,9 @@
 - 365 nuits maximum pour nouvelles requêtes ;
 - retrait UI des settings non consommés.
 
-## Sortie
+## Livré et validé
 
-Typecheck, lint, tests, build, smoke, ai check et scénarios runtime dédiés.
+- JWT/session remember cohérents, facteurs TOTP active/pending effacés à anonymisation ;
+- borne 365 nuits et settings décoratifs retirés de l’UI.
+
+Tests : typecheck, lint 0 erreur, suite DB seedée, build, smoke et ai check.

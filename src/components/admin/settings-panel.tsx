@@ -57,7 +57,6 @@ export function SettingsPanel({ initial, providers }: Props) {
       <BillingSection initial={initial.billing} />
       <BestrewardsSection initial={initial.bestrewards} />
       <CancellationSection initial={initial.cancellation} />
-      <NotificationsSection initial={initial.notifications} />
       <EmailTemplatesSection initial={initial.emailTemplates} />
       <SecuritySection initial={initial.security} />
       <ProvidersSection providers={providers} />
@@ -393,161 +392,39 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
   );
 }
 
-/* ─────────────────────────── NOTIFICATIONS ─────────────────────────── */
-
-const NOTIF_LABELS: Record<keyof SettingValue<"notifications">, string> = {
-  welcomeEmail: "Email de bienvenue",
-  bookingConfirmation: "Confirmation de réservation",
-  bookingReminderJ3: "Rappel de voyage J-3",
-  bookingReminderJ1: "Rappel de voyage J-1",
-  reviewRequest: "Demande d'avis post-séjour",
-  priceAlerts: "Alertes prix favoris",
-  newsletter: "Newsletter promotionnelle",
-};
-
-function NotificationsSection({ initial }: { initial: SettingValue<"notifications"> }) {
-  const [v, setV] = useState(initial);
-  const [status, setStatus] = useState<SaveStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
-
-  function save() {
-    setError(null);
-    setStatus("saving");
-    startTransition(async () => {
-      try {
-        await saveSection("notifications", v);
-        setStatus("saved");
-      } catch (e) {
-        setStatus("error");
-        setError(e instanceof Error ? e.message : "Erreur");
-      }
-    });
-  }
-
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Bell className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Notifications email</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {(Object.keys(NOTIF_LABELS) as (keyof SettingValue<"notifications">)[]).map((k) => (
-          <div key={k} className="flex items-center justify-between py-2">
-            <span className="text-sm text-gray-700">{NOTIF_LABELS[k]}</span>
-            <label className="relative inline-flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                className="sr-only peer"
-                checked={v[k]}
-                onChange={(e) => setV({ ...v, [k]: e.target.checked })}
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-            </label>
-          </div>
-        ))}
-      </CardContent>
-      <CardFooter className="flex items-center gap-3">
-        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
-        <StatusPill status={status} error={error} />
-      </CardFooter>
-    </Card>
-  );
-}
-
 /* ─────────────────────────── SECURITY ─────────────────────────── */
 
 function SecuritySection({ initial }: { initial: SettingValue<"security"> }) {
-  const [v, setV] = useState(initial);
+  const [maintenanceMode, setMaintenanceMode] = useState(initial.maintenanceMode);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function save() {
-    setError(null);
-    setStatus("saving");
+    setStatus("saving"); setError(null);
     startTransition(async () => {
       try {
-        await saveSection("security", v);
+        // Conserve les clés legacy mais n'expose comme toggle que la seule
+        // politique effectivement lue par le runtime: maintenanceMode.
+        await saveSection("security", { ...initial, maintenanceMode });
         setStatus("saved");
-      } catch (e) {
-        setStatus("error");
-        setError(e instanceof Error ? e.message : "Erreur");
+      } catch (reason) {
+        setStatus("error"); setError(reason instanceof Error ? reason.message : "Erreur");
       }
     });
   }
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <Shield className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Sécurité</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input
-            label="Longueur min. mot de passe"
-            type="number"
-            min={6}
-            max={64}
-            step={1}
-            value={v.minPasswordLength}
-            onChange={(e) => setV({ ...v, minPasswordLength: parseInt(e.target.value, 10) || 8 })}
-          />
-          <Input
-            label="Durée de session (jours)"
-            type="number"
-            min={1}
-            max={90}
-            step={1}
-            value={v.sessionDays}
-            onChange={(e) => setV({ ...v, sessionDays: parseInt(e.target.value, 10) || 30 })}
-          />
-        </div>
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <p className="font-medium text-gray-900">2FA obligatoire hébergeurs</p>
-            <p className="text-sm text-gray-500">Exiger la 2FA pour tous les comptes hébergeurs</p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={v.twoFactorRequiredHosts}
-              onChange={(e) => setV({ ...v, twoFactorRequiredHosts: e.target.checked })}
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-          </label>
-        </div>
-        <div className="flex items-center justify-between py-2">
-          <div>
-            <p className="font-medium text-gray-900">Mode maintenance</p>
-            <p className="text-sm text-gray-500">
-              Prépare l&apos;affichage d&apos;une page maintenance (paramètre
-              enregistré, activation front à cabler ultérieurement).
-            </p>
-          </div>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              className="sr-only peer"
-              checked={v.maintenanceMode}
-              onChange={(e) => setV({ ...v, maintenanceMode: e.target.checked })}
-            />
-            <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-          </label>
-        </div>
-      </CardContent>
-      <CardFooter className="flex items-center gap-3">
-        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
-        <StatusPill status={status} error={error} />
-      </CardFooter>
-    </Card>
-  );
+  return <Card>
+    <CardHeader><div className="flex items-center gap-3"><Shield className="w-5 h-5 text-[#1B3A6B]" /><CardTitle>Sécurité opérationnelle</CardTitle></div></CardHeader>
+    <CardContent className="space-y-4">
+      <div className="flex items-center justify-between py-2">
+        <div><p className="font-medium text-gray-900">Mode maintenance</p><p className="text-sm text-gray-500">Bloque les parcours métier non admin; les routes administrateur restent accessibles pour éviter un verrouillage.</p></div>
+        <label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={maintenanceMode} onChange={(e) => setMaintenanceMode(e.target.checked)} /><div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600" /></label>
+      </div>
+      <p className="text-xs text-gray-500 border-t pt-3">Les politiques de mot de passe, durée de session, obligation 2FA hôte et campagnes email ne sont pas encore configurables à chaud. Elles ne sont donc volontairement pas présentées comme des contrôles actifs.</p>
+    </CardContent>
+    <CardFooter className="flex items-center gap-3"><Button onClick={save} disabled={isPending}>Enregistrer</Button><StatusPill status={status} error={error} /></CardFooter>
+  </Card>;
 }
 
 /* ─────────────────────────── EMAIL TEMPLATES (T-025) ─────────────────────────── */
