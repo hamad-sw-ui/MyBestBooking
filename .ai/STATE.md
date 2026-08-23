@@ -4,7 +4,7 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a02dbb-mybestbooking`
-- **HEAD audit post-T-109** : `400e37b`
+- **HEAD validé T-110** : `ab6777c`
 - **Version Framework** : AI-DOS 3.0.0
 - **Dernière tâche validée** : T-109 — claim invité et reprise opérationnelle
 

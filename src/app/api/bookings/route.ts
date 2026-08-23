@@ -13,7 +13,7 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { ipFromRequest, rateLimit } from "@/lib/rate-limit";
-import { evaluateBookingRules } from "@/lib/booking-rules";
+import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules";
 import { createPaymentIntentForBooking } from "@/lib/payment-intents";
 import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
@@ -112,6 +112,7 @@ export async function POST(request: NextRequest) {
     await assertNotMaintenance(user);
     const today = new Date().toISOString().slice(0, 10);
     if (data.checkIn < today) return NextResponse.json({ error: "La date d'arrivée ne peut pas être dans le passé" }, { status: 400 });
+    if (!stayNightsWithinLimit(data.checkIn, data.checkOut)) return NextResponse.json({ error: "Un séjour doit compter entre 1 et 365 nuits" }, { status: 400 });
 
     // Un invité n’a pas encore de userId : limiter par IP avant toute écriture.
     const rl = user

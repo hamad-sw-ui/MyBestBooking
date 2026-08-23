@@ -146,6 +146,7 @@ async function bulkUsers(
             phone: null,
             avatarUrl: null,
             twoFactorSecret: null,
+            twoFactorPendingSecret: null,
             twoFactorEnabled: false,
           })
           .where(eq(users.id, id));

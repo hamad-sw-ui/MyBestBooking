@@ -142,3 +142,10 @@ export function evaluateBookingRules(input: {
 
   return { ok: true, nights, nightlyPrices };
 }
+
+/** Borne opérationnelle commune, protège API et calculs contre plages abusives. */
+export const MAX_STAY_NIGHTS = 365;
+export function stayNightsWithinLimit(checkIn: string, checkOut: string, max = MAX_STAY_NIGHTS): boolean {
+  const nights = stayNights(checkIn, checkOut);
+  return nights.length > 0 && nights.length <= max;
+}

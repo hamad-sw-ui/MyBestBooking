@@ -1,18 +1,17 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Corriger les risques P0 post-T109 : injection JSON-LD, crash
-refund, consommation token concurrente et promesses/promo non supportées.
-**ID** : T-110
-**Niveau** : **S** — sécurité contenu public et intégrité financière.
-**Statut** : **CORRIGÉ (VALIDÉ)**
+**Tâche :** Aligner session/JWT, bornes temporelles, nettoyage TOTP et vérité des settings admin.
+**ID** : T-111
+**Niveau** : **S** — sécurité de session et limites opérationnelles.
+**Statut** : **EN COURS**
 
 ## Périmètre
 
-- sérialisation JSON-LD script-safe ;
-- annulation persistée avant PSP et reprise refund ;
-- token claim/reset atomique ;
-- retrait/reformulation des promesses et `free_night` approximatif.
+- rememberMe JWT/DB/cookie cohérent ;
+- effacement TOTP actif/pending à anonymisation ;
+- 365 nuits maximum pour nouvelles requêtes ;
+- retrait UI des settings non consommés.
 
-## Sortie obligatoire
+## Sortie
 
-Tests XSS/refund/token/promo, typecheck, lint, tests, build, smoke et ai:check.
+Typecheck, lint, tests, build, smoke, ai check et scénarios runtime dédiés.

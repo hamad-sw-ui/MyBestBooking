@@ -103,6 +103,7 @@ export async function DELETE() {
       phone: null,
       avatarUrl: null,
       twoFactorSecret: null,
+      twoFactorPendingSecret: null,
       twoFactorEnabled: false,
     })
     .where(eq(users.id, user.id));

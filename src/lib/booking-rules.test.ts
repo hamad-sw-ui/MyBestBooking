@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { capacityError, evaluateBookingRules, stayNights } from "./booking-rules";
+import { capacityError, evaluateBookingRules, stayNights, stayNightsWithinLimit } from "./booking-rules";
 
 const room = {
   maxOccupancy: 2,
@@ -93,5 +93,12 @@ describe("booking-rules", () => {
       overlappingBookings: [{ checkIn: "2027-11-10", checkOut: "2027-11-12" }],
     });
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("stayNightsWithinLimit", () => {
+  it("borne les nouvelles demandes à 365 nuits", () => {
+    expect(stayNightsWithinLimit("2027-01-01", "2028-01-01")).toBe(true);
+    expect(stayNightsWithinLimit("2027-01-01", "2028-01-02")).toBe(false);
   });
 });

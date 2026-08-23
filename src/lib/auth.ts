@@ -36,7 +36,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createToken(userId: string): Promise<string> {
+export async function createToken(userId: string, expiresIn: "7d" | "30d" = "7d"): Promise<string> {
   // T-017 (BUG-016) : ajout d'un jti aléatoire pour éviter que deux
   // logins simultanés du même user à la même seconde produisent le
   // même JWT (violation de sessions_token_unique).
@@ -44,7 +44,7 @@ export async function createToken(userId: string): Promise<string> {
   return new SignJWT({ userId })
     .setProtectedHeader({ alg: "HS256" })
     .setJti(randomUUID())
-    .setExpirationTime("7d")
+    .setExpirationTime(expiresIn)
     .setIssuedAt()
     .sign(JWT_SECRET);
 }
@@ -59,7 +59,7 @@ export async function verifyToken(token: string): Promise<{ userId: string } | n
 }
 
 export async function createSession(userId: string, rememberMe = false): Promise<string> {
-  const token = await createToken(userId);
+  const token = await createToken(userId, rememberMe ? "30d" : "7d");
   const expiresAt = new Date(
     Date.now() + (rememberMe ? REMEMBERED_SESSION_DURATION : SESSION_DURATION),
   );

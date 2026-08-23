@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { rooms, properties, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
+import { stayNightsWithinLimit } from "@/lib/booking-rules";
 
 /**
  * GET /api/rooms/[id]/availability?from=&to=
@@ -50,6 +51,10 @@ export async function GET(
     ?? new Date().toISOString().slice(0, 10);
   const to = request.nextUrl.searchParams.get("to")
     ?? new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || !stayNightsWithinLimit(from, new Date(`${to}T00:00:00Z`).getTime() === new Date(`${from}T00:00:00Z`).getTime() ? to : new Date(new Date(`${to}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10))) {
+    return NextResponse.json({ error: "La fenêtre availability doit couvrir au maximum 365 jours" }, { status: 400 });
+  }
 
   const list = await db
     .select()
