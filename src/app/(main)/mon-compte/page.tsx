@@ -15,7 +15,6 @@ import { ProfileForm } from "@/components/profile-form";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { TwoFactorSection } from "@/components/two-factor-section";
 import { DeleteAccountSection } from "@/components/delete-account-section";
-import { ReferralCard } from "@/components/referral-card";
 import { NotificationPrefsSection } from "@/components/notification-prefs-section";
 
 interface UserData {
@@ -308,8 +307,7 @@ export default function MyAccountPage() {
                     priceAlertEnabled: (user as unknown as { priceAlertEnabled?: boolean }).priceAlertEnabled ?? false,
                   }}
                 />
-                {/* T-030 : code de parrainage */}
-                <ReferralCard />
+                <p className="text-xs text-gray-500 border-t border-gray-100 pt-3">Le programme de parrainage n&apos;est pas encore ouvert : aucun avantage ne sera promis tant que son attribution n&apos;est pas traçable.</p>
               </div>
             )}
           </div>
