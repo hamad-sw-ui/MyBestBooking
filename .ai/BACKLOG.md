@@ -18,6 +18,17 @@
 
 Voir `CURRENT_TASK.md` pour la tâche active.
 
+### Remédiations issues de l’audit post T-107 (à arbitrer avant implémentation)
+
+- 🔴 **T-108 (C)** — frontières publiques/RBAC, annulation financière admin,
+  suppression transactionnelle et 2FA locale/réauthentifiée. Couvre
+  BUG-035/036/037, migration additive et tests de sécurité négatifs.
+- 🔴 **T-109 (C)** — saga d’annulation/reprise paiement, outbox unifiée,
+  messagerie hôte et politique de timezone/devise. Couvre le noyau de BUG-038.
+- 🟠 **T-110 (S)** — vérité UI/produit : BestRewards/referral/promos,
+  actions de fiche, reporting, contrats de listes, capacité room et upgrade
+  dépendances. Voir `REPORTS/audit_execution_deep_post_T107_2026-08-23.md`.
+
 ### Chantiers Sessions 5-7 (livrés)
 
 - ✅ **T-011** Framework v1.1.0 — livré Session 5

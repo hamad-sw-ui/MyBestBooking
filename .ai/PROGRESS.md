@@ -9,6 +9,38 @@
 
 ---
 
+## Session 16 — 2026-08-23 : audit d’exécution approfondi post T-107
+
+### Réalisé
+
+- 🔍 Audit croisé UI/API/schéma sur les parcours public, voyageur, hôte et admin.
+- ▶️ Reproduction runtime de quatre écarts critiques : fuite detail/brouillon,
+  lecture anonyme avis hidden, auto-publication hôte, annulation bulk sans
+  remboursement et suppression property partielle.
+- 🔍 Contrôle des effets externes, 2FA, settings, outbox, messages, reporting,
+  BestRewards, promos, devise/timezone, actions visibles et dépendances.
+
+### Décision
+
+- 🧠 Aucun correctif n’est fusionné dans cette session d’audit : les défauts
+  sont ouverts comme BUG-035 à BUG-038 et les solutions/migrations de
+  non-régression sont détaillées dans le rapport.
+- 🧠 Ordre recommandé : T-108 C (sécurité/finance/atomicité), T-109 C
+  (sagas/messages/devise/timezone), puis T-110 S (vérité UX/produit/perf).
+
+### Preuves
+
+- 🔨 migration fraîche, typecheck et lint 0 erreur;
+- ▶️ smoke 91/91, 🧪 218/218 — baseline verte malgré les scénarios non couverts;
+- ▶️ `npm audit --omit=dev` : 3 vulnérabilités high de production à traiter
+  par upgrade contrôlé (`next`, `postcss`, `sharp`).
+
+### Référence
+
+`REPORTS/audit_execution_deep_post_T107_2026-08-23.md`.
+
+---
+
 ## Session 15 — 2026-08-23 : T-107 orchestration paiement et parcours opérationnels
 
 ### Livré
