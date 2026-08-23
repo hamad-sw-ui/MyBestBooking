@@ -1,20 +1,16 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Aligner session/JWT, bornes temporelles, nettoyage TOTP et vérité des settings admin.
-**ID** : T-111
-**Niveau** : **S** — sécurité de session et limites opérationnelles.
-**Statut** : **CORRIGÉ (VALIDÉ)**
+**Tâche :** Rendre la création de conversation idempotente sous concurrence.
+**ID** : T-112
+**Niveau** : **S** — messagerie, migration additive et invariants métier.
+**Statut** : **EN COURS**
 
 ## Périmètre
 
-- rememberMe JWT/DB/cookie cohérent ;
-- effacement TOTP actif/pending à anonymisation ;
-- 365 nuits maximum pour nouvelles requêtes ;
-- retrait UI des settings non consommés.
+- clé métier unique conversation booking/pré-booking;
+- migration de backfill additive;
+- insert idempotent et tests DB/concurrence.
 
-## Livré et validé
+## Sortie
 
-- JWT/session remember cohérents, facteurs TOTP active/pending effacés à anonymisation ;
-- borne 365 nuits et settings décoratifs retirés de l’UI.
-
-Tests : typecheck, lint 0 erreur, suite DB seedée, build, smoke et ai check.
+Migration fraîche, tests, build, smoke, ai check.

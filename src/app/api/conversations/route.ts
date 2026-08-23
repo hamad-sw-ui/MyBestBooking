@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
 import { conversations, properties, bookings } from "@/db/schema";
-import { and, eq, or } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 
 const createSchema = z.object({
@@ -50,25 +50,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Un hôte doit sélectionner une réservation pour ouvrir une conversation" }, { status: 400 });
     }
 
-    const [existing] = await db
-      .select()
-      .from(conversations)
-      .where(and(
-        eq(conversations.userId, participantUserId),
-        eq(conversations.propertyId, data.propertyId),
-        data.bookingId ? eq(conversations.bookingId, data.bookingId) : undefined,
-      ))
-      .limit(1);
-    if (existing) return NextResponse.json({ conversation: existing });
-
-    const [conversation] = await db
-      .insert(conversations)
-      .values({
-        propertyId: data.propertyId,
-        userId: participantUserId,
-        bookingId: data.bookingId ?? null,
-      })
-      .returning();
+    const conversationKey = data.bookingId
+      ? `booking:${data.bookingId}`
+      : `property:${data.propertyId}:user:${participantUserId}`;
+    await db.insert(conversations).values({
+      conversationKey,
+      propertyId: data.propertyId,
+      userId: participantUserId,
+      bookingId: data.bookingId ?? null,
+    }).onConflictDoNothing({ target: conversations.conversationKey });
+    const [conversation] = await db.select().from(conversations)
+      .where(eq(conversations.conversationKey, conversationKey)).limit(1);
+    if (!conversation) throw new Error("CONVERSATION_CREATE_FAILED");
     return NextResponse.json({ conversation }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });

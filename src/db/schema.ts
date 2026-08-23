@@ -407,6 +407,7 @@ export const wishlistItems = pgTable("wishlist_items", {
 // ═══════════════════════════════════════════════
 export const conversations = pgTable("conversations", {
   id: uuid("id").defaultRandom().primaryKey(),
+  conversationKey: varchar("conversation_key", { length: 160 }).unique().notNull(),
   bookingId: uuid("booking_id").references(() => bookings.id),
   userId: uuid("user_id").references(() => users.id).notNull(),
   propertyId: uuid("property_id").references(() => properties.id).notNull(),
