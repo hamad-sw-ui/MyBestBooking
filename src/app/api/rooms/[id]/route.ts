@@ -32,19 +32,22 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const [room] = await db
-      .select()
+    const [row] = await db
+      .select({ room: rooms, property: properties })
       .from(rooms)
+      .leftJoin(properties, eq(rooms.propertyId, properties.id))
       .where(eq(rooms.id, id));
 
-    if (!room) {
-      return NextResponse.json(
-        { error: "Chambre non trouvée" },
-        { status: 404 }
-      );
+    if (!row?.room || !row.property) {
+      return NextResponse.json({ error: "Chambre non trouvée" }, { status: 404 });
+    }
+    const user = await getCurrentUser();
+    const canSeePrivate = user?.role === "admin" || row.property.hostId === user?.id;
+    if ((!row.room.isActive || row.property.status !== "active") && !canSeePrivate) {
+      return NextResponse.json({ error: "Chambre non trouvée" }, { status: 404 });
     }
 
-    return NextResponse.json({ room });
+    return NextResponse.json({ room: row.room });
   } catch (error) {
     console.error("Error fetching room:", error);
     return NextResponse.json(

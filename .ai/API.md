@@ -58,7 +58,7 @@ Authentification :
 
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
-| GET | `/api/reviews?propertyId=…` | 🔓 | Liste des avis approuvés pour une property. |
+| GET | `/api/reviews?propertyId=…` | 🔓 approved, 👤 host/admin modération | Public force `approved`; les statuts hidden/pending/rejected sont réservés à l’admin et à l’hôte propriétaire. `limit`/`offset` bornés. |
 | POST | `/api/reviews` | 🔒 | Crée un avis pour un booking `completed` de l'utilisateur. Met à jour `properties.averageRating` et `totalReviews`. |
 
 ## Wishlists

@@ -9,6 +9,32 @@
 
 ---
 
+## Session 17 — 2026-08-23 : T-108 frontières publiques, finance bulk et 2FA
+
+### Livré
+
+- 🔨 DTO publics allowlistés et wrapper Server Component avant `PropertyCard` client; recherche qualifie maintenant une même room pour capacité/prix/dates.
+- 🔨 Detail property/room public active-only, avis modérés privés et publication hôte refusée.
+- 🔨 `cancelBooking` partagé route/bulk, archive property non destructive et agrégats avis transactionnels.
+- 🔨 TOTP sans QR tiers, password + code actif pour rotation, secret pending promu au verify (`0014`).
+
+### Preuves
+
+- ▶️ migration fraîche `0000…0014`; HTTP API/Flight/draft/hidden/search/bulk/archive/2FA.
+- 🧪 `npm test` : **220/220** ; 🔨 typecheck/build ; lint 0 erreur.
+- ▶️ `npm run smoke` : **91/91**.
+
+### Limites
+
+- ❓ T-109 reste requis pour claim invité, reprise paiement UI, outbox globale, devise/timezone.
+- ❓ Aucun provider réel ni E2E Chromium validé dans le sandbox.
+
+### Références
+
+`REPORTS/analyse_impact_2026-08-23_T108_frontieres_finance_2fa.md`, conception/débat/opportunités, post-correction et `validation_T-108_2026-08-23.md`; ADR-013.
+
+---
+
 ## Session 16 — 2026-08-23 : audit d’exécution approfondi post T-107
 
 ### Réalisé

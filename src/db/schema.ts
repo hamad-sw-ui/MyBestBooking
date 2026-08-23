@@ -42,6 +42,9 @@ export const users = pgTable("users", {
   // T-029 : secret TOTP base32 (stocké en clair — voir ADR-008 pour
   // le compromis "chiffrer avec master key" reporté).
   twoFactorSecret: varchar("two_factor_secret", { length: 64 }),
+  // T-108 : rotation à deux phases; le facteur actif reste utilisable jusqu'à
+  // validation du nouveau secret.
+  twoFactorPendingSecret: varchar("two_factor_pending_secret", { length: 64 }),
   // T-026 : code de parrainage personnel auto-généré
   referralCode: varchar("referral_code", { length: 12 }).unique(),
   // T-026 : préférences alertes prix

@@ -26,15 +26,18 @@ export function RowDeleteButton(props: {
   label: string;
   disabled?: boolean;
   onDeleted?: () => void;
+  /** Une property conserve son historique : l’action est un archivage. */
+  verb?: "Supprimer" | "Archiver";
 }) {
-  const { entity, id, label, disabled, onDeleted } = props;
+  const { entity, id, label, disabled, onDeleted, verb = "Supprimer" } = props;
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function handleClick() {
     if (busy || disabled) return;
-    if (!window.confirm(`Supprimer ${label} ? Cette action est irréversible.`)) {
+    const suffix = verb === "Archiver" ? "L'hébergement ne sera plus public, mais son historique sera conservé." : "Cette action est irréversible.";
+    if (!window.confirm(`${verb} ${label} ? ${suffix}`)) {
       return;
     }
     setBusy(true);
@@ -91,8 +94,8 @@ export function RowDeleteButton(props: {
         type="button"
         onClick={handleClick}
         disabled={busy || disabled}
-        aria-label={`Supprimer ${label}`}
-        title={disabled ? "Suppression indisponible" : `Supprimer ${label}`}
+        aria-label={`${verb} ${label}`}
+        title={disabled ? `${verb} indisponible` : `${verb} ${label}`}
         className="p-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         data-testid={`row-delete-${entity}-${id}`}
       >

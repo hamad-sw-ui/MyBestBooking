@@ -4,18 +4,15 @@ import { bookings, properties, rooms, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { computeCancellationFeeWithGrid, daysUntil, type CancellationPolicy } from "@/lib/cancellation";
 import { getSetting } from "@/lib/settings";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { transitionError, type BookingActor, type BookingStatus } from "@/lib/booking-lifecycle";
-import { getPaymentProvider } from "@/lib/payment";
 import {
   assertNotMaintenance,
   MaintenanceError,
   maintenanceResponse,
 } from "@/lib/maintenance";
-import { getMailer, templates } from "@/lib/mail";
-import { releaseBookingBenefits } from "@/lib/booking-benefits";
+import { BookingCancellationError, cancelBooking, notifyBookingCancellation } from "@/lib/booking-cancellation";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
@@ -94,52 +91,22 @@ export async function PUT(
     });
     if (transition) return NextResponse.json({ error: transition }, { status: 400 });
 
-    const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
-    let cancellationFee = 0;
-    let refundAmount = 0;
-    let refundStatus: "none" | "pending" | "refunded" = "none";
-
+    // Annulation : une seule commande métier pour route individuelle et bulk.
+    // Elle conserve les états refund, libère les avantages et émet l’outbox.
     if (data.status === "cancelled") {
-      const ratePlanSnapshot = existing.booking.ratePlanSnapshot as { cancellationPolicy?: string; cancellationFreeDays?: number | null } | null;
-      const ratePlanPolicy = ratePlanSnapshot?.cancellationPolicy;
-      const policy = (ratePlanPolicy ?? existing.property?.cancellationPolicy ?? "flexible") as CancellationPolicy;
-      const daysBeforeCheckIn = daysUntil(existing.booking.checkIn);
-      const grid = await getSetting("cancellation");
-      cancellationFee = (ratePlanSnapshot?.cancellationFreeDays ?? 0) > 0 && daysBeforeCheckIn >= (ratePlanSnapshot?.cancellationFreeDays ?? 0)
-        ? 0
-        : computeCancellationFeeWithGrid(policy, Number(existing.booking.total), daysBeforeCheckIn, grid);
-      refundAmount = Math.max(0, Number(existing.booking.total) - cancellationFee);
-
-      // Ne jamais marquer une annulation payée comme soldée sans avoir tenté
-      // le remboursement. Le mock est testable ; Stripe retourne une erreur
-      // exploitable sans modifier le booking si le PSP refuse.
-      if (existing.booking.paymentStatus === "paid" && refundAmount > 0) {
-        if (!existing.booking.paymentIntentId) {
-          return NextResponse.json({ error: "Remboursement impossible : paiement introuvable" }, { status: 409 });
+      try {
+        const outcome = await cancelBooking(id, data.cancellationReason?.trim() || "Annulation demandée");
+        await notifyBookingCancellation(outcome);
+        return NextResponse.json({ booking: outcome.booking });
+      } catch (cancellationError) {
+        if (cancellationError instanceof BookingCancellationError) {
+          return NextResponse.json({ error: cancellationError.message }, { status: 409 });
         }
-        const refund = await (await getPaymentProvider()).refund(
-          existing.booking.paymentIntentId,
-          Math.round(refundAmount * 100),
-          `booking-cancellation-refund:${existing.booking.id}`,
-        );
-        if (refund.status === "failed") {
-          return NextResponse.json({ error: "Le remboursement a été refusé ; la réservation reste active" }, { status: 502 });
-        }
-        refundStatus = refund.status === "succeeded" ? "refunded" : "pending";
-        updateData.refundProviderId = refund.id;
-      } else if (existing.booking.paymentStatus === "pending" && existing.booking.paymentIntentId) {
-        const cancellation = await (await getPaymentProvider()).cancel(existing.booking.paymentIntentId);
-        if (cancellation === "failed") {
-          return NextResponse.json({ error: "Le paiement en attente ne peut pas être annulé ; la réservation reste active" }, { status: 502 });
-        }
+        throw cancellationError;
       }
-
-      updateData.cancelledAt = new Date();
-      updateData.cancellationFee = cancellationFee.toFixed(2);
-      updateData.refundAmount = refundAmount.toFixed(2);
-      updateData.refundStatus = refundStatus;
-      if (refundStatus === "refunded") updateData.refundedAt = new Date();
     }
+
+    const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
 
     const updatedBooking = await db.transaction(async (tx) => {
       const [lockedBooking] = await tx
@@ -197,26 +164,7 @@ export async function PUT(
       return updated;
     });
 
-    // Une annulation avant capture relâche promo/wallet une seule fois. Une
-    // capture tardive reste protégée par l’inbox qui la rembourse ensuite.
-    if (data.status === "cancelled" && updatedBooking.paymentStatus !== "paid") {
-      await releaseBookingBenefits(updatedBooking.id);
-    }
 
-    if (data.status === "cancelled" && existing.booking.guestEmail) {
-      try {
-        const mail = await templates.bookingCancellation({
-          firstName: existing.booking.guestFirstName ?? "",
-          bookingReference: existing.booking.bookingReference,
-          propertyName: existing.property?.name ?? "",
-          cancellationFee: cancellationFee.toFixed(2),
-          currency: existing.booking.currency ?? "EUR",
-        });
-        await (await getMailer()).send({ to: existing.booking.guestEmail, ...mail });
-      } catch (mailErr) {
-        console.error("[bookings PUT] cancellation mail failed:", mailErr);
-      }
-    }
 
     return NextResponse.json({ booking: updatedBooking });
   } catch (error) {

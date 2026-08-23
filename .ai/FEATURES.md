@@ -29,7 +29,7 @@ modification de code.
 | Changement de mot de passe | ✅ | `POST /api/auth/change-password` + `<ChangePasswordForm>` : hash new, révoque autres sessions | T-016 |
 | Mot de passe oublié (email de reset) | ✅ | `POST /api/auth/forgot-password` (rate-limit, anti-enum) + `POST /api/auth/reset-password` + pages `/mot-de-passe-oublie` `/reinitialiser` + révocation sessions | T-013 |
 | Vérification email (envoi + confirmation via lien) | ✅ | Token SHA-256 en base (24h) + `GET /api/auth/verify` + page `/verifier-email` + envoi dans register | T-013 |
-| 2FA (TOTP) | ✅ | `speakeasy` + `/api/auth/2fa/{setup,verify,disable}` (T-029). 4 tests unitaires. Secret base32 en DB, verify avec window ±1 | T-029 |
+| 2FA (TOTP) | ✅ | Setup/disable avec mot de passe, remplacement avec TOTP actif, secret pending promu après verify; aucun QR/secret vers un tiers. | T-029, T-108 |
 | Suppression du compte | ✅ | `DELETE /api/users/me` (T-027) : soft-delete `deletedAt`, révocation sessions, cookie retiré. Admin bloqué (400) | T-027 |
 
 ## Recherche & découverte

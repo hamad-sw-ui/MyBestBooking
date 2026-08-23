@@ -334,6 +334,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                               entity="properties"
                               id={property.id}
                               label={`l'hébergement « ${property.name} »`}
+                              verb="Archiver"
                             />
                           </>
                         )}

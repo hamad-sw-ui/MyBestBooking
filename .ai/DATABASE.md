@@ -9,7 +9,9 @@
   `0013_orchestration-resilience.sql`.
 - T-107 ajoute `bookings.benefits_released_at`,
   `email_outbox.provider_message_id` et remplace les FK `review_votes` par
-  `ON DELETE CASCADE`. La migration ne réécrit aucune réservation historique.
+  `ON DELETE CASCADE`. La migration `0014` ajoute
+  `users.two_factor_pending_secret` pour la rotation TOTP en deux phases. Ces
+  migrations ne réécrivent aucune réservation historique.
 - Les bookings sont le journal du hold paiement : `payment_expires_at`, intent,
   remboursement et libération d’avantages restent persistés/rejouables.
 - Toute migration future doit rester additive, être appliquée sur une chaîne

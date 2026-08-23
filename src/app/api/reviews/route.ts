@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { reviews, properties, users, bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, and, desc, sql, inArray } from "drizzle-orm";
+import { eq, and, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   assertNotMaintenance,
@@ -11,6 +11,7 @@ import {
 } from "@/lib/maintenance";
 import { rateLimit } from "@/lib/rate-limit";
 import { isReviewEligible, type BookingStatus } from "@/lib/booking-lifecycle";
+import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -27,136 +28,83 @@ const reviewSchema = z.object({
   travelerType: z.enum(["solo", "couple", "family", "group", "business"]).optional(),
 });
 
+const listSchema = z.object({
+  propertyId: z.string().uuid().optional(),
+  status: z.enum(["approved", "hidden", "rejected", "pending"]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).max(10_000).default(0),
+});
+
+/**
+ * Public = avis approuvés uniquement. Les avis modérés restent visibles aux
+ * dashboards admin et hôte propriétaire, jamais grâce à un simple query param.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const propertyId = searchParams.get("propertyId");
-    const status = searchParams.get("status") || "approved";
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
-
+    const parsed = listSchema.parse(Object.fromEntries(new URL(request.url).searchParams));
     const user = await getCurrentUser();
+    const requestedStatus = parsed.status ?? "approved";
+    const conditions = [];
 
-    let conditions = [eq(reviews.status, status)];
-
-    if (propertyId) {
-      conditions.push(eq(reviews.propertyId, propertyId));
+    if (user?.role === "admin") {
+      conditions.push(eq(reviews.status, requestedStatus));
+      if (parsed.propertyId) conditions.push(eq(reviews.propertyId, parsed.propertyId));
     } else if (user?.role === "host") {
-      // Get host's properties reviews
-      const hostProperties = await db
-        .select({ id: properties.id })
-        .from(properties)
-        .where(eq(properties.hostId, user.id));
-      
-      if (hostProperties.length === 0) {
-        return NextResponse.json({ reviews: [] });
+      const hostProperties = await db.select({ id: properties.id }).from(properties).where(eq(properties.hostId, user.id));
+      const ids = hostProperties.map((property) => property.id);
+      if (!ids.length) return NextResponse.json({ reviews: [] });
+      if (parsed.propertyId && !ids.includes(parsed.propertyId)) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
-      conditions.push(inArray(reviews.propertyId, hostProperties.map((property) => property.id)));
+      conditions.push(eq(reviews.status, requestedStatus));
+      conditions.push(parsed.propertyId ? eq(reviews.propertyId, parsed.propertyId) : inArray(reviews.propertyId, ids));
+    } else {
+      // Client anonyme ou voyageur : on ignore volontairement status non public.
+      conditions.push(eq(reviews.status, "approved"));
+      if (parsed.propertyId) conditions.push(eq(reviews.propertyId, parsed.propertyId));
     }
 
     const results = await db
       .select({
         review: reviews,
-        user: {
-          firstName: users.firstName,
-          lastName: users.lastName,
-          country: users.country,
-        },
-        property: {
-          id: properties.id,
-          name: properties.name,
-          city: properties.city,
-        },
+        user: { firstName: users.firstName, lastName: users.lastName, country: users.country },
+        property: { id: properties.id, name: properties.name, city: properties.city },
       })
       .from(reviews)
       .leftJoin(users, eq(reviews.userId, users.id))
       .leftJoin(properties, eq(reviews.propertyId, properties.id))
       .where(and(...conditions))
-      .orderBy(desc(reviews.createdAt))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(reviews.createdAt), desc(reviews.id))
+      .limit(parsed.limit)
+      .offset(parsed.offset);
 
     return NextResponse.json({ reviews: results });
   } catch (error) {
+    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Paramètres invalides" }, { status: 400 });
     console.error("Error fetching reviews:", error);
-    return NextResponse.json(
-      { error: "Une erreur est survenue" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Non autorisé" },
-        { status: 401 }
-      );
-    }
-    // T-022 : mode maintenance
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     await assertNotMaintenance(user);
 
-    // T-028 : rate-limit — 20 avis/heure/user (largement au-dessus
-    // du besoin réel, empêche le spam de faux avis).
-    const rl = rateLimit(`reviews:user:${user.id}`, {
-      limit: 20,
-      windowMs: 60 * 60 * 1000,
-    });
-    if (!rl.ok) {
-      return NextResponse.json(
-        { error: "Trop d'avis publiés, réessayez plus tard" },
-        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
-      );
-    }
+    const rl = rateLimit(`reviews:user:${user.id}`, { limit: 20, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return NextResponse.json({ error: "Trop d'avis publiés, réessayez plus tard" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
-    const body = await request.json();
-    const data = reviewSchema.parse(body);
+    const data = reviewSchema.parse(await request.json());
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, data.bookingId));
+    if (!booking) return NextResponse.json({ error: "Réservation non trouvée" }, { status: 404 });
+    if (booking.userId !== user.id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    if (!isReviewEligible(booking.status as BookingStatus, booking.checkOut)) return NextResponse.json({ error: "Vous ne pouvez laisser un avis qu'après un séjour terminé" }, { status: 400 });
 
-    // Get booking and verify ownership
-    const [booking] = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.id, data.bookingId));
-
-    if (!booking) {
-      return NextResponse.json(
-        { error: "Réservation non trouvée" },
-        { status: 404 }
-      );
-    }
-
-    if (booking.userId !== user.id) {
-      return NextResponse.json(
-        { error: "Non autorisé" },
-        { status: 403 }
-      );
-    }
-
-    if (!isReviewEligible(booking.status as BookingStatus, booking.checkOut)) {
-      return NextResponse.json(
-        { error: "Vous ne pouvez laisser un avis qu'après un séjour terminé" },
-        { status: 400 }
-      );
-    }
-
-    // Check if review already exists
-    const existingReview = await db
-      .select()
-      .from(reviews)
-      .where(eq(reviews.bookingId, data.bookingId));
-
-    if (existingReview.length > 0) {
-      return NextResponse.json(
-        { error: "Vous avez déjà laissé un avis pour cette réservation" },
-        { status: 400 }
-      );
-    }
-
-    const [newReview] = await db
-      .insert(reviews)
-      .values({
+    const created = await db.transaction(async (tx) => {
+      const [existing] = await tx.select({ id: reviews.id }).from(reviews).where(eq(reviews.bookingId, data.bookingId)).for("update");
+      if (existing) return null;
+      const [review] = await tx.insert(reviews).values({
         bookingId: data.bookingId,
         userId: user.id,
         propertyId: booking.propertyId,
@@ -173,41 +121,16 @@ export async function POST(request: NextRequest) {
         travelerType: data.travelerType,
         isVerified: true,
         status: "approved",
-      })
-      .returning();
-
-    // T-007 (BUG-010) : recalcul atomique en SQL — plus de race entre
-    // deux POST /api/reviews concurrents. Une seule requête, valeurs
-    // dérivées de la table `reviews` elle-même.
-    await db.execute(sql`
-      UPDATE properties
-         SET average_rating = sub.avg_rating,
-             total_reviews  = sub.total
-        FROM (
-          SELECT ROUND(AVG(overall_rating)::numeric, 1) AS avg_rating,
-                 COUNT(*)                              AS total
-            FROM reviews
-           WHERE property_id = ${booking.propertyId}
-             AND status      = 'approved'
-        ) AS sub
-       WHERE properties.id = ${booking.propertyId};
-    `);
-
-    return NextResponse.json({ review: newReview }, { status: 201 });
+      }).returning();
+      await recomputePropertyReviewAggregate(tx, booking.propertyId);
+      return review;
+    });
+    if (!created) return NextResponse.json({ error: "Vous avez déjà laissé un avis pour cette réservation" }, { status: 400 });
+    return NextResponse.json({ review: created }, { status: 201 });
   } catch (error) {
-    if (error instanceof MaintenanceError) {
-      return maintenanceResponse(error.retryAfterSeconds);
-    }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
-    }
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
+    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
     console.error("Error creating review:", error);
-    return NextResponse.json(
-      { error: "Une erreur est survenue" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }

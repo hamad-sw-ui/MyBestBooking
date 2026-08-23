@@ -29,6 +29,12 @@
 - Les nouvelles pièces jointes de messagerie sont privées et ne sont servies
   qu'après vérification du participant ; les images publiques d'hébergement
   restent un domaine distinct.
+- Les projections publiques property sont allowlistées et les fiches non
+  `active` renvoient 404 aux visiteurs. Les payloads RSC ne reçoivent ni marge,
+  ni hostId, ni validateur.
+- La 2FA TOTP n’envoie plus le secret à un service QR externe. Setup/disable
+  exigent le mot de passe; une rotation exige aussi le code actif et promeut un
+  secret pending seulement après vérification.
 
 Les sections Android ci-dessous sont conservées comme archive et ne doivent
 pas servir de source de vérité pour le code actuel.

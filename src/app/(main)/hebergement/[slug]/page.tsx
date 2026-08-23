@@ -4,11 +4,12 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const [p] = await db.select().from(properties).where(eq(properties.slug, slug)).limit(1);
+  const [p] = await db.select().from(properties).where(and(eq(properties.slug, slug), eq(properties.status, "active"))).limit(1);
   if (!p) return { title: "Hébergement introuvable" };
   const desc = `${p.name} à ${p.city}, ${p.country}. ${p.description ? p.description.slice(0, 140) : "Réservez au meilleur prix."}`;
   return {
@@ -50,18 +51,20 @@ interface PropertyPageProps {
   }>;
 }
 
-async function getProperty(slug: string) {
+async function getProperty(slug: string, viewerId?: string, isAdmin = false) {
   const [property] = await db
     .select()
     .from(properties)
     .where(eq(properties.slug, slug));
 
   if (!property) return null;
+  const canSeePrivate = isAdmin || property.hostId === viewerId;
+  if (property.status !== "active" && !canSeePrivate) return null;
 
   const propertyRooms = await db
     .select()
     .from(rooms)
-    .where(and(eq(rooms.propertyId, property.id), eq(rooms.isActive, true)));
+    .where(and(eq(rooms.propertyId, property.id), ...(canSeePrivate ? [] : [eq(rooms.isActive, true)])));
 
   const propertyReviews = await db
     .select({
@@ -108,7 +111,8 @@ const AMENITY_LABELS: Record<string, string> = {
 export default async function PropertyPage({ params, searchParams }: PropertyPageProps) {
   const { slug } = await params;
   const query = await searchParams;
-  const data = await getProperty(slug);
+  const viewer = await getCurrentUser();
+  const data = await getProperty(slug, viewer?.id, viewer?.role === "admin");
 
   if (!data) {
     notFound();

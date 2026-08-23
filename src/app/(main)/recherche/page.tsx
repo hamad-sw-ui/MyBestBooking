@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
 import { bookings, properties, rooms } from "@/db/schema";
-import { asc, count, eq, and, ilike, or, desc, sql, min } from "drizzle-orm";
+import { asc, count, eq, and, ilike, or, desc, sql, type SQL } from "drizzle-orm";
 
 export const metadata: Metadata = {
   title: "Recherche d'hébergements",
   description: "Trouvez le meilleur hébergement pour votre séjour : hôtel, riad, villa, appartement, camping.",
 };
 import { PropertyCard } from "@/components/property-card";
+import { toPublicPropertyCard } from "@/lib/public-property";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
@@ -29,99 +30,101 @@ interface SearchPageProps {
   }>;
 }
 
-async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>) {
-  const conditions = [eq(properties.status, "active")];
+function validStay(params: Awaited<SearchPageProps["searchParams"]>): params is Awaited<SearchPageProps["searchParams"]> & { checkIn: string; checkOut: string } {
+  return Boolean(
+    params.checkIn && params.checkOut
+    && /^\d{4}-\d{2}-\d{2}$/.test(params.checkIn)
+    && /^\d{4}-\d{2}-\d{2}$/.test(params.checkOut)
+    && params.checkOut > params.checkIn,
+  );
+}
 
-  if (params.city) {
-    conditions.push(
-      or(
-        ilike(properties.city, `%${params.city}%`),
-        ilike(properties.name, `%${params.city}%`)
-      )!
-    );
-  }
-
-  if (params.country) {
-    conditions.push(eq(properties.country, params.country));
-  }
-
-  if (params.type) {
-    conditions.push(eq(properties.type, params.type));
-  }
-  if (params.amenity) {
-    conditions.push(sql`${properties.amenities} @> ${JSON.stringify([params.amenity])}::jsonb`);
-  }
-  if (params.guests) {
-    const guests = Number(params.guests);
-    if (Number.isInteger(guests) && guests > 0) {
-      conditions.push(sql`EXISTS (SELECT 1 FROM rooms r WHERE r.property_id = ${properties.id} AND r.is_active = true AND r.max_occupancy >= ${guests})`);
-    }
-  }
+/** Même prédicat pour EXISTS et prix affiché : une seule room doit satisfaire
+ * tous les critères. L’alias est constant et ne provient jamais de l’URL. */
+function eligibleRoomPredicate(alias: "r" | "r2", params: Awaited<SearchPageProps["searchParams"]>): SQL {
+  const room = sql.raw(alias);
+  const clauses: SQL[] = [sql`${room}.is_active = true`];
+  const guests = Number(params.guests);
+  if (Number.isInteger(guests) && guests > 0) clauses.push(sql`${room}.max_occupancy >= ${guests}`);
 
   const minPrice = params.minPrice ? Number(params.minPrice) : null;
   const maxPrice = params.maxPrice ? Number(params.maxPrice) : null;
-  if ((minPrice !== null && Number.isFinite(minPrice) && minPrice >= 0) || (maxPrice !== null && Number.isFinite(maxPrice) && maxPrice >= 0)) {
-    conditions.push(sql`EXISTS (
-      SELECT 1 FROM rooms r
-      WHERE r.property_id = ${properties.id}
-        AND r.is_active = true
-        ${minPrice !== null && Number.isFinite(minPrice) && minPrice >= 0 ? sql`AND r.base_price >= ${minPrice}` : sql``}
-        ${maxPrice !== null && Number.isFinite(maxPrice) && maxPrice >= 0 ? sql`AND r.base_price <= ${maxPrice}` : sql``}
-    )`);
-  }
+  if (minPrice !== null && Number.isFinite(minPrice) && minPrice >= 0) clauses.push(sql`${room}.base_price >= ${minPrice}`);
+  if (maxPrice !== null && Number.isFinite(maxPrice) && maxPrice >= 0) clauses.push(sql`${room}.base_price <= ${maxPrice}`);
 
-  if (
-    params.checkIn &&
-    params.checkOut &&
-    /^\d{4}-\d{2}-\d{2}$/.test(params.checkIn) &&
-    /^\d{4}-\d{2}-\d{2}$/.test(params.checkOut) &&
-    params.checkOut > params.checkIn
-  ) {
-    conditions.push(sql`EXISTS (
-      SELECT 1 FROM rooms r
-      WHERE r.property_id = ${properties.id}
-        AND r.is_active = true
-        AND COALESCE((
-          SELECT ra.min_stay FROM room_availability ra
-          WHERE ra.room_id = r.id AND ra.date = ${params.checkIn}
-        ), 1) <= (${params.checkOut}::date - ${params.checkIn}::date)
-        AND NOT EXISTS (
-          SELECT 1
-          FROM generate_series(${params.checkIn}::date, ${params.checkOut}::date - interval '1 day', interval '1 day') AS stay(day)
-          LEFT JOIN room_availability ra
-            ON ra.room_id = r.id AND ra.date = stay.day::date
-          WHERE COALESCE(ra.stop_sell, false) = true
-             OR COALESCE(ra.available_count, r.quantity) <= (
-               SELECT COUNT(*) FROM bookings b
-               WHERE b.room_id = r.id
-                 AND b.status <> 'cancelled'
-                 AND b.check_in <= stay.day::date
-                 AND b.check_out > stay.day::date
-             )
-        )
-    )`);
+  if (validStay(params)) {
+    clauses.push(sql`
+      COALESCE((
+        SELECT ra.min_stay FROM room_availability ra
+        WHERE ra.room_id = ${room}.id AND ra.date = ${params.checkIn}
+      ), 1) <= (${params.checkOut}::date - ${params.checkIn}::date)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM generate_series(${params.checkIn}::date, ${params.checkOut}::date - interval '1 day', interval '1 day') AS stay(day)
+        LEFT JOIN room_availability ra
+          ON ra.room_id = ${room}.id AND ra.date = stay.day::date
+        WHERE COALESCE(ra.stop_sell, false) = true
+           OR COALESCE(ra.available_count, ${room}.quantity) <= (
+             SELECT COUNT(*) FROM bookings b
+             WHERE b.room_id = ${room}.id
+               AND b.status <> 'cancelled'
+               AND b.check_in <= stay.day::date
+               AND b.check_out > stay.day::date
+           )
+      )
+    `);
   }
+  return sql.join(clauses, sql` AND `);
+}
+
+async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>) {
+  const conditions: SQL[] = [eq(properties.status, "active")];
+
+  if (params.city) {
+    conditions.push(or(ilike(properties.city, `%${params.city}%`), ilike(properties.name, `%${params.city}%`))!);
+  }
+  if (params.country) conditions.push(eq(properties.country, params.country));
+  if (params.type) conditions.push(eq(properties.type, params.type));
+  if (params.amenity) conditions.push(sql`${properties.amenities} @> ${JSON.stringify([params.amenity])}::jsonb`);
+
+  // Une property est éligible seulement si une room unique l’est sur la totalité
+  // des filtres; cette même room participe au prix affiché ci-dessous.
+  const existsEligibleRoom = sql`EXISTS (
+    SELECT 1 FROM rooms r
+    WHERE r.property_id = ${properties.id}
+      AND ${eligibleRoomPredicate("r", params)}
+  )`;
+  conditions.push(existsEligibleRoom);
+
+  const eligiblePrice = sql<string | null>`(
+    SELECT r2.base_price FROM rooms r2
+    WHERE r2.property_id = ${properties.id}
+      AND ${eligibleRoomPredicate("r2", params)}
+    ORDER BY r2.base_price ASC, r2.id ASC
+    LIMIT 1
+  )`;
+  const eligibleCurrency = sql<string | null>`(
+    SELECT r2.currency FROM rooms r2
+    WHERE r2.property_id = ${properties.id}
+      AND ${eligibleRoomPredicate("r2", params)}
+    ORDER BY r2.base_price ASC, r2.id ASC
+    LIMIT 1
+  )`;
 
   const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-  const [{ total }] = await db
-    .select({ total: count() })
-    .from(properties)
-    .where(and(...conditions));
+  const [{ total }] = await db.select({ total: count() }).from(properties).where(and(...conditions));
   const totalPages = Math.max(1, Math.ceil(total / 20));
-  // Une URL trop grande revient sur la dernière page existante, jamais sur une
-  // page vide. L’ID est le tie-breaker stable pour les égalités de prix/avis.
   const page = Math.min(requestedPage, totalPages);
   const order = params.sort === "price_asc"
-    ? [sql`MIN(${rooms.basePrice}) ASC`, asc(properties.id)]
+    ? [sql`${eligiblePrice} ASC`, asc(properties.id)]
     : params.sort === "price_desc"
-      ? [sql`MIN(${rooms.basePrice}) DESC`, asc(properties.id)]
+      ? [sql`${eligiblePrice} DESC`, asc(properties.id)]
       : [desc(properties.averageRating), asc(properties.id)];
+
   const rows = await db
-    .select({ property: properties, minPrice: min(rooms.basePrice), minCurrency: min(rooms.currency) })
+    .select({ property: properties, minPrice: eligiblePrice, minCurrency: eligibleCurrency })
     .from(properties)
-    .leftJoin(rooms, and(eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)))
     .where(and(...conditions))
-    .groupBy(properties.id)
     .orderBy(...order)
     .limit(20)
     .offset((page - 1) * 20);
@@ -130,8 +133,7 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
     total,
     page,
     totalPages,
-    results: rows.map(({ property, minPrice, minCurrency }) => ({
-      ...property,
+    results: rows.map(({ property, minPrice, minCurrency }) => toPublicPropertyCard(property, {
       minPrice: minPrice === null ? null : Number(minPrice),
       minCurrency,
     })),

@@ -9,38 +9,34 @@ suivante.
 
 ## Ouverts
 
-- [ ] **2026-08-23 — BUG-035** (C, AUD-108-01/02/03) : frontières de
-  publication/RBAC incomplètes. Les détails property exposent commission/IDs
-  internes et les brouillons sont publics; `GET /api/reviews?status=hidden`
-  divulgue les avis modérés; un hôte peut s’auto-publier. ▶️ Reproduit en HTTP
-  local : detail 200 avec `hostId/commissionRate/validatedBy`, brouillon API+
-  page 200, avis hidden 200, PATCH hôte `pending→active` 200.
+- [ ] **2026-08-23 — BUG-037** (S résiduel, T-108 partiel,
+  AUD-108-07) : les réglages notifications et certains réglages sécurité
+  administrateur restent non consommés par le runtime. La sous-partie TOTP est
+  corrigée en T-108 : aucun QR tiers, password + TOTP actif et secret pending.
 
-- [ ] **2026-08-23 — BUG-036** (C, AUD-108-04/05/20) : opérations admin
-  destructives contournent la finance, l’atomicité et les agrégats. L’annulation
-  bulk laisse un booking payé `refundStatus=none`; la suppression property peut
-  effacer un rate plan puis échouer sur FK booking; delete review laisse
-  `averageRating/totalReviews` périmés. ▶️ Reproduit : bulk cancel 200 → paid/
-  none; bulk property → `failed` avec property+room présents mais rate_plan=0;
-  bulk review → 0 avis réels mais moyenne 4.0/compteur 1.
-
-- [ ] **2026-08-23 — BUG-037** (C, AUD-108-06/07) : mise en place 2FA envoie
-  l’URI contenant le secret à un QR provider tiers et peut désactiver une 2FA
-  active; plusieurs réglages sécurité/notifications admin ne sont pas consommés
-  par le runtime. Correctif requis avant promesse de sécurité configurable.
-
-- [ ] **2026-08-23 — BUG-038** (S, AUD-108-08 à 17) : parcours opérationnels
-  partiels : reprise paiement non actionnable, emails/outbox hétérogènes,
-  dashboard messages non navigable, promesses/BestRewards/referral/promo
-  trompeuses, multi-devise et timezone incohérents, invariants room/messages et
-  pagination API incomplets. Détail et solutions dans
-  `REPORTS/audit_execution_deep_post_T107_2026-08-23.md`.
+- [ ] **2026-08-23 — BUG-038** (S, AUD-108-08 à 17, 19 à 24) : parcours
+  opérationnels partiels : reprise paiement non actionnable, emails/outbox
+  hétérogènes, checkout invité sans claim et créant des comptes même après une
+  demande invalide, dashboard messages non navigable, promesses/BestRewards/
+  referral/promo trompeuses, multi-devise/timezone/quote incohérents, alertes
+  contextuelles dédupliquées sur un ancien séjour, webhook Stripe incomplet,
+  invariants room/messages et pagination/API dates incomplets. Détail et
+  solutions dans les rapports d’audit profond et addendum post T-107.
 
 Le point historique **BUG-003 (paiement non implémenté)** reste déplacé dans
 `KNOWN_LIMITATIONS.md` : une validation Stripe réelle exige toujours des clés
 fournisseur de test dans l’environnement.
 
 ## Corrigés
+
+- [x] **2026-08-23 — BUG-035** (C, T-108) : frontières publication/RBAC et
+  fuite RSC. Correctif : DTO allowlistés, details public active-only/404,
+  avis modérés privés et status host refusé. ▶️ API/Flight/draft/host/hidden
+  validés.
+
+- [x] **2026-08-23 — BUG-036** (C, T-108) : bulk finance, archive et agrégats.
+  Correctif : commande cancellation+outbox, archive property non destructive
+  et recompute avis transactionnel. ▶️ refund/outbox/archive/0-0 validés.
 
 - [x] **2026-08-23 — BUG-034** (T-107) : un succès de paiement après
   expiration était consommé sans compensation, l’intent PSP restait sous

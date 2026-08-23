@@ -1,32 +1,27 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Orchestrer sans effets externes sous verrou les paiements, notifications et opérations différées révélés par l’audit extrême ; compléter les parcours pagination, calendrier, rate plans et rotation de coffre.
-**ID** : T-107
-**Niveau** : **C** — paiements, remboursements, secrets, migrations et parcours administrateur/voyageur.
+**Tâche :** Corriger les frontières publiques, annulations financières bulk,
+archivage administrateur, agrégats d’avis et rotation 2FA révélés par les audits
+post T-107.
+**ID** : T-108
+**Niveau** : **C** — données privées, paiements/remboursements, 2FA et migrations.
 **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Périmètre
 
-- intent paiement hors transaction, reprise et expiration ;
-- succès tardif compensé par remboursement idempotent ;
-- outbox fournisseur idempotente ; suppression d’avis avec votes ;
-- quote d’alerte contextualisé ;
-- count/ordre pagination, navigation calendrier >90 jours et édition rate plan ;
-- keyring et procédure de rotation provider.
+- DTO publics/RBAC properties, recherche et avis ;
+- status property réservé à l’administration ;
+- annulation métier commune bulk/individuelle et archive property ;
+- recalcul agrégat avis ;
+- TOTP local à deux phases, reauthentification et migration additive.
 
-## Livré et validé
+## Bornes
 
-- intent paiement post-commit idempotent, reprise cron et compensation du succès tardif ;
-- outbox provider-aware, suppression votes sûre et migration `0013` ;
-- quote alerte contextualisé, recherche/calendrier/rate plans complétés ;
-- rotation keyring provider sans secret HTTP.
+T-109 (claim invité, reprise paiement, outbox globale, devise/timezone) reste
+un chantier C distinct : aucun comportement sera simulé pour le masquer.
 
-## Preuves
+## Sortie obligatoire
 
-- 🔨 typecheck/build/lint (0 erreur) ;
-- 🧪 218/218 ;
-- ▶️ migration 0013, webhook/refund tardif, lease outbox, bulk vote, quote,
-  PATCH plan et smoke 91/91 ;
-- 🔨 `ai:check` à rejouer après synchronisation du HEAD dans STATE/TRACEABILITY.
-
-Les providers externes réels ne sont pas déclarés validés sans clés de test configurées.
+Migration fraîche, tests RBAC/finance/2FA/recherche négatifs, typecheck, lint,
+tests, build, smoke, ai:check et scénarios HTTP. Aucune validation Stripe,
+Resend ou S3 réelle sans credentials test.

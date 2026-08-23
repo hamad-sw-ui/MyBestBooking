@@ -1,33 +1,47 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import speakeasy from "speakeasy";
+import { z } from "zod";
 import { db } from "@/db";
 import { users } from "@/db/schema";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, verifyPassword } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 
+const schema = z.object({
+  password: z.string().min(1, "Mot de passe requis"),
+  /** Obligatoire quand un facteur actif est remplacé. */
+  currentCode: z.string().regex(/^\d{6}$/).optional(),
+});
+
 /**
- * POST /api/auth/2fa/setup (T-029)
- * Génère un secret TOTP + URI otpauth pour QR code côté client.
- * Le secret est stocké, `twoFactorEnabled` reste false jusqu'à la
- * vérification (POST /api/auth/2fa/verify).
+ * Génère un secret pending local. Une reprovision ne retire jamais le facteur
+ * actif avant que le nouveau code soit vérifié; aucun QR/secret ne sort vers un
+ * service tiers.
  */
-export async function POST() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+export async function POST(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    const data = schema.parse(await request.json());
+    const [account] = await db.select({
+      passwordHash: users.passwordHash,
+      secret: users.twoFactorSecret,
+      enabled: users.twoFactorEnabled,
+    }).from(users).where(eq(users.id, user.id));
+    if (!account?.passwordHash || !await verifyPassword(data.password, account.passwordHash)) {
+      return NextResponse.json({ error: "Mot de passe incorrect" }, { status: 401 });
+    }
+    if (account.enabled) {
+      if (!account.secret || !data.currentCode) return NextResponse.json({ error: "Code TOTP actif requis pour remplacer la 2FA" }, { status: 400 });
+      const valid = speakeasy.totp.verify({ secret: account.secret, encoding: "base32", token: data.currentCode, window: 1 });
+      if (!valid) return NextResponse.json({ error: "Code TOTP actif invalide" }, { status: 401 });
+    }
 
-  const secret = speakeasy.generateSecret({
-    name: `MyBestBooking:${user.email}`,
-    issuer: "MyBestBooking",
-    length: 20,
-  });
-
-  await db
-    .update(users)
-    .set({ twoFactorSecret: secret.base32, twoFactorEnabled: false })
-    .where(eq(users.id, user.id));
-
-  return NextResponse.json({
-    secret: secret.base32,
-    otpauth: secret.otpauth_url,
-  });
+    const secret = speakeasy.generateSecret({ name: `MyBestBooking:${user.email}`, issuer: "MyBestBooking", length: 20 });
+    await db.update(users).set({ twoFactorPendingSecret: secret.base32, updatedAt: new Date() }).where(eq(users.id, user.id));
+    return NextResponse.json({ secret: secret.base32 });
+  } catch (error) {
+    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
+    console.error("[2fa/setup]", error);
+    return NextResponse.json({ error: "Erreur" }, { status: 500 });
+  }
 }

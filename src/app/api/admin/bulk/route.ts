@@ -21,6 +21,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq, inArray, and, ne, or, sql, gte } from "drizzle-orm";
 import { createHash } from "node:crypto";
+import { BookingCancellationError, cancelBooking, notifyBookingCancellation } from "@/lib/booking-cancellation";
+import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
 
 /**
  * POST /api/admin/bulk (T-033, étendu T-034)
@@ -167,68 +169,21 @@ async function bulkProperties(
 ): Promise<Result> {
   const r = emptyResult("properties", action, ids.length);
   if (action === "delete") {
+    // Une property avec historique ne peut pas être hard-delete sans casser les
+    // FK bookings. Le bouton admin devient un archivage réversible et atomique.
     for (const id of ids) {
       try {
-        // Refus si booking actif (pending/confirmed)
-        const [act] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(bookings)
-          .where(
-            and(
-              eq(bookings.propertyId, id),
-              or(eq(bookings.status, "pending"), eq(bookings.status, "confirmed")),
-            ),
-          );
-        if ((act?.count ?? 0) > 0) {
-          r.skipped.push({
-            id,
-            reason: `${act.count} réservation(s) active(s) — impossible de supprimer`,
-          });
-          continue;
-        }
-        // Nettoyer les FK enfants avant hard delete
-        const roomIds = (
-          await db.select({ id: rooms.id }).from(rooms).where(eq(rooms.propertyId, id))
-        ).map((x) => x.id);
-        if (roomIds.length) {
-          await db.delete(roomAvailability).where(inArray(roomAvailability.roomId, roomIds));
-          await db.delete(ratePlans).where(inArray(ratePlans.roomId, roomIds));
-        }
-        await db.delete(rooms).where(eq(rooms.propertyId, id));
-        await db.delete(wishlistItems).where(eq(wishlistItems.propertyId, id));
-        await db.delete(priceAlerts).where(eq(priceAlerts.propertyId, id));
-        const propertyReviewIds = (await db.select({ id: reviews.id }).from(reviews).where(eq(reviews.propertyId, id))).map((review) => review.id);
-        // Explicite même si la migration 0013 ajoute CASCADE : compatible avec
-        // une base en cours de déploiement et lisible dans ce cleanup admin.
-        if (propertyReviewIds.length) await db.delete(reviewVotes).where(inArray(reviewVotes.reviewId, propertyReviewIds));
-        await db.delete(reviews).where(eq(reviews.propertyId, id));
-        // Conversations & messages
-        const convIds = (
-          await db.select({ id: conversations.id })
-            .from(conversations)
-            .where(eq(conversations.propertyId, id))
-        ).map((x) => x.id);
-        if (convIds.length) {
-          await db.delete(messages).where(inArray(messages.conversationId, convIds));
-          await db.delete(conversations).where(inArray(conversations.id, convIds));
-        }
-        // Bookings terminaux (cancelled/completed/no_show) : on ne les supprime
-        // pas — on les orphelinise avec propertyId conservé. Alternative :
-        // supprimer aussi (perte d'historique). On garde l'historique.
-        const [row] = await db
-          .delete(properties)
+        const [row] = await db.update(properties)
+          .set({ status: "archived", updatedAt: new Date() })
           .where(eq(properties.id, id))
           .returning({ id: properties.id });
         if (!row) {
           r.skipped.push({ id, reason: "property introuvable" });
           continue;
         }
-        r.succeeded++;
+        r.succeeded += 1;
       } catch (err) {
-        r.failed.push({
-          id,
-          error: err instanceof Error ? err.message : String(err),
-        });
+        r.failed.push({ id, error: err instanceof Error ? err.message : String(err) });
       }
     }
     return r;
@@ -278,12 +233,15 @@ async function bulkReviews(action: string, ids: string[]): Promise<Result> {
     for (const id of ids) {
       try {
         const row = await db.transaction(async (tx) => {
+          const [existing] = await tx.select({ propertyId: reviews.propertyId }).from(reviews).where(eq(reviews.id, id)).for("update");
+          if (!existing) return null;
           // La suppression explicite évite que l’action bulk dépende d’un FK
           // déployé partiellement; la cascade DB reste un filet de sécurité.
           await tx.delete(reviewVotes).where(eq(reviewVotes.reviewId, id));
           const [deleted] = await tx.delete(reviews)
             .where(eq(reviews.id, id))
             .returning({ id: reviews.id });
+          await recomputePropertyReviewAggregate(tx, existing.propertyId);
           return deleted;
         });
         if (!row) {
@@ -312,11 +270,16 @@ async function bulkReviews(action: string, ids: string[]): Promise<Result> {
   }
   for (const id of ids) {
     try {
-      const [row] = await db
-        .update(reviews)
-        .set({ status: targetStatus, updatedAt: new Date() })
-        .where(eq(reviews.id, id))
-        .returning({ id: reviews.id });
+      const row = await db.transaction(async (tx) => {
+        const [existing] = await tx.select({ propertyId: reviews.propertyId }).from(reviews).where(eq(reviews.id, id)).for("update");
+        if (!existing) return null;
+        const [updated] = await tx.update(reviews)
+          .set({ status: targetStatus, updatedAt: new Date() })
+          .where(eq(reviews.id, id))
+          .returning({ id: reviews.id });
+        await recomputePropertyReviewAggregate(tx, existing.propertyId);
+        return updated;
+      });
       if (!row) {
         r.skipped.push({ id, reason: "review introuvable" });
         continue;
@@ -334,40 +297,20 @@ async function bulkReviews(action: string, ids: string[]): Promise<Result> {
 
 async function bulkBookings(action: string, ids: string[]): Promise<Result> {
   const r = emptyResult("bookings", action, ids.length);
-  if (action !== "cancel") {
-    throw new Error(`Action invalide pour bookings : ${action}`);
-  }
+  if (action !== "cancel") throw new Error(`Action invalide pour bookings : ${action}`);
   for (const id of ids) {
     try {
-      const [existing] = await db
-        .select({ status: bookings.status })
-        .from(bookings)
-        .where(eq(bookings.id, id));
-      if (!existing) {
-        r.skipped.push({ id, reason: "booking introuvable" });
-        continue;
+      const outcome = await cancelBooking(id, "Annulation administrative");
+      await notifyBookingCancellation(outcome);
+      r.succeeded += 1;
+    } catch (error) {
+      if (error instanceof BookingCancellationError) {
+        // Une transition terminale n’est pas une panne infra : le dashboard peut
+        // l’expliquer et l’opérateur ne croit pas le refund effectué.
+        r.skipped.push({ id, reason: error.message });
+      } else {
+        r.failed.push({ id, error: error instanceof Error ? error.message : String(error) });
       }
-      if (existing.status !== "pending" && existing.status !== "confirmed") {
-        r.skipped.push({
-          id,
-          reason: `transition invalide depuis '${existing.status}'`,
-        });
-        continue;
-      }
-      await db
-        .update(bookings)
-        .set({
-          status: "cancelled",
-          cancelledAt: new Date(),
-          updatedAt: new Date(),
-        })
-        .where(eq(bookings.id, id));
-      r.succeeded++;
-    } catch (err) {
-      r.failed.push({
-        id,
-        error: err instanceof Error ? err.message : String(err),
-      });
     }
   }
   return r;

@@ -7,194 +7,97 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Shield, ShieldCheck, Loader2 } from "lucide-react";
 
-interface Props {
-  initiallyEnabled: boolean;
-}
+interface Props { initiallyEnabled: boolean; }
+
+type SetupState = { phase: "idle" } | { phase: "loading" } | { phase: "setup"; secret: string };
 
 /**
- * <TwoFactorSection /> (T-030)
- * Interface complète 2FA TOTP :
- * - Setup : appel /api/auth/2fa/setup → affiche otpauth URI + input code
- * - Verify : appel /api/auth/2fa/verify → activation
- * - Disable : appel /api/auth/2fa/disable avec code TOTP requis
- *
- * QR code : on affiche l'URI otpauth encodée en URL image via
- * `qrserver.com` (service public gratuit, aucun secret transmis puisque
- * l'URI contient déjà le secret et que la CSP l'autorise en `img-src`).
- * Alternative : librairie qrcode locale à ajouter si CSP resserrée.
+ * TOTP local : aucun QR distant ne reçoit l’URI/secret. La saisie manuelle est
+ * compatible avec toutes les applications TOTP et la rotation garde le facteur
+ * actif jusqu’à la vérification du nouveau code.
  */
 export function TwoFactorSection({ initiallyEnabled }: Props) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(initiallyEnabled);
-  const [setupState, setSetupState] = useState<
-    | { phase: "idle" }
-    | { phase: "loading" }
-    | { phase: "setup"; otpauth: string; secret: string }
-    | { phase: "disabling" }
-  >({ phase: "idle" });
-  const [code, setCode] = useState("");
+  const [setupState, setSetupState] = useState<SetupState>({ phase: "idle" });
+  const [password, setPassword] = useState("");
+  const [currentCode, setCurrentCode] = useState("");
+  const [newCode, setNewCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  function cleanCode(value: string) { return value.replace(/\D/g, "").slice(0, 6); }
+
   async function startSetup() {
-    setError(null);
-    setSetupState({ phase: "loading" });
+    if (!password) { setError("Confirmez votre mot de passe pour modifier la 2FA"); return; }
+    if (enabled && !/^\d{6}$/.test(currentCode)) { setError("Entrez votre code TOTP actif pour remplacer la 2FA"); return; }
+    setError(null); setBusy(true); setSetupState({ phase: "loading" });
     try {
-      const r = await fetch("/api/auth/2fa/setup", { method: "POST" });
-      const j = await r.json();
+      const r = await fetch("/api/auth/2fa/setup", {
+        method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password, ...(enabled ? { currentCode } : {}) }),
+      });
+      const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error ?? "Erreur");
-      setSetupState({ phase: "setup", otpauth: j.otpauth, secret: j.secret });
+      setSetupState({ phase: "setup", secret: j.secret });
+      setNewCode("");
     } catch (e) {
       setSetupState({ phase: "idle" });
       setError(e instanceof Error ? e.message : "Erreur");
-    }
+    } finally { setBusy(false); }
   }
 
   async function verify() {
-    if (!/^\d{6}$/.test(code)) {
-      setError("Le code doit contenir 6 chiffres");
-      return;
-    }
-    setError(null);
-    setBusy(true);
+    if (!/^\d{6}$/.test(newCode)) { setError("Le nouveau code doit contenir 6 chiffres"); return; }
+    setError(null); setBusy(true);
     try {
-      const r = await fetch("/api/auth/2fa/verify", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      const j = await r.json();
+      const r = await fetch("/api/auth/2fa/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: newCode }) });
+      const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error ?? "Code invalide");
-      setEnabled(true);
-      setSetupState({ phase: "idle" });
-      setCode("");
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setBusy(false);
-    }
+      setEnabled(true); setSetupState({ phase: "idle" }); setPassword(""); setCurrentCode(""); setNewCode(""); router.refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Erreur"); }
+    finally { setBusy(false); }
   }
 
   async function disable() {
-    if (!/^\d{6}$/.test(code)) {
-      setError("Entrez un code TOTP à 6 chiffres pour confirmer");
-      return;
-    }
-    setError(null);
-    setBusy(true);
+    if (!password || !/^\d{6}$/.test(currentCode)) { setError("Mot de passe et code TOTP actif requis"); return; }
+    setError(null); setBusy(true);
     try {
-      const r = await fetch("/api/auth/2fa/disable", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({ code }),
-      });
-      const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Code invalide");
-      setEnabled(false);
-      setSetupState({ phase: "idle" });
-      setCode("");
-      router.refresh();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-    } finally {
-      setBusy(false);
-    }
+      const r = await fetch("/api/auth/2fa/disable", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password, code: currentCode }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error ?? "Erreur");
+      setEnabled(false); setSetupState({ phase: "idle" }); setPassword(""); setCurrentCode(""); router.refresh();
+    } catch (e) { setError(e instanceof Error ? e.message : "Erreur"); }
+    finally { setBusy(false); }
   }
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center gap-2">
-          {enabled ? (
-            <ShieldCheck className="w-5 h-5 text-green-600" />
-          ) : (
-            <Shield className="w-5 h-5 text-gray-400" />
-          )}
-          <CardTitle>Authentification à deux facteurs (TOTP)</CardTitle>
-        </div>
-      </CardHeader>
+      <CardHeader><div className="flex items-center gap-2">{enabled ? <ShieldCheck className="w-5 h-5 text-green-600" /> : <Shield className="w-5 h-5 text-gray-400" />}<CardTitle>Authentification à deux facteurs (TOTP)</CardTitle></div></CardHeader>
       <CardContent className="space-y-4">
-        <p className="text-sm text-gray-600">
-          Ajoutez une couche de sécurité supplémentaire avec une application
-          d&apos;authentification (Google Authenticator, Authy, 1Password,
-          Bitwarden…).
-        </p>
-
-        {enabled && setupState.phase === "idle" && (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center gap-2 text-green-700">
-              <ShieldCheck className="w-4 h-4" />
-              <span className="font-medium">2FA activée sur votre compte</span>
-            </div>
-            <div className="flex gap-2 items-end">
-              <Input
-                label="Code TOTP pour désactiver"
-                value={code}
-                onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                placeholder="123456"
-                aria-label="Code TOTP à 6 chiffres"
-              />
-              <Button variant="danger" onClick={disable} disabled={busy}>
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Désactiver"}
-              </Button>
+        <p className="text-sm text-gray-600">Utilisez une application d&apos;authentification. Le secret reste entre votre navigateur, votre application TOTP et MyBestBooking : aucun service QR tiers n&apos;est appelé.</p>
+        {setupState.phase === "idle" && (
+          <div className="space-y-3">
+            {enabled && <p className="flex items-center gap-2 text-sm font-medium text-green-700"><ShieldCheck className="w-4 h-4" />2FA activée. Remplacez-la seulement avec le facteur actif.</p>}
+            <Input label="Mot de passe actuel" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            {enabled && <Input label="Code TOTP actif" value={currentCode} onChange={(e) => setCurrentCode(cleanCode(e.target.value))} placeholder="123456" inputMode="numeric" />}
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={startSetup} disabled={busy}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : enabled ? "Remplacer la 2FA" : "Activer la 2FA"}</Button>
+              {enabled && <Button variant="danger" onClick={disable} disabled={busy}>Désactiver</Button>}
             </div>
           </div>
         )}
-
-        {!enabled && setupState.phase === "idle" && (
-          <Button onClick={startSetup}>Activer la 2FA</Button>
-        )}
-
-        {setupState.phase === "loading" && (
-          <div className="flex items-center gap-2 text-gray-600">
-            <Loader2 className="w-4 h-4 animate-spin" /> Génération du secret…
-          </div>
-        )}
-
+        {setupState.phase === "loading" && <div className="flex items-center gap-2 text-gray-600"><Loader2 className="w-4 h-4 animate-spin" />Génération locale du secret…</div>}
         {setupState.phase === "setup" && (
           <div className="space-y-4 border border-gray-200 rounded-lg p-4">
-            <p className="text-sm text-gray-700 font-medium">
-              1. Scannez ce QR code avec votre application d&apos;authentification :
-            </p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(setupState.otpauth)}`}
-              alt="QR code TOTP"
-              width={200}
-              height={200}
-              className="border border-gray-200 rounded-lg"
-            />
-            <p className="text-xs text-gray-500">
-              Ou saisissez le secret manuellement :{" "}
-              <code className="bg-gray-100 px-2 py-1 rounded font-mono text-[11px] break-all">
-                {setupState.secret}
-              </code>
-            </p>
-            <div className="pt-2 border-t border-gray-100">
-              <p className="text-sm text-gray-700 font-medium mb-2">
-                2. Entrez le code à 6 chiffres généré :
-              </p>
-              <div className="flex gap-2 items-end">
-                <Input
-                  label="Code TOTP"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                  placeholder="123456"
-                  aria-label="Code TOTP à 6 chiffres"
-                />
-                <Button onClick={verify} disabled={busy}>
-                  {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Vérifier"}
-                </Button>
-                <Button variant="ghost" onClick={() => setSetupState({ phase: "idle" })}>
-                  Annuler
-                </Button>
-              </div>
-            </div>
+            <p className="text-sm font-medium text-gray-800">1. Ajoutez ce secret dans votre application TOTP (saisie manuelle).</p>
+            <code className="block bg-gray-100 px-3 py-2 rounded font-mono text-sm break-all select-all">{setupState.secret}</code>
+            <p className="text-xs text-gray-600">2. Le facteur actuel reste actif jusqu&apos;à validation du nouveau code.</p>
+            <Input label="Nouveau code TOTP" value={newCode} onChange={(e) => setNewCode(cleanCode(e.target.value))} placeholder="123456" inputMode="numeric" />
+            <div className="flex gap-2"><Button onClick={verify} disabled={busy}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Vérifier et activer"}</Button><Button variant="ghost" onClick={() => { setSetupState({ phase: "idle" }); setNewCode(""); }}>Annuler</Button></div>
           </div>
         )}
-
-        {error && <p className="text-sm text-red-600">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
       </CardContent>
     </Card>
   );

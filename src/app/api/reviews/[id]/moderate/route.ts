@@ -5,7 +5,8 @@ import { reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
+import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
 
 const schema = z.object({
   status: z.enum(["approved", "pending", "hidden", "rejected"]),
@@ -65,22 +66,7 @@ export async function PATCH(
         .where(eq(reviews.id, id))
         .returning();
 
-      // Recalcul averageRating + totalReviews sur la property affectée.
-      // Ne compte que les avis `status='approved'`. COALESCE pour éviter
-      // NULL quand il ne reste plus aucun avis approuvé.
-      await tx.execute(sql`
-        UPDATE properties
-           SET average_rating = COALESCE(sub.avg_rating, 0),
-               total_reviews  = COALESCE(sub.total, 0)
-          FROM (
-            SELECT ROUND(AVG(overall_rating)::numeric, 1) AS avg_rating,
-                   COUNT(*)::int                          AS total
-              FROM reviews
-             WHERE property_id = ${existing.propertyId}
-               AND status      = 'approved'
-          ) AS sub
-         WHERE properties.id = ${existing.propertyId};
-      `);
+      await recomputePropertyReviewAggregate(tx, existing.propertyId);
 
       return { review: updated, previousStatus };
     });
