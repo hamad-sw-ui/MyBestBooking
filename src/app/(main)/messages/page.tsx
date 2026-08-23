@@ -213,7 +213,7 @@ export default async function MessagesPage({
             <div>
               <h3 className="font-semibold text-gray-900">Besoin d&apos;aide ?</h3>
               <p className="text-sm text-gray-600 mt-1">
-                Notre équipe support est disponible 24h/24 pour répondre à vos questions.
+                Notre équipe support répond par email aux demandes envoyées depuis ce lien.
               </p>
               <a
                 href="mailto:support@mybestbooking.com?subject=Aide%20MyBestBooking"

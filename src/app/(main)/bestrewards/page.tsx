@@ -91,7 +91,7 @@ export default async function BestRewardsPage() {
             {[
               { step: 1, title: "Inscrivez-vous", desc: "C'est gratuit et instantané. Vous êtes immédiatement Level 1 Explorer." },
               { step: 2, title: "Réservez", desc: "Chaque réservation confirmée compte. Plus vous voyagez, plus vous montez en niveau." },
-              { step: 3, title: "Profitez", desc: "Débloquez des réductions exclusives, petits-déjeuners offerts, et bien plus." },
+              { step: 3, title: "Profitez", desc: "Utilisez vos réductions BestRewards et, au niveau Ambassador, votre cashback wallet." },
             ].map((item) => (
               <div key={item.step} className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#1B3A6B] text-white flex items-center justify-center text-2xl font-bold">

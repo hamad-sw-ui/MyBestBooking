@@ -135,6 +135,7 @@ export class StripePaymentProvider implements PaymentProvider {
         if (!object.payment_intent) return null;
         return {
           kind: "refund",
+          providerEventId: evt.id ?? `${evt.type}:${object.id}:${object.status ?? "pending"}`,
           type: evt.type,
           refundId: object.id,
           paymentIntentId: object.payment_intent,
@@ -143,6 +144,7 @@ export class StripePaymentProvider implements PaymentProvider {
       }
       return {
         kind: "payment",
+        providerEventId: evt.id ?? `${evt.type}:${object.id}:${object.status ?? "pending"}`,
         type: evt.type,
         paymentIntentId: object.id,
         status: this.normalizeStatus(object.status ?? "pending"),

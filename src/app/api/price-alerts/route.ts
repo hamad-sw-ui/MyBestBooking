@@ -9,7 +9,11 @@ const schema = z.object({
   propertyId: z.string().uuid(),
   maxPrice: z.number().positive(),
   currency: z.string().length(3).optional(),
-});
+  checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  numAdults: z.number().int().min(1).optional(),
+  numChildren: z.number().int().min(0).optional(),
+}).refine((data) => !data.checkIn || !data.checkOut || data.checkOut > data.checkIn, { message: "La date de départ doit être postérieure à l'arrivée", path: ["checkOut"] });
 
 /**
  * GET /api/price-alerts (T-026) — liste des alertes de l'user courant.
@@ -40,12 +44,20 @@ export async function POST(request: NextRequest) {
         propertyId: data.propertyId,
         maxPrice: String(data.maxPrice),
         currency: data.currency ?? "EUR",
+        checkIn: data.checkIn ?? null,
+        checkOut: data.checkOut ?? null,
+        numAdults: data.numAdults ?? null,
+        numChildren: data.numChildren ?? null,
       })
       .onConflictDoUpdate({
         target: [priceAlerts.userId, priceAlerts.propertyId],
         set: {
           maxPrice: String(data.maxPrice),
           currency: data.currency ?? "EUR",
+          checkIn: data.checkIn ?? null,
+          checkOut: data.checkOut ?? null,
+          numAdults: data.numAdults ?? null,
+          numChildren: data.numChildren ?? null,
           active: true,
         },
       })

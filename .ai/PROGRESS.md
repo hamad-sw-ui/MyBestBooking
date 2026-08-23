@@ -1925,3 +1925,20 @@ Ajouter la couche gouvernance manquante — devenu la Session 2 ci-dessus.
    temporaire sans snapshot/cleanup.
 4. **Amélioration proposée** : worker outbox et monitoring provider multi-instance.
 5. **Règle permanente** : aucune nouvelle règle, le workflow C est suffisant.
+
+---
+
+## 2026-08-23 — T-106 Résilience paiement et opérations (C) — CORRIGÉ (VALIDÉ)
+
+- 🔍 expiration booking pending, webhook inbox, outbox lease, attachment transactionnelle,
+  quote annulation et diagnostics provider codifiés.
+- 🧪 215/215 DB+serveur ; 🔨 typecheck/build/lint 0 erreur.
+- ▶️ migration 0012, webhook précoce, expiration pending, smoke 91/91.
+
+### Rétrospective §17
+
+1. **Bien fonctionné** : penser aux crash windows a révélé les états inbox/lease.
+2. **Ralenti** : chaînes DB/provider plus longues à tester localement.
+3. **Erreur évitée** : ack webhook sans persistance et stock bloque par pending.
+4. **Amélioration proposée** : idempotency key fournisseur et worker dédié.
+5. **Règle permanente** : aucune nouvelle règle.

@@ -4,7 +4,8 @@ import { db } from "@/db";
 import { conversations, messages, properties, uploadObjects, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { and, eq, sql } from "drizzle-orm";
-import { getMailer, templates } from "@/lib/mail";
+import { templates } from "@/lib/mail";
+import { enqueueEmail } from "@/lib/email-outbox";
 
 const schema = z.object({
   conversationId: z.string().uuid(),
@@ -73,28 +74,31 @@ export async function POST(request: NextRequest) {
     if (!ok) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
     const senderType = ok.isGuest ? "user" : "host";
-    if (data.attachmentKey) {
-      if (!data.attachmentKey.startsWith(`uploads/${user.id.slice(0, 8)}-`)) {
-        return NextResponse.json({ error: "Pièce jointe non autorisée" }, { status: 403 });
-      }
-      const [upload] = await db.select().from(uploadObjects).where(and(eq(uploadObjects.key, data.attachmentKey), eq(uploadObjects.ownerId, user.id)));
-      if (!upload || upload.attachedAt) return NextResponse.json({ error: "Pièce jointe introuvable ou déjà utilisée" }, { status: 400 });
+    if (data.attachmentKey && !data.attachmentKey.startsWith(`uploads/${user.id.slice(0, 8)}-`)) {
+      return NextResponse.json({ error: "Pièce jointe non autorisée" }, { status: 403 });
     }
 
-    const [msg] = await db
-      .insert(messages)
-      .values({
-        conversationId: data.conversationId,
-        senderId: user.id,
-        senderType,
-        content: data.content,
-        attachmentKey: data.attachmentKey ?? null,
-        attachmentMimeType: data.attachmentMimeType ?? null,
-      })
-      .returning();
-    if (data.attachmentKey) {
-      await db.update(uploadObjects).set({ attachedAt: new Date() }).where(eq(uploadObjects.key, data.attachmentKey));
-    }
+    const msg = await db.transaction(async (tx) => {
+      if (data.attachmentKey) {
+        const [upload] = await tx.select().from(uploadObjects).where(and(eq(uploadObjects.key, data.attachmentKey), eq(uploadObjects.ownerId, user.id))).for("update");
+        if (!upload || upload.attachedAt) throw new Error("ATTACHMENT_UNAVAILABLE");
+      }
+      const [created] = await tx
+        .insert(messages)
+        .values({
+          conversationId: data.conversationId,
+          senderId: user.id,
+          senderType,
+          content: data.content,
+          attachmentKey: data.attachmentKey ?? null,
+          attachmentMimeType: data.attachmentMimeType ?? null,
+        })
+        .returning();
+      if (data.attachmentKey) {
+        await tx.update(uploadObjects).set({ attachedAt: new Date(), messageId: created.id }).where(eq(uploadObjects.key, data.attachmentKey));
+      }
+      return created;
+    });
 
     // Incrémente unread côté destinataire, met à jour lastMessageAt.
     await db
@@ -132,7 +136,7 @@ export async function POST(request: NextRequest) {
               firstName: recipient.firstName ?? "",
               senderName,
             });
-            await (await getMailer()).send({ to: recipient.email, ...mail });
+            await enqueueEmail({ eventKey: `message:${msg.id}:${recipientId}`, to: recipient.email, ...mail });
           }
         }
       }
@@ -142,6 +146,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: msg }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "ATTACHMENT_UNAVAILABLE") {
+      return NextResponse.json({ error: "Pièce jointe introuvable ou déjà utilisée" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }

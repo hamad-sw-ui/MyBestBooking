@@ -56,7 +56,7 @@ export default function ReviewPage() {
               <Star className="w-5 h-5 text-[#F5A623]" />
               Partager votre expérience
             </CardTitle>
-            <p className="text-sm text-gray-600">Votre avis sera publié après vérification de votre réservation.</p>
+            <p className="text-sm text-gray-600">Votre séjour est déjà vérifié : votre avis sera publié immédiatement après envoi.</p>
           </CardHeader>
           <CardContent>
             <form onSubmit={submitReview} className="space-y-5">

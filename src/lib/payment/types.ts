@@ -16,12 +16,14 @@ export interface CreateIntentParams {
 export type WebhookEvent =
   | {
       kind: "payment";
+      providerEventId: string;
       type: string;
       paymentIntentId: string;
       status: PaymentIntent["status"];
     }
   | {
       kind: "refund";
+      providerEventId: string;
       type: string;
       refundId: string;
       paymentIntentId: string;

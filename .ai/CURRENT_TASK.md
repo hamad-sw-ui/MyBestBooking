@@ -1,26 +1,21 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Corriger les pages, promesses et actions restantes identifiées par l’audit profond.
-**ID** : T-105
-**Niveau** : **C** — outbox, votes DB, uploads, alertes, recherche, migrations.
+**Tâche :** Remédier aux séquences critiques révélées par l’audit extrême.
+**ID** : T-106
+**Niveau** : **C** — paiement pending, webhook inbox, outbox lease, uploads et migrations.
 **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Livré
 
-- aide interactive avec articles et recherche ; garantie prix retirée ; politique
-  annulation contextualisée ;
-- outbox email persistante/retryable, votes utiles DB, cleanup upload cron ;
-- rate plan archivable, sélection/snapshot booking ;
-- recherche enrichie/paginée, export CSV sécurisé, provider test historisé ;
-- promesses destinations et BestRewards réalignées sur le réel.
+- expiration pending, restauration promo/wallet, inbox webhook idempotente ;
+- outbox lease/retry, notifications message/alertes dans outbox ;
+- upload transactionnel, suppression pending contrôlée ;
+- quote annulation, remboursement visible, textes avis/support/perks cohérents ;
+- alert context API, recherche et diagnostics provider durcis.
 
 ## Preuves
 
-- 🔨 typecheck/build, lint 0 erreur ;
-- 🧪 **215/215** DB + serveur ;
-- ▶️ migration 0011, outbox sent, votes 200/429, cleanup, rate plan, CSV ;
-- ▶️ smoke **91/91**, ai:check 18 OK / 0 fail.
-
-## Limites
-
-Appels fournisseurs réels et Chromium Playwright restent externes au sandbox.
+- 🔨 typecheck/build/lint ;
+- 🧪 215/215 DB+serveur ;
+- ▶️ migration 0012, expiration, inbox précoce, CSV, smoke 91/91 ;
+- 🔨 ai:check 18 OK, 0 fail.

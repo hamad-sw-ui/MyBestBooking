@@ -94,6 +94,7 @@ export const uploadObjects = pgTable("upload_objects", {
   ownerId: uuid("owner_id").references(() => users.id).notNull(),
   mimeType: varchar("mime_type", { length: 100 }).notNull(),
   size: integer("size").notNull(),
+  messageId: uuid("message_id"),
   attachedAt: timestamp("attached_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -110,10 +111,26 @@ export const emailOutbox = pgTable("email_outbox", {
   text: text("text").notNull(),
   status: varchar("status", { length: 20 }).default("pending").notNull(),
   attempts: integer("attempts").default(0).notNull(),
+  claimedAt: timestamp("claimed_at"),
   sentAt: timestamp("sent_at"),
+  failedAt: timestamp("failed_at"),
   lastError: text("last_error"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ═══════════════════════════════════════════════
+// PAYMENT_EVENT_INBOX (T-106) — webhooks idempotents, reçus avant/après booking.
+// ═══════════════════════════════════════════════
+export const paymentEventInbox = pgTable("payment_event_inbox", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  providerEventId: varchar("provider_event_id", { length: 255 }).unique().notNull(),
+  type: varchar("type", { length: 100 }).notNull(),
+  paymentIntentId: varchar("payment_intent_id", { length: 255 }).notNull(),
+  refundId: varchar("refund_id", { length: 255 }),
+  status: varchar("status", { length: 32 }).notNull(),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
 // ═══════════════════════════════════════════════
@@ -289,6 +306,9 @@ export const bookings = pgTable("bookings", {
   paymentStatus: varchar("payment_status", { length: 20 }).default("pending"),
   paymentMethod: varchar("payment_method", { length: 20 }),
   paymentIntentId: varchar("payment_intent_id", { length: 255 }),
+  paymentExpiresAt: timestamp("payment_expires_at"),
+  promotionId: uuid("promotion_id"),
+  walletCreditsUsed: decimal("wallet_credits_used", { precision: 10, scale: 2 }).default("0"),
   confirmationEmailSentAt: timestamp("confirmation_email_sent_at"),
   refundProviderId: varchar("refund_provider_id", { length: 255 }),
   // Snapshot du rate plan choisi : les modifications ultérieures d'un plan
@@ -498,6 +518,7 @@ export type NewPriceAlert = typeof priceAlerts.$inferInsert;
 export type ReviewVote = typeof reviewVotes.$inferSelect;
 export type UploadObject = typeof uploadObjects.$inferSelect;
 export type EmailOutbox = typeof emailOutbox.$inferSelect;
+export type PaymentEventInbox = typeof paymentEventInbox.$inferSelect;
 export type ProviderTestLog = typeof providerTestLogs.$inferSelect;
 export type ProviderCredential = typeof providerCredentials.$inferSelect;
 export type NewProviderCredential = typeof providerCredentials.$inferInsert;

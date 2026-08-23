@@ -32,25 +32,33 @@ export function BookingRowActions({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
-  function cancel() {
-    if (!confirm("Annuler cette réservation ? Des frais peuvent s'appliquer selon la politique.")) return;
+  async function cancel() {
     setError(null);
-    startTransition(async () => {
-      try {
-        const r = await fetch(`/api/bookings/${bookingId}`, {
-          method: "PUT",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ status: "cancelled", cancellationReason: "Annulation demandée par le voyageur" }),
-        });
-        if (!r.ok) {
-          const j = await r.json().catch(() => ({}));
-          throw new Error(j.error ?? "Erreur");
+    try {
+      const quoteResponse = await fetch(`/api/bookings/${bookingId}/cancellation`, { cache: "no-store" });
+      const quote = await quoteResponse.json().catch(() => ({}));
+      if (!quoteResponse.ok) throw new Error(quote.error ?? "Impossible de calculer l'annulation");
+      const message = `Annuler cette réservation ?\n\nFrais estimés : ${quote.cancellationFee} ${quote.currency}\nRemboursement estimé : ${quote.estimatedRefund} ${quote.currency}`;
+      if (!confirm(message)) return;
+      startTransition(async () => {
+        try {
+          const r = await fetch(`/api/bookings/${bookingId}`, {
+            method: "PUT",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ status: "cancelled", cancellationReason: "Annulation demandée par le voyageur" }),
+          });
+          if (!r.ok) {
+            const j = await r.json().catch(() => ({}));
+            throw new Error(j.error ?? "Erreur");
+          }
+          router.refresh();
+        } catch (e) {
+          setError(e instanceof Error ? e.message : "Erreur");
         }
-        router.refresh();
-      } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur");
-      }
-    });
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    }
   }
 
   async function contactHost() {

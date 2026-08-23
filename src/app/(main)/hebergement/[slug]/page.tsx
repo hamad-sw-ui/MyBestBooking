@@ -463,6 +463,10 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                   propertyId={property.id}
                   currency={cheapestRoom?.currency ?? "EUR"}
                   defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
+                  checkIn={query.checkIn}
+                  checkOut={query.checkOut}
+                  numAdults={Number(query.adults ?? "") || undefined}
+                  numChildren={Number(query.children ?? "") || undefined}
                 />
               </div>
 

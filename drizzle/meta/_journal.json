@@ -85,6 +85,13 @@
       "when": 1787494215926,
       "tag": "0011_operational-reliability",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1787496488067,
+      "tag": "0012_payment-resilience",
+      "breakpoints": true
     }
   ]
 }

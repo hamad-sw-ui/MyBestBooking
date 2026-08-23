@@ -331,6 +331,9 @@ export async function POST(request: NextRequest) {
             paymentStatus: intent.status === "succeeded" ? "paid" : "pending",
             paymentMethod: provider.kind === "stripe" ? "stripe" : "mock_card",
             paymentIntentId: intent.id,
+            paymentExpiresAt: intent.status === "succeeded" ? null : new Date(Date.now() + 15 * 60 * 1000),
+            promotionId: appliedPromoId,
+            walletCreditsUsed: walletUsed.toFixed(2),
             ratePlanId: selectedRatePlan?.id ?? null,
             ratePlanName: selectedRatePlan?.name ?? null,
             ratePlanSnapshot: selectedRatePlan ? {

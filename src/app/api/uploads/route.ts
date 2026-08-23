@@ -23,7 +23,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   }
   const key = new URL(request.url).searchParams.get("key");
-  if (!key || !/^[A-Za-z0-9._-]+$/.test(key)) {
+  if (!key || !/^uploads\/[A-Za-z0-9._-]+$/.test(key)) {
     return NextResponse.json({ error: "Key invalide" }, { status: 400 });
   }
   // Vérif ownership : les nouveaux uploads privés sont sous uploads/<id8>-.
@@ -31,6 +31,9 @@ export async function DELETE(request: NextRequest) {
   if (user.role !== "admin" && !key.startsWith(`uploads/${ownedPrefix}-`)) {
     return NextResponse.json({ error: "Non autorisé sur ce fichier" }, { status: 403 });
   }
+  const [upload] = await db.select().from(uploadObjects).where(eq(uploadObjects.key, key));
+  if (!upload) return NextResponse.json({ error: "Fichier introuvable" }, { status: 404 });
+  if (upload.attachedAt) return NextResponse.json({ error: "Cette pièce jointe est déjà liée à un message" }, { status: 409 });
   const ok = await (await getUploader()).remove(key);
   if (ok) await db.delete(uploadObjects).where(eq(uploadObjects.key, key));
   return NextResponse.json({ removed: ok });

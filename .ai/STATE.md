@@ -4,9 +4,9 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a02dbb-mybestbooking`
-- **HEAD validé T-104** : `54dcbb2`
+- **HEAD validé T-105** : `7534186`
 - **Version Framework** : AI-DOS 3.0.0
-- **Dernière tâche validée** : T-105 — pages, promesses et actions opérationnelles
+- **Dernière tâche validée** : T-106 — résilience paiement, inbox et outbox
 
 ## 🛠️ État technique T-102
 

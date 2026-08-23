@@ -43,6 +43,7 @@ export class MockPaymentProvider implements PaymentProvider {
       if (!evt.data?.object?.id) return null;
       return {
         kind: "payment",
+        providerEventId: evt.id ?? `${evt.type ?? "payment_intent.succeeded"}:${evt.data.object.id}:${evt.data.object.status ?? "succeeded"}`,
         type: evt.type ?? "payment_intent.succeeded",
         paymentIntentId: evt.data.object.id,
         status: evt.data.object.status ?? "succeeded",

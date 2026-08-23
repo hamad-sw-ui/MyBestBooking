@@ -206,6 +206,11 @@ export default async function MyBookingsPage() {
                             </div>
                           </div>
                           
+                          {booking.status === "cancelled" && (
+                            <div className="mt-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-900">
+                              Frais : {formatPrice(booking.cancellationFee ?? "0", booking.currency)} · Remboursement : {formatPrice(booking.refundAmount ?? "0", booking.currency)} ({booking.refundStatus === "refunded" ? "effectué" : booking.refundStatus === "pending" ? "en cours" : "non requis"})
+                            </div>
+                          )}
                           {booking.status === "completed" && (
                             <div className="mt-3">
                               <Link
