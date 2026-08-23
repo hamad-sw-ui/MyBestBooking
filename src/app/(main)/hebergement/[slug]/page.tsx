@@ -33,11 +33,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PriceAlertButton } from "@/components/price-alert-button";
+import { PropertyHeaderActions } from "@/components/property-header-actions";
 import { ReviewHelpfulButton } from "@/components/review-helpful-button";
 import { PropertyBookingCard } from "@/components/property-booking-card";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import {
-  Star, MapPin, Heart, Share2, Check, X, Wifi, Car, Utensils, Waves,
+  Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
   Dumbbell, Wind, Users, Calendar, Shield, MessageCircle, Award
 } from "lucide-react";
 import Link from "next/link";
@@ -220,14 +221,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <Heart className="w-5 h-5 text-gray-500" />
-            </button>
-            <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <Share2 className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
+          <PropertyHeaderActions propertyId={property.id} propertyName={property.name} />
         </div>
 
         {/* Image Gallery */}
