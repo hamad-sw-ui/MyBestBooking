@@ -41,6 +41,8 @@ export interface RefundResult {
 export interface PaymentProvider {
   readonly kind: "mock" | "stripe";
   create(params: CreateIntentParams): Promise<PaymentIntent>;
+  /** Retrouve l’intent existant pour une reprise propriétaire du checkout. */
+  retrieve(paymentIntentId: string): Promise<PaymentIntent | null>;
   /** Annule un intent encore en attente afin qu'il ne soit pas capturé plus tard. */
   cancel(paymentIntentId: string): Promise<"succeeded" | "pending" | "failed">;
   /**

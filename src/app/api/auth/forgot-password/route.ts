@@ -4,8 +4,9 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { rateLimit } from "@/lib/rate-limit";
-import { issueToken } from "@/lib/tokens";
-import { getMailer, templates } from "@/lib/mail";
+import { hashToken, issueToken } from "@/lib/tokens";
+import { templates } from "@/lib/mail";
+import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 
 const schema = z.object({ email: z.string().email() });
 
@@ -45,7 +46,9 @@ export async function POST(request: NextRequest) {
         const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const url = `${base}/reinitialiser?token=${encodeURIComponent(clear)}`;
         const mail = await templates.passwordReset({ firstName: user.firstName, url });
-        await (await getMailer()).send({ to: user.email, ...mail });
+        const eventKey = `password-reset:${user.id}:${hashToken(clear).slice(0, 24)}`;
+        await enqueueEmail({ eventKey, to: user.email, ...mail });
+        await deliverEmail(eventKey);
       } catch (e) {
         console.error("[forgot-password] mail send failed", e);
         // On ne le révèle pas au client.

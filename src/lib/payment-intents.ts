@@ -114,3 +114,24 @@ export async function recoverPendingPaymentIntents(limit = 20): Promise<{ recove
   }
   return { recovered, failed };
 }
+
+/**
+ * Reprend un checkout déjà créé sans générer une seconde réservation. Pour un
+ * intent déjà rattaché, le provider redonne le client secret propriétaire; pour
+ * un hold sans intent, la création garde la clé idempotente booking.
+ */
+export async function resumePaymentIntentForBooking(bookingId: string): Promise<PaymentIntentSetup | null> {
+  const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+  if (!booking || booking.status !== "pending" || booking.paymentStatus !== "pending" || !booking.paymentExpiresAt || booking.paymentExpiresAt <= new Date()) return null;
+  if (!booking.paymentIntentId) return createPaymentIntentForBooking(bookingId);
+
+  const provider = await getPaymentProvider();
+  const intent = await provider.retrieve(booking.paymentIntentId);
+  if (!intent) return createPaymentIntentForBooking(bookingId);
+  return {
+    booking,
+    provider: provider.kind,
+    clientSecret: intent.clientSecret,
+    status: intent.status === "succeeded" ? "succeeded" : "pending",
+  };
+}

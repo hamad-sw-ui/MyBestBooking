@@ -21,6 +21,12 @@ describe("MockPaymentProvider (T-020, §13.5)", () => {
     expect(r.clientSecret).toBeNull();
   });
 
+  it("retrieve retrouve le même intent mock pour une reprise", async () => {
+    const p = new MockPaymentProvider();
+    const created = await p.create({ amount: 1000, currency: "EUR", bookingReference: "MBB-RESUME", guestEmail: "resume@example.test", idempotencyKey: "resume-key" });
+    await expect(p.retrieve(created.id)).resolves.toMatchObject({ id: created.id, amount: 1000 });
+  });
+
   it("cancel annule un intent mock en attente", async () => {
     const p = new MockPaymentProvider();
     await expect(p.cancel("pi_mock_any")).resolves.toBe("succeeded");
@@ -82,6 +88,17 @@ describe("StripePaymentProvider — verifyWebhook (§13.5)", () => {
   it("signature invalide → null", async () => {
     const p = JSON.stringify({ type: "x", data: { object: { id: "y" } } });
     expect(await provider.verifyWebhook(p, "t=1,v1=deadbeef")).toBeNull();
+  });
+
+  it("accepte une signature v1 valide parmi plusieurs pendant une rotation", async () => {
+    const payload = JSON.stringify({ type: "payment_intent.succeeded", data: { object: { id: "pi_rotate", status: "succeeded" } } });
+    const valid = sign(payload);
+    expect(await provider.verifyWebhook(payload, `${valid},v1=${"0".repeat(64)}`)).toMatchObject({ paymentIntentId: "pi_rotate" });
+  });
+
+  it("ignore les événements Stripe hors contrat payment/refund", async () => {
+    const payload = JSON.stringify({ type: "charge.dispute.created", data: { object: { id: "dp_1", status: "open" } } });
+    expect(await provider.verifyWebhook(payload, sign(payload))).toBeNull();
   });
 
   it("timestamp trop vieux (> 5min) → null", async () => {

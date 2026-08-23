@@ -69,6 +69,7 @@ function ReservationPageInner() {
   const [ratePlans, setRatePlans] = useState<RatePlanData[]>([]);
   const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string; paymentPending?: boolean; mockPayment?: boolean } | null>(null);
   const [pendingStripePayment, setPendingStripePayment] = useState<{ bookingId: string; bookingReference: string; total: string; clientSecret: string } | null>(null);
+  const [resumeBookingId, setResumeBookingId] = useState<string | null>(null);
   const [promo, setPromo] = useState<{ code: string; discount: number; finalTotal: number } | null>(null);
   // T-030 : wallet + guest booking
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -197,7 +198,16 @@ function ReservationPageInner() {
 
       const data = await response.json();
       if (!response.ok) {
-        setError(data.error || "Erreur lors de la réservation");
+        // Le hold est durable : ne pas demander au voyageur de recréer une
+        // réservation qui occupe déjà le stock. Un compte connecté peut ouvrir
+        // le même intent; un invité reçoit le lien de claim dans son email.
+        if (response.status === 503 && data.booking?.id) {
+          setConfirmation({ bookingReference: data.booking.bookingReference, total: data.booking.total, paymentPending: true });
+          setResumeBookingId(data.booking.id);
+          setStep(4);
+        } else {
+          setError(data.error || "Erreur lors de la réservation");
+        }
         setSubmitting(false);
         return;
       }
@@ -224,6 +234,26 @@ function ReservationPageInner() {
     }
     setSubmitting(false);
   };
+
+  async function resumePayment() {
+    if (!resumeBookingId) return;
+    setSubmitting(true); setError("");
+    try {
+      const response = await fetch(`/api/bookings/${resumeBookingId}/payment`, { method: "POST", headers: { "content-type": "application/json" } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Impossible de reprendre le paiement");
+      if (data.payment?.requiresConfirmation && data.payment.clientSecret) {
+        setPendingStripePayment({ bookingId: data.booking.id, bookingReference: data.booking.bookingReference, total: data.booking.total, clientSecret: data.payment.clientSecret });
+        setResumeBookingId(null); setStep(3); return;
+      }
+      if (data.booking?.status === "confirmed") {
+        setConfirmation({ bookingReference: data.booking.bookingReference, total: data.booking.total });
+        setResumeBookingId(null); return;
+      }
+      throw new Error("Le paiement reste en préparation. Réessayez dans quelques instants.");
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); }
+    finally { setSubmitting(false); }
+  }
 
   async function waitForStripeConfirmation() {
     if (!pendingStripePayment) return;
@@ -556,6 +586,12 @@ function ReservationPageInner() {
                     <p className="text-xs text-amber-800 mb-6 p-3 rounded-lg bg-amber-50">Mode démonstration : aucun débit réel n&apos;a été effectué.</p>
                   )}
 
+                  {resumeBookingId && (
+                    <div className="mb-5">
+                      {isAuthed ? <Button onClick={resumePayment} loading={submitting}>Reprendre le même paiement</Button> : <p className="text-sm text-amber-800 bg-amber-50 p-3 rounded-lg">Activez votre accès depuis l&apos;email envoyé, puis reconnectez-vous pour reprendre ce paiement sans recréer la réservation.</p>}
+                      {error && <p role="alert" className="mt-2 text-sm text-red-600">{error}</p>}
+                    </div>
+                  )}
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Link href="/mes-reservations">
                       <Button>Voir mes réservations</Button>

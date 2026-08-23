@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { priceAlerts, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, desc } from "drizzle-orm";
+import { and, eq, desc } from "drizzle-orm";
 
 const schema = z.object({
   propertyId: z.string().uuid(),
@@ -40,6 +40,16 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     const data = schema.parse(await request.json());
+    const [existing] = await db.select().from(priceAlerts).where(and(eq(priceAlerts.userId, user.id), eq(priceAlerts.propertyId, data.propertyId))).limit(1);
+    const date = (value: string | Date | null | undefined) => value ? (typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10)) : null;
+    const contextChanged = Boolean(existing) && (
+      String(existing!.maxPrice) !== String(data.maxPrice)
+      || (existing!.currency ?? "EUR") !== (data.currency ?? "EUR")
+      || date(existing!.checkIn) !== (data.checkIn ?? null)
+      || date(existing!.checkOut) !== (data.checkOut ?? null)
+      || existing!.numAdults !== (data.numAdults ?? null)
+      || existing!.numChildren !== (data.numChildren ?? null)
+    );
     const [alert] = await db
       .insert(priceAlerts)
       .values({
@@ -62,6 +72,7 @@ export async function POST(request: NextRequest) {
           numAdults: data.numAdults ?? null,
           numChildren: data.numChildren ?? null,
           active: true,
+          ...(contextChanged ? { lastNotifiedAt: null, lastNotifiedPrice: null } : {}),
         },
       })
       .returning();

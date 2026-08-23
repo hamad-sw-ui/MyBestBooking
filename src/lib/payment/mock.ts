@@ -14,6 +14,7 @@ import type {
 export class MockPaymentProvider implements PaymentProvider {
   readonly kind = "mock" as const;
   private static intentsByKey = new Map<string, PaymentIntent>();
+  private static intentsById = new Map<string, PaymentIntent>();
   private static refundsByKey = new Map<string, RefundResult>();
 
   async create(params: CreateIntentParams): Promise<PaymentIntent> {
@@ -29,7 +30,12 @@ export class MockPaymentProvider implements PaymentProvider {
       currency: params.currency,
     };
     if (params.idempotencyKey) MockPaymentProvider.intentsByKey.set(params.idempotencyKey, intent);
+    MockPaymentProvider.intentsById.set(intent.id, intent);
     return intent;
+  }
+
+  async retrieve(paymentIntentId: string): Promise<PaymentIntent | null> {
+    return MockPaymentProvider.intentsById.get(paymentIntentId) ?? null;
   }
 
   async cancel(_paymentIntentId: string): Promise<"succeeded"> {

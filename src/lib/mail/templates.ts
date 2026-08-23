@@ -83,6 +83,18 @@ export const templates = {
     return { subject, html, text: stripHtml(html) };
   },
 
+  /** Claim explicite du profil créé par un checkout invité. */
+  async guestAccountClaim({ firstName, url, bookingReference }: { firstName: string; url: string; bookingReference: string }) {
+    const subject = `Accédez à votre réservation ${bookingReference}`;
+    const html = layout(`
+      <p>Bonjour ${escapeHtml(firstName)},</p>
+      <p>Votre réservation <strong>${escapeHtml(bookingReference)}</strong> est enregistrée. Créez votre mot de passe pour accéder à vos réservations et suivre votre séjour.</p>
+      <p style="margin:24px 0;">${button(url, "Activer mon accès")}</p>
+      <p style="font-size:13px;color:#666;">Ce lien est personnel et expire dans 24 heures.</p>
+    `);
+    return { subject, html, text: stripHtml(html) };
+  },
+
   async bookingConfirmation({
     firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency,
   }: {

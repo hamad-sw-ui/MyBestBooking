@@ -12,9 +12,12 @@ import {
   MaintenanceError,
   maintenanceResponse,
 } from "@/lib/maintenance";
-import { rateLimit } from "@/lib/rate-limit";
+import { ipFromRequest, rateLimit } from "@/lib/rate-limit";
 import { evaluateBookingRules } from "@/lib/booking-rules";
 import { createPaymentIntentForBooking } from "@/lib/payment-intents";
+import { issueToken } from "@/lib/tokens";
+import { templates } from "@/lib/mail";
+import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 
 const bookingSchema = z
   .object({
@@ -98,62 +101,38 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    let user = await getCurrentUser();
+    const user = await getCurrentUser();
     const data = bookingSchema.parse(await request.json());
+    const isGuestBooking = !user && data.isGuestBooking === true;
 
-    if (!user && !data.isGuestBooking) {
+    if (!user && !isGuestBooking) {
       return NextResponse.json({ error: "Veuillez vous connecter pour réserver" }, { status: 401 });
     }
 
-    if (!user && data.isGuestBooking) {
-      const [existing] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, data.guestEmail.toLowerCase()))
-        .limit(1);
-      if (existing) {
-        return NextResponse.json({ error: "Connectez-vous pour réserver avec cet email" }, { status: 409 });
-      }
-      const [created] = await db
-        .insert(users)
-        .values({
-          email: data.guestEmail.toLowerCase(),
-          firstName: data.guestFirstName,
-          lastName: data.guestLastName,
-          phone: data.guestPhone ?? null,
-          country: data.guestCountry ?? null,
-          role: "customer",
-          emailVerified: false,
-          passwordHash: null,
-        })
-        .returning();
-      user = created;
-    }
-    if (!user) return NextResponse.json({ error: "État inattendu" }, { status: 500 });
-
     await assertNotMaintenance(user);
     const today = new Date().toISOString().slice(0, 10);
-    if (data.checkIn < today) {
-      return NextResponse.json({ error: "La date d'arrivée ne peut pas être dans le passé" }, { status: 400 });
-    }
-    const rl = rateLimit(`bookings:user:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 });
-    if (!rl.ok) {
-      return NextResponse.json(
-        { error: "Trop de tentatives, réessayez plus tard" },
-        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
-      );
-    }
+    if (data.checkIn < today) return NextResponse.json({ error: "La date d'arrivée ne peut pas être dans le passé" }, { status: 400 });
+
+    // Un invité n’a pas encore de userId : limiter par IP avant toute écriture.
+    const rl = user
+      ? rateLimit(`bookings:user:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 })
+      : rateLimit(`bookings:guest-ip:${ipFromRequest(request)}`, { limit: 10, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return NextResponse.json({ error: "Trop de tentatives, réessayez plus tard" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
     const [property] = await db.select().from(properties).where(eq(properties.id, data.propertyId));
-    if (!property || property.status !== "active") {
-      return NextResponse.json({ error: "Hébergement non disponible" }, { status: 400 });
-    }
-    const [room] = await db
-      .select()
-      .from(rooms)
-      .where(and(eq(rooms.id, data.roomId), eq(rooms.propertyId, data.propertyId)));
-    if (!room || !room.isActive) {
-      return NextResponse.json({ error: "Chambre non disponible" }, { status: 400 });
+    if (!property || property.status !== "active") return NextResponse.json({ error: "Hébergement non disponible" }, { status: 400 });
+    const [room] = await db.select().from(rooms).where(and(eq(rooms.id, data.roomId), eq(rooms.propertyId, data.propertyId)));
+    if (!room || !room.isActive) return NextResponse.json({ error: "Chambre non disponible" }, { status: 400 });
+
+    if (isGuestBooking) {
+      const [existing] = await db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.email, data.guestEmail.toLowerCase())).limit(1);
+      if (existing) {
+        return NextResponse.json({
+          error: existing.passwordHash
+            ? "Connectez-vous pour réserver avec cet email"
+            : "Activez d'abord votre accès depuis l'email de confirmation, puis connectez-vous",
+        }, { status: 409 });
+      }
     }
 
     const [billing, bestrewardsSettings] = await Promise.all([
@@ -173,12 +152,12 @@ export async function POST(request: NextRequest) {
           .where(eq(rooms.id, data.roomId))
           .for("update");
 
-        const [lockedUser] = await tx
-          .select()
-          .from(users)
-          .where(eq(users.id, user.id))
-          .for("update");
-        if (!lockedUser) throw new BookingRuleError("Compte introuvable");
+        let lockedUser: typeof users.$inferSelect | null = null;
+        if (user) {
+          const [locked] = await tx.select().from(users).where(eq(users.id, user.id)).for("update");
+          if (!locked) throw new BookingRuleError("Compte introuvable");
+          lockedUser = locked;
+        }
 
         const availability = await tx
           .select({
@@ -259,7 +238,7 @@ export async function POST(request: NextRequest) {
           appliedPromoId = promo.id;
         }
 
-        const level = lockedUser.bestrewardsLevel ?? 1;
+        const level = lockedUser?.bestrewardsLevel ?? 1;
         let bestrewardsPercent = level >= 3
           ? bestrewardsSettings.discounts[2]
           : level >= 2
@@ -273,13 +252,29 @@ export async function POST(request: NextRequest) {
         }
 
         let walletUsed = 0;
-        if (data.useWalletCredits) {
+        if (data.useWalletCredits && lockedUser) {
           const wallet = Number(lockedUser.walletBalance ?? "0");
           if (wallet > 0) {
             walletUsed = Math.min(wallet, total);
             total = Math.max(0, total - walletUsed);
             discount += walletUsed;
           }
+        }
+
+        // Le profil invité n’est créé qu’après toutes les validations métier
+        // (stock, promo, taux, wallet). Une demande rejetée n’écrit aucun user.
+        if (!lockedUser) {
+          const [createdGuest] = await tx.insert(users).values({
+            email: data.guestEmail.toLowerCase(),
+            firstName: data.guestFirstName,
+            lastName: data.guestLastName,
+            phone: data.guestPhone ?? null,
+            country: data.guestCountry ?? null,
+            role: "customer",
+            emailVerified: false,
+            passwordHash: null,
+          }).returning();
+          lockedUser = createdGuest;
         }
 
         const commissionRate = Number(property.commissionRate || "15");
@@ -358,6 +353,25 @@ export async function POST(request: NextRequest) {
       throw error;
     }
 
+    if (isGuestBooking) {
+      try {
+        const { clear } = await issueToken(createdBooking.userId, "guest_claim");
+        const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+        const mail = await templates.guestAccountClaim({
+          firstName: createdBooking.guestFirstName,
+          bookingReference: createdBooking.bookingReference,
+          url: `${base}/activer-compte?token=${encodeURIComponent(clear)}`,
+        });
+        const eventKey = `guest-claim:${createdBooking.id}`;
+        await enqueueEmail({ eventKey, to: createdBooking.guestEmail, ...mail });
+        await deliverEmail(eventKey);
+      } catch (claimError) {
+        // Le booking reste valable; l’outbox ou le support peut reprendre le
+        // claim sans jamais exposer le token dans la réponse API.
+        console.error("[booking] guest claim email failed:", claimError);
+      }
+    }
+
     // Effet externe hors transaction. La référence booking est la clé
     // d’idempotence du PSP, et le cron reprend un intent non rattaché.
     let payment;
@@ -386,6 +400,7 @@ export async function POST(request: NextRequest) {
           clientSecret: payment.clientSecret,
           requiresConfirmation: payment.status !== "succeeded",
         },
+        ...(isGuestBooking ? { guestAccessPending: true } : {}),
       },
       { status: 201 },
     );

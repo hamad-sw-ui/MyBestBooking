@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -196,11 +197,13 @@ export function MessagesManager({ conversations }: Props) {
             {filtered.map(({ conversation, property, guest, booking }) => {
               const unread = (conversation.unreadByHost ?? 0) > 0;
               return (
-                <div
+                <Link
                   key={conversation.id}
-                  className={`flex items-center gap-4 p-4 hover:bg-gray-50 cursor-pointer ${
+                  href={`/dashboard/messages/${conversation.id}`}
+                  className={`flex items-center gap-4 p-4 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#1B3A6B] ${
                     unread ? "bg-blue-50/50" : ""
                   }`}
+                  aria-label={`Ouvrir la conversation avec ${guest?.firstName ?? "le voyageur"}`}
                 >
                   <div className="w-10 h-10 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white font-medium flex-shrink-0">
                     {guest?.firstName?.charAt(0) ?? "?"}
@@ -235,7 +238,7 @@ export function MessagesManager({ conversations }: Props) {
                         })}
                     </p>
                   </div>
-                </div>
+                </Link>
               );
             })}
           </div>
@@ -248,11 +251,10 @@ export function MessagesManager({ conversations }: Props) {
             <Clock className="w-5 h-5 text-green-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-green-900">Temps de réponse</h3>
+            <h3 className="font-semibold text-green-900">Répondre aux voyageurs</h3>
             <p className="text-sm text-green-700 mt-1">
-              Répondez rapidement à vos voyageurs ! Un temps de réponse
-              inférieur à 2 heures améliore votre score de fiche et votre
-              visibilité sur mybestbooking.
+              Ouvrez une conversation pour répondre. Aucun délai ni impact de
+              visibilité n&apos;est affiché tant qu&apos;il n&apos;est pas calculé par la plateforme.
             </p>
           </div>
         </div>

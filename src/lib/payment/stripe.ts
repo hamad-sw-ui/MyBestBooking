@@ -60,6 +60,22 @@ export class StripePaymentProvider implements PaymentProvider {
     };
   }
 
+  async retrieve(paymentIntentId: string): Promise<PaymentIntent | null> {
+    const res = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}`, {
+      headers: { Authorization: `Bearer ${this.secretKey}` },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Stripe retrieve failed: HTTP ${res.status}`);
+    const data = (await res.json()) as { id: string; client_secret?: string; status?: string; amount?: number; currency?: string };
+    return {
+      id: data.id,
+      clientSecret: data.client_secret ?? null,
+      status: this.normalizeStatus(data.status ?? "pending"),
+      amount: data.amount ?? 0,
+      currency: data.currency ?? "EUR",
+    };
+  }
+
   async cancel(paymentIntentId: string): Promise<"succeeded" | "pending" | "failed"> {
     const res = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}/cancel`, {
       method: "POST",
@@ -108,32 +124,27 @@ export class StripePaymentProvider implements PaymentProvider {
     signature: string | null,
   ): Promise<WebhookEvent | null> {
     if (!signature) return null;
-    // Stripe-Signature: t=1234567,v1=hex...
-    const parts = signature.split(",").reduce<Record<string, string>>((acc, p) => {
-      const [k, v] = p.split("=");
-      if (k && v) acc[k.trim()] = v.trim();
-      return acc;
-    }, {});
-    const timestamp = parts.t;
-    const providedSig = parts.v1;
-    if (!timestamp || !providedSig) return null;
-
-    // Vérif fenêtre 5 minutes
+    // Stripe peut signer avec plusieurs v1 pendant une rotation de secret.
+    const pieces = signature.split(",").map((part) => part.trim().split("=", 2));
+    const timestamp = pieces.find(([key]) => key === "t")?.[1];
+    const signatures = pieces.filter(([key]) => key === "v1").map(([, value]) => value).filter(Boolean) as string[];
+    if (!timestamp || !signatures.length) return null;
     const nowSec = Math.floor(Date.now() / 1000);
     if (Math.abs(nowSec - parseInt(timestamp, 10)) > 300) return null;
 
-    const expected = createHmac("sha256", this.webhookSecret)
-      .update(`${timestamp}.${payload}`)
-      .digest("hex");
-    const a = Buffer.from(providedSig, "hex");
-    const b = Buffer.from(expected, "hex");
-    if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+    const expected = createHmac("sha256", this.webhookSecret).update(`${timestamp}.${payload}`).digest("hex");
+    const expectedBuffer = Buffer.from(expected, "hex");
+    const valid = signatures.some((provided) => {
+      const candidate = Buffer.from(provided, "hex");
+      return candidate.length === expectedBuffer.length && timingSafeEqual(candidate, expectedBuffer);
+    });
+    if (!valid) return null;
 
     try {
       const evt = JSON.parse(payload);
       if (!evt.type || !evt.data?.object?.id) return null;
       const object = evt.data.object as { id: string; status?: string; payment_intent?: string };
-      if (evt.type.startsWith("refund.")) {
+      if (["refund.created", "refund.updated"].includes(evt.type)) {
         if (!object.payment_intent) return null;
         return {
           kind: "refund",
@@ -144,6 +155,7 @@ export class StripePaymentProvider implements PaymentProvider {
           status: object.status === "succeeded" ? "succeeded" : object.status === "failed" || object.status === "canceled" ? "failed" : "pending",
         };
       }
+      if (!["payment_intent.succeeded", "payment_intent.payment_failed", "payment_intent.canceled", "payment_intent.processing"].includes(evt.type)) return null;
       return {
         kind: "payment",
         providerEventId: evt.id ?? `${evt.type}:${object.id}:${object.status ?? "pending"}`,
@@ -155,4 +167,5 @@ export class StripePaymentProvider implements PaymentProvider {
       return null;
     }
   }
+
 }

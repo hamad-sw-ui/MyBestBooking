@@ -5,7 +5,8 @@ import { conversations, messages, properties, uploadObjects, users } from "@/db/
 import { getCurrentUser } from "@/lib/auth";
 import { and, eq, sql } from "drizzle-orm";
 import { templates } from "@/lib/mail";
-import { enqueueEmail } from "@/lib/email-outbox";
+import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   conversationId: z.string().uuid(),
@@ -70,6 +71,8 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const data = schema.parse(await request.json());
+    const rl = rateLimit(`messages:user:${user.id}`, { limit: 60, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return NextResponse.json({ error: "Trop de messages, réessayez plus tard" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
     const ok = await checkParticipant(user.id, data.conversationId);
     if (!ok) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
@@ -79,9 +82,12 @@ export async function POST(request: NextRequest) {
     }
 
     const msg = await db.transaction(async (tx) => {
+      let attachmentMimeType: string | null = null;
       if (data.attachmentKey) {
         const [upload] = await tx.select().from(uploadObjects).where(and(eq(uploadObjects.key, data.attachmentKey), eq(uploadObjects.ownerId, user.id))).for("update");
         if (!upload || upload.attachedAt) throw new Error("ATTACHMENT_UNAVAILABLE");
+        // Le MIME est une propriété de l’objet uploadé, jamais du navigateur.
+        attachmentMimeType = upload.mimeType;
       }
       const [created] = await tx
         .insert(messages)
@@ -91,7 +97,7 @@ export async function POST(request: NextRequest) {
           senderType,
           content: data.content,
           attachmentKey: data.attachmentKey ?? null,
-          attachmentMimeType: data.attachmentMimeType ?? null,
+          attachmentMimeType,
         })
         .returning();
       if (data.attachmentKey) {
@@ -136,7 +142,9 @@ export async function POST(request: NextRequest) {
               firstName: recipient.firstName ?? "",
               senderName,
             });
-            await enqueueEmail({ eventKey: `message:${msg.id}:${recipientId}`, to: recipient.email, ...mail });
+            const eventKey = `message:${msg.id}:${recipientId}`;
+            await enqueueEmail({ eventKey, to: recipient.email, ...mail });
+            await deliverEmail(eventKey);
           }
         }
       }

@@ -14,20 +14,20 @@ suivante.
   administrateur restent non consommés par le runtime. La sous-partie TOTP est
   corrigée en T-108 : aucun QR tiers, password + TOTP actif et secret pending.
 
-- [ ] **2026-08-23 — BUG-038** (S, AUD-108-08 à 17, 19 à 24) : parcours
-  opérationnels partiels : reprise paiement non actionnable, emails/outbox
-  hétérogènes, checkout invité sans claim et créant des comptes même après une
-  demande invalide, dashboard messages non navigable, promesses/BestRewards/
-  referral/promo trompeuses, multi-devise/timezone/quote incohérents, alertes
-  contextuelles dédupliquées sur un ancien séjour, webhook Stripe incomplet,
-  invariants room/messages et pagination/API dates incomplets. Détail et
-  solutions dans les rapports d’audit profond et addendum post T-107.
+- [ ] **2026-08-23 — BUG-038** (S résiduel, T-109 partiel) : restent les
+  settings décoratifs, reporting multi-devise/timezone, quote checkout UI,
+  promesses BestRewards/referral/promo, bornes de dates, conversations uniques
+  et dette E2E/upgrade. Claim invité, reprise intent, outbox auth/messages,
+  dashboard messages, alert reset et webhook allowlist sont corrigés en BUG-039.
+  Voir T-110 et les audits post T-107.
 
 Le point historique **BUG-003 (paiement non implémenté)** reste déplacé dans
 `KNOWN_LIMITATIONS.md` : une validation Stripe réelle exige toujours des clés
 fournisseur de test dans l’environnement.
 
 ## Corrigés
+
+- [x] **2026-08-23 — BUG-039** (C, T-109) : checkout invité et opérations différées. Correctif : profil après validation, claim token hashé/session, reprise intent, outbox auth/messages, webhook strict et alert reset. ▶️ guest invalide 0 user, claim bookings 200, alert/outbox, 223/223, smoke 91/91.
 
 - [x] **2026-08-23 — BUG-035** (C, T-108) : frontières publication/RBAC et
   fuite RSC. Correctif : DTO allowlistés, details public active-only/404,

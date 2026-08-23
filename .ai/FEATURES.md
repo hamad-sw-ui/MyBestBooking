@@ -260,7 +260,7 @@ modification de code.
 | `loading.tsx` par route | ✅ | Spinner root + sr-only | T-017 |
 | Dark mode | ✅ | Classe `.dark` sur `<html>` + palette CSS globale + `<DarkModeToggle>` client avec persistance localStorage + script inline anti-FOUC (T-029) | T-029 |
 | `next/font` (Inter + Poppins) | 🚧 | **Sandbox-limited** : CDN Google indispo au build. Fallback `<link>` fonctionnel. Ré-activable en 1 commit quand CI a l'accès CDN | 🎯 CI |
-| Mode invité au checkout | ✅ | `POST /api/bookings { isGuestBooking:true }` crée un user stub par email (T-029). ▶️ booking 201 confirmé sans cookie | T-029 |
+| Mode invité revendicable | ✅ | Profil créé après validation booking, claim hashé par email, mot de passe + session puis réservations; pas de stub sur une demande invalide. | T-029, T-109 |
 
 ---
 

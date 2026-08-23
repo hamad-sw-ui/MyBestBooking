@@ -9,6 +9,30 @@
 
 ---
 
+## Session 18 — 2026-08-23 : T-109 claim invité et reprise opérationnelle
+
+### Livré
+
+- 🔨 Guest créé après règles transactionnelles, claim email hashé et session après password.
+- 🔨 Endpoint/reprise UI du même intent, provider retrieve idempotent; aucun nouveau booking.
+- 🔨 Outbox register/reset/claim/messages, lien dashboard messages, rate-limit/MIME.
+- 🔨 Stripe multi-signatures/allowlist et reset dedupe alertes.
+
+### Preuves
+
+- ▶️ guest invalide → 0 user; claim one-time → session + GET bookings 200; alert reset/outbox validés.
+- 🧪 `npm test` : **223/223** ; 🔨 typecheck/lint/build ; ▶️ smoke 91/91.
+
+### Limites
+
+- ❓ T-110 : settings, multi-devise/timezone, quote UI, promotions/referral, dates et E2E réel.
+
+### Références
+
+Rapports T-109 et ADR-014.
+
+---
+
 ## Session 17 — 2026-08-23 : T-108 frontières publiques, finance bulk et 2FA
 
 ### Livré

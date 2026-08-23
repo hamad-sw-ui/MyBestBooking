@@ -9,7 +9,7 @@ import { and, eq, isNull, gt } from "drizzle-orm";
  * qu'un hash SHA-256 pour limiter l'impact d'une fuite.
  */
 
-export type TokenPurpose = "email_verification" | "password_reset";
+export type TokenPurpose = "email_verification" | "password_reset" | "guest_claim";
 
 export function hashToken(clear: string): string {
   return createHash("sha256").update(clear).digest("hex");
@@ -24,6 +24,7 @@ export interface IssuedToken {
 const DEFAULT_TTL_MS: Record<TokenPurpose, number> = {
   email_verification: 24 * 60 * 60 * 1000, // 24h
   password_reset: 60 * 60 * 1000,           // 1h
+  guest_claim: 24 * 60 * 60 * 1000,          // 24h
 };
 
 export async function issueToken(

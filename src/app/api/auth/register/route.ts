@@ -6,7 +6,8 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
-import { getMailer, templates } from "@/lib/mail";
+import { templates } from "@/lib/mail";
+import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -72,7 +73,9 @@ export async function POST(request: NextRequest) {
       const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       const url = `${base}/api/auth/verify?token=${encodeURIComponent(clear)}`;
       const mail = await templates.emailVerification({ firstName: newUser.firstName, url });
-      await (await getMailer()).send({ to: newUser.email, ...mail });
+      const eventKey = `email-verification:${newUser.id}`;
+      await enqueueEmail({ eventKey, to: newUser.email, ...mail });
+      await deliverEmail(eventKey);
     } catch (mailErr) {
       console.error("[register] verification mail failed:", mailErr);
     }
