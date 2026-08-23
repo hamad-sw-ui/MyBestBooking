@@ -16,6 +16,11 @@ _Aucun bug critique ouvert._ Le seul point restant est **BUG-003
 
 ## Corrigés
 
+- [x] **2026-08-23 — BUG-033** (T-105) : aide décorative, confirmation email
+  non retryable, votes mémoire, uploads orphelins, rate plans incomplets et
+  CSV non neutralisé. Correctif : articles réels, outbox, votes DB, cleanup
+  cron, archivage rate plan et CSV sûr. ▶️ 215/215 + scénarios runtime.
+
 - [x] **2026-08-23 — BUG-032** (T-104) : confirmation Stripe post-webhook
   sans email, refund pending non typé, attachments publiques et suppression
   S3 `uploads/` cassée. Correctif : service confirmation marqué, webhook

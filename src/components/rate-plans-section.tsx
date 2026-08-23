@@ -11,6 +11,7 @@ interface RatePlan {
   includesBreakfast: boolean | null;
   cancellationPolicy: string;
   cancellationFreeDays: number | null;
+  isActive: boolean | null;
 }
 
 export function RatePlansSection({ roomId, initialRatePlans }: { roomId: string; initialRatePlans: RatePlan[] }) {
@@ -18,6 +19,17 @@ export function RatePlansSection({ roomId, initialRatePlans }: { roomId: string;
   const [form, setForm] = useState({ name: "", type: "flexible", discountPercentage: "0", includesBreakfast: false, cancellationPolicy: "flexible", cancellationFreeDays: "0" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  async function setActive(id: string, isActive: boolean) {
+    setBusy(true); setError(null);
+    try {
+      const response = await fetch(`/api/rooms/${roomId}/rate-plans`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, isActive }) });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "Impossible de modifier le plan");
+      setPlans((current) => current.map((plan) => plan.id === id ? body.ratePlan : plan));
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); }
+    finally { setBusy(false); }
+  }
 
   async function add() {
     setBusy(true); setError(null);
@@ -46,7 +58,7 @@ export function RatePlansSection({ roomId, initialRatePlans }: { roomId: string;
     <section className="mt-8 border border-gray-200 rounded-xl p-5 bg-white">
       <h2 className="text-lg font-semibold text-gray-900">Plans tarifaires</h2>
       <p className="text-sm text-gray-600 mt-1">Les plans actifs seront proposés au voyageur et figés dans chaque réservation.</p>
-      {plans.length > 0 && <ul className="mt-4 divide-y divide-gray-100">{plans.map((plan) => <li key={plan.id} className="py-3 text-sm"><strong>{plan.name}</strong> · -{plan.discountPercentage ?? "0"}% · {plan.cancellationPolicy}{plan.includesBreakfast ? " · petit-déjeuner inclus" : ""}</li>)}</ul>}
+      {plans.length > 0 && <ul className="mt-4 divide-y divide-gray-100">{plans.map((plan) => <li key={plan.id} className="py-3 text-sm flex flex-wrap items-center justify-between gap-2"><span><strong>{plan.name}</strong> · -{plan.discountPercentage ?? "0"}% · {plan.cancellationPolicy}{plan.includesBreakfast ? " · petit-déjeuner inclus" : ""} {!plan.isActive && "· archivé"}</span><Button size="sm" variant="ghost" disabled={busy} onClick={() => setActive(plan.id, !plan.isActive)}>{plan.isActive ? "Archiver" : "Réactiver"}</Button></li>)}</ul>}
       <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
         <label className="text-sm">Nom<input value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="mt-1 w-full border rounded px-3 py-2" placeholder="Flexible petit-déjeuner" /></label>
         <label className="text-sm">Réduction (%)<input type="number" min="0" max="100" value={form.discountPercentage} onChange={(event) => setForm({ ...form, discountPercentage: event.target.value })} className="mt-1 w-full border rounded px-3 py-2" /></label>

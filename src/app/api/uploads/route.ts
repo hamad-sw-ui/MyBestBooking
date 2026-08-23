@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { db } from "@/db";
+import { uploadObjects } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   getUploader,
@@ -29,6 +32,7 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "Non autorisé sur ce fichier" }, { status: 403 });
   }
   const ok = await (await getUploader()).remove(key);
+  if (ok) await db.delete(uploadObjects).where(eq(uploadObjects.key, key));
   return NextResponse.json({ removed: ok });
 }
 
@@ -95,6 +99,7 @@ export async function POST(request: NextRequest) {
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const stored = await (await getUploader()).put(buffer, mimeType, user.id);
+    await db.insert(uploadObjects).values({ key: stored.key, ownerId: user.id, mimeType, size: stored.size }).onConflictDoNothing({ target: uploadObjects.key });
     return NextResponse.json({
       url: stored.url,
       key: stored.key,

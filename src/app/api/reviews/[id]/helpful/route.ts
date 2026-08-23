@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { reviews } from "@/db/schema";
+import { reviews, reviewVotes } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { eq, sql } from "drizzle-orm";
@@ -38,17 +38,25 @@ export async function POST(
       );
     }
 
-    const [updated] = await db
-      .update(reviews)
-      .set({ helpfulCount: sql`${reviews.helpfulCount} + 1` })
-      .where(eq(reviews.id, id))
-      .returning({ id: reviews.id, helpfulCount: reviews.helpfulCount });
-
-    if (!updated) {
-      return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
-    }
-
-    return NextResponse.json({ review: updated });
+    const result = await db.transaction(async (tx) => {
+      const [review] = await tx.select({ id: reviews.id }).from(reviews).where(eq(reviews.id, id));
+      if (!review) return { missing: true as const };
+      const inserted = await tx
+        .insert(reviewVotes)
+        .values({ reviewId: id, userId: user.id })
+        .onConflictDoNothing({ target: [reviewVotes.reviewId, reviewVotes.userId] })
+        .returning({ id: reviewVotes.id });
+      if (!inserted.length) return { duplicate: true as const };
+      const [updated] = await tx
+        .update(reviews)
+        .set({ helpfulCount: sql`${reviews.helpfulCount} + 1` })
+        .where(eq(reviews.id, id))
+        .returning({ id: reviews.id, helpfulCount: reviews.helpfulCount });
+      return { review: updated };
+    });
+    if ("missing" in result) return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
+    if ("duplicate" in result) return NextResponse.json({ error: "Vous avez déjà marqué cet avis comme utile" }, { status: 429 });
+    return NextResponse.json({ review: result.review });
   } catch (error) {
     console.error("[reviews/helpful] error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

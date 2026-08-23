@@ -1,28 +1,20 @@
 import { db } from "@/db";
-import { bookings, properties, users } from "@/db/schema";
+import { bookings, emailOutbox, properties, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { getMailer, templates } from "@/lib/mail";
+import { templates } from "@/lib/mail";
+import { deliverEmail } from "@/lib/email-outbox";
 
 /**
- * Envoie les confirmations après une capture réelle/mock réussie. Le verrou
- * booking évite les doublons lors des retries webhook normaux.
+ * Crée les événements email dans la même transaction que le marqueur booking,
+ * puis les tente hors transaction. Les retries webhook/cron partagent les
+ * mêmes eventKey et ne dupliquent pas les notifications.
  */
 export async function sendBookingConfirmationIfNeeded(bookingId: string): Promise<boolean> {
-  return db.transaction(async (tx) => {
-    // PostgreSQL ne permet pas FOR UPDATE sur le côté nullable d'un LEFT JOIN.
-    // Verrouiller la réservation seule puis charger la property séparément.
-    const [booking] = await tx
-      .select()
-      .from(bookings)
-      .where(eq(bookings.id, bookingId))
-      .for("update");
-    if (!booking || booking.status !== "confirmed" || booking.paymentStatus !== "paid" || booking.confirmationEmailSentAt) {
-      return false;
-    }
+  const eventKeys = await db.transaction(async (tx) => {
+    const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).for("update");
+    if (!booking || booking.status !== "confirmed" || booking.paymentStatus !== "paid" || booking.confirmationEmailSentAt) return [];
     const [property] = await tx.select().from(properties).where(eq(properties.id, booking.propertyId));
-
-    const mailer = await getMailer();
-    const travellerMail = await templates.bookingConfirmation({
+    const traveller = await templates.bookingConfirmation({
       firstName: booking.guestFirstName,
       bookingReference: booking.bookingReference,
       propertyName: property?.name ?? "",
@@ -32,15 +24,13 @@ export async function sendBookingConfirmationIfNeeded(bookingId: string): Promis
       total: String(booking.total),
       currency: booking.currency,
     });
-    await mailer.send({ to: booking.guestEmail, ...travellerMail });
-
+    const guestKey = `booking-confirmation:${booking.id}:guest`;
+    await tx.insert(emailOutbox).values({ eventKey: guestKey, to: booking.guestEmail, ...traveller }).onConflictDoNothing({ target: emailOutbox.eventKey });
+    const keys = [guestKey];
     if (property?.hostId) {
-      const [host] = await tx
-        .select({ email: users.email, firstName: users.firstName })
-        .from(users)
-        .where(eq(users.id, property.hostId));
+      const [host] = await tx.select({ email: users.email, firstName: users.firstName }).from(users).where(eq(users.id, property.hostId));
       if (host) {
-        const hostMail = await templates.bookingHostNotification({
+        const hostEmail = await templates.bookingHostNotification({
           hostFirstName: host.firstName,
           bookingReference: booking.bookingReference,
           propertyName: property.name,
@@ -48,14 +38,14 @@ export async function sendBookingConfirmationIfNeeded(bookingId: string): Promis
           checkIn: String(booking.checkIn),
           checkOut: String(booking.checkOut),
         });
-        await mailer.send({ to: host.email, ...hostMail });
+        const hostKey = `booking-confirmation:${booking.id}:host`;
+        await tx.insert(emailOutbox).values({ eventKey: hostKey, to: host.email, ...hostEmail }).onConflictDoNothing({ target: emailOutbox.eventKey });
+        keys.push(hostKey);
       }
     }
-
-    await tx
-      .update(bookings)
-      .set({ confirmationEmailSentAt: new Date(), updatedAt: new Date() })
-      .where(eq(bookings.id, bookingId));
-    return true;
+    await tx.update(bookings).set({ confirmationEmailSentAt: new Date(), updatedAt: new Date() }).where(eq(bookings.id, bookingId));
+    return keys;
   });
+  await Promise.all(eventKeys.map((key) => deliverEmail(key)));
+  return eventKeys.length > 0;
 }

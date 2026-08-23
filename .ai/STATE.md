@@ -4,9 +4,9 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a02dbb-mybestbooking`
-- **HEAD de travail T-104** : `82f2a60`
+- **HEAD validé T-104** : `54dcbb2`
 - **Version Framework** : AI-DOS 3.0.0
-- **Dernière tâche validée** : T-104 — post-actions financières, fichiers privés et rate plans
+- **Dernière tâche validée** : T-105 — pages, promesses et actions opérationnelles
 
 ## 🛠️ État technique T-102
 

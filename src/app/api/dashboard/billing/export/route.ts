@@ -5,7 +5,10 @@ import { and, eq, ne } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 
 function csvCell(value: unknown): string {
-  const text = String(value ?? "");
+  let text = String(value ?? "");
+  // Neutralise les formules Excel/LibreOffice provenant d'un nom de property
+  // saisi par un hôte, sans modifier les montants ni références métiers.
+  if (/^[=+\-@]/.test(text)) text = `'${text}`;
   return `"${text.replaceAll('"', '""')}"`;
 }
 

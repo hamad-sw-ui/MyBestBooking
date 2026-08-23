@@ -14,6 +14,8 @@ import { AUDIT_ACTIONS, recordAudit } from "@/lib/audit";
 import { getPaymentProvider } from "@/lib/payment";
 import { getMailer } from "@/lib/mail";
 import { getUploader, S3Uploader } from "@/lib/storage";
+import { db } from "@/db";
+import { providerTestLogs } from "@/db/schema";
 
 const valueSchema = z.string().min(1).max(4096);
 const updateSchema = z.object({ values: z.record(z.string(), valueSchema) });
@@ -96,11 +98,14 @@ export async function POST(
       const removed = await uploader.remove(test.key);
       if (!removed) throw new Error("Objet test S3 créé mais non supprimé");
     }
+    await db.insert(providerTestLogs).values({ provider: rawProvider, actorId: user.id, status: "success", message: "Connexion validée" });
     await recordAudit({ actorId: user.id, actorEmail: user.email, action: AUDIT_ACTIONS.providerConnectionTest, entityType: "provider", entityId: rawProvider, metadata: { result: "success" } });
     return NextResponse.json({ ok: true, message: `Connexion ${rawProvider} validée` });
   } catch (error) {
+    const message = error instanceof Error ? error.message : "Échec du test provider";
+    await db.insert(providerTestLogs).values({ provider: rawProvider, actorId: user.id, status: "failed", message: message.slice(0, 500) });
     await recordAudit({ actorId: user.id, actorEmail: user.email, action: AUDIT_ACTIONS.providerConnectionTest, entityType: "provider", entityId: rawProvider, metadata: { result: "failed" } });
-    return NextResponse.json({ error: error instanceof Error ? error.message : "Échec du test provider" }, { status: 422 });
+    return NextResponse.json({ error: message }, { status: 422 });
   }
 }
 

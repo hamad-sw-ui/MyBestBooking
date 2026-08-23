@@ -74,7 +74,7 @@ modification de code.
 | Recalcul atomique `averageRating` | ✅ | `UPDATE...FROM(SELECT AVG…)` | T-007 |
 | **Réponse hôte à un avis** | ✅ | `POST /api/reviews/[id]/reply` (T-015) + `<HostReplyForm>` branchée (T-016) | T-016 |
 | **Modération admin** (approuver, masquer, rejeter, en attente) | ✅ | `PATCH /api/reviews/[id]/moderate` + `<ReviewModerateActions>` dans /dashboard/reviews (T-023). Recalcul atomique averageRating. 5 tests DB-backed | T-023 |
-| Marquer un avis comme utile (`helpfulCount`) | ✅ | `POST /api/reviews/[id]/helpful` (auth, rate-limit 1/24h par user+review, incrément atomique) — T-025 suivi audit | T-025 |
+| Marquer un avis comme utile (`helpfulCount`) | ✅ | Bouton fiche + vote DB unique `(review,user)`, rate-limit et incrément atomique. | T-025, T-105 |
 
 ## Favoris (wishlists)
 
@@ -85,6 +85,12 @@ modification de code.
 | Contrainte unicité item | ✅ | `UNIQUE (wishlist_id, property_id)` | T-006 |
 | **Partage public par lien (shareToken)** | ✅ | Endpoint T-015 + page `/wishlists/share/[token]` (T-016) qui rend une grille public de properties, expose seulement name+items | T-016 |
 | Alertes prix | ✅ | Table `price_alerts`, GET/POST/DELETE + job `/api/cron/price-alerts` idempotent, planifié dans `vercel.json`, préférences utilisateur et seuil de dernière notification. | T-026, T-102 |
+
+## Aide
+
+| Feature | État | Preuve | Traçabilité |
+|---|---|---|---|
+| Centre d’aide consultable | ✅ | Articles internes, recherche client et canal email réellement actifs sur `/aide`. | T-105 |
 
 ## Messagerie voyageur ↔ hôte
 

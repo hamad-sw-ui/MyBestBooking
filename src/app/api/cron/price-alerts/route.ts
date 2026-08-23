@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { bookings, priceAlerts, properties, rooms, users } from "@/db/schema";
-import { and, eq, isNull, lte } from "drizzle-orm";
+import { bookings, priceAlerts, properties, rooms, uploadObjects, users } from "@/db/schema";
+import { and, eq, isNull, lt, lte } from "drizzle-orm";
 import { getMailer } from "@/lib/mail";
 import { shouldNotifyPriceAlert } from "@/lib/price-alert-rules";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { getSetting } from "@/lib/settings";
+import { deliverPendingEmails } from "@/lib/email-outbox";
+import { getUploader } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -64,11 +66,27 @@ async function completeEligibleBookings(today: string): Promise<number> {
   return completed;
 }
 
+async function cleanupOrphanUploads(): Promise<number> {
+  const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const orphaned = await db.select({ key: uploadObjects.key }).from(uploadObjects).where(and(isNull(uploadObjects.attachedAt), lt(uploadObjects.createdAt, cutoff))).limit(100);
+  const uploader = await getUploader();
+  let removed = 0;
+  for (const item of orphaned) {
+    if (await uploader.remove(item.key)) {
+      await db.delete(uploadObjects).where(eq(uploadObjects.key, item.key));
+      removed += 1;
+    }
+  }
+  return removed;
+}
+
 export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   try {
     const completedBookings = await completeEligibleBookings(new Date().toISOString().slice(0, 10));
+    const emailDelivery = await deliverPendingEmails();
+    const orphanUploadsRemoved = await cleanupOrphanUploads();
     const alerts = await db
       .select({ alert: priceAlerts, user: users, property: properties })
       .from(priceAlerts)
@@ -106,7 +124,7 @@ export async function GET(request: NextRequest) {
       notified += 1;
     }
 
-    return NextResponse.json({ ok: true, scanned: alerts.length, notified, completedBookings });
+    return NextResponse.json({ ok: true, scanned: alerts.length, notified, completedBookings, emailDelivery, orphanUploadsRemoved });
   } catch (error) {
     console.error("[cron price-alerts]", error);
     return NextResponse.json({ error: "Échec du traitement des alertes prix" }, { status: 500 });

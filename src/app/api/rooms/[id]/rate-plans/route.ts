@@ -13,6 +13,7 @@ const createSchema = z.object({
   cancellationPolicy: z.enum(["free", "flexible", "moderate", "strict", "non_refundable"]),
   cancellationFreeDays: z.number().int().min(0).max(365).optional(),
 });
+const updateSchema = createSchema.partial().extend({ id: z.string().uuid(), isActive: z.boolean().optional() });
 
 /**
  * GET /api/rooms/[id]/rate-plans
@@ -79,6 +80,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
     console.error("rate-plans POST error:", error);
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    const { id: roomId } = await params;
+    const row = await ownership(user.id, roomId);
+    if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+    if (row.property?.hostId !== user.id && user.role !== "admin") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    const data = updateSchema.parse(await request.json());
+    const [existing] = await db.select().from(ratePlans).where(and(eq(ratePlans.id, data.id), eq(ratePlans.roomId, roomId)));
+    if (!existing) return NextResponse.json({ error: "Plan tarifaire introuvable" }, { status: 404 });
+    const update: Record<string, unknown> = { ...data };
+    delete update.id;
+    if (data.discountPercentage !== undefined) update.discountPercentage = String(data.discountPercentage);
+    const [ratePlan] = await db.update(ratePlans).set(update).where(eq(ratePlans.id, data.id)).returning();
+    return NextResponse.json({ ratePlan });
+  } catch (error) {
+    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    console.error("rate-plans PATCH error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }

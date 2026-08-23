@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { conversations, messages, properties, users } from "@/db/schema";
+import { conversations, messages, properties, uploadObjects, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { and, eq, sql } from "drizzle-orm";
 import { getMailer, templates } from "@/lib/mail";
@@ -73,8 +73,12 @@ export async function POST(request: NextRequest) {
     if (!ok) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
     const senderType = ok.isGuest ? "user" : "host";
-    if (data.attachmentKey && !data.attachmentKey.startsWith(`uploads/${user.id.slice(0, 8)}-`)) {
-      return NextResponse.json({ error: "Pièce jointe non autorisée" }, { status: 403 });
+    if (data.attachmentKey) {
+      if (!data.attachmentKey.startsWith(`uploads/${user.id.slice(0, 8)}-`)) {
+        return NextResponse.json({ error: "Pièce jointe non autorisée" }, { status: 403 });
+      }
+      const [upload] = await db.select().from(uploadObjects).where(and(eq(uploadObjects.key, data.attachmentKey), eq(uploadObjects.ownerId, user.id)));
+      if (!upload || upload.attachedAt) return NextResponse.json({ error: "Pièce jointe introuvable ou déjà utilisée" }, { status: 400 });
     }
 
     const [msg] = await db
@@ -88,6 +92,9 @@ export async function POST(request: NextRequest) {
         attachmentMimeType: data.attachmentMimeType ?? null,
       })
       .returning();
+    if (data.attachmentKey) {
+      await db.update(uploadObjects).set({ attachedAt: new Date() }).where(eq(uploadObjects.key, data.attachmentKey));
+    }
 
     // Incrémente unread côté destinataire, met à jour lastMessageAt.
     await db

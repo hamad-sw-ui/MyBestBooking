@@ -1,33 +1,26 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Corriger les défauts prioritaires détectés par l’audit post-providers.
-**ID** : T-104
-**Niveau** : **C** — post-actions Stripe, remboursements, stockage privé, rate plans et migrations.
+**Tâche :** Corriger les pages, promesses et actions restantes identifiées par l’audit profond.
+**ID** : T-105
+**Niveau** : **C** — outbox, votes DB, uploads, alertes, recherche, migrations.
 **Statut** : **CORRIGÉ (VALIDÉ)**
 
 ## Livré
 
-- confirmation booking partagée entre mock/webhook, marqueur persistant ;
-- événements refund Stripe typés et réconciliés ;
-- upload messages privé, téléchargement participant, S3 sans ACL publique et
-  suppression de clés `uploads/...` ;
-- rate plans créables par hôte, sélectionnables au checkout, snapshot booking
-  et politique d’annulation appliquée ;
-- test provider admin explicite ;
-- prix min/max recherche unifié, avis utile visible, promesses BestRewards
-  réalignées sur les capacités réelles.
+- aide interactive avec articles et recherche ; garantie prix retirée ; politique
+  annulation contextualisée ;
+- outbox email persistante/retryable, votes utiles DB, cleanup upload cron ;
+- rate plan archivable, sélection/snapshot booking ;
+- recherche enrichie/paginée, export CSV sécurisé, provider test historisé ;
+- promesses destinations et BestRewards réalignées sur le réel.
 
 ## Preuves
 
-- 🔨 typecheck/build ;
-- 🧪 Vitest DB+serveur : **215/215** ;
-- ▶️ migration fraîche 0010 ;
-- ▶️ webhook confirmation + email marker ;
-- ▶️ attachment participant 200 / outsider 403 ;
-- ▶️ rate plan snapshot ;
-- ▶️ smoke 91/91 et ai:check sans fail.
+- 🔨 typecheck/build, lint 0 erreur ;
+- 🧪 **215/215** DB + serveur ;
+- ▶️ migration 0011, outbox sent, votes 200/429, cleanup, rate plan, CSV ;
+- ▶️ smoke **91/91**, ai:check 18 OK / 0 fail.
 
 ## Limites
 
-Les appels réels Stripe/Resend/S3 demandent toujours des clés de test valides ;
-le test admin les exerce seulement lorsqu’une configuration réelle existe.
+Appels fournisseurs réels et Chromium Playwright restent externes au sandbox.

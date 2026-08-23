@@ -42,11 +42,11 @@ export default async function HomePage() {
   const featuredProperties = await getFeaturedProperties();
   
   const destinations = [
-    { name: "Paris", country: "France", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400", count: 2450 },
-    { name: "Marrakech", country: "Maroc", image: "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400", count: 890 },
-    { name: "Barcelone", country: "Espagne", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400", count: 1820 },
-    { name: "Rome", country: "Italie", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400", count: 1650 },
-    { name: "Tunis", country: "Tunisie", image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400", count: 420 },
+    { name: "Paris", country: "France", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400" },
+    { name: "Marrakech", country: "Maroc", image: "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400" },
+    { name: "Barcelone", country: "Espagne", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400" },
+    { name: "Rome", country: "Italie", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400" },
+    { name: "Tunis", country: "Tunisie", image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400" },
   ];
 
   return (
@@ -196,7 +196,7 @@ export default async function HomePage() {
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">
                   <h3 className="font-bold text-lg">{dest.name}</h3>
-                  <p className="text-sm text-white/80">{dest.count}+ hébergements</p>
+                  <p className="text-sm text-white/80">Découvrir {dest.country}</p>
                 </div>
               </Link>
             ))}

@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
-import { providerCredentials } from "@/db/schema";
+import { providerCredentials, providerTestLogs } from "@/db/schema";
 
 export const PROVIDERS = ["stripe", "resend", "s3"] as const;
 export type ProviderName = (typeof PROVIDERS)[number];
@@ -143,6 +143,7 @@ export interface ProviderMetadata {
   encryptionReady: boolean;
   source: "database" | "environment" | "none";
   fields: { name: string; stored: boolean; environment: boolean; updatedAt: string | null }[];
+  lastTest: { status: string; message: string | null; createdAt: string } | null;
 }
 
 /** Metadata sans valeur secrète, destinée exclusivement au panneau admin. */
@@ -152,6 +153,7 @@ export async function providerMetadata(provider: ProviderName): Promise<Provider
     .from(providerCredentials)
     .where(eq(providerCredentials.provider, provider));
   const stored = new Map(storedRows.map((row) => [row.name, row.updatedAt]));
+  const [lastTest] = await db.select({ status: providerTestLogs.status, message: providerTestLogs.message, createdAt: providerTestLogs.createdAt }).from(providerTestLogs).where(eq(providerTestLogs.provider, provider)).orderBy(desc(providerTestLogs.createdAt)).limit(1);
   const env = envValues(provider);
   const fields = PROVIDER_FIELDS[provider].map((name) => ({
     name,
@@ -169,6 +171,7 @@ export async function providerMetadata(provider: ProviderName): Promise<Provider
     encryptionReady,
     source: encryptionReady && stored.size ? "database" : configured ? "environment" : "none",
     fields,
+    lastTest: lastTest ? { status: lastTest.status, message: lastTest.message, createdAt: lastTest.createdAt.toISOString() } : null,
   };
 }
 

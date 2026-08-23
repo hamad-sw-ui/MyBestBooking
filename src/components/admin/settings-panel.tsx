@@ -665,6 +665,7 @@ type ProviderMetadata = {
   encryptionReady: boolean;
   source: "database" | "environment" | "none";
   fields: { name: string; stored: boolean; environment: boolean; updatedAt: string | null }[];
+  lastTest: { status: string; message: string | null; createdAt: string } | null;
 };
 
 const PROVIDER_UI: Record<ProviderKey, { name: string; fields: { key: string; label: string; secret?: boolean }[] }> = {
@@ -792,6 +793,7 @@ function ProvidersSection({ providers }: { providers: Providers }) {
                 {(meta?.configured ?? fallbackConfigured) ? <Badge variant="success"><CheckCircle2 className="w-3 h-3 mr-1" /> Configuré</Badge> : <Badge variant="warning"><XCircle className="w-3 h-3 mr-1" /> Non configuré</Badge>}
               </div>
               {meta && !meta.encryptionReady && <p className="text-xs text-amber-800 bg-amber-50 p-2 rounded">Ajoutez `CREDENTIALS_ENCRYPTION_KEY` dans l’environnement du serveur pour autoriser l’enregistrement web chiffré.</p>}
+              {meta?.lastTest && <p className={`text-xs p-2 rounded ${meta.lastTest.status === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>Dernier test : {new Date(meta.lastTest.createdAt).toLocaleString("fr-FR")} — {meta.lastTest.status === "success" ? "réussi" : "échec"}{meta.lastTest.message ? ` (${meta.lastTest.message})` : ""}</p>}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {PROVIDER_UI[provider].fields.map((field) => {
                   const status = meta?.fields.find((item) => item.name === field.key);

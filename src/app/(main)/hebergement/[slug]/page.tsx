@@ -332,7 +332,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                             {room.sizeSqm && <span>{room.sizeSqm} m²</span>}
                           </div>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="success">✓ Annulation gratuite</Badge>
+                            <Badge variant="info">Politique : {property.cancellationPolicy === "free" ? "annulation gratuite" : property.cancellationPolicy === "non_refundable" ? "non remboursable" : property.cancellationPolicy ?? "voir le tarif"}</Badge>
                             {room.amenities && (room.amenities as string[]).includes("wifi") && (
                               <Badge variant="info">WiFi</Badge>
                             )}
@@ -465,19 +465,6 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                   defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
                 />
               </div>
-
-              {/* Price Guarantee */}
-              <Card className="bg-[#F5A623]/10 border-[#F5A623]/30">
-                <CardContent>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="w-5 h-5 text-[#F5A623]" />
-                    <span className="font-semibold text-[#1B3A6B]">Garantie Meilleur Prix</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Trouvé moins cher ailleurs ? On vous rembourse la différence.
-                  </p>
-                </CardContent>
-              </Card>
 
               {/* Policies */}
               <Card>

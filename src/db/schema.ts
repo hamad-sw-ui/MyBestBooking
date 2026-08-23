@@ -60,6 +60,10 @@ export const priceAlerts = pgTable("price_alerts", {
   propertyId: uuid("property_id").references(() => properties.id).notNull(),
   maxPrice: decimal("max_price", { precision: 10, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 3 }).default("EUR"),
+  checkIn: date("check_in"),
+  checkOut: date("check_out"),
+  numAdults: smallint("num_adults"),
+  numChildren: smallint("num_children"),
   active: boolean("active").default(true),
   // Un cron idempotent ne renvoie pas la même alerte au même tarif à
   // chaque exécution. Null = aucune notification encore envoyée.
@@ -69,6 +73,60 @@ export const priceAlerts = pgTable("price_alerts", {
 }, (table) => [
   uniqueIndex("uidx_price_alert_user_prop").on(table.userId, table.propertyId),
 ]);
+
+// ═══════════════════════════════════════════════
+// REVIEW_VOTES (T-105) — vote utile persistant, au plus un/user/avis.
+// ═══════════════════════════════════════════════
+export const reviewVotes = pgTable("review_votes", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  reviewId: uuid("review_id").references(() => reviews.id).notNull(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uniq_review_votes_review_user").on(table.reviewId, table.userId),
+]);
+
+// ═══════════════════════════════════════════════
+// UPLOAD_OBJECTS (T-105) — suit les uploads privés temporaires/rattachés.
+// ═══════════════════════════════════════════════
+export const uploadObjects = pgTable("upload_objects", {
+  key: varchar("key", { length: 500 }).primaryKey(),
+  ownerId: uuid("owner_id").references(() => users.id).notNull(),
+  mimeType: varchar("mime_type", { length: 100 }).notNull(),
+  size: integer("size").notNull(),
+  attachedAt: timestamp("attached_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+// ═══════════════════════════════════════════════
+// EMAIL_OUTBOX (T-105) — effet externe idempotent/retryable.
+// ═══════════════════════════════════════════════
+export const emailOutbox = pgTable("email_outbox", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  eventKey: varchar("event_key", { length: 160 }).unique().notNull(),
+  to: varchar("to", { length: 255 }).notNull(),
+  subject: varchar("subject", { length: 255 }).notNull(),
+  html: text("html").notNull(),
+  text: text("text").notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  attempts: integer("attempts").default(0).notNull(),
+  sentAt: timestamp("sent_at"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+// ═══════════════════════════════════════════════
+// PROVIDER_TEST_LOGS (T-105) — historique sans secret.
+// ═══════════════════════════════════════════════
+export const providerTestLogs = pgTable("provider_test_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  actorId: uuid("actor_id").references(() => users.id),
+  status: varchar("status", { length: 20 }).notNull(),
+  message: varchar("message", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [index("idx_provider_test_logs_provider_created").on(table.provider, table.createdAt)]);
 
 // ═══════════════════════════════════════════════
 // VERIFICATION_TOKENS (T-013)
@@ -437,5 +495,9 @@ export type AuditLog = typeof auditLog.$inferSelect;
 export type NewAuditLog = typeof auditLog.$inferInsert;
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type NewPriceAlert = typeof priceAlerts.$inferInsert;
+export type ReviewVote = typeof reviewVotes.$inferSelect;
+export type UploadObject = typeof uploadObjects.$inferSelect;
+export type EmailOutbox = typeof emailOutbox.$inferSelect;
+export type ProviderTestLog = typeof providerTestLogs.$inferSelect;
 export type ProviderCredential = typeof providerCredentials.$inferSelect;
 export type NewProviderCredential = typeof providerCredentials.$inferInsert;

@@ -1903,3 +1903,25 @@ Ajouter la couche gouvernance manquante — devenu la Session 2 ci-dessus.
    réconciliation refund planifiée, à traiter séparément.
 5. **Règle permanente** : aucune nouvelle règle ; les preuves C existantes
    suffisent.
+
+---
+
+## 2026-08-23 — T-105 Pages et actions opérationnelles (C) — CORRIGÉ (VALIDÉ)
+
+- 🔍 aide réelle, garantie prix retirée, politique annulation contextualisée,
+  destinations sans chiffres fictifs.
+- 🔍 outbox email, vote review DB, cleanup uploads, rate plan archive, CSV sûr,
+  provider test historisé, recherche enrichie.
+- 🧪 **215/215** DB+serveur ; 🔨 typecheck/build/lint 0 erreur.
+- ▶️ migration 0011, outbox, votes, cleanup, snapshot, CSV, smoke 91/91.
+
+### Rétrospective §17
+
+1. **Bien fonctionné** : transformer les cartes décoratives en parcours réels
+   a révélé les promesses à retirer plutôt qu’à simuler.
+2. **Ralenti** : la séquence de migrations et tests DB reste dépendante du
+   serveur local ; elle a néanmoins donné les preuves nécessaires.
+3. **Erreur évitée** : traiter un rate plan ou un upload comme une donnée
+   temporaire sans snapshot/cleanup.
+4. **Amélioration proposée** : worker outbox et monitoring provider multi-instance.
+5. **Règle permanente** : aucune nouvelle règle, le workflow C est suffisant.

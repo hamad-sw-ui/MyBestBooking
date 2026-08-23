@@ -100,6 +100,7 @@ export default async function RoomCalendarPage({
           includesBreakfast: plan.includesBreakfast,
           cancellationPolicy: plan.cancellationPolicy,
           cancellationFreeDays: plan.cancellationFreeDays,
+          isActive: plan.isActive,
         }))}
       />
     </div>
