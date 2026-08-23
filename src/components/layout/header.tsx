@@ -200,22 +200,19 @@ export function Header({ user }: HeaderProps) {
             >
               Aide
             </Link>
-            {!user && (
+            {!user ? (
               <div className="pt-4 border-t border-gray-100 space-y-2">
-                <Link
-                  href="/connexion"
-                  className="block w-full px-4 py-2 text-center text-sm font-medium text-[#1B3A6B] border border-[#1B3A6B] rounded-lg"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  Se connecter
-                </Link>
-                <Link
-                  href="/inscription"
-                  className="block w-full px-4 py-2 text-center text-sm font-medium text-white bg-[#1B3A6B] rounded-lg"
-                  onClick={() => setMobileMenuOpen(false)}
-                >
-                  S&apos;inscrire
-                </Link>
+                <Link href="/connexion" className="block w-full px-4 py-2 text-center text-sm font-medium text-[#1B3A6B] border border-[#1B3A6B] rounded-lg" onClick={() => setMobileMenuOpen(false)}>Se connecter</Link>
+                <Link href="/inscription" className="block w-full px-4 py-2 text-center text-sm font-medium text-white bg-[#1B3A6B] rounded-lg" onClick={() => setMobileMenuOpen(false)}>S&apos;inscrire</Link>
+              </div>
+            ) : (
+              <div className="pt-4 border-t border-gray-100 space-y-1">
+                <Link href="/mon-compte" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Mon compte</Link>
+                <Link href="/mes-reservations" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Mes réservations</Link>
+                <Link href="/mes-favoris" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Mes favoris</Link>
+                <Link href="/messages" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Messages</Link>
+                {(user.role === "host" || user.role === "admin") && <Link href="/dashboard" className="block px-4 py-2 text-sm font-medium text-[#1B3A6B] hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>}
+                <form action="/api/auth/logout" method="POST" className="pt-2"><button type="submit" className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">Déconnexion</button></form>
               </div>
             )}
           </div>

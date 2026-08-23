@@ -14,7 +14,7 @@ import { PropertyCard } from "@/components/property-card";
 
 async function getFeaturedProperties() {
   const results = await db
-    .select({ property: properties, minPrice: min(rooms.basePrice) })
+    .select({ property: properties, minPrice: min(rooms.basePrice), minCurrency: min(rooms.currency) })
     .from(properties)
     .leftJoin(rooms, and(eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)))
     .where(eq(properties.status, "active"))
@@ -22,9 +22,10 @@ async function getFeaturedProperties() {
     .orderBy(desc(properties.averageRating))
     .limit(4);
 
-  return results.map(({ property, minPrice }) => ({
+  return results.map(({ property, minPrice, minCurrency }) => ({
     ...property,
     minPrice: minPrice === null ? null : Number(minPrice),
+    minCurrency,
   }));
 }
 
@@ -259,7 +260,7 @@ export default async function HomePage() {
                 Les vrais avantages, dès votre 1ère réservation
               </h2>
               <p className="text-white/90">
-                Jusqu&apos;à -20% sur vos réservations, petits-déjeuners offerts, surclassements...
+                Jusqu&apos;à -20% sur les hébergements BestRewards et cashback Ambassador après séjour terminé.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4">

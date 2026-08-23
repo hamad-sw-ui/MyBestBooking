@@ -52,6 +52,9 @@ export const AUDIT_ACTIONS = {
   propertySuspend: "property.suspend",
   // T-033 (Session 12) — actions groupées
   bulkAction: "bulk.action",
+  providerCredentialsUpdate: "provider_credentials.update",
+  providerCredentialsRemove: "provider_credentials.remove",
+  providerConnectionTest: "provider_credentials.test",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

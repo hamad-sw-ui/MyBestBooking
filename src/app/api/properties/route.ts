@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { properties, rooms, reviews, bookings, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { generateSlug } from "@/lib/utils";
+import { stayNights } from "@/lib/booking-rules";
 import { eq, and, ilike, or, desc, asc, sql, min, count, gte, lte, lt, gt, ne, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 
@@ -147,52 +148,40 @@ export async function GET(request: NextRequest) {
       filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice <= parseFloat(maxPrice));
     }
 
-    // T-026 : filtre disponibilité (dates). Exclut les properties dont
-    // TOUTES les rooms sont bookées ou marquées stop-sell sur la
-    // fenêtre. Fait en JS après la première requête pour rester
-    // compatible avec l'agrégation actuelle ; à optimiser si trafic
-    // impose HAVING SQL.
+    // Disponibilité évaluée nuit par nuit, avec le même modèle que la
+    // création de booking : override daily, stop-sell et minimum à l'arrivée.
     if (checkIn && checkOut && /^\d{4}-\d{2}-\d{2}$/.test(checkIn) && /^\d{4}-\d{2}-\d{2}$/.test(checkOut) && checkOut > checkIn) {
-      const inDate = checkIn;
-      const outDate = checkOut;
+      const nights = stayNights(checkIn, checkOut);
       const propIds = filteredResults.map((p) => p.id);
       if (propIds.length > 0) {
-        // rooms disponibles = quantity - overlaps > 0 ET pas stop_sell
         const roomsInfo = await db
-          .select({
-            id: rooms.id, propertyId: rooms.propertyId, quantity: rooms.quantity,
-          })
+          .select({ id: rooms.id, propertyId: rooms.propertyId, quantity: rooms.quantity })
           .from(rooms)
           .where(and(inArray(rooms.propertyId, propIds), eq(rooms.isActive, true)));
-        const roomIds = roomsInfo.map((r) => r.id);
-        const bookedRows = roomIds.length > 0 ? await db
-          .select({ roomId: bookings.roomId, cnt: count() })
+        const roomIds = roomsInfo.map((room) => room.id);
+        const overlapping = roomIds.length ? await db
+          .select({ roomId: bookings.roomId, checkIn: bookings.checkIn, checkOut: bookings.checkOut })
           .from(bookings)
-          .where(and(
-            inArray(bookings.roomId, roomIds),
-            ne(bookings.status, "cancelled"),
-            lt(bookings.checkIn, outDate),
-            gt(bookings.checkOut, inDate),
-          ))
-          .groupBy(bookings.roomId) : [];
-        const bookedByRoom = new Map(bookedRows.map((b) => [b.roomId, Number(b.cnt)]));
-        const stopSellRows = roomIds.length > 0 ? await db
-          .select({ roomId: roomAvailability.roomId })
+          .where(and(inArray(bookings.roomId, roomIds), ne(bookings.status, "cancelled"), lt(bookings.checkIn, checkOut), gt(bookings.checkOut, checkIn))) : [];
+        const dailyRules = roomIds.length ? await db
+          .select({ roomId: roomAvailability.roomId, date: roomAvailability.date, availableCount: roomAvailability.availableCount, stopSell: roomAvailability.stopSell, minStay: roomAvailability.minStay })
           .from(roomAvailability)
-          .where(and(
-            inArray(roomAvailability.roomId, roomIds),
-            gte(roomAvailability.date, inDate),
-            lt(roomAvailability.date, outDate),
-            eq(roomAvailability.stopSell, true),
-          )) : [];
-        const stopSellRoomIds = new Set(stopSellRows.map((s) => s.roomId));
+          .where(and(inArray(roomAvailability.roomId, roomIds), gte(roomAvailability.date, checkIn), lt(roomAvailability.date, checkOut))) : [];
         const availablePropIds = new Set<string>();
-        for (const r of roomsInfo) {
-          if (stopSellRoomIds.has(r.id)) continue;
-          const bookedCount = bookedByRoom.get(r.id) ?? 0;
-          if ((r.quantity ?? 1) > bookedCount) availablePropIds.add(r.propertyId);
+        for (const room of roomsInfo) {
+          const rules = new Map(dailyRules.filter((rule) => rule.roomId === room.id).map((rule) => [String(rule.date).slice(0, 10), rule]));
+          const arrival = rules.get(checkIn);
+          if ((arrival?.minStay ?? 1) > nights.length) continue;
+          const canBook = nights.every((night) => {
+            const rule = rules.get(night);
+            if (rule?.stopSell) return false;
+            const capacity = Math.min(rule?.availableCount ?? room.quantity ?? 1, room.quantity ?? 1);
+            const occupied = overlapping.filter((booking) => booking.roomId === room.id && String(booking.checkIn).slice(0, 10) <= night && String(booking.checkOut).slice(0, 10) > night).length;
+            return capacity > occupied;
+          });
+          if (canBook) availablePropIds.add(room.propertyId);
         }
-        filteredResults = filteredResults.filter((p) => availablePropIds.has(p.id));
+        filteredResults = filteredResults.filter((property) => availablePropIds.has(property.id));
       }
     }
 

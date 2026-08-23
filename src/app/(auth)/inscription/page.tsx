@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Mail, Lock, User, Eye, EyeOff, Building2 } from "lucide-react";
+import { safeNextPath } from "@/lib/safe-next";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -44,11 +45,9 @@ export default function RegisterPage() {
         return;
       }
 
-      if (isHost) {
-        router.push("/dashboard");
-      } else {
-        router.push("/");
-      }
+      const requested = new URLSearchParams(window.location.search).get("next");
+      const safeNext = safeNextPath(requested);
+      router.push(safeNext ?? (isHost ? "/dashboard" : "/"));
       router.refresh();
     } catch {
       setError("Une erreur est survenue");

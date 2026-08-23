@@ -79,7 +79,7 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - 🟢 CSRF token explicite (double-submit) sur formulaires HTML
 - ✅ Support du 2FA TOTP côté réglages et connexion ; ajouter davantage de
   tests E2E autour de la récupération reste souhaitable.
-- 🟠 Procédure documentée de rotation `JWT_SECRET` en cas de fuite
+- 🟠 Procédure documentée de rotation `JWT_SECRET` et `CREDENTIALS_ENCRYPTION_KEY` en cas de fuite
 
 ## Base de données & performance
 
@@ -115,7 +115,7 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - 🟢 Carte géographique (Mapbox/Leaflet) sur `/recherche` et fiche
 - 🟢 Programme parrainage lié à `walletBalance`
 - 🟢 Réductions réelles BestRewards sur properties `isBestrewards:true`
-- 🟢 Cron de notification des alertes prix (`priceAlertEnabled` est présent).
+- 🟢 Monitoring/observabilité du cron d'alertes prix et de clôture des séjours (le handler idempotent est livré T-102).
 - ✅ Système d'avis de base ; votes « utile » restent à améliorer.
 
 ## Observabilité & prod

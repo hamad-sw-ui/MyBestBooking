@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { properties, rooms, reviews, users } from "@/db/schema";
+import { properties, ratePlans, rooms, reviews, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, and, desc } from "drizzle-orm";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const updatePropertySchema = z.object({
@@ -54,6 +54,11 @@ export async function GET(
       .from(rooms)
       .where(eq(rooms.propertyId, id));
 
+    const roomIds = propertyRooms.map((room) => room.id);
+    const propertyRatePlans = roomIds.length
+      ? await db.select().from(ratePlans).where(and(eq(ratePlans.isActive, true), sql`${ratePlans.roomId} IN (${sql.join(roomIds.map((roomId) => sql`${roomId}`), sql`, `)})`))
+      : [];
+
     // Get reviews with user info
     const propertyReviews = await db
       .select({
@@ -83,6 +88,7 @@ export async function GET(
     return NextResponse.json({
       property,
       rooms: propertyRooms,
+      ratePlans: propertyRatePlans,
       reviews: propertyReviews,
       host,
     });

@@ -16,6 +16,45 @@ _Aucun bug critique ouvert._ Le seul point restant est **BUG-003
 
 ## Corrigés
 
+- [x] **2026-08-23 — BUG-032** (T-104) : confirmation Stripe post-webhook
+  sans email, refund pending non typé, attachments publiques et suppression
+  S3 `uploads/` cassée. Correctif : service confirmation marqué, webhook
+  refund, clé attachment privée/handler participant, S3 sans ACL publique et
+  validation de clé `uploads/`. ▶️ participant 200/outsider 403 ; snapshot
+  rate plan et confirmation webhook validés.
+
+- [x] **2026-08-23 — BUG-031** (T-103) : aucune interface ne permettait
+  de configurer Stripe, Resend ou S3 sans accès à l'environnement. Correctif :
+  coffre `provider_credentials` AES-256-GCM, master key hors DB,
+  endpoints admin RBAC/audit, UI `/dashboard/settings`, fallback env et
+  suppression d'override. ▶️ API admin sans clé = 403 ; réponse metadata sans
+  secret ; ciphertext DB sans valeur claire ; `GET /api/providers/stripe`
+  n'expose que la clé publiable.
+
+- [x] **2026-08-23 — BUG-027** (T-102) : une réservation pouvait dépasser
+  adultes/enfants/capacité de la chambre, le stock journalier positif ou le
+  `minStay`. Correctif : `booking-rules.ts` partagé, validation dans la
+  transaction verrouillée de `POST /api/bookings`, calendrier hôte borné à la
+  quantité structurelle et recherche nuit par nuit. ▶️ Stock 1 + minStay 3 :
+  deux nuits → 409 ; après minStay 2 : premier booking 201, second 409.
+
+- [x] **2026-08-23 — BUG-028** (T-102) : un voyageur pouvait passer une
+  réservation future à `completed` et déposer un avis vérifié. Correctif :
+  `booking-lifecycle.ts` applique les droits par rôle/date ; clôture hôte après
+  départ ou cron ; avis seulement après clôture réelle. ▶️ customer
+  `confirmed→completed` et POST review futur retournent tous deux 400.
+
+- [x] **2026-08-23 — BUG-029** (T-102) : le CTA latéral de fiche passait
+  `propertyId/roomId` alors que le checkout lisait `property/room`. Correctif :
+  convention `reservation-url.ts`, lecture legacy temporaire, carte client
+  qui conserve dates/voyageurs et checkout invité non bloqué par proxy.
+
+- [x] **2026-08-23 — BUG-030** (T-102) : annulation laissait une réservation
+  payée sans remboursement traçable et Stripe pending pouvait ressusciter un
+  booking annulé. Correctif : migration 0008, provider cancel/refund, statuts
+  refund et webhook qui confirme seulement un booking pending. ▶️ mock :
+  cancellationFee 0, refundAmount total, refundStatus refunded.
+
 - [x] **2026-08-21 — BUG-026** (Session 11 quinquies) : le settings
   `general` de l'admin n'exposait pas les listes `supportedLocales` et
   `supportedCurrencies` — seulement `defaultLanguage`/`defaultCurrency`.

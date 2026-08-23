@@ -1,30 +1,24 @@
 import { ConsoleMailer } from "./console-mailer";
 import { ResendMailer } from "./resend-mailer";
 import type { Mailer } from "./types";
+import { clearProviderCredentialsCache, resolveProviderCredentials } from "@/lib/provider-credentials";
 
 export type { Mailer, Email } from "./types";
 export { templates, stripHtml } from "./templates";
 export { ConsoleMailer, ResendMailer };
 
 /**
- * Singleton mailer sélectionné selon l'environnement.
- * - RESEND_API_KEY présent → ResendMailer (prod).
- * - Sinon → ConsoleMailer (dev/test, écrit dans .data/mails/).
- *
- * Voir `.env.example` et ADR (T-013).
+ * Sélectionne le mailer via coffre chiffré DB puis variables d'environnement.
+ * Sans clé Resend, le ConsoleMailer reste le comportement dev/test historique.
  */
-let cached: Mailer | null = null;
-
-export function getMailer(): Mailer {
-  if (cached) return cached;
-  const key = process.env.RESEND_API_KEY;
-  cached = key
-    ? new ResendMailer(key, process.env.MAIL_FROM)
+export async function getMailer(): Promise<Mailer> {
+  const config = await resolveProviderCredentials("resend");
+  return config.apiKey
+    ? new ResendMailer(config.apiKey, config.mailFrom)
     : new ConsoleMailer();
-  return cached;
 }
 
-/** Réinitialise le singleton (tests). */
+/** Réinitialise le cache de configuration (tests ou mutation admin). */
 export function _resetMailer(): void {
-  cached = null;
+  clearProviderCredentialsCache("resend");
 }

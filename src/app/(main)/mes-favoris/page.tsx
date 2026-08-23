@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PropertyCard } from "@/components/property-card";
 import { WishlistActions } from "@/components/wishlist-actions";
+import { CreateWishlistButton } from "@/components/create-wishlist-button";
 import { PriceAlertsSection } from "@/components/price-alerts-section";
 import { Heart, Bell } from "lucide-react";
 import Link from "next/link";
@@ -66,6 +67,7 @@ export default async function FavoritesPage() {
               {allFavoriteProperties.length} hébergement{allFavoriteProperties.length !== 1 ? "s" : ""} sauvegardé{allFavoriteProperties.length !== 1 ? "s" : ""}
             </p>
           </div>
+          <CreateWishlistButton />
         </div>
 
         {userWishlists.length === 0 ? (

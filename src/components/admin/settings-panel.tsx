@@ -6,7 +6,7 @@
  * bouton d'enregistrement individuel et rate-limit côté serveur.
  */
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -658,43 +658,155 @@ function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTempla
 
 /* ─────────────────────────── PROVIDERS ─────────────────────────── */
 
+type ProviderKey = "stripe" | "resend" | "s3";
+type ProviderMetadata = {
+  provider: ProviderKey;
+  configured: boolean;
+  encryptionReady: boolean;
+  source: "database" | "environment" | "none";
+  fields: { name: string; stored: boolean; environment: boolean; updatedAt: string | null }[];
+};
+
+const PROVIDER_UI: Record<ProviderKey, { name: string; fields: { key: string; label: string; secret?: boolean }[] }> = {
+  stripe: {
+    name: "Stripe",
+    fields: [
+      { key: "secretKey", label: "Clé secrète Stripe", secret: true },
+      { key: "webhookSecret", label: "Secret webhook Stripe", secret: true },
+      { key: "publishableKey", label: "Clé publique Stripe" },
+    ],
+  },
+  resend: {
+    name: "Resend (emails)",
+    fields: [
+      { key: "apiKey", label: "Clé API Resend", secret: true },
+      { key: "mailFrom", label: "Expéditeur (MAIL_FROM)" },
+    ],
+  },
+  s3: {
+    name: "S3 / R2 (uploads)",
+    fields: [
+      { key: "endpoint", label: "Endpoint" },
+      { key: "region", label: "Région" },
+      { key: "bucket", label: "Bucket" },
+      { key: "accessKey", label: "Access key", secret: true },
+      { key: "secretKey", label: "Secret key", secret: true },
+      { key: "publicBaseUrl", label: "Base URL publique" },
+    ],
+  },
+};
+
 function ProvidersSection({ providers }: { providers: Providers }) {
-  const items: { key: keyof Providers; name: string; help: string }[] = [
-    { key: "stripe", name: "Stripe", help: "STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET" },
-    { key: "resend", name: "Resend (email)", help: "RESEND_API_KEY" },
-    { key: "s3", name: "S3 (uploads)", help: "S3_ENDPOINT / _BUCKET / _ACCESS_KEY / _SECRET_KEY" },
-  ];
+  const [metadata, setMetadata] = useState<ProviderMetadata[] | null>(null);
+  const [values, setValues] = useState<Record<ProviderKey, Record<string, string>>>({ stripe: {}, resend: {}, s3: {} });
+  const [busy, setBusy] = useState<ProviderKey | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  async function refresh() {
+    const response = await fetch("/api/admin/providers", { cache: "no-store" });
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(body.error ?? "Impossible de lire les providers");
+    setMetadata(body.providers);
+  }
+
+  useEffect(() => {
+    let active = true;
+    async function loadMetadata() {
+      try {
+        const response = await fetch("/api/admin/providers", { cache: "no-store" });
+        const body = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(body.error ?? "Impossible de lire les providers");
+        if (active) setMetadata(body.providers);
+      } catch (reason) {
+        if (active) setError(reason instanceof Error ? reason.message : "Erreur");
+      }
+    }
+    void loadMetadata();
+    return () => { active = false; };
+  }, []);
+
+  async function save(provider: ProviderKey) {
+    const nonEmpty = Object.fromEntries(Object.entries(values[provider]).filter(([, value]) => value.trim()));
+    if (!Object.keys(nonEmpty).length) {
+      setError("Saisissez au moins une valeur à mettre à jour. Les champs vides ne remplacent jamais une clé existante.");
+      return;
+    }
+    setBusy(provider); setError(null); setSuccess(null);
+    try {
+      const response = await fetch(`/api/admin/providers/${provider}`, {
+        method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ values: nonEmpty }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "Impossible d'enregistrer le provider");
+      setValues((current) => ({ ...current, [provider]: {} }));
+      setSuccess(`${PROVIDER_UI[provider].name} enregistré. Les valeurs ne sont jamais réaffichées.`);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Erreur");
+    } finally { setBusy(null); }
+  }
+
+  async function testConnection(provider: ProviderKey) {
+    setBusy(provider); setError(null); setSuccess(null);
+    try {
+      const response = await fetch(`/api/admin/providers/${provider}`, { method: "POST" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "Test provider échoué");
+      setSuccess(`${PROVIDER_UI[provider].name} : connexion validée.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Erreur");
+    } finally { setBusy(null); }
+  }
+
+  async function reset(provider: ProviderKey) {
+    if (!window.confirm(`Retirer les overrides chiffrés ${PROVIDER_UI[provider].name} et revenir aux variables d’environnement ?`)) return;
+    setBusy(provider); setError(null); setSuccess(null);
+    try {
+      const response = await fetch(`/api/admin/providers/${provider}`, {
+        method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ confirmProvider: provider }),
+      });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(body.error ?? "Impossible de réinitialiser le provider");
+      setSuccess(`${PROVIDER_UI[provider].name} revient aux variables d’environnement.`);
+      await refresh();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "Erreur");
+    } finally { setBusy(null); }
+  }
+
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-3">
-          <Package className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Providers externes (lecture seule)</CardTitle>
-        </div>
+        <div className="flex items-center gap-3"><Package className="w-5 h-5 text-[#1B3A6B]" /><CardTitle>Providers externes sécurisés</CardTitle></div>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <p className="text-xs text-gray-500">
-          Les clés d&apos;API sont pilotées par variables d&apos;environnement
-          — leur modification exige un redéploiement. Cette section
-          affiche uniquement l&apos;état (jamais les clés).
-        </p>
-        {items.map(({ key, name, help }) => (
-          <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
-            <div>
-              <p className="font-medium text-gray-900">{name}</p>
-              <p className="text-xs text-gray-500 font-mono">{help}</p>
-            </div>
-            {providers[key] ? (
-              <span className="inline-flex items-center gap-1 text-green-700 text-sm font-medium">
-                <CheckCircle2 className="w-4 h-4" /> Configuré
-              </span>
-            ) : (
-              <span className="inline-flex items-center gap-1 text-gray-500 text-sm">
-                <XCircle className="w-4 h-4" /> Non configuré
-              </span>
-            )}
-          </div>
-        ))}
+      <CardContent className="space-y-6">
+        <p className="text-sm text-gray-600">Les valeurs saisies sont chiffrées côté serveur avec une clé maître hors base de données. Elles ne sont jamais affichées, même à un administrateur. Les champs vides conservent la valeur actuelle.</p>
+        {(Object.keys(PROVIDER_UI) as ProviderKey[]).map((provider) => {
+          const meta = metadata?.find((item) => item.provider === provider);
+          const fallbackConfigured = providers[provider];
+          return (
+            <section key={provider} className="border border-gray-200 rounded-lg p-4 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div><h4 className="font-semibold text-gray-900">{PROVIDER_UI[provider].name}</h4><p className="text-xs text-gray-500">Source : {meta?.source ?? "chargement…"}</p></div>
+                {(meta?.configured ?? fallbackConfigured) ? <Badge variant="success"><CheckCircle2 className="w-3 h-3 mr-1" /> Configuré</Badge> : <Badge variant="warning"><XCircle className="w-3 h-3 mr-1" /> Non configuré</Badge>}
+              </div>
+              {meta && !meta.encryptionReady && <p className="text-xs text-amber-800 bg-amber-50 p-2 rounded">Ajoutez `CREDENTIALS_ENCRYPTION_KEY` dans l’environnement du serveur pour autoriser l’enregistrement web chiffré.</p>}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {PROVIDER_UI[provider].fields.map((field) => {
+                  const status = meta?.fields.find((item) => item.name === field.key);
+                  return <label key={field.key} className="block text-sm font-medium text-gray-700">{field.label}
+                    <input type={field.secret ? "password" : "text"} autoComplete="off" value={values[provider][field.key] ?? ""} onChange={(event) => setValues((current) => ({ ...current, [provider]: { ...current[provider], [field.key]: event.target.value } }))} placeholder={status?.stored ? "Valeur chiffrée enregistrée — saisir pour remplacer" : status?.environment ? "Fourni par l’environnement — saisir pour remplacer" : "Non configuré"} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm" />
+                    <span className="mt-1 block text-xs text-gray-500">{status?.stored ? "Override chiffré en base" : status?.environment ? "Fallback environnement" : "Aucune valeur"}</span>
+                  </label>;
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => save(provider)} disabled={busy === provider || meta?.encryptionReady === false}>{busy === provider ? "Enregistrement…" : "Enregistrer les champs saisis"}</Button><Button size="sm" variant="outline" onClick={() => testConnection(provider)} disabled={busy === provider || !(meta?.configured ?? fallbackConfigured)}>Tester la connexion</Button><Button size="sm" variant="ghost" onClick={() => reset(provider)} disabled={busy === provider}>Revenir à l’environnement</Button></div>
+            </section>
+          );
+        })}
+        {success && <p className="text-sm text-green-700">{success}</p>}
+        {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
       </CardContent>
     </Card>
   );

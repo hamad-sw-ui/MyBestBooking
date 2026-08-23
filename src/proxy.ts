@@ -52,7 +52,8 @@ export const config = {
     "/mes-reservations/:path*",
     "/mes-favoris/:path*",
     "/messages/:path*",
-    "/reservation/:path*",
+    // /reservation reste public pour permettre l'achat invité. Les règles
+    // d'authentification et de propriété sont vérifiées dans les handlers API.
     "/dashboard/:path*",
   ],
 };

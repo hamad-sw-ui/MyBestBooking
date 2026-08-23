@@ -1,30 +1,36 @@
 import { MockPaymentProvider } from "./mock";
 import { StripePaymentProvider } from "./stripe";
 import type { PaymentProvider } from "./types";
+import { clearProviderCredentialsCache, resolveProviderCredentials } from "@/lib/provider-credentials";
 
 export type {
   PaymentProvider,
   PaymentIntent,
   CreateIntentParams,
   WebhookEvent,
+  RefundResult,
 } from "./types";
 export { MockPaymentProvider, StripePaymentProvider };
 
-let cached: PaymentProvider | null = null;
-
 /**
- * Sélectionne le provider selon l'environnement (T-020).
- * - `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET` définis → Stripe.
- * - Sinon → Mock (comportement historique : "paid" immédiat).
+ * Sélectionne le provider avec override chiffré DB, puis fallback env.
+ * Le mock n'est autorisé qu'en dev/test ; production exige les trois clés
+ * Stripe nécessaires au serveur, webhook et navigateur.
  */
-export function getPaymentProvider(): PaymentProvider {
-  if (cached) return cached;
-  const sk = process.env.STRIPE_SECRET_KEY;
-  const wh = process.env.STRIPE_WEBHOOK_SECRET;
-  cached = sk && wh ? new StripePaymentProvider(sk, wh) : new MockPaymentProvider();
-  return cached;
+export async function getPaymentProvider(): Promise<PaymentProvider> {
+  const config = await resolveProviderCredentials("stripe");
+  const secretKey = config.secretKey;
+  const webhookSecret = config.webhookSecret;
+  const publishableKey = config.publishableKey;
+  if (process.env.NODE_ENV === "production" && (!secretKey || !webhookSecret || !publishableKey)) {
+    throw new Error("Le paiement production exige les clés Stripe serveur, webhook et publique");
+  }
+  return secretKey && webhookSecret
+    ? new StripePaymentProvider(secretKey, webhookSecret)
+    : new MockPaymentProvider();
 }
 
+/** Conservé pour la compatibilité des tests historiques. */
 export function _resetPaymentProvider(): void {
-  cached = null;
+  clearProviderCredentialsCache("stripe");
 }

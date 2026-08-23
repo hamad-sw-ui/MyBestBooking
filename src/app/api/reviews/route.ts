@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { reviews, properties, users, bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   assertNotMaintenance,
@@ -10,6 +10,7 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { rateLimit } from "@/lib/rate-limit";
+import { isReviewEligible, type BookingStatus } from "@/lib/booking-lifecycle";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -50,6 +51,7 @@ export async function GET(request: NextRequest) {
       if (hostProperties.length === 0) {
         return NextResponse.json({ reviews: [] });
       }
+      conditions.push(inArray(reviews.propertyId, hostProperties.map((property) => property.id)));
     }
 
     const results = await db
@@ -132,9 +134,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (booking.status !== "completed") {
+    if (!isReviewEligible(booking.status as BookingStatus, booking.checkOut)) {
       return NextResponse.json(
-        { error: "Vous ne pouvez laisser un avis qu'après votre séjour" },
+        { error: "Vous ne pouvez laisser un avis qu'après un séjour terminé" },
         { status: 400 }
       );
     }

@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { bookings, properties } from "@/db/schema";
-import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
+import { eq, and, desc, sql, ne } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,11 +31,12 @@ async function getBillingData(userId: string, isAdmin: boolean) {
 
   // Get all paid bookings
   const paidBookingsQuery = isAdmin
-    ? db.select().from(bookings).where(eq(bookings.paymentStatus, "paid"))
+    ? db.select().from(bookings).where(and(eq(bookings.paymentStatus, "paid"), ne(bookings.status, "cancelled")))
     : db.select().from(bookings).where(
         and(
           sql`${bookings.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`,
-          eq(bookings.paymentStatus, "paid")
+          eq(bookings.paymentStatus, "paid"),
+          ne(bookings.status, "cancelled"),
         )
       );
   const paidBookings = await paidBookingsQuery;
@@ -70,42 +71,28 @@ async function getBillingData(userId: string, isAdmin: boolean) {
     .leftJoin(properties, eq(bookings.propertyId, properties.id))
     .where(
       isAdmin
-        ? eq(bookings.paymentStatus, "paid")
+        ? and(eq(bookings.paymentStatus, "paid"), ne(bookings.status, "cancelled"))
         : and(
             sql`${bookings.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`,
-            eq(bookings.paymentStatus, "paid")
+            eq(bookings.paymentStatus, "paid"),
+            ne(bookings.status, "cancelled"),
           )
     )
     .orderBy(desc(bookings.createdAt))
     .limit(10);
 
-  // Generate invoices (mock data based on months)
-  const invoices = [];
-  for (let i = 0; i < 6; i++) {
-    const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const monthName = month.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-    const monthBookings = paidBookings.filter(b => {
-      const bDate = new Date(b.createdAt);
-      return bDate.getMonth() === month.getMonth() && bDate.getFullYear() === month.getFullYear();
-    });
-    
-    if (monthBookings.length > 0) {
-      const revenue = monthBookings.reduce((sum, b) => sum + parseFloat(b.total), 0);
-      const commission = monthBookings.reduce((sum, b) => sum + parseFloat(b.commissionAmount), 0);
-      const net = monthBookings.reduce((sum, b) => sum + parseFloat(b.netToHost), 0);
-      
-      invoices.push({
-        id: `MBB-INV-${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, '0')}`,
-        period: monthName,
-        bookingsCount: monthBookings.length,
-        revenue,
-        commission,
-        net,
-        status: i === 0 ? 'pending' : 'paid',
-        paidAt: i === 0 ? null : new Date(month.getFullYear(), month.getMonth() + 1, 5),
-      });
-    }
-  }
+  // Les factures légales et exports ne sont pas encore produits par un
+  // moteur comptable. Ne jamais fabriquer un document qui semblerait réel.
+  const invoices: Array<{
+    id: string;
+    period: string;
+    bookingsCount: number;
+    revenue: number;
+    commission: number;
+    net: number;
+    status: "pending" | "paid";
+    paidAt: Date | null;
+  }> = [];
 
   return {
     thisMonth: {
@@ -218,15 +205,17 @@ export default async function BillingPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Factures</CardTitle>
-              <span className="inline-flex items-center px-3 py-1 rounded-lg border border-gray-200 text-xs text-gray-400">
-                <Download className="w-3 h-3 mr-1" />
-                Export CSV via API (v prochaine)
-              </span>
+              <div className="flex items-center gap-2">
+                <a href="/api/dashboard/billing/export" className="inline-flex items-center px-3 py-1 rounded-lg border border-[#1B3A6B] text-xs text-[#1B3A6B] hover:bg-blue-50">
+                  <Download className="w-3 h-3 mr-1" /> Export CSV
+                </a>
+                <span className="inline-flex items-center px-3 py-1 rounded-lg border border-gray-200 text-xs text-gray-500">Factures légales indisponibles</span>
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             {billing.invoices.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Aucune facture</p>
+              <p className="text-center text-gray-500 py-8">Les factures et exports seront disponibles après intégration du moteur comptable.</p>
             ) : (
               <div className="space-y-4">
                 {billing.invoices.map((invoice) => (
@@ -313,9 +302,7 @@ export default async function BillingPage() {
           <div>
             <h3 className="font-semibold text-blue-900">À propos des commissions</h3>
             <p className="text-sm text-blue-700 mt-1">
-              mybestbooking prélève une commission de 15% sur chaque réservation pour couvrir les frais de plateforme,
-              le support client 24/7, et la garantie prix. Les versements sont effectués automatiquement 
-              48h après le check-out du client.
+              Les montants affichés excluent désormais les réservations annulées. Les factures légales et le calendrier de versement ne sont pas encore automatisés ; ne les considérez pas comme des documents comptables.
             </p>
           </div>
         </CardContent>

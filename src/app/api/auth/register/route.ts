@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       const url = `${base}/api/auth/verify?token=${encodeURIComponent(clear)}`;
       const mail = await templates.emailVerification({ firstName: newUser.firstName, url });
-      await getMailer().send({ to: newUser.email, ...mail });
+      await (await getMailer()).send({ to: newUser.email, ...mail });
     } catch (mailErr) {
       console.error("[register] verification mail failed:", mailErr);
     }

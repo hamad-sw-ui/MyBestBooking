@@ -3,15 +3,17 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
+import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   ArrowLeft, ArrowRight, Check, Shield, Lock, MapPin,
-  Calendar, Users, CreditCard, Clock, CheckCircle, Star
+  Calendar, Users, Clock, CheckCircle, Star
 } from "lucide-react";
 import Link from "next/link";
+import { readReservationParams } from "@/lib/reservation-url";
 
 interface PropertyData {
   id: string;
@@ -27,11 +29,23 @@ interface PropertyData {
   checkOutUntil: string | null;
 }
 
+interface RatePlanData {
+  id: string;
+  roomId: string;
+  name: string;
+  type: string;
+  discountPercentage: string;
+  includesBreakfast: boolean | null;
+  cancellationPolicy: string;
+}
+
 interface RoomData {
   id: string;
   name: string;
   roomType: string;
   maxOccupancy: number;
+  maxAdults: number;
+  maxChildren: number | null;
   basePrice: string;
   sizeSqm: string | null;
   amenities: string[];
@@ -40,8 +54,11 @@ interface RoomData {
 function ReservationPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const propertyId = searchParams.get("property");
-  const roomId = searchParams.get("room");
+  // Lecture temporaire des paramètres legacy propertyId/roomId afin que les
+  // liens déjà générés ne cassent pas pendant la migration de convention.
+  const reservationParams = readReservationParams(searchParams);
+  const propertyId = reservationParams?.propertyId ?? null;
+  const roomId = reservationParams?.roomId ?? null;
 
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -49,7 +66,9 @@ function ReservationPageInner() {
   const [error, setError] = useState("");
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [room, setRoom] = useState<RoomData | null>(null);
-  const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string } | null>(null);
+  const [ratePlans, setRatePlans] = useState<RatePlanData[]>([]);
+  const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string; paymentPending?: boolean; mockPayment?: boolean } | null>(null);
+  const [pendingStripePayment, setPendingStripePayment] = useState<{ bookingId: string; bookingReference: string; total: string; clientSecret: string } | null>(null);
   const [promo, setPromo] = useState<{ code: string; discount: number; finalTotal: number } | null>(null);
   // T-030 : wallet + guest booking
   const [walletBalance, setWalletBalance] = useState<number>(0);
@@ -58,10 +77,10 @@ function ReservationPageInner() {
   const [guestMode, setGuestMode] = useState<boolean>(false);
 
   const [formData, setFormData] = useState({
-    checkIn: searchParams.get("checkIn") || "",
-    checkOut: searchParams.get("checkOut") || "",
-    numAdults: 2,
-    numChildren: 0,
+    checkIn: reservationParams?.checkIn || "",
+    checkOut: reservationParams?.checkOut || "",
+    numAdults: reservationParams?.numAdults || 2,
+    numChildren: reservationParams?.numChildren || 0,
     guestFirstName: "",
     guestLastName: "",
     guestEmail: "",
@@ -70,7 +89,7 @@ function ReservationPageInner() {
     tripPurpose: "",
     specialRequests: "",
     estimatedArrival: "",
-    paymentMethod: "card",
+    ratePlanId: searchParams.get("ratePlan") || "",
   });
 
   // Calculate pricing
@@ -80,7 +99,10 @@ function ReservationPageInner() {
   const numNights = checkInDate && checkOutDate
     ? Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
-  const subtotal = pricePerNight * numNights;
+  const baseSubtotal = pricePerNight * numNights;
+  const selectedRatePlan = ratePlans.find((plan) => plan.id === formData.ratePlanId) ?? null;
+  const ratePlanDiscount = selectedRatePlan ? baseSubtotal * (parseFloat(selectedRatePlan.discountPercentage || "0") / 100) : 0;
+  const subtotal = Math.max(0, baseSubtotal - ratePlanDiscount);
   const taxes = subtotal * 0.1;
   const totalBeforePromo = subtotal + taxes;
   const total = promo ? promo.finalTotal : totalBeforePromo;
@@ -94,7 +116,26 @@ function ReservationPageInner() {
         if (data.property) {
           setProperty(data.property);
           const foundRoom = data.rooms?.find((r: RoomData) => r.id === roomId);
-          if (foundRoom) setRoom(foundRoom);
+          if (foundRoom) {
+            setRoom(foundRoom);
+            const roomPlans = (data.ratePlans ?? []).filter((plan: RatePlanData) => plan.roomId === foundRoom.id);
+            setRatePlans(roomPlans);
+            setFormData((previous) => ({
+              ...previous,
+              ratePlanId: roomPlans.some((plan: RatePlanData) => plan.id === previous.ratePlanId) ? previous.ratePlanId : "",
+            }));
+            // Le formulaire ne propose plus un nombre de voyageurs au-delà
+            // de la chambre ; l'API reste la validation définitive.
+            setFormData((previous) => ({
+              ...previous,
+              numAdults: Math.min(Math.max(1, previous.numAdults), foundRoom.maxAdults),
+              numChildren: Math.min(
+                previous.numChildren,
+                foundRoom.maxChildren ?? 0,
+                Math.max(0, foundRoom.maxOccupancy - Math.min(Math.max(1, previous.numAdults), foundRoom.maxAdults)),
+              ),
+            }));
+          }
         }
         setLoading(false);
       });
@@ -148,6 +189,7 @@ function ReservationPageInner() {
           specialRequests: formData.specialRequests || undefined,
           estimatedArrival: formData.estimatedArrival || undefined,
           promoCode: promo?.code || undefined,
+          ratePlanId: formData.ratePlanId || undefined,
           useWalletCredits: useWalletCredits || undefined,
           isGuestBooking: guestMode || undefined,
         }),
@@ -160,9 +202,21 @@ function ReservationPageInner() {
         return;
       }
 
+      if (data.payment?.requiresConfirmation && data.payment.clientSecret) {
+        setPendingStripePayment({
+          bookingId: data.booking.id,
+          bookingReference: data.booking.bookingReference,
+          total: data.booking.total,
+          clientSecret: data.payment.clientSecret,
+        });
+        setSubmitting(false);
+        return;
+      }
+
       setConfirmation({
         bookingReference: data.booking.bookingReference,
         total: data.booking.total,
+        mockPayment: data.payment?.provider === "mock",
       });
       setStep(4);
     } catch {
@@ -170,6 +224,31 @@ function ReservationPageInner() {
     }
     setSubmitting(false);
   };
+
+  async function waitForStripeConfirmation() {
+    if (!pendingStripePayment) return;
+    setSubmitting(true);
+    for (let attempt = 0; attempt < 5; attempt += 1) {
+      const response = await fetch(`/api/bookings/${pendingStripePayment.bookingId}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok && data.booking?.status === "confirmed" && data.booking?.paymentStatus === "paid") {
+        setConfirmation({ bookingReference: pendingStripePayment.bookingReference, total: pendingStripePayment.total });
+        setPendingStripePayment(null);
+        setStep(4);
+        setSubmitting(false);
+        return;
+      }
+      await new Promise((resolve) => window.setTimeout(resolve, 800));
+    }
+    setConfirmation({
+      bookingReference: pendingStripePayment.bookingReference,
+      total: pendingStripePayment.total,
+      paymentPending: true,
+    });
+    setPendingStripePayment(null);
+    setStep(4);
+    setSubmitting(false);
+  }
 
   if (!propertyId || !roomId) {
     return (
@@ -273,7 +352,7 @@ function ReservationPageInner() {
                         onChange={(e) => setFormData({ ...formData, numAdults: parseInt(e.target.value) })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
                       >
-                        {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n} adulte{n > 1 ? "s" : ""}</option>)}
+                        {Array.from({ length: room?.maxAdults ?? 1 }, (_, index) => index + 1).map(n => <option key={n} value={n}>{n} adulte{n > 1 ? "s" : ""}</option>)}
                       </select>
                     </div>
                     <div>
@@ -283,10 +362,24 @@ function ReservationPageInner() {
                         onChange={(e) => setFormData({ ...formData, numChildren: parseInt(e.target.value) })}
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
                       >
-                        {[0,1,2,3,4].map(n => <option key={n} value={n}>{n} enfant{n > 1 ? "s" : ""}</option>)}
+                        {Array.from({ length: Math.min(room?.maxChildren ?? 0, Math.max(0, (room?.maxOccupancy ?? 1) - formData.numAdults)) + 1 }, (_, index) => index).map(n => <option key={n} value={n}>{n} enfant{n > 1 ? "s" : ""}</option>)}
                       </select>
                     </div>
                   </div>
+                  {ratePlans.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Tarif et avantages</label>
+                      <select value={formData.ratePlanId} onChange={(event) => setFormData({ ...formData, ratePlanId: event.target.value })} className="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
+                        <option value="">Tarif standard</option>
+                        {ratePlans.map((plan) => (
+                          <option key={plan.id} value={plan.id}>
+                            {plan.name}{Number(plan.discountPercentage) > 0 ? ` — -${plan.discountPercentage}%` : ""}{plan.includesBreakfast ? " · petit-déjeuner inclus" : ""}
+                          </option>
+                        ))}
+                      </select>
+                      {selectedRatePlan && <p className="mt-1 text-xs text-gray-500">Politique : {selectedRatePlan.cancellationPolicy}{selectedRatePlan.includesBreakfast ? " · Petit-déjeuner inclus" : ""}</p>}
+                    </div>
+                  )}
                 </CardContent>
                 <CardFooter className="flex justify-end">
                   <Button onClick={() => setStep(2)} disabled={!formData.checkIn || !formData.checkOut || numNights <= 0}>
@@ -394,73 +487,37 @@ function ReservationPageInner() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="space-y-3">
-                    {[
-                      { value: "card", label: "💳 Carte bancaire (Visa, Mastercard, Amex)", tag: "Recommandé" },
-                      { value: "paypal", label: "🅿️ PayPal", tag: null },
-                      { value: "apple_pay", label: "🍎 Apple Pay", tag: null },
-                      { value: "pay_at_hotel", label: "🏨 Payer à l'hôtel", tag: null },
-                    ].map((method) => (
-                      <label
-                        key={method.value}
-                        className={`flex items-center justify-between p-4 rounded-lg border-2 cursor-pointer transition-colors ${
-                          formData.paymentMethod === method.value
-                            ? "border-[#1B3A6B] bg-[#1B3A6B]/5"
-                            : "border-gray-200 hover:border-gray-300"
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <input
-                            type="radio"
-                            name="payment"
-                            value={method.value}
-                            checked={formData.paymentMethod === method.value}
-                            onChange={(e) => setFormData({ ...formData, paymentMethod: e.target.value })}
-                            className="sr-only"
-                          />
-                          <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                            formData.paymentMethod === method.value
-                              ? "border-[#1B3A6B]"
-                              : "border-gray-300"
-                          }`}>
-                            {formData.paymentMethod === method.value && (
-                              <div className="w-3 h-3 rounded-full bg-[#1B3A6B]" />
-                            )}
-                          </div>
-                          <span>{method.label}</span>
-                        </div>
-                        {method.tag && (
-                          <Badge variant="success">{method.tag}</Badge>
-                        )}
-                      </label>
-                    ))}
-                  </div>
-
-                  {formData.paymentMethod === "card" && (
-                    <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
-                      <Input label="Numéro de carte" placeholder="1234 5678 9012 3456" />
-                      <div className="grid grid-cols-2 gap-4">
-                        <Input label="Date d'expiration" placeholder="MM/AA" />
-                        <Input label="CVV" placeholder="123" />
+                  {pendingStripePayment ? (
+                    <>
+                      <p className="text-sm text-gray-600">
+                        Finalisez le paiement auprès de Stripe. Les moyens proposés sont ceux réellement activés pour cet établissement.
+                      </p>
+                      <StripePaymentForm clientSecret={pendingStripePayment.clientSecret} onSubmitted={waitForStripeConfirmation} />
+                    </>
+                  ) : (
+                    <>
+                      <div className="p-4 rounded-lg bg-gray-50 text-sm text-gray-700">
+                        <p className="font-medium text-gray-900">Paiement en ligne sécurisé</p>
+                        <p className="mt-1">Les données de carte sont saisies directement dans l&apos;interface du prestataire de paiement ; MyBestBooking ne les enregistre jamais.</p>
                       </div>
-                      <Input label="Nom sur la carte" placeholder="JEAN DUPONT" />
-                    </div>
+                      <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg text-sm text-green-800">
+                        <Shield className="w-5 h-5 text-green-600 flex-shrink-0" />
+                        <span>Votre réservation ne sera confirmée qu&apos;après confirmation effective du paiement.</span>
+                      </div>
+                    </>
                   )}
-
-                  <div className="flex items-center gap-3 p-3 bg-green-50 rounded-lg text-sm text-green-800">
-                    <Shield className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>Chiffrement SSL 256 bits • 3D Secure 2.0 • Certifié PCI DSS Level 1</span>
-                  </div>
                 </CardContent>
-                <CardFooter className="flex justify-between">
-                  <Button variant="ghost" onClick={() => setStep(2)}>
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Retour
-                  </Button>
-                  <Button onClick={handleSubmit} loading={submitting} size="lg" variant="secondary">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Confirmer et payer {total > 0 ? `€${total.toFixed(2)}` : ""}
-                  </Button>
-                </CardFooter>
+                {!pendingStripePayment && (
+                  <CardFooter className="flex justify-between">
+                    <Button variant="ghost" onClick={() => setStep(2)}>
+                      <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+                    </Button>
+                    <Button onClick={handleSubmit} loading={submitting} size="lg" variant="secondary">
+                      <Lock className="w-4 h-4 mr-2" />
+                      Continuer vers le paiement {total > 0 ? `€${total.toFixed(2)}` : ""}
+                    </Button>
+                  </CardFooter>
+                )}
               </Card>
             )}
 
@@ -468,14 +525,16 @@ function ReservationPageInner() {
             {step === 4 && confirmation && (
               <Card className="text-center">
                 <CardContent className="py-12">
-                  <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-[#00A699] flex items-center justify-center">
-                    <CheckCircle className="w-10 h-10 text-white" />
+                  <div className={`w-20 h-20 mx-auto mb-6 rounded-full flex items-center justify-center ${confirmation.paymentPending ? "bg-amber-500" : "bg-[#00A699]"}`}>
+                    {confirmation.paymentPending ? <Clock className="w-10 h-10 text-white" /> : <CheckCircle className="w-10 h-10 text-white" />}
                   </div>
                   <h2 className="text-3xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    🎉 C&apos;est confirmé !
+                    {confirmation.paymentPending ? "Paiement en cours de confirmation" : "🎉 C&apos;est confirmé !"}
                   </h2>
                   <p className="text-gray-600 mb-6">
-                    Merci {formData.guestFirstName} ! Votre réservation est confirmée.
+                    {confirmation.paymentPending
+                      ? "Votre demande de paiement a été transmise. La réservation sera confirmée dès la réponse sécurisée du prestataire."
+                      : `Merci ${formData.guestFirstName} ! Votre réservation est confirmée.`}
                   </p>
 
                   <div className="inline-block p-6 bg-gray-50 rounded-xl mb-6">
@@ -484,13 +543,18 @@ function ReservationPageInner() {
                     <div className="mt-4 space-y-1 text-sm text-gray-600">
                       <p>🏨 {property?.name}, {property?.city}</p>
                       <p>📅 {formData.checkIn} → {formData.checkOut}</p>
-                      <p>💰 Total payé : €{parseFloat(confirmation.total).toFixed(2)} tout inclus</p>
+                      <p>💰 {confirmation.paymentPending ? "Montant à confirmer" : "Total payé"} : €{parseFloat(confirmation.total).toFixed(2)} tout inclus</p>
                     </div>
                   </div>
 
-                  <p className="text-sm text-gray-500 mb-6">
-                    📧 Confirmation envoyée à {formData.guestEmail}
+                  <p className="text-sm text-gray-500 mb-3">
+                    {confirmation.paymentPending
+                      ? "📧 Vous recevrez la confirmation définitive à l'issue du paiement."
+                      : `📧 Confirmation envoyée à ${formData.guestEmail}`}
                   </p>
+                  {confirmation.mockPayment && (
+                    <p className="text-xs text-amber-800 mb-6 p-3 rounded-lg bg-amber-50">Mode démonstration : aucun débit réel n&apos;a été effectué.</p>
+                  )}
 
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Link href="/mes-reservations">
@@ -558,6 +622,12 @@ function ReservationPageInner() {
                         </span>
                         <span>€{subtotal.toFixed(2)}</span>
                       </div>
+                      {selectedRatePlan && (
+                        <div className="flex justify-between text-sm mb-2 text-green-700">
+                          <span>{selectedRatePlan.name}</span>
+                          <span>−€{ratePlanDiscount.toFixed(2)}</span>
+                        </div>
+                      )}
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-600">Taxes et frais</span>
                         <span>€{taxes.toFixed(2)}</span>

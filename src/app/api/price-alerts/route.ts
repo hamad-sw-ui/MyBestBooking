@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { priceAlerts } from "@/db/schema";
+import { priceAlerts, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq, desc } from "drizzle-orm";
 
@@ -50,6 +50,9 @@ export async function POST(request: NextRequest) {
         },
       })
       .returning();
+    // Créer volontairement une alerte constitue un opt-in explicite pour ces
+    // notifications. L'utilisateur peut ensuite la désactiver dans son compte.
+    await db.update(users).set({ priceAlertEnabled: true, updatedAt: new Date() }).where(eq(users.id, user.id));
     return NextResponse.json({ alert }, { status: 201 });
   } catch (e) {
     if (e instanceof z.ZodError) {

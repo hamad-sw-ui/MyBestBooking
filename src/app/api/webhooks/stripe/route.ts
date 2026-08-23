@@ -1,23 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings } from "@/db/schema";
-import { eq } from "drizzle-orm";
+import { eq, or } from "drizzle-orm";
 import { getPaymentProvider } from "@/lib/payment";
+import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
 
 /**
- * POST /api/webhooks/stripe (T-020)
- * Reçoit les events Stripe et met à jour le booking correspondant.
- * Signature vérifiée dans provider.verifyWebhook. Idempotent : un
- * même paymentIntentId `succeeded` reçu 2× ne change rien la 2e fois.
+ * Webhook Stripe idempotent : confirmation Payment Intent et réconciliation
+ * refund. Aucune transition ne ressuscite une réservation annulée.
  */
 export async function POST(request: NextRequest) {
-  const provider = getPaymentProvider();
+  const provider = await getPaymentProvider();
   const payload = await request.text();
   const signature = request.headers.get("stripe-signature");
-
   const event = await provider.verifyWebhook(payload, signature);
-  if (!event) {
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+  if (!event) return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+
+  if (event.kind === "refund") {
+    const [booking] = await db
+      .select()
+      .from(bookings)
+      .where(or(eq(bookings.refundProviderId, event.refundId), eq(bookings.paymentIntentId, event.paymentIntentId)))
+      .limit(1);
+    if (!booking) return NextResponse.json({ received: true, warn: "booking_not_found" });
+    await db
+      .update(bookings)
+      .set({
+        refundProviderId: event.refundId,
+        refundStatus: event.status === "succeeded" ? "refunded" : event.status,
+        ...(event.status === "succeeded" ? { refundedAt: new Date() } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(bookings.id, booking.id));
+    return NextResponse.json({ received: true, kind: "refund" });
   }
 
   const [booking] = await db
@@ -25,23 +40,20 @@ export async function POST(request: NextRequest) {
     .from(bookings)
     .where(eq(bookings.paymentIntentId, event.paymentIntentId))
     .limit(1);
+  if (!booking) return NextResponse.json({ received: true, warn: "booking_not_found" });
 
-  if (!booking) {
-    // Le webhook peut arriver avant le commit du booking (rare) ou
-    // référencer un paymentIntent d'un autre projet. On acquitte 200
-    // pour éviter les retries infinis Stripe.
-    return NextResponse.json({ received: true, warn: "booking_not_found" });
-  }
-
-  if (event.status === "succeeded" && booking.paymentStatus !== "paid") {
+  if (event.status === "succeeded" && booking.paymentStatus !== "paid" && booking.status === "pending") {
     await db
       .update(bookings)
-      .set({
-        paymentStatus: "paid",
-        status: "confirmed",
-        updatedAt: new Date(),
-      })
+      .set({ paymentStatus: "paid", status: "confirmed", updatedAt: new Date() })
       .where(eq(bookings.id, booking.id));
+    try {
+      await sendBookingConfirmationIfNeeded(booking.id);
+    } catch (error) {
+      // Le booking reste confirmé ; un retry webhook ou une future outbox peut
+      // retenter l'envoi, sans faire échouer la confirmation financière.
+      console.error("[stripe webhook] confirmation email failed", error);
+    }
   } else if (event.status === "failed" && booking.paymentStatus !== "failed") {
     await db
       .update(bookings)
@@ -55,5 +67,5 @@ export async function POST(request: NextRequest) {
       .where(eq(bookings.id, booking.id));
   }
 
-  return NextResponse.json({ received: true });
+  return NextResponse.json({ received: true, kind: "payment" });
 }

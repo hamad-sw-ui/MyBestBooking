@@ -1,7 +1,14 @@
 export interface StoredFile {
-  url: string;    // URL publique ou présignée
-  key: string;    // chemin/identifiant interne
+  // Les nouveaux uploads de messagerie sont privés : url peut être null.
+  url: string | null;
+  key: string;
   size: number;
+  mimeType: string;
+}
+
+export interface RetrievedFile {
+  body: Buffer;
+  mimeType: string | null;
 }
 
 export interface Uploader {
@@ -18,4 +25,7 @@ export interface Uploader {
    * Ne throw jamais (best-effort).
    */
   remove(key: string): Promise<boolean>;
+
+  /** Lit un fichier privé après que le handler applicatif a vérifié l'accès. */
+  get(key: string): Promise<RetrievedFile | null>;
 }

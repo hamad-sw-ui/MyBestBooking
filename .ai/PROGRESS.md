@@ -1820,3 +1820,86 @@ Aucun.
 ### Étape suivante
 
 Ajouter la couche gouvernance manquante — devenu la Session 2 ci-dessus.
+
+---
+
+## 2026-08-23 — T-102 Remédiation audit runtime (C) — CORRIGÉ (VALIDÉ)
+
+- 🔍 `booking-rules.ts` centralise nuits, capacité, stock quotidien,
+  `stopSell`, `minStay` et prix journalier ; intégrée dans la transaction
+  verrouillée de réservation.
+- 🔍 cycle de vie par acteur/date, remboursement/cancel provider, marqueurs
+  fidélité/alertes, Stripe Elements conditionnel et webhook anti-résurrection.
+- 🔍 CTA checkout, achat invité, post-login, mobile, messagerie, pièces
+  jointes, wishlist public et cron alertes/clôture corrigés.
+- 🔨 migration 0008 générée et appliquée sur une base PostgreSQL fraîche.
+- 🧪 Vitest avec DB + serveur : **208/208**.
+- 🔨 typecheck, build et ai:check : succès ; lint 0 erreur.
+- ▶️ smoke : **91/91** ; scénarios API critiques documentés dans
+  `REPORTS/validation_T-102_2026-08-23.md`.
+
+### Rétrospective §17
+
+1. **Bien fonctionné** : les preuves runtime ont révélé les divergences entre
+   UI et API ; les règles pures ont rendu les corrections testables.
+2. **Ralenti** : tests intégration qui dépendent d'un serveur HTTP en plus de
+   PostgreSQL, et Chromium inaccessible dans le sandbox.
+3. **Erreur évitée** : présenter un intent Stripe pending ou une alerte stockée
+   comme un résultat final ; les états explicites empêchent cette confusion.
+4. **Amélioration proposée** : faire démarrer un serveur de test dédié dans la
+   config Vitest afin que les 208 tests ne dépendent plus d'un processus
+   externe. À examiner, non implémenté dans ce cycle.
+5. **Règle permanente** : aucune nouvelle règle proposée ; le workflow C
+   existant a suffi lorsqu'il a été appliqué intégralement.
+
+---
+
+## 2026-08-23 — T-103 Coffre chiffré providers (C) — CORRIGÉ (VALIDÉ)
+
+- 🔍 table `provider_credentials` + migration 0009 ; AES-256-GCM avec IV/tag
+  par champ et master key hors DB.
+- 🔍 endpoints admin RBAC/rate-limit/audit, metadata sans valeurs, UI
+  `/dashboard/settings`, fallback env et endpoint public Stripe limité à `pk_*`.
+- 🔍 factories mail/paiement/upload résolvent async coffre puis env.
+- 🧪 **211/211** avec DB+serveur, dont crypto tamper et override Resend DB.
+- ▶️ migration fraîche, 403 non-admin, absence de fuite JSON/ciphertext, PUT/
+  DELETE admin et clé publique Stripe validés.
+- 🔨 typecheck, build, lint 0 erreur et ai:check sans fail ; ▶️ smoke 91/91.
+
+### Rétrospective §17
+
+1. **Bien fonctionné** : la séparation metadata/valeur a permis une UI utile
+   sans rendre une clé relisible ; les fallbacks env n'ont pas été cassés.
+2. **Ralenti** : les factories synchrones historiques ont nécessité un
+   inventaire complet des appelants avant conversion async.
+3. **Erreur évitée** : exposer une clé Stripe publique depuis une env compile-time
+   uniquement ; l'endpoint public dédié résout maintenant aussi le coffre.
+4. **Amélioration proposée** : procédure de rotation double-clé et test de
+   connexion provider asynchrone, à planifier séparément.
+5. **Règle permanente** : aucune nouvelle règle ; le workflow C existant a
+   correctement encadré la modification.
+
+---
+
+## 2026-08-23 — T-104 Post-actions Stripe, fichiers privés, rate plans (C) — CORRIGÉ (VALIDÉ)
+
+- 🔍 confirmation mail idempotente depuis mock/webhook, événements refund typés,
+  test provider admin et rate plans snapshotés au checkout.
+- 🔍 pièces jointes privées hors public, handler participant, S3 sans ACL
+  public-read et suppression `uploads/...` validée.
+- 🧪 **215/215** avec DB+serveur ; 🔨 typecheck/build/lint 0 erreur.
+- ▶️ migration 0010, webhook email, attachment 200/403, rate plan snapshot,
+  smoke **91/91** et ai:check sans fail.
+
+### Rétrospective §17
+
+1. **Bien fonctionné** : les scénarios runtime ont immédiatement trouvé le
+   verrou `FOR UPDATE` invalide et permis sa correction avant clôture.
+2. **Ralenti** : les tests externes Stripe/Resend/S3 restent indisponibles sans
+   credentials, mais les interfaces de test sont prêtes.
+3. **Erreur évitée** : confondre URL aléatoire et autorisation réelle d’une
+   pièce jointe.
+4. **Amélioration proposée** : outbox email/provider avec idempotency key et
+   réconciliation refund planifiée, à traiter séparément.
+5. **Règle permanente** : aucune nouvelle règle ; les preuves C existantes
+   suffisent.

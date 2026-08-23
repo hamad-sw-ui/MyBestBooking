@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { safeNextPath } from "@/lib/safe-next";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -44,12 +45,11 @@ export default function LoginPage() {
         return;
       }
 
-      // Redirect based on role
-      if (data.user.role === "admin" || data.user.role === "host") {
-        router.push("/dashboard");
-      } else {
-        router.push("/");
-      }
+      // Le proxy conserve la destination initiale. Refuser toute URL externe
+      // pour éviter une redirection ouverte après authentification.
+      const requested = new URLSearchParams(window.location.search).get("next");
+      const safeNext = safeNextPath(requested);
+      router.push(safeNext ?? (data.user.role === "admin" || data.user.role === "host" ? "/dashboard" : "/"));
       router.refresh();
     } catch {
       setError("Une erreur est survenue");

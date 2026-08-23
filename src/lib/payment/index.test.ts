@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createHmac } from "node:crypto";
 import {
   MockPaymentProvider,
@@ -19,6 +19,18 @@ describe("MockPaymentProvider (T-020, §13.5)", () => {
     expect(r.id).toMatch(/^pi_mock_/);
     expect(r.status).toBe("succeeded");
     expect(r.clientSecret).toBeNull();
+  });
+
+  it("cancel annule un intent mock en attente", async () => {
+    const p = new MockPaymentProvider();
+    await expect(p.cancel("pi_mock_any")).resolves.toBe("succeeded");
+  });
+
+  it("refund → remboursement mock immédiatement réussi", async () => {
+    const p = new MockPaymentProvider();
+    const refund = await p.refund("pi_mock_any", 1250);
+    expect(refund).toMatchObject({ status: "succeeded", amount: 1250 });
+    expect(refund.id).toMatch(/^re_mock_/);
   });
 
   it("verifyWebhook accepte n'importe quel JSON payload", async () => {
@@ -54,6 +66,15 @@ describe("StripePaymentProvider — verifyWebhook (§13.5)", () => {
     expect(evt?.type).toBe("payment_intent.succeeded");
   });
 
+  it("refund.updated valide → événement refund typé", async () => {
+    const payload = JSON.stringify({
+      type: "refund.updated",
+      data: { object: { id: "re_123", payment_intent: "pi_stripe_1", status: "succeeded" } },
+    });
+    const evt = await provider.verifyWebhook(payload, sign(payload));
+    expect(evt).toMatchObject({ kind: "refund", refundId: "re_123", paymentIntentId: "pi_stripe_1", status: "succeeded" });
+  });
+
   it("signature absente → null", async () => {
     expect(await provider.verifyWebhook("{}", null)).toBeNull();
   });
@@ -76,22 +97,30 @@ describe("getPaymentProvider factory", () => {
     _resetPaymentProvider();
     delete process.env.STRIPE_SECRET_KEY;
     delete process.env.STRIPE_WEBHOOK_SECRET;
+    delete process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    vi.unstubAllEnvs();
   });
 
-  it("sans variables → Mock", () => {
-    expect(getPaymentProvider().kind).toBe("mock");
+  it("sans variables → Mock", async () => {
+    expect((await getPaymentProvider()).kind).toBe("mock");
   });
 
-  it("avec STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET → Stripe", () => {
+  it("avec STRIPE_SECRET_KEY + STRIPE_WEBHOOK_SECRET → Stripe", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_x";
     _resetPaymentProvider();
-    expect(getPaymentProvider().kind).toBe("stripe");
+    expect((await getPaymentProvider()).kind).toBe("stripe");
   });
 
-  it("uniquement STRIPE_SECRET_KEY (webhook manquant) → Mock (dégradé)", () => {
+  it("uniquement STRIPE_SECRET_KEY (webhook manquant) → Mock (dégradé)", async () => {
     process.env.STRIPE_SECRET_KEY = "sk_test_x";
     _resetPaymentProvider();
-    expect(getPaymentProvider().kind).toBe("mock");
+    expect((await getPaymentProvider()).kind).toBe("mock");
+  });
+
+  it("refuse le mock lorsqu'un runtime production n'a pas toutes les clés Stripe", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    _resetPaymentProvider();
+    await expect(getPaymentProvider()).rejects.toThrow(/exige les clés Stripe/);
   });
 });

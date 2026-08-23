@@ -4,6 +4,7 @@ import type {
   PaymentIntent,
   CreateIntentParams,
   WebhookEvent,
+  RefundResult,
 } from "./types";
 
 /**
@@ -24,11 +25,24 @@ export class MockPaymentProvider implements PaymentProvider {
     };
   }
 
+  async cancel(_paymentIntentId: string): Promise<"succeeded"> {
+    return "succeeded";
+  }
+
+  async refund(_paymentIntentId: string, amount: number): Promise<RefundResult> {
+    return {
+      id: `re_mock_${randomUUID()}`,
+      status: "succeeded",
+      amount,
+    };
+  }
+
   async verifyWebhook(payload: string): Promise<WebhookEvent | null> {
     try {
       const evt = JSON.parse(payload);
       if (!evt.data?.object?.id) return null;
       return {
+        kind: "payment",
         type: evt.type ?? "payment_intent.succeeded",
         paymentIntentId: evt.data.object.id,
         status: evt.data.object.status ?? "succeeded",

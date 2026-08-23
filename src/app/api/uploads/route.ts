@@ -23,12 +23,12 @@ export async function DELETE(request: NextRequest) {
   if (!key || !/^[A-Za-z0-9._-]+$/.test(key)) {
     return NextResponse.json({ error: "Key invalide" }, { status: 400 });
   }
-  // Vérif ownership : préfixe 8 chars = id user
+  // Vérif ownership : les nouveaux uploads privés sont sous uploads/<id8>-.
   const ownedPrefix = user.id.slice(0, 8);
-  if (user.role !== "admin" && !key.startsWith(`${ownedPrefix}-`)) {
+  if (user.role !== "admin" && !key.startsWith(`uploads/${ownedPrefix}-`)) {
     return NextResponse.json({ error: "Non autorisé sur ce fichier" }, { status: 403 });
   }
-  const ok = await getUploader().remove(key);
+  const ok = await (await getUploader()).remove(key);
   return NextResponse.json({ removed: ok });
 }
 
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const stored = await getUploader().put(buffer, mimeType, user.id);
+    const stored = await (await getUploader()).put(buffer, mimeType, user.id);
     return NextResponse.json({
       url: stored.url,
       key: stored.key,

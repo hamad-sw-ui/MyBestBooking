@@ -9,11 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import type { Property } from "@/db/schema";
 
 interface PropertyCardProps {
-  property: Property & { minPrice?: number | null };
+  property: Property & { minPrice?: number | null; minCurrency?: string | null };
   showFavorite?: boolean;
+  /** Critères de séjour à préserver entre résultat de recherche et fiche. */
+  searchQuery?: string;
 }
 
-export function PropertyCard({ property, showFavorite = true }: PropertyCardProps) {
+export function PropertyCard({ property, showFavorite = true, searchQuery }: PropertyCardProps) {
   const [favoriteState, setFavoriteState] = useState<"idle" | "loading" | "saved">("idle");
   const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
@@ -66,7 +68,7 @@ export function PropertyCard({ property, showFavorite = true }: PropertyCardProp
 
   return (
     <Link
-      href={`/hebergement/${property.slug}`}
+      href={`/hebergement/${property.slug}${searchQuery ? `?${searchQuery}` : ""}`}
       className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow"
     >
       {/* Image */}
@@ -141,7 +143,7 @@ export function PropertyCard({ property, showFavorite = true }: PropertyCardProp
           <div>
             {minPrice !== null && minPrice !== undefined ? (
               <>
-                <span className="text-lg font-bold text-gray-900">Dès €{minPrice.toFixed(2)}</span>
+                <span className="text-lg font-bold text-gray-900">Dès {formatPrice(minPrice, property.minCurrency ?? "EUR")}</span>
                 <span className="text-sm text-gray-500">/nuit</span>
               </>
             ) : (

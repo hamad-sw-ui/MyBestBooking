@@ -55,7 +55,7 @@ export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 10
   if (!open) {
     return (
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
-        <Bell className="w-4 h-4 mr-2" /> Suivre le prix
+        <Bell className="w-4 h-4 mr-2" /> Suivre le prix de base
       </Button>
     );
   }

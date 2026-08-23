@@ -61,6 +61,10 @@ export const priceAlerts = pgTable("price_alerts", {
   maxPrice: decimal("max_price", { precision: 10, scale: 2 }).notNull(),
   currency: varchar("currency", { length: 3 }).default("EUR"),
   active: boolean("active").default(true),
+  // Un cron idempotent ne renvoie pas la même alerte au même tarif à
+  // chaque exécution. Null = aucune notification encore envoyée.
+  lastNotifiedAt: timestamp("last_notified_at"),
+  lastNotifiedPrice: decimal("last_notified_price", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   uniqueIndex("uidx_price_alert_user_prop").on(table.userId, table.propertyId),
@@ -227,12 +231,27 @@ export const bookings = pgTable("bookings", {
   paymentStatus: varchar("payment_status", { length: 20 }).default("pending"),
   paymentMethod: varchar("payment_method", { length: 20 }),
   paymentIntentId: varchar("payment_intent_id", { length: 255 }),
+  confirmationEmailSentAt: timestamp("confirmation_email_sent_at"),
+  refundProviderId: varchar("refund_provider_id", { length: 255 }),
+  // Snapshot du rate plan choisi : les modifications ultérieures d'un plan
+  // ne modifient jamais une réservation déjà vendue.
+  ratePlanId: uuid("rate_plan_id"),
+  ratePlanName: varchar("rate_plan_name", { length: 100 }),
+  ratePlanSnapshot: jsonb("rate_plan_snapshot"),
   commissionRate: decimal("commission_rate", { precision: 4, scale: 2 }).notNull(),
   commissionAmount: decimal("commission_amount", { precision: 10, scale: 2 }).notNull(),
   netToHost: decimal("net_to_host", { precision: 10, scale: 2 }).notNull(),
   cancelledAt: timestamp("cancelled_at"),
   cancellationReason: text("cancellation_reason"),
   cancellationFee: decimal("cancellation_fee", { precision: 10, scale: 2 }).default("0"),
+  // Etats financiers additifs : une annulation peut être valide alors que
+  // son remboursement PSP est encore en cours ou échoué.
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }).default("0"),
+  refundStatus: varchar("refund_status", { length: 20 }).default("none"),
+  refundedAt: timestamp("refunded_at"),
+  // Une attribution de fidélité doit être exactement une fois, après séjour.
+  loyaltyAwardedAt: timestamp("loyalty_awarded_at"),
+  cashbackAmount: decimal("cashback_amount", { precision: 10, scale: 2 }).default("0"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [
@@ -318,7 +337,11 @@ export const messages = pgTable("messages", {
   senderId: uuid("sender_id").references(() => users.id).notNull(),
   senderType: varchar("sender_type", { length: 10 }).notNull(),
   content: text("content").notNull(),
+  // attachmentUrl est conservé pour les messages historiques ; les nouveaux
+  // messages utilisent attachmentKey via le handler participant protégé.
   attachmentUrl: varchar("attachment_url", { length: 500 }),
+  attachmentKey: varchar("attachment_key", { length: 500 }),
+  attachmentMimeType: varchar("attachment_mime_type", { length: 100 }),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
@@ -341,6 +364,25 @@ export const promotions = pgTable("promotions", {
   isActive: boolean("is_active").default(true),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
+
+// ═══════════════════════════════════════════════
+// PROVIDER_CREDENTIALS (T-103)
+// Overrides de providers chiffrés AES-256-GCM. La clé maître ne vit jamais
+// en DB : elle reste dans CREDENTIALS_ENCRYPTION_KEY côté environnement.
+// ═══════════════════════════════════════════════
+export const providerCredentials = pgTable("provider_credentials", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  name: varchar("name", { length: 64 }).notNull(),
+  ciphertext: text("ciphertext").notNull(),
+  iv: varchar("iv", { length: 32 }).notNull(),
+  authTag: varchar("auth_tag", { length: 32 }).notNull(),
+  updatedBy: uuid("updated_by").references(() => users.id),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("uniq_provider_credentials_provider_name").on(table.provider, table.name),
+  index("idx_provider_credentials_provider").on(table.provider),
+]);
 
 // ═══════════════════════════════════════════════
 // APP_SETTINGS (T-021, ADR-007)
@@ -395,3 +437,5 @@ export type AuditLog = typeof auditLog.$inferSelect;
 export type NewAuditLog = typeof auditLog.$inferInsert;
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type NewPriceAlert = typeof priceAlerts.$inferInsert;
+export type ProviderCredential = typeof providerCredentials.$inferSelect;
+export type NewProviderCredential = typeof providerCredentials.$inferInsert;

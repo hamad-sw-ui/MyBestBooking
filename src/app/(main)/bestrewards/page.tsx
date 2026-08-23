@@ -5,10 +5,10 @@ import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
   title: "BestRewards — programme fidélité",
-  description: "Cumulez des réservations et débloquez 3 niveaux de récompenses : réductions, upgrades, avantages exclusifs.",
+  description: "Cumulez des séjours terminés et débloquez des réductions BestRewards et le cashback Ambassador.",
 };
 import { Badge } from "@/components/ui/badge";
-import { Award, Check, Star, Gift, Percent, Coffee, ArrowUp, Wallet } from "lucide-react";
+import { Award, Star, Percent, Wallet } from "lucide-react";
 import Link from "next/link";
 
 export default async function BestRewardsPage() {
@@ -21,35 +21,29 @@ export default async function BestRewardsPage() {
       color: "from-blue-500 to-blue-600",
       requirement: "Dès l'inscription",
       benefits: [
-        { icon: Percent, text: "-10% sur hébergements BestRewards" },
-        { icon: Star, text: "Accès aux offres exclusives" },
-        { icon: Gift, text: "Cadeau de bienvenue" },
+        { icon: Percent, text: "Réduction configurée sur hébergements BestRewards" },
+        { icon: Star, text: "Suivi de votre niveau dans Mon compte" },
       ],
     },
     {
       level: 2,
       name: "Voyageur",
       color: "from-purple-500 to-purple-600",
-      requirement: "5 réservations confirmées",
+      requirement: "5 séjours terminés",
       benefits: [
-        { icon: Percent, text: "-10 à -15% sur BestRewards" },
-        { icon: Coffee, text: "Petit-déjeuner gratuit (sélection)" },
-        { icon: ArrowUp, text: "Surclassement prioritaire" },
-        { icon: Star, text: "Tous les avantages Level 1" },
+        { icon: Percent, text: "Réduction niveau Voyageur sur BestRewards" },
+        { icon: Star, text: "Tous les avantages Explorer" },
       ],
     },
     {
       level: 3,
       name: "Ambassador",
       color: "from-[#F5A623] to-yellow-500",
-      requirement: "15 réservations confirmées",
+      requirement: "15 séjours terminés",
       benefits: [
-        { icon: Percent, text: "-10 à -20% sur BestRewards" },
-        { icon: Coffee, text: "Petit-déjeuner offert partout" },
-        { icon: ArrowUp, text: "Surclassement garanti" },
-        { icon: Wallet, text: "Cashback 5% en wallet" },
-        { icon: Star, text: "Support prioritaire 24/7" },
-        { icon: Gift, text: "Cadeaux exclusifs" },
+        { icon: Percent, text: "Réduction niveau Ambassador sur BestRewards" },
+        { icon: Wallet, text: "Cashback 5% en wallet après séjour" },
+        { icon: Star, text: "Tous les avantages Voyageur" },
       ],
     },
   ];
@@ -169,7 +163,7 @@ export default async function BestRewardsPage() {
               },
               {
                 q: "Comment monter de niveau ?",
-                a: "Chaque réservation confirmée compte. Après 5 réservations, vous passez Level 2 Voyageur. Après 15 réservations, vous atteignez Level 3 Ambassador.",
+                a: "Chaque séjour terminé compte. Après 5 séjours, vous passez Level 2 Voyageur. Après 15 séjours, vous atteignez Level 3 Ambassador.",
               },
               {
                 q: "Les réductions sont-elles cumulables ?",
@@ -181,7 +175,7 @@ export default async function BestRewardsPage() {
               },
               {
                 q: "Mon niveau peut-il expirer ?",
-                a: "Votre niveau est calculé sur les 24 derniers mois. Si vous n'atteignez pas le seuil de réservations sur cette période, vous redescendez au niveau correspondant.",
+                a: "Votre niveau progresse après chaque séjour terminé. Les règles de durée de validité ne sont pas encore proposées ; votre niveau n'expire donc pas automatiquement.",
               },
             ].map((faq, i) => (
               <div key={i} className="border border-gray-200 rounded-lg p-6">

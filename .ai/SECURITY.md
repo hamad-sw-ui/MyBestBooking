@@ -16,6 +16,15 @@
   commission interne.
 - Les endpoints mutables appliquent des contrôles de rôle et plusieurs routes
   critiques disposent d'un rate-limit process-local.
+- Les overrides Stripe, Resend et S3 saisis via `/dashboard/settings` sont
+  chiffrés AES-256-GCM dans `provider_credentials`. La clé maître
+  `CREDENTIALS_ENCRYPTION_KEY` reste exclusivement en variable d'environnement,
+  hors DB et hors UI ; les endpoints admin ne retournent que des métadonnées.
+- Les variables d'environnement restent le fallback compatible si aucun
+  override chiffré n'est enregistré.
+- Les nouvelles pièces jointes de messagerie sont privées et ne sont servies
+  qu'après vérification du participant ; les images publiques d'hébergement
+  restent un domaine distinct.
 
 Les sections Android ci-dessous sont conservées comme archive et ne doivent
 pas servir de source de vérité pour le code actuel.

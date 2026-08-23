@@ -11,12 +11,12 @@ interface Props {
 /**
  * Composeur de message pour envoyer un message dans une conversation
  * (T-016 + T-029 pièces jointes).
- * POST /api/messages { conversationId, content, attachmentUrl? }
+ * POST /api/messages { conversationId, content, attachmentKey?, attachmentMimeType? }
  */
 export function MessageComposer({ conversationId }: Props) {
   const router = useRouter();
   const [content, setContent] = useState("");
-  const [attachmentUrl, setAttachmentUrl] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<{ key: string; mimeType: string } | null>(null);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -33,7 +33,7 @@ export function MessageComposer({ conversationId }: Props) {
       const r = await fetch("/api/uploads", { method: "POST", body: fd });
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Erreur");
-      setAttachmentUrl(j.url);
+      setAttachment({ key: j.key, mimeType: j.mimeType });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -44,12 +44,15 @@ export function MessageComposer({ conversationId }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!content.trim() && !attachmentUrl) return;
+    if (!content.trim() && !attachment) return;
     setError(null);
     setLoading(true);
     try {
       const body: Record<string, unknown> = { conversationId, content: content.trim() || "(pièce jointe)" };
-      if (attachmentUrl) body.attachmentUrl = attachmentUrl;
+      if (attachment) {
+        body.attachmentKey = attachment.key;
+        body.attachmentMimeType = attachment.mimeType;
+      }
       const res = await fetch("/api/messages", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -58,7 +61,7 @@ export function MessageComposer({ conversationId }: Props) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Erreur");
       setContent("");
-      setAttachmentUrl(null);
+      setAttachment(null);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
@@ -82,15 +85,13 @@ export function MessageComposer({ conversationId }: Props) {
           placeholder="Écrivez votre message…"
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
         />
-        {attachmentUrl && (
+        {attachment && (
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
             <Paperclip className="w-3 h-3" />
-            <a href={attachmentUrl} target="_blank" rel="noopener noreferrer" className="underline">
-              Pièce jointe attachée
-            </a>
+            <span>Pièce jointe privée prête à envoyer</span>
             <button
               type="button"
-              onClick={() => setAttachmentUrl(null)}
+              onClick={() => setAttachment(null)}
               aria-label="Retirer la pièce jointe"
               className="text-gray-400 hover:text-red-600"
             >
@@ -118,7 +119,7 @@ export function MessageComposer({ conversationId }: Props) {
       </label>
       <button
         type="submit"
-        disabled={loading || uploading || (content.trim().length === 0 && !attachmentUrl)}
+        disabled={loading || uploading || (content.trim().length === 0 && !attachment)}
         aria-label="Envoyer le message"
         className="p-3 bg-[#FF5A5F] text-white rounded-lg hover:bg-[#e54a4f] disabled:opacity-50"
       >

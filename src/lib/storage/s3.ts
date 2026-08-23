@@ -59,7 +59,6 @@ export class S3Uploader implements Uploader {
       "content-type": mimeType,
       "x-amz-content-sha256": payloadHash,
       "x-amz-date": amzDate,
-      "x-amz-acl": "public-read",
     };
 
     const signedHeaders = Object.keys(headers).sort().join(";");
@@ -98,13 +97,15 @@ export class S3Uploader implements Uploader {
     const publicUrl = this.publicBase
       ? `${this.publicBase.replace(/\/$/, "")}/${key}`
       : url;
-    return { url: publicUrl, key, size: file.byteLength };
+    // publicBase est conservé pour les usages explicitement publics ; les
+    // messages s'appuient sur key + handler participant, pas cette URL.
+    return { url: this.publicBase ? publicUrl : null, key, size: file.byteLength, mimeType };
   }
 
   async remove(key: string): Promise<boolean> {
-    // T-026 : suppression best-effort. Path traversal empêché
-    // par validation du key (limité à alphanum, tirets, points).
-    if (!/^[A-Za-z0-9._-]+$/.test(key)) return false;
+    // T-104 : les clés générées sont sous uploads/, préfixe explicitement
+    // autorisé au lieu de rejeter le slash et rendre la suppression impossible.
+    if (!/^uploads\/[A-Za-z0-9._-]+$/.test(key)) return false;
     const url = `https://${this.endpoint}/${this.bucket}/${key}`;
     const now = new Date();
     const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
@@ -142,6 +143,41 @@ export class S3Uploader implements Uploader {
       return res.status === 204 || res.status === 404;
     } catch {
       return false;
+    }
+  }
+
+  async get(key: string): Promise<{ body: Buffer; mimeType: string | null } | null> {
+    if (!/^uploads\/[A-Za-z0-9._-]+$/.test(key)) return null;
+    const url = `https://${this.endpoint}/${this.bucket}/${key}`;
+    const now = new Date();
+    const amzDate = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
+    const dateStamp = amzDate.slice(0, 8);
+    const emptyHash = hex(sha256(""));
+    const headers: Record<string, string> = {
+      host: this.endpoint,
+      "x-amz-content-sha256": emptyHash,
+      "x-amz-date": amzDate,
+    };
+    const signedHeaders = Object.keys(headers).sort().join(";");
+    const canonicalHeaders = Object.entries(headers)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([k, v]) => `${k}:${v}\n`)
+      .join("");
+    const canonicalRequest = `GET\n/${this.bucket}/${key}\n\n${canonicalHeaders}\n${signedHeaders}\n${emptyHash}`;
+    const scope = `${dateStamp}/${this.region}/s3/aws4_request`;
+    const stringToSign = `AWS4-HMAC-SHA256\n${amzDate}\n${scope}\n${hex(sha256(canonicalRequest))}`;
+    const kDate = hmac(`AWS4${this.secretKey}`, dateStamp);
+    const kRegion = hmac(kDate, this.region);
+    const kService = hmac(kRegion, "s3");
+    const kSigning = hmac(kService, "aws4_request");
+    const signature = hex(hmac(kSigning, stringToSign));
+    const authHeader = `AWS4-HMAC-SHA256 Credential=${this.accessKey}/${scope}, SignedHeaders=${signedHeaders}, Signature=${signature}`;
+    try {
+      const res = await fetch(url, { method: "GET", headers: { ...headers, Authorization: authHeader } });
+      if (!res.ok) return null;
+      return { body: Buffer.from(await res.arrayBuffer()), mimeType: res.headers.get("content-type") };
+    } catch {
+      return null;
     }
   }
 }

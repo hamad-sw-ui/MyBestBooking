@@ -48,11 +48,11 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
 
   // Calculate stats
   const totalRevenue = allBookings
-    .filter(b => b.paymentStatus === "paid")
+    .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
     .reduce((sum, b) => sum + parseFloat(b.total), 0);
   
   const recentRevenue = recentBookings
-    .filter(b => b.paymentStatus === "paid")
+    .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
     .reduce((sum, b) => sum + parseFloat(b.total), 0);
 
   // Get reviews count

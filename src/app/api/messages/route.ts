@@ -9,7 +9,10 @@ import { getMailer, templates } from "@/lib/mail";
 const schema = z.object({
   conversationId: z.string().uuid(),
   content: z.string().min(1).max(4000),
-  attachmentUrl: z.string().url().optional(),
+  // attachmentUrl est réservé aux messages historiques ; les nouveaux
+  // fichiers privés sont référencés par key et servis après contrôle participant.
+  attachmentKey: z.string().regex(/^uploads\/[A-Za-z0-9._-]+$/).optional(),
+  attachmentMimeType: z.string().max(100).optional(),
 });
 
 /**
@@ -70,6 +73,9 @@ export async function POST(request: NextRequest) {
     if (!ok) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
     const senderType = ok.isGuest ? "user" : "host";
+    if (data.attachmentKey && !data.attachmentKey.startsWith(`uploads/${user.id.slice(0, 8)}-`)) {
+      return NextResponse.json({ error: "Pièce jointe non autorisée" }, { status: 403 });
+    }
 
     const [msg] = await db
       .insert(messages)
@@ -78,7 +84,8 @@ export async function POST(request: NextRequest) {
         senderId: user.id,
         senderType,
         content: data.content,
-        attachmentUrl: data.attachmentUrl ?? null,
+        attachmentKey: data.attachmentKey ?? null,
+        attachmentMimeType: data.attachmentMimeType ?? null,
       })
       .returning();
 
@@ -118,7 +125,7 @@ export async function POST(request: NextRequest) {
               firstName: recipient.firstName ?? "",
               senderName,
             });
-            await getMailer().send({ to: recipient.email, ...mail });
+            await (await getMailer()).send({ to: recipient.email, ...mail });
           }
         }
       }

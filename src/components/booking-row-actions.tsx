@@ -2,16 +2,15 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Download, XCircle, Loader2 } from "lucide-react";
 
 interface Props {
   bookingId: string;
   bookingReference: string;
-  propertySlug?: string | null;
+  propertyId: string;
   status: string;
-  hostContactEmail?: string | null;
+  messageArea?: "traveler" | "dashboard";
 }
 
 /**
@@ -25,8 +24,9 @@ interface Props {
 export function BookingRowActions({
   bookingId,
   bookingReference,
+  propertyId,
   status,
-  hostContactEmail,
+  messageArea = "traveler",
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -53,6 +53,22 @@ export function BookingRowActions({
     });
   }
 
+  async function contactHost() {
+    setError(null);
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ propertyId, bookingId }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Impossible d'ouvrir la conversation");
+      router.push(messageArea === "dashboard" ? `/dashboard/messages/${data.conversation.id}` : `/messages/${data.conversation.id}`);
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Erreur");
+    }
+  }
+
   function downloadConfirmation() {
     // Génère un .txt côté client (pas de PDF pour rester léger V1).
     const content =
@@ -74,16 +90,12 @@ export function BookingRowActions({
     URL.revokeObjectURL(url);
   }
 
-  const contactHref = hostContactEmail
-    ? `mailto:${hostContactEmail}?subject=Réservation ${bookingReference}`
-    : `mailto:support@mybestbooking.com?subject=Support Réservation ${bookingReference}`;
-
   return (
     <>
-      <a href={contactHref} className="inline-flex items-center px-3 py-1.5 rounded-lg text-sm text-gray-700 hover:bg-gray-100 transition">
+      <Button variant="ghost" size="sm" onClick={contactHost}>
         <MessageSquare className="w-4 h-4 mr-2" />
-        Contacter
-      </a>
+        Écrire à l&apos;hébergeur
+      </Button>
       <Button variant="ghost" size="sm" onClick={downloadConfirmation}>
         <Download className="w-4 h-4 mr-2" />
         Confirmation

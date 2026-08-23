@@ -52,11 +52,8 @@ describe("middleware auth (T-003, §13.5)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("préserve la query string dans next", async () => {
-    const { proxy } = await import("./proxy");
-    const res = await proxy(makeRequest("/reservation?property=abc&room=def"));
-    const loc = res.headers.get("location") ?? "";
-    expect(loc).toContain("next=");
-    expect(decodeURIComponent(loc)).toContain("/reservation?property=abc&room=def");
+  it("laisse /reservation hors du matcher afin de permettre l'achat invité", async () => {
+    const { config } = await import("./proxy");
+    expect(config.matcher).not.toContain("/reservation/:path*");
   });
 });

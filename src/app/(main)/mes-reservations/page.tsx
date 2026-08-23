@@ -156,9 +156,8 @@ export default async function MyBookingsPage() {
                             <BookingRowActions
                               bookingId={booking.id}
                               bookingReference={booking.bookingReference}
-                              propertySlug={property?.slug ?? null}
+                              propertyId={property?.id ?? booking.propertyId}
                               status={booking.status}
-                              hostContactEmail={null}
                             />
                           </div>
                         </div>

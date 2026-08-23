@@ -196,9 +196,9 @@ done
 # ─────────────────────────────────────────────────────────────
 # 4. Navigation publique
 # ─────────────────────────────────────────────────────────────
-sect "3. Pages publiques (11)"
+sect "3. Pages publiques (12, checkout invité inclus)"
 for u in / /recherche /aide /bestrewards /confidentialite \
-         /mentions-legales /connexion /inscription \
+         /mentions-legales /connexion /inscription /reservation \
          /mot-de-passe-oublie /verifier-email /maintenance; do
   assert_code "$u" "200" "public"
 done
@@ -206,8 +206,8 @@ done
 # ─────────────────────────────────────────────────────────────
 # 5. Pages protégées sans cookie (proxy edge → 307)
 # ─────────────────────────────────────────────────────────────
-sect "4. Pages protégées sans cookie (20 → 307 proxy)"
-for u in /mon-compte /mes-reservations /mes-favoris /messages /reservation \
+sect "4. Pages protégées sans cookie (19 → 307 proxy)"
+for u in /mon-compte /mes-reservations /mes-favoris /messages \
          /dashboard /dashboard/bookings /dashboard/properties /dashboard/rooms \
          /dashboard/reviews /dashboard/messages /dashboard/promotions \
          /dashboard/settings /dashboard/users /dashboard/analytics \

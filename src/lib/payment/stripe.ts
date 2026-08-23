@@ -4,6 +4,7 @@ import type {
   PaymentIntent,
   CreateIntentParams,
   WebhookEvent,
+  RefundResult,
 } from "./types";
 
 /**
@@ -58,6 +59,41 @@ export class StripePaymentProvider implements PaymentProvider {
     };
   }
 
+  async cancel(paymentIntentId: string): Promise<"succeeded" | "pending" | "failed"> {
+    const res = await fetch(`https://api.stripe.com/v1/payment_intents/${encodeURIComponent(paymentIntentId)}/cancel`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${this.secretKey}` },
+    });
+    if (!res.ok) return "failed";
+    const data = (await res.json()) as { status?: string };
+    return data.status === "canceled" ? "succeeded" : "pending";
+  }
+
+  async refund(paymentIntentId: string, amount: number): Promise<RefundResult> {
+    const body = new URLSearchParams({
+      payment_intent: paymentIntentId,
+      amount: String(amount),
+    });
+    const res = await fetch("https://api.stripe.com/v1/refunds", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.secretKey}`,
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw new Error(`Stripe refund failed: HTTP ${res.status} ${detail.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as { id: string; status: string; amount: number };
+    return {
+      id: data.id,
+      status: data.status === "succeeded" ? "succeeded" : data.status === "failed" ? "failed" : "pending",
+      amount: data.amount,
+    };
+  }
+
   private normalizeStatus(s: string): PaymentIntent["status"] {
     if (s === "succeeded" || s === "requires_payment_method") return s;
     if (s === "canceled") return "failed";
@@ -94,10 +130,22 @@ export class StripePaymentProvider implements PaymentProvider {
     try {
       const evt = JSON.parse(payload);
       if (!evt.type || !evt.data?.object?.id) return null;
+      const object = evt.data.object as { id: string; status?: string; payment_intent?: string };
+      if (evt.type.startsWith("refund.")) {
+        if (!object.payment_intent) return null;
+        return {
+          kind: "refund",
+          type: evt.type,
+          refundId: object.id,
+          paymentIntentId: object.payment_intent,
+          status: object.status === "succeeded" ? "succeeded" : object.status === "failed" || object.status === "canceled" ? "failed" : "pending",
+        };
+      }
       return {
+        kind: "payment",
         type: evt.type,
-        paymentIntentId: evt.data.object.id,
-        status: this.normalizeStatus(evt.data.object.status ?? "pending"),
+        paymentIntentId: object.id,
+        status: this.normalizeStatus(object.status ?? "pending"),
       };
     } catch {
       return null;

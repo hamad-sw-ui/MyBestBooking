@@ -17,7 +17,7 @@
 //       clôture — motif toléré : "à mettre à jour en fin de session").
 //   R8  CURRENT_TASK.md référence bien une tâche T-xxx et un statut valide.
 //   R9  Aucun lien Markdown interne cassé dans les documents obligatoires.
-//   R10 La branche Git courante = arena/01a01eee-mybestbooking (§8).
+//   R10 La branche Git courante = branche Arena active de MyBestBooking (§8).
 //   R11 Aucune collision d'ID entre les BUG-xxx (dans BUGS.md) et les
 //       T-xxx (dans BACKLOG.md, CURRENT_TASK.md, STATE.md, TRACEABILITY,
 //       PROGRESS) — voir §8.1.
@@ -279,9 +279,9 @@ if (broken.length === 0) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Règle 10 : branche Git = arena/01a01eee-mybestbooking (§8)
+// Règle 10 : branche Git de la session Arena active (§8)
 // ─────────────────────────────────────────────────────────────
-const EXPECTED_BRANCH = "arena/01a01eee-mybestbooking";
+const EXPECTED_BRANCH = "arena/01a02dbb-mybestbooking";
 try {
   const branch = execSync("git rev-parse --abbrev-ref HEAD", {
     cwd: REPO_ROOT,

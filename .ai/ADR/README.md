@@ -19,6 +19,9 @@ au-delà d'une seule session). Interdit pour T (pas de valeur).
 | N° | Titre | Statut | Tâche | Date |
 |---|---|---|---|---|
 | 001 | Framework de gouvernance `.ai/` v1.0.0 | accepté | T-000 | 2026-08-20 |
+| 009 | Intégrité réservation, paiement et cycle de vie | accepté | T-102 | 2026-08-23 |
+| 010 | Coffre chiffré de configuration providers | accepté | T-103 | 2026-08-23 |
+| 011 | Post-actions financières, fichiers privés et rate plans | accepté | T-104 | 2026-08-23 |
 
 ## Modèle
 

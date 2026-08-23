@@ -18,7 +18,7 @@ export default async function VerifyEmailPage({
           <CheckCircle2 className="w-14 h-14 mx-auto text-[#00A699] mb-4" />
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Email vérifié</h1>
           <p className="text-gray-600 mb-6">
-            Votre adresse a bien été confirmée. Vous pouvez désormais réserver.
+            Votre adresse a bien été confirmée. Nous l&apos;utiliserons pour sécuriser vos communications de réservation.
           </p>
           <Link
             href="/"

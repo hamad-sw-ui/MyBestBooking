@@ -371,8 +371,9 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
               <BookingRowActions
                 bookingId={booking.id}
                 bookingReference={booking.bookingReference}
+                propertyId={booking.propertyId}
                 status={booking.status}
-                hostContactEmail={booking.guestEmail ?? null}
+                messageArea="dashboard"
               />
             </CardContent>
           </Card>

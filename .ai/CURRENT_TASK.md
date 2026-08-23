@@ -1,31 +1,33 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Synchroniser `.ai/` avec l'audit fonctionnel runtime du 2026-08-23.
-**ID** : T-101
-**Niveau** : L
-**Statut** : EN COURS
+**Tâche :** Corriger les défauts prioritaires détectés par l’audit post-providers.
+**ID** : T-104
+**Niveau** : **C** — post-actions Stripe, remboursements, stockage privé, rate plans et migrations.
+**Statut** : **CORRIGÉ (VALIDÉ)**
 
-## Etat de la documentation
+## Livré
 
-| Document | Etat | Statut |
-|---|---|---|
-| Stack applicative | Next.js 16, React 19, PostgreSQL, Drizzle | ✅ observe |
-| Validation | typecheck, lint, build, health check | ✅ execute |
-| Ancien corpus Android | MobileCaisse | ⚠️ archive obsolète |
+- confirmation booking partagée entre mock/webhook, marqueur persistant ;
+- événements refund Stripe typés et réconciliés ;
+- upload messages privé, téléchargement participant, S3 sans ACL publique et
+  suppression de clés `uploads/...` ;
+- rate plans créables par hôte, sélectionnables au checkout, snapshot booking
+  et politique d’annulation appliquée ;
+- test provider admin explicite ;
+- prix min/max recherche unifié, avis utile visible, promesses BestRewards
+  réalignées sur les capacités réelles.
 
-## Objectif du cycle
-1. Documenter les corrections d'authentification, réservation, recherche,
-	favoris, avis et analytics.
-2. Corriger les contradictions entre l'ancien corpus Android et le code réel
-	Next.js.
-3. Enregistrer les preuves et les limites restantes sans les présenter comme
-	des fonctionnalités terminées.
+## Preuves
 
-## Résultat
-- Rapport détaillé : `REPORTS/rapport_analyse_2026-08-23_parcours-fonctionnels.md`.
-- Typecheck, build, lint ciblé, tests JWT et smoke Playwright exécutés.
-- Les migrations, permissions et résultats de tests historiques restent à
-	auditer séparément avant toute suppression documentaire.
+- 🔨 typecheck/build ;
+- 🧪 Vitest DB+serveur : **215/215** ;
+- ▶️ migration fraîche 0010 ;
+- ▶️ webhook confirmation + email marker ;
+- ▶️ attachment participant 200 / outsider 403 ;
+- ▶️ rate plan snapshot ;
+- ▶️ smoke 91/91 et ai:check sans fail.
 
----
-*Mis à jour le 2026-08-23.*
+## Limites
+
+Les appels réels Stripe/Resend/S3 demandent toujours des clés de test valides ;
+le test admin les exerce seulement lorsqu’une configuration réelle existe.

@@ -37,7 +37,7 @@ modification de code.
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Liste properties actives paginée | ✅ | `GET /api/properties` + limit/offset | T-004 |
-| Filtre par ville, pays, type, note, prix, recherche texte | ✅ | Query params sur `/api/properties` | T-004 |
+| Filtres découverte et pagination | ✅ | `/recherche` : ville, dates, type, voyageurs, équipement, prix min/max sur une même chambre, tri et pagination ; API properties avancée. | T-004, T-026, T-104 |
 | Filtre par équipements (`amenities`) | ✅ | `GET /api/properties?amenities=wifi,pool` : filtre JSONB `@>` PostgreSQL (T-026). ▶️ 4 properties trouvées avec wifi+pool | T-026 |
 | Filtre par dates (disponibilité) | ✅ | `GET /api/properties?checkIn=X&checkOut=Y` : exclut les properties dont toutes les rooms sont bookées ou stop-sell (T-026) | T-026 |
 | Filtre par nombre de voyageurs | ✅ | `?guests=N` filtre `rooms.maxOccupancy >= N` au JOIN (T-026) | T-026 |
@@ -55,11 +55,11 @@ modification de code.
 | **Vérification de disponibilité `room_availability`** | ✅ | T-012 + T-026 : `GET /api/properties?checkIn=X&checkOut=Y` respecte `room_availability.stopSell` + capacité bookings | T-012, T-026 |
 | **Détection de chevauchement avec bookings existants** | ✅ | Transaction Drizzle + SELECT FOR UPDATE + comparaison stricte semi-ouverte + retour 409 | T-012 |
 | **Application d'un code promo** | ✅ | POST /api/bookings accepte `promoCode`, applique atomiquement + incrémente `promotions.currentUses`. GET /api/promotions/apply pour aperçu. Composant `<PromoCodeInput>` dans le tunnel. 11 tests unitaires. | T-016 |
-| **Application `rate_plans`** (petit-déj, remboursable) | ✅ | Endpoints GET/POST `/api/rooms/[id]/rate-plans` (T-018), affichés dans `/dashboard/rooms/[id]/calendrier` | T-018 |
+| **Application `rate_plans`** (petit-déj, remboursable) | ✅ | Hôte : création dans calendrier chambre ; voyageur : sélection au checkout ; remise, conditions et avantages figés dans le booking. | T-018, T-104 |
 | **Politique d'annulation réelle** | ✅ | `computeCancellationFee()` selon 5 politiques × daysUntil dans PUT /api/bookings/[id] (T-016). 10 tests unitaires. | T-016 |
 | Annulation par le voyageur | ✅ | PUT /api/bookings/[id] applique le calcul. UI existante fonctionne. | T-016 |
-| **Paiement réel (Stripe)** | ✅ | Infrastructure complète (T-020) : PaymentProvider + Stripe (fetch API, signature v4) + Mock. **Sandbox-limited** : env vars Stripe à fournir en prod pour bascule Mock→Real | T-020 |
-| **Webhook confirmation paiement** | ✅ | `POST /api/webhooks/stripe` : signature Stripe-Signature vérifiée en timing-safe, idempotent | T-020 |
+| **Paiement Stripe sécurisé** | 🟠 | PaymentProvider + Stripe Elements + webhook signé. Un intent `pending` reste affiché comme en attente. Clés configurables depuis le coffre admin chiffré ou env ; validation Stripe test-mode encore requise avant production. | T-020, T-102, T-103 |
+| **Webhook confirmation paiement** | ✅ | `POST /api/webhooks/stripe` : signature Stripe-Signature vérifiée, idempotent et ne ressuscite pas une réservation annulée. | T-020, T-102 |
 | **Email de confirmation** | ✅ | `POST /api/bookings` envoie via ConsoleMailer/ResendMailer | T-013 |
 | **Email d'annulation** | ✅ | Template `bookingCancellation` (settings) + hook dans `PUT /api/bookings/[id]` quand status→cancelled (T-027). ▶️ mail généré avec subject et frais | T-027 |
 | Récupération « mes réservations » | ✅ | `GET /api/bookings` filtré par rôle | initial |
@@ -84,7 +84,7 @@ modification de code.
 | Ajouter/retirer une property | ✅ | `POST/DELETE /api/wishlists` | initial |
 | Contrainte unicité item | ✅ | `UNIQUE (wishlist_id, property_id)` | T-006 |
 | **Partage public par lien (shareToken)** | ✅ | Endpoint T-015 + page `/wishlists/share/[token]` (T-016) qui rend une grille public de properties, expose seulement name+items | T-016 |
-| Alertes prix | ✅ | Table `price_alerts` (migration 0007) + `GET/POST /api/price-alerts` + `DELETE /api/price-alerts/[id]` (T-026). Job cron de notification à cabler dans un futur T-030 | T-026 |
+| Alertes prix | ✅ | Table `price_alerts`, GET/POST/DELETE + job `/api/cron/price-alerts` idempotent, planifié dans `vercel.json`, préférences utilisateur et seuil de dernière notification. | T-026, T-102 |
 
 ## Messagerie voyageur ↔ hôte
 
@@ -94,7 +94,7 @@ modification de code.
 | **Créer une conversation** | ✅ | `POST /api/conversations` (T-015) | T-015 |
 | **Envoyer un message** | ✅ | Endpoint T-015 + `<MessageComposer>` + pages détail /messages/[id] et /dashboard/messages/[id] (T-016) | T-016 |
 | **Marquer comme lu** | ✅ | Reset unread quand `GET /api/messages` par le participant | T-015 |
-| Pièce jointe | ✅ | `<MessageComposer>` upload via `/api/uploads` puis POST `/api/messages { attachmentUrl }` (T-029) | T-029 |
+| Pièce jointe privée | ✅ | Upload privé hors `public/`, `attachmentKey` et téléchargement `/api/messages/attachments/[id]` vérifié participant ; URLs historiques ne sont plus exposées. | T-104 |
 | Notification email nouveau message | ✅ | Template `newMessage` + hook dans `POST /api/messages` (T-027) | T-027 |
 
 ## Programme BestRewards (fidélité)
@@ -125,7 +125,7 @@ modification de code.
 | Répondre à un avis | ✅ | `POST /api/reviews/[id]/reply` + `<HostReplyForm>` branchée dans /dashboard/reviews (T-016) | T-016 |
 | Répondre à un message | ✅ | POST /api/messages + `<MessageComposer>` (T-015, T-029 pièces jointes) | T-015, T-029 |
 | Analytics revenus / occupation | ✅ | Page `/dashboard/analytics` : revenus + occupation 30j. ADR/RevPAR avancés = 🎯 backlog métier | T-015 |
-| Facturation (billing) | ✅ | Page `/dashboard/billing` opérationnelle. PDF invoice = 🎯 backlog (dépend prestataire compta) | T-015 |
+| Facturation (billing) | ✅ | Dashboard + export CSV privé des réservations payées non annulées. Facture légale/payout restent hors périmètre comptable. | T-015, T-104 |
 | Notifications email/webhook sur nouvelle réservation | ✅ | Email host via template `bookingHostNotification` dans `POST /api/bookings` (T-013). Webhook Stripe pour paiement dans `/api/webhooks/stripe` (T-020) | T-013, T-020 |
 
 ## Admin
@@ -138,7 +138,8 @@ modification de code.
 | **CRUD codes promo** | ✅ | GET/POST `/api/promotions` + PATCH/DELETE `/api/promotions/[id]` (T-015). Application au checkout reste 🎯 T-016. | T-015 |
 | Journal d'actions admin (audit_log global) | ✅ | Table `audit_log` (migration 0006), `src/lib/audit.ts`, hooks dans 4 handlers (setting.update, review.moderate, user.suspend/reactivate, property.validate/reject/suspend), `GET /api/admin/audit`, page `/dashboard/audit` (T-024). 5 tests unitaires | T-024 |
 | Suspendre / réactiver un utilisateur | ✅ | `PATCH /api/users/[id]/suspend` (T-016) + bouton `<UserSuspendActions>` dans `/dashboard/users` (T-021) — testé ▶️ suspend/login 401/reactivate/login 200 | T-021 |
-| **Panel de configuration runtime (TVA, commissions, seuils BestRewards, grille annulation, notifications, sécurité, providers)** | ✅ | Table `app_settings` + `src/lib/settings.ts` + endpoints `/api/admin/settings` + `<SettingsPanel>` dans `/dashboard/settings` (T-021, ADR-007). 9 tests unitaires settings + 3 tests grille custom cancellation. ▶️ PATCH billing → TVA appliquée immédiatement à `POST /api/bookings` | T-021 |
+| **Panel de configuration runtime (TVA, commissions, seuils BestRewards, grille annulation, notifications, sécurité)** | ✅ | Table `app_settings` + `src/lib/settings.ts` + endpoints `/api/admin/settings` + `<SettingsPanel>` dans `/dashboard/settings` (T-021). | T-021 |
+| **Coffre providers Stripe / Resend / S3** | ✅ | `provider_credentials` chiffré AES-256-GCM, master key env, endpoints admin metadata-only, UI sans réaffichage, fallback env et audit. | T-103, ADR-010 |
 | **Mode maintenance (activable par admin, redirige non-admins vers /maintenance, API métier → 503)** | ✅ | `src/lib/maintenance.ts` + page `/maintenance` + guards RSC dans 3 layouts + guards 503 dans POST /api/bookings, PUT /api/bookings/[id], POST /api/uploads, POST /api/reviews, GET /api/promotions/apply (T-022). Whitelist déterministe anti-lockout admin. 11 tests unitaires. ▶️ Customer POST /api/bookings → 503 + `Retry-After: 60`, admin → 201 (bypass) | T-022 |
 | **Dashboards — recherche + filtres + sélection multiple + actions groupées + raccourcis clavier** | ✅ | `POST /api/admin/bulk` (admin only, max 100 ids/batch, chaque item isolé, audit `bulk.action`). 6 entités × N actions : users (suspend/reactivate/anonymize/delete), properties (approve/reject/suspend/delete), reviews (approve/hide/reject/delete), bookings (cancel, FSM BUG-022), **rooms** (activate/deactivate/delete refuse booking futur), **promotions** (activate/deactivate/delete refuse `currentUses > 0`). 5 composants clients (BulkToolbar + 4 Managers) + 4 nouveaux Managers T-034 (RoomsManager, PromotionsManager, MessagesManager, AuditFilter). Raccourcis `/`, `Ctrl+A`, `Ctrl+D`, `Escape`. Testé ▶️ **472/472 assertions sur 6 suites**, 12 tests intégration route bulk | T-033, T-034 |
 | **Icône de suppression rapide par ligne dans les dashboards mutables** | ✅ | Composant `<RowDeleteButton>` (T-034) : icône corbeille rouge + `window.confirm()` + POST `/api/admin/bulk { action: "delete", ids: [id] }` + `router.refresh()`. `data-testid="row-delete-<entity>-<id>"`. Branché dans 5 Managers : users (disabled si self ou admin), properties, reviews, rooms, promotions. Skipped visible inline si refus (booking actif, promo utilisée, admin protégé). Testé ▶️ HTML rendu contient les 5 data-testid + 6 scénarios delete happy-path/refus en simulation | T-034 |

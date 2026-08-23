@@ -4,7 +4,6 @@ import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -32,6 +31,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PriceAlertButton } from "@/components/price-alert-button";
+import { ReviewHelpfulButton } from "@/components/review-helpful-button";
+import { PropertyBookingCard } from "@/components/property-booking-card";
+import { buildReservationUrl } from "@/lib/reservation-url";
 import {
   Star, MapPin, Heart, Share2, Check, X, Wifi, Car, Utensils, Waves,
   Dumbbell, Wind, Users, Calendar, Shield, MessageCircle, Award
@@ -40,6 +42,12 @@ import Link from "next/link";
 
 interface PropertyPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{
+    checkIn?: string;
+    checkOut?: string;
+    adults?: string;
+    children?: string;
+  }>;
 }
 
 async function getProperty(slug: string) {
@@ -97,10 +105,10 @@ const AMENITY_LABELS: Record<string, string> = {
   garden: "Jardin",
 };
 
-export default async function PropertyPage({ params }: PropertyPageProps) {
+export default async function PropertyPage({ params, searchParams }: PropertyPageProps) {
   const { slug } = await params;
+  const query = await searchParams;
   const data = await getProperty(slug);
-  const user = await getCurrentUser();
 
   if (!data) {
     notFound();
@@ -335,7 +343,14 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                             {formatPrice(room.basePrice, room.currency || "EUR")}
                           </p>
                           <p className="text-sm text-gray-500">par nuit</p>
-                          <Link href={user ? `/reservation?property=${property.id}&room=${room.id}` : "/connexion"}>
+                          <Link href={buildReservationUrl({
+                            propertyId: property.id,
+                            roomId: room.id,
+                            checkIn: query.checkIn,
+                            checkOut: query.checkOut,
+                            numAdults: Number(query.adults ?? "2"),
+                            numChildren: Number(query.children ?? "0"),
+                          })}>
                             <Button className="mt-2" size="sm">
                               Réserver
                             </Button>
@@ -408,9 +423,16 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                             <span className="text-gray-400">👎</span> {review.negativeComment}
                           </p>
                         )}
+                        {review.hostReply && (
+                          <div className="mt-3 ml-3 border-l-2 border-[#1B3A6B] bg-blue-50/60 p-3 rounded-r-lg">
+                            <p className="text-xs font-semibold text-[#1B3A6B]">Réponse de l&apos;hébergement</p>
+                            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{review.hostReply}</p>
+                          </div>
+                        )}
                         <p className="text-xs text-gray-400 mt-2">
                           {formatDate(review.createdAt)}
                         </p>
+                        <ReviewHelpfulButton reviewId={review.id} initialCount={review.helpfulCount} />
                       </div>
                     ))}
                   </div>
@@ -423,68 +445,26 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-4">
               {/* Booking Card */}
-              <Card>
-                <CardContent>
-                  <div className="text-center mb-4">
-                    <p className="text-sm text-gray-500">À partir de</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {propertyRooms.length > 0 
-                        ? formatPrice(Math.min(...propertyRooms.map(r => parseFloat(r.basePrice))))
-                        : "—"
-                      }
-                    </p>
-                    <p className="text-sm text-gray-500">par nuit</p>
-                  </div>
+              <PropertyBookingCard
+                propertyId={property.id}
+                room={cheapestRoom ? {
+                  id: cheapestRoom.id,
+                  basePrice: cheapestRoom.basePrice,
+                  currency: cheapestRoom.currency,
+                } : null}
+                initialCheckIn={query.checkIn}
+                initialCheckOut={query.checkOut}
+                initialAdults={Number(query.adults ?? "2") || 2}
+                initialChildren={Number(query.children ?? "0") || 0}
+              />
 
-                  <div className="space-y-3 mb-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Arrivée</label>
-                        <input
-                          type="date"
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Départ</label>
-                        <input
-                          type="date"
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Voyageurs</label>
-                      <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                        <option>1 adulte</option>
-                        <option>2 adultes</option>
-                        <option>2 adultes, 1 enfant</option>
-                        <option>2 adultes, 2 enfants</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <a
-                    href={`/reservation?propertyId=${property.id}&roomId=${cheapestRoom?.id ?? ""}`}
-                    className="block w-full text-center px-6 py-3 rounded-lg bg-[#FF5A5F] text-white font-medium hover:bg-[#e54a4f] transition"
-                  >
-                    Voir les disponibilités
-                  </a>
-
-                  <p className="text-xs text-center text-gray-500 mt-3">
-                    ✓ Annulation gratuite • ✓ Paiement sécurisé
-                  </p>
-
-                  {/* T-030 : suivre le prix */}
-                  <div className="mt-3">
-                    <PriceAlertButton
-                      propertyId={property.id}
-                      currency={cheapestRoom?.currency ?? "EUR"}
-                      defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="-mt-1">
+                <PriceAlertButton
+                  propertyId={property.id}
+                  currency={cheapestRoom?.currency ?? "EUR"}
+                  defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
+                />
+              </div>
 
               {/* Price Guarantee */}
               <Card className="bg-[#F5A623]/10 border-[#F5A623]/30">

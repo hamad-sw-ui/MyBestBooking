@@ -99,24 +99,24 @@ describe("getMailer factory", () => {
   beforeEach(() => { _resetMailer(); });
   afterEach(() => { _resetMailer(); delete process.env.RESEND_API_KEY; });
 
-  it("retourne ConsoleMailer si RESEND_API_KEY absent", () => {
+  it("retourne ConsoleMailer si RESEND_API_KEY absent", async () => {
     delete process.env.RESEND_API_KEY;
-    const m = getMailer();
+    const m = await getMailer();
     expect(m.constructor.name).toBe("ConsoleMailer");
   });
 
-  it("retourne ResendMailer si RESEND_API_KEY présent", () => {
+  it("retourne ResendMailer si RESEND_API_KEY présent", async () => {
     process.env.RESEND_API_KEY = "re_test_xxx";
     _resetMailer();
-    const m = getMailer();
+    const m = await getMailer();
     expect(m.constructor.name).toBe("ResendMailer");
   });
 
-  it("est un singleton (2 appels = même instance)", () => {
+  it("résout de manière cohérente deux appels consécutifs", async () => {
     delete process.env.RESEND_API_KEY;
     _resetMailer();
-    const a = getMailer();
-    const b = getMailer();
-    expect(a).toBe(b);
+    const [a, b] = await Promise.all([getMailer(), getMailer()]);
+    expect(a.constructor.name).toBe("ConsoleMailer");
+    expect(b.constructor.name).toBe("ConsoleMailer");
   });
 });

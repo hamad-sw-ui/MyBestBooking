@@ -43,16 +43,16 @@ Authentification :
 | GET | `/api/rooms/[id]` | 🔓 | Détail room. |
 | PATCH | `/api/rooms/[id]` | 👤 host propriétaire ou `admin` | Mise à jour partielle. |
 | DELETE | `/api/rooms/[id]` | 👤 host propriétaire ou `admin` | Suppression. |
+| GET/POST | `/api/rooms/[id]/rate-plans` | 👤 host propriétaire ou admin | Liste/crée des plans tarifaires qui peuvent être sélectionnés et snapshotés au booking. |
 
 ## Bookings
 
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
 | GET | `/api/bookings` | 🔒 | Filtré selon rôle : `customer` → siennes, `host` → sur ses properties, `admin` → toutes. Filtres additionnels : `status`, `propertyId`. Joint property, room, user. |
-| POST | `/api/bookings` | 🔒 | Crée une réservation. Calcule `numNights`, `subtotal = basePrice*nuits`, `taxes = 10%`, `total`, `commission`, `netToHost`. Force `status='confirmed'` et `paymentStatus='paid'` (⚠️ paiement mocké). Incrémente `bestrewardsBookingsCount` et recalcule le niveau (seuils 5, 15). |
-| GET | `/api/bookings/[id]` | 🔒 propriétaire, host de la property, ou admin | Détail booking. |
-| PATCH | `/api/bookings/[id]` | 🔒 même règle | Ex. annulation (`status='cancelled'`, `cancelledAt`, `cancellationReason`). |
-| DELETE | `/api/bookings/[id]` | 👤 admin | Suppression. |
+| POST | `/api/bookings` | 🔒 ou 👤 invité | Crée une réservation après validation transactionnelle : dates, capacité adultes/enfants, stock par nuit, stop-sell et `minStay`. Prix journalier override, TVA/réductions/wallet sont recalculés serveur. Réponse `payment` distingue mock confirmé et Stripe `pending`. |
+| GET | `/api/bookings/[id]` | 🔒 propriétaire, host de la property, ou admin | Détail booking, y compris états paiement/remboursement. |
+| PUT | `/api/bookings/[id]` | 🔒 même règle | Voyageur : annulation uniquement. Hôte/admin : clôture contrôlée après départ. Annulation calcule frais et remboursement provider idempotent. |
 
 ## Reviews
 
@@ -66,8 +66,25 @@ Authentification :
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
 | GET | `/api/wishlists` | 🔒 | Liste des wishlists de l'utilisateur avec items et propriétés jointes. |
-| POST | `/api/wishlists` | 🔒 | Crée une wishlist (`name`, `isPublic?`). Ou ajoute un item si le body contient `wishlistId` + `propertyId`. |
-| DELETE | `/api/wishlists?itemId=…` | 🔒 | Retire un item. |
+| POST | `/api/wishlists` | 🔒 | Crée une wishlist (`name`, `isPublic?`) ou ajoute un item (`wishlistId`, `propertyId`). |
+| PATCH | `/api/wishlists` | 🔒 propriétaire | Rend une liste publique/privée et génère ou renouvelle son `shareToken`. |
+| DELETE | `/api/wishlists?wishlistId=…&propertyId?=…` | 🔒 propriétaire | Retire un item ou supprime la liste entière. |
+| GET/POST | `/api/conversations` | 🔒 | Liste les fils accessibles ou ouvre/récupère le fil voyageur-hôte associé à une réservation. |
+| GET/POST | `/api/messages` | 🔒 participant | Liste ou envoie les messages ; les nouvelles pièces jointes utilisent `attachmentKey` privé. |
+| GET | `/api/messages/attachments/[id]` | 🔒 participant | Sert une pièce jointe privée après vérification conversation. |
+| GET | `/api/cron/price-alerts` | 🔒 cron | Évalue alertes prix et clôture les séjours payés terminés ; secret `CRON_SECRET` obligatoire en production. |
+
+## Administration des providers
+
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/providers/stripe` | 🔓 | Retourne uniquement la clé Stripe publiable résolue depuis env/coffre, jamais un secret serveur. |
+| GET | `/api/admin/providers` | 👤 admin | Retourne uniquement metadata : provider, état, source, champs présents et date. Jamais les valeurs. |
+| POST | `/api/admin/providers/[provider]` | 👤 admin | Test explicite : intent Stripe annulé, email Resend administrateur ou objet S3 temporaire supprimé. Aucune valeur retournée. |
+| PUT | `/api/admin/providers/[provider]` | 👤 admin | Chiffre et stocke les champs saisis pour `stripe`, `resend` ou `s3`. Requiert `CREDENTIALS_ENCRYPTION_KEY` côté serveur. |
+| DELETE | `/api/admin/providers/[provider]` | 👤 admin | Retire les overrides chiffrés après confirmation et repasse au fallback variables d’environnement. |
+
+| GET | `/api/dashboard/billing/export` | 👤 host/admin | Télécharge un CSV privé des bookings payés non annulés ; ce n’est pas une facture légale. |
 
 ## Conventions
 
@@ -86,9 +103,8 @@ Authentification :
 
 ## Ce qui n'existe pas encore
 
-- Pas d'endpoint `/api/promotions` — la table existe, aucune route.
-- Pas d'endpoint `/api/conversations` ni `/api/messages` — les pages `messages`
-  utilisent probablement une lecture serveur directe ou sont partiellement
-  mockées.
-- Pas d'endpoint `/api/rate-plans` ni `/api/room-availability`.
-- Pas de webhook / callback de paiement (car pas de paiement).
+- Les routes promotions, conversations, messages, rate-plans et disponibilité
+  sont présentes dans `src/app/api`; ce document doit rester synchronisé avec
+  leurs contrats réels.
+- La capture Stripe live et les factures légales restent dépendantes de la
+  configuration fournisseur et ne sont pas déclarées validées dans le sandbox.

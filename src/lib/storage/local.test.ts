@@ -14,8 +14,8 @@ describe("LocalUploader (T-014, §13.5)", () => {
     const buf = Buffer.from([0xff, 0xd8, 0xff, 0xe0]); // magic JPEG
     const res = await u.put(buf, "image/jpeg", "abcdef12-uid");
     expect(res.size).toBe(4);
-    expect(res.url).toMatch(/^\/uploads\/abcdef12-[a-f0-9-]+\.jpg$/);
-    expect(res.key).toMatch(/\.jpg$/);
+    expect(res.url).toBeNull();
+    expect(res.key).toMatch(/^uploads\/abcdef12-[a-f0-9-]+\.jpg$/);
     expect(existsSync(join(tmp, res.key))).toBe(true);
     expect(readFileSync(join(tmp, res.key))).toEqual(buf);
   });
@@ -24,14 +24,14 @@ describe("LocalUploader (T-014, §13.5)", () => {
     const u = new LocalUploader(tmp);
     const png = await u.put(Buffer.from([1]), "image/png", "u1");
     const webp = await u.put(Buffer.from([2]), "image/webp", "u2");
-    expect(png.url).toMatch(/\.png$/);
-    expect(webp.url).toMatch(/\.webp$/);
+    expect(png.key).toMatch(/\.png$/);
+    expect(webp.key).toMatch(/\.webp$/);
   });
 
   it("fallback .bin pour MIME inconnu", async () => {
     const u = new LocalUploader(tmp);
     const res = await u.put(Buffer.from([0]), "application/x-mystery", "u1");
-    expect(res.url).toMatch(/\.bin$/);
+    expect(res.key).toMatch(/\.bin$/);
   });
 
   it("produit des noms uniques (aucune collision sur 10 uploads)", async () => {
@@ -39,15 +39,25 @@ describe("LocalUploader (T-014, §13.5)", () => {
     const urls = await Promise.all(
       Array.from({ length: 10 }, () => u.put(Buffer.from([1]), "image/png", "same"))
     );
-    const set = new Set(urls.map((u) => u.url));
+    const set = new Set(urls.map((u) => u.key));
     expect(set.size).toBe(10);
-    expect(readdirSync(tmp).length).toBe(10);
+    expect(readdirSync(join(tmp, "uploads")).length).toBe(10);
   });
 
   it("ne préfixe l'URL qu'avec les 8 premiers chars de ownerId", async () => {
     const u = new LocalUploader(tmp);
     const res = await u.put(Buffer.from([1]), "image/png", "abcdefghij-secret-suffix");
-    expect(res.url).toContain("abcdefgh-");
-    expect(res.url).not.toContain("secret");
+    expect(res.key).toContain("uploads/abcdefgh-");
+    expect(res.key).not.toContain("secret");
   });
+
+  it("lit et supprime la clé privée générée", async () => {
+    const u = new LocalUploader(tmp);
+    const stored = await u.put(Buffer.from([1, 2]), "image/png", "abcdefgh-user");
+    const loaded = await u.get(stored.key);
+    expect(loaded?.body).toEqual(Buffer.from([1, 2]));
+    expect(await u.remove(stored.key)).toBe(true);
+    expect(await u.get(stored.key)).toBeNull();
+  });
+
 });

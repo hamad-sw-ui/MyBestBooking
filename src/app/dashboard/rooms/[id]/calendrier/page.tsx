@@ -1,10 +1,12 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { db } from "@/db";
-import { rooms, properties, roomAvailability } from "@/db/schema";
+import { rooms, properties, ratePlans, roomAvailability } from "@/db/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { AvailabilityCalendar } from "@/components/availability-calendar";
+import { RatePlansSection } from "@/components/rate-plans-section";
+import { RoomEditSection } from "@/components/room-edit-section";
 import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -43,6 +45,8 @@ export default async function RoomCalendarPage({
       ),
     );
 
+  const plans = await db.select().from(ratePlans).where(eq(ratePlans.roomId, id));
+
   return (
     <div className="max-w-5xl">
       <Link
@@ -74,6 +78,28 @@ export default async function RoomCalendarPage({
           price: d.price,
           stopSell: d.stopSell,
           minStay: d.minStay,
+        }))}
+      />
+      <RoomEditSection room={{
+        id,
+        name: row.room.name,
+        basePrice: row.room.basePrice,
+        quantity: row.room.quantity ?? 1,
+        maxOccupancy: row.room.maxOccupancy,
+        maxAdults: row.room.maxAdults,
+        maxChildren: row.room.maxChildren,
+        isActive: row.room.isActive,
+      }} />
+      <RatePlansSection
+        roomId={id}
+        initialRatePlans={plans.map((plan) => ({
+          id: plan.id,
+          name: plan.name,
+          type: plan.type,
+          discountPercentage: plan.discountPercentage,
+          includesBreakfast: plan.includesBreakfast,
+          cancellationPolicy: plan.cancellationPolicy,
+          cancellationFreeDays: plan.cancellationFreeDays,
         }))}
       />
     </div>

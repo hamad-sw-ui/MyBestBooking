@@ -14,16 +14,23 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 ## Produit
 
-- **Paiement mocké.** `POST /api/bookings` force `paymentStatus: 'paid'`
-  sans débit. Une vraie intégration Stripe/CinetPay/PayPal est nécessaire
-  avant tout usage réel. Requiert des credentials fournisseur non
-  disponibles dans l'environnement sandbox actuel. Déplacé de BUG-003
-  vers cette liste le 2026-08-20 (session 4). À rouvrir en tâche
-  T-011 dès qu'un compte test est fourni.
+- **Validation Stripe réelle non exécutée dans le sandbox.** Le checkout utilise
+  Stripe Elements lorsque les clés Stripe secrète, webhook et publique sont
+  configurées et ne présente jamais un intent `pending` comme payé. Aucun
+  compte/jeu de clés Stripe n'est disponible ici : capture, webhook et
+  remboursement Stripe test-mode restent à valider avant ouverture production.
+  Le mock est explicitement limité au dev/test et refusé en production sans
+  configuration complète.
 
 - **Vérification d'email non bloquante.** L'inscription envoie un mail de
   vérification best-effort et crée la session immédiatement. Le produit ne
   bloque pas encore les actions sensibles tant que `emailVerified` est faux.
+
+- **Rotation de la clé maître providers manuelle.** Les overrides Stripe,
+  Resend et S3 saisis dans `/dashboard/settings` sont chiffrés AES-GCM. La
+  perte de `CREDENTIALS_ENCRYPTION_KEY` rend ces valeurs DB illisibles ; une
+  procédure de double chiffrement/rotation reste à concevoir. Les env restent
+  un fallback et doivent être conservés comme sauvegarde opérationnelle.
 
 - **Rate-limit en mémoire (mono-instance).** `src/lib/rate-limit.ts` de
   T-009 utilise une Map process-local. En déploiement multi-instance

@@ -11,7 +11,7 @@ import { formatDate } from "@/lib/utils";
 import { MessageSquare, Search, Send, Building2, Calendar } from "lucide-react";
 import Link from "next/link";
 
-async function getConversations(userId: string) {
+async function getConversations(userId: string, search = "") {
   const userConversations = await db
     .select({
       conversation: conversations,
@@ -57,17 +57,28 @@ async function getConversations(userId: string) {
     })
   );
 
-  return conversationsWithMessages;
+  const needle = search.trim().toLocaleLowerCase("fr");
+  if (!needle) return conversationsWithMessages;
+  return conversationsWithMessages.filter(({ property, lastMessage }) =>
+    [property?.name, property?.city, lastMessage?.content]
+      .filter((value): value is string => Boolean(value))
+      .some((value) => value.toLocaleLowerCase("fr").includes(needle)),
+  );
 }
 
-export default async function MessagesPage() {
+export default async function MessagesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ search?: string }>;
+}) {
   const user = await getCurrentUser();
 
   if (!user) {
     redirect("/connexion");
   }
 
-  const userConversations = await getConversations(user.id);
+  const { search = "" } = await searchParams;
+  const userConversations = await getConversations(user.id, search);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -83,16 +94,20 @@ export default async function MessagesPage() {
         </div>
 
         {/* Search */}
-        <div className="mb-6">
+        <form method="get" action="/messages" className="mb-6">
+          <label className="sr-only" htmlFor="messages-search">Rechercher dans les messages</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
-              type="text"
+              id="messages-search"
+              type="search"
+              name="search"
+              defaultValue={search}
               placeholder="Rechercher dans les messages..."
               className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
             />
           </div>
-        </div>
+        </form>
 
         {userConversations.length === 0 ? (
           <Card>

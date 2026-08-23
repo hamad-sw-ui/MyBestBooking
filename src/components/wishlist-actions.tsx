@@ -21,17 +21,41 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isPublicState, setIsPublicState] = useState(isPublic);
+  const [shareTokenState, setShareTokenState] = useState(shareToken);
+  const [updatingShare, setUpdatingShare] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function share() {
-    if (!isPublic || !shareToken) return;
-    const url = `${window.location.origin}/wishlists/share/${shareToken}`;
+    if (!isPublicState || !shareTokenState) return;
+    const url = `${window.location.origin}/wishlists/share/${shareTokenState}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // fallback silencieux
+    }
+  }
+
+  async function updateSharing(nextPublic: boolean, rotateShareToken = false) {
+    setError(null);
+    setUpdatingShare(true);
+    try {
+      const response = await fetch("/api/wishlists", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wishlistId, isPublic: nextPublic, rotateShareToken }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? "Impossible de modifier le partage");
+      setIsPublicState(Boolean(data.wishlist?.isPublic));
+      setShareTokenState(data.wishlist?.shareToken ?? null);
+      router.refresh();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Erreur");
+    } finally {
+      setUpdatingShare(false);
     }
   }
 
@@ -56,18 +80,21 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
 
   return (
     <div className="flex items-center gap-2">
-      {isPublic && shareToken && (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={share}
-          aria-label="Copier le lien de partage"
-        >
-          {copied ? (
-            <><Check className="w-4 h-4 mr-2" /> Copié !</>
-          ) : (
-            <><Share2 className="w-4 h-4 mr-2" /> Partager</>
-          )}
+      {isPublicState && shareTokenState ? (
+        <>
+          <Button variant="ghost" size="sm" onClick={share} aria-label="Copier le lien de partage">
+            {copied ? <><Check className="w-4 h-4 mr-2" /> Copié !</> : <><Share2 className="w-4 h-4 mr-2" /> Partager</>}
+          </Button>
+          <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(true, true)}>
+            Nouveau lien
+          </Button>
+          <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(false)}>
+            Rendre privée
+          </Button>
+        </>
+      ) : (
+        <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(true)}>
+          <Share2 className="w-4 h-4 mr-2" /> Rendre publique
         </Button>
       )}
       <Button

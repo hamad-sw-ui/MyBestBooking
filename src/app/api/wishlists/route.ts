@@ -17,6 +17,12 @@ const addItemSchema = z.object({
   propertyId: z.string().uuid(),
 });
 
+const updateWishlistSchema = z.object({
+  wishlistId: z.string().uuid(),
+  isPublic: z.boolean().optional(),
+  rotateShareToken: z.boolean().optional(),
+});
+
 export async function GET() {
   try {
     const user = await getCurrentUser();
@@ -159,6 +165,35 @@ export async function POST(request: NextRequest) {
       { error: "Une erreur est survenue" },
       { status: 500 }
     );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    const data = updateWishlistSchema.parse(await request.json());
+    const [wishlist] = await db
+      .select()
+      .from(wishlists)
+      .where(and(eq(wishlists.id, data.wishlistId), eq(wishlists.userId, user.id)));
+    if (!wishlist) return NextResponse.json({ error: "Liste non trouvée" }, { status: 404 });
+
+    const isPublic = data.isPublic ?? wishlist.isPublic ?? false;
+    const shouldGenerateToken = isPublic && (!wishlist.shareToken || data.rotateShareToken);
+    const [updated] = await db
+      .update(wishlists)
+      .set({
+        isPublic,
+        shareToken: isPublic ? (shouldGenerateToken ? uuidv4() : wishlist.shareToken) : null,
+      })
+      .where(eq(wishlists.id, wishlist.id))
+      .returning();
+    return NextResponse.json({ wishlist: updated });
+  } catch (error) {
+    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    console.error("Error updating wishlist:", error);
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }
 

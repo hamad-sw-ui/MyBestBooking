@@ -364,7 +364,9 @@ export function getProviderStatus(): {
 } {
   return {
     stripe: Boolean(
-      process.env.STRIPE_SECRET_KEY && process.env.STRIPE_WEBHOOK_SECRET,
+      process.env.STRIPE_SECRET_KEY &&
+      process.env.STRIPE_WEBHOOK_SECRET &&
+      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
     ),
     resend: Boolean(process.env.RESEND_API_KEY),
     s3: Boolean(

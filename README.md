@@ -48,6 +48,18 @@ Comptes de démo créés par le seed :
 | Hôte | `host@mybestbooking.com` | `Host123!` |
 | Voyageur | `customer@mybestbooking.com` | `Customer123!` |
 
+## 🔑 Configuration sécurisée des providers
+
+Un administrateur peut renseigner **Stripe**, **Resend** et **S3/R2** dans
+`/dashboard/settings` → « Providers externes sécurisés ». Les valeurs sont
+chiffrées côté serveur et ne sont jamais réaffichées. Cette interface exige
+une clé maître d'infrastructure `CREDENTIALS_ENCRYPTION_KEY` (32 octets en hex
+ou Base64), à définir uniquement dans l'environnement de déploiement.
+
+Les variables `.env.local` restent compatibles comme fallback : elles sont
+recommandées pour le bootstrap, la récupération et la rotation de secrets.
+Voir `.env.example` et `.ai/SECURITY.md`.
+
 ## 📚 Documentation
 
 Le dossier [`.ai/`](.ai/) contient la **documentation vivante** et le
