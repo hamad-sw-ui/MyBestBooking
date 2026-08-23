@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
+import { getSetting } from "@/lib/settings";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -13,6 +14,9 @@ import Link from "next/link";
 
 export default async function BestRewardsPage() {
   const user = await getCurrentUser();
+  const settings = await getSetting("bestrewards");
+  const [level2Threshold, level3Threshold] = settings.thresholds;
+  const [level1Discount, level2Discount, level3Discount] = settings.discounts;
 
   const levels = [
     {
@@ -21,7 +25,7 @@ export default async function BestRewardsPage() {
       color: "from-blue-500 to-blue-600",
       requirement: "Dès l'inscription",
       benefits: [
-        { icon: Percent, text: "Réduction configurée sur hébergements BestRewards" },
+        { icon: Percent, text: "Réduction de ${level1Discount}% configurée sur hébergements BestRewards" },
         { icon: Star, text: "Suivi de votre niveau dans Mon compte" },
       ],
     },
@@ -29,9 +33,9 @@ export default async function BestRewardsPage() {
       level: 2,
       name: "Voyageur",
       color: "from-purple-500 to-purple-600",
-      requirement: "5 séjours terminés",
+      requirement: `${level2Threshold} séjours terminés`,
       benefits: [
-        { icon: Percent, text: "Réduction niveau Voyageur sur BestRewards" },
+        { icon: Percent, text: "Réduction de ${level2Discount}% niveau Voyageur sur BestRewards" },
         { icon: Star, text: "Tous les avantages Explorer" },
       ],
     },
@@ -39,9 +43,9 @@ export default async function BestRewardsPage() {
       level: 3,
       name: "Ambassador",
       color: "from-[#F5A623] to-yellow-500",
-      requirement: "15 séjours terminés",
+      requirement: `${level3Threshold} séjours terminés`,
       benefits: [
-        { icon: Percent, text: "Réduction niveau Ambassador sur BestRewards" },
+        { icon: Percent, text: "Réduction de ${level3Discount}% niveau Ambassador sur BestRewards" },
         { icon: Wallet, text: "Cashback 5% en wallet après séjour" },
         { icon: Star, text: "Tous les avantages Voyageur" },
       ],
@@ -159,11 +163,11 @@ export default async function BestRewardsPage() {
             {[
               {
                 q: "Comment rejoindre BestRewards ?",
-                a: "C'est automatique ! Dès votre inscription sur mybestbooking, vous êtes Level 1 Explorer et bénéficiez immédiatement de -10% sur les hébergements BestRewards.",
+                a: "C'est automatique ! Dès votre inscription sur mybestbooking, vous êtes Level 1 Explorer et bénéficiez immédiatement de la réduction configurée sur les hébergements BestRewards.",
               },
               {
                 q: "Comment monter de niveau ?",
-                a: "Chaque séjour terminé compte. Après 5 séjours, vous passez Level 2 Voyageur. Après 15 séjours, vous atteignez Level 3 Ambassador.",
+                a: "Chaque séjour terminé compte. Après ${level2Threshold} séjours, vous passez Level 2 Voyageur. Après ${level3Threshold} séjours, vous atteignez Level 3 Ambassador.",
               },
               {
                 q: "Les réductions sont-elles cumulables ?",
