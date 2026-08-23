@@ -17,6 +17,9 @@
 - ▶️ Reproduction runtime de quatre écarts critiques : fuite detail/brouillon,
   lecture anonyme avis hidden, auto-publication hôte, annulation bulk sans
   remboursement et suppression property partielle.
+- ▶️ Addendum : fuite dans le payload RSC de recherche + combinaison rooms
+  impossible, guest checkout non revendicable/création avant validation et
+  agrégat review périmé après bulk delete.
 - 🔍 Contrôle des effets externes, 2FA, settings, outbox, messages, reporting,
   BestRewards, promos, devise/timezone, actions visibles et dépendances.
 

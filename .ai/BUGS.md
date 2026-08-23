@@ -16,11 +16,13 @@ suivante.
   local : detail 200 avec `hostId/commissionRate/validatedBy`, brouillon API+
   page 200, avis hidden 200, PATCH hôte `pending→active` 200.
 
-- [ ] **2026-08-23 — BUG-036** (C, AUD-108-04/05) : opérations admin
-  destructives contournent la finance et l’atomicité. L’annulation bulk laisse
-  un booking payé `refundStatus=none`; la suppression property peut effacer un
-  rate plan puis échouer sur FK booking. ▶️ Reproduit : bulk cancel 200 → paid/
-  none; bulk property → `failed` avec property+room présents mais rate_plan=0.
+- [ ] **2026-08-23 — BUG-036** (C, AUD-108-04/05/20) : opérations admin
+  destructives contournent la finance, l’atomicité et les agrégats. L’annulation
+  bulk laisse un booking payé `refundStatus=none`; la suppression property peut
+  effacer un rate plan puis échouer sur FK booking; delete review laisse
+  `averageRating/totalReviews` périmés. ▶️ Reproduit : bulk cancel 200 → paid/
+  none; bulk property → `failed` avec property+room présents mais rate_plan=0;
+  bulk review → 0 avis réels mais moyenne 4.0/compteur 1.
 
 - [ ] **2026-08-23 — BUG-037** (C, AUD-108-06/07) : mise en place 2FA envoie
   l’URI contenant le secret à un QR provider tiers et peut désactiver une 2FA

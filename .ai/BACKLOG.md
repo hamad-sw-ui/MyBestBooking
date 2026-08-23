@@ -20,14 +20,17 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 
 ### Remédiations issues de l’audit post T-107 (à arbitrer avant implémentation)
 
-- 🔴 **T-108 (C)** — frontières publiques/RBAC, annulation financière admin,
-  suppression transactionnelle et 2FA locale/réauthentifiée. Couvre
-  BUG-035/036/037, migration additive et tests de sécurité négatifs.
+- 🔴 **T-108 (C)** — frontières publiques/RBAC, DTO RSC de recherche,
+  annulation financière admin, suppressions/agrégats transactionnels et 2FA
+  locale/réauthentifiée. Couvre BUG-035/036/037, migration additive et tests de
+  sécurité négatifs.
 - 🔴 **T-109 (C)** — saga d’annulation/reprise paiement, outbox unifiée,
-  messagerie hôte et politique de timezone/devise. Couvre le noyau de BUG-038.
-- 🟠 **T-110 (S)** — vérité UI/produit : BestRewards/referral/promos,
-  actions de fiche, reporting, contrats de listes, capacité room et upgrade
-  dépendances. Voir `REPORTS/audit_execution_deep_post_T107_2026-08-23.md`.
+  claim checkout invité, messagerie hôte et politique de timezone/devise. Couvre
+  le noyau financier et compte de BUG-038.
+- 🟠 **T-110 (S)** — vérité UI/produit : quote checkout/alertes, recherche sur
+  une même room, BestRewards/referral/promos, actions de fiche, reporting,
+  contrats de listes, capacité room, bornes dates et upgrade dépendances. Voir
+  les rapports d’audit profond et addendum post T-107.
 
 ### Chantiers Sessions 5-7 (livrés)
 

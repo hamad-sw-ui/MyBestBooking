@@ -4,7 +4,7 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a02dbb-mybestbooking`
-- **HEAD à synchroniser après commit T-107** : `0cd0ddb`
+- **HEAD audit post-T-107** : `5e9351d`
 - **Version Framework** : AI-DOS 3.0.0
 - **Dernière tâche validée** : T-107 — orchestration paiement, outbox et parcours opérationnels
 
@@ -50,6 +50,11 @@
   et tests DB sont des preuves complémentaires, pas un E2E navigateur.
 - Facture légale/payout, ticket support et réimport automatisé des anciennes
   pièces jointes restent hors périmètre; voir `KNOWN_LIMITATIONS.md`/backlog.
+- Les audits profonds post-T-107 ont ouvert BUG-035 à BUG-038 : exposition de
+  données publiques/modérées (dont le payload RSC recherche), annulations bulk
+  financières/agrégats, 2FA/paramètres décoratifs et parcours invité/
+  asynchrones/UI incomplets. Aucun déploiement production ne doit être envisagé
+  avant T-108; voir les rapports `audit_execution_deep_post_T107` et addendum.
 
 ## Documents de référence
 
@@ -58,6 +63,8 @@
 - `REPORTS/debat_technique_2026-08-23_resilience_orchestrations.md`
 - `REPORTS/analyse_impact_post_2026-08-23_resilience_orchestrations.md`
 - `REPORTS/validation_T-107_2026-08-23.md`
+- `REPORTS/audit_execution_deep_post_T107_2026-08-23.md`
+- `REPORTS/audit_execution_addendum_post_T107_2026-08-23.md`
 - `ADR/ADR-012_Orchestration_paiement_outbox_et_rotation.md`
 
 ---
