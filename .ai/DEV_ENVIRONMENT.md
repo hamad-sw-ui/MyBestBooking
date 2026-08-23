@@ -106,8 +106,12 @@ le fait par défaut.
 
 ## Points connus
 
-- **Pas de dossier `drizzle/`** : les migrations ne sont pas versionnées.
-- **Pas de `.env.example`** commité.
-- **Pas de README.md** à la racine du dépôt.
-- **`node_modules` absents** dans le dépôt (normal), à réinstaller à chaque
-  clone.
+- **`npm run ai:check` est portable pour les parcours de fichiers.** Les
+  contrôles utilisent désormais Node.js au lieu de `find`/`ls`, et le contrôle
+  de permission Unix est ignoré sous Windows. Quelques alertes restent
+  possibles dans les archives historiques et les heuristiques UI.
+
+- **Le dossier `drizzle/`** contient les migrations versionnées.
+- **`.env.example`** est présent ; `.env.local` reste ignoré et local.
+- **`README.md`** est présent à la racine du projet.
+- **`node_modules`** est absent du dépôt (normal), à réinstaller à chaque clone.

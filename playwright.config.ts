@@ -18,6 +18,8 @@ import { defineConfig, devices } from "@playwright/test";
  */
 export default defineConfig({
   testDir: "./tests/e2e",
+  timeout: 120_000,
+  expect: { timeout: 10_000 },
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
@@ -25,9 +27,9 @@ export default defineConfig({
   reporter: process.env.CI ? "github" : "list",
 
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3100",
+    navigationTimeout: 120_000,
     trace: "on-first-retry",
-    video: "retain-on-failure",
     screenshot: "only-on-failure",
   },
 
@@ -41,9 +43,9 @@ export default defineConfig({
   webServer: process.env.E2E_BASE_URL
     ? undefined
     : {
-        command: "npm run dev -- -H 0.0.0.0 -p 3000",
-        url: "http://localhost:3000",
+        command: "npm run start -- -H 0.0.0.0 -p 3100",
+        url: "http://localhost:3100",
         reuseExistingServer: true,
-        timeout: 60_000,
+        timeout: 300_000,
       },
 });

@@ -1,23 +1,68 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Star, MapPin, Heart } from "lucide-react";
+import { Star, MapPin, Heart, Loader2 } from "lucide-react";
 import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { Property } from "@/db/schema";
 
 interface PropertyCardProps {
-  property: Property;
+  property: Property & { minPrice?: number | null };
   showFavorite?: boolean;
 }
 
 export function PropertyCard({ property, showFavorite = true }: PropertyCardProps) {
+  const [favoriteState, setFavoriteState] = useState<"idle" | "loading" | "saved">("idle");
+  const [favoriteError, setFavoriteError] = useState<string | null>(null);
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating) : null;
 
-  // Find minimum price from property rooms (simplified)
-  const minPrice = 89; // Default starting price
+  const minPrice = property.minPrice;
+
+  async function addToFavorites(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (favoriteState === "loading" || favoriteState === "saved") return;
+
+    setFavoriteState("loading");
+    setFavoriteError(null);
+    try {
+      const listsResponse = await fetch("/api/wishlists");
+      if (listsResponse.status === 401) {
+        window.location.href = "/connexion?next=%2Frecherche";
+        return;
+      }
+      if (!listsResponse.ok) throw new Error("Impossible de charger vos favoris");
+      const listsData = await listsResponse.json();
+      let wishlist = listsData.wishlists?.[0];
+
+      if (!wishlist) {
+        const createResponse = await fetch("/api/wishlists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: "Mes favoris" }),
+        });
+        if (!createResponse.ok) throw new Error("Impossible de créer votre liste");
+        wishlist = (await createResponse.json()).wishlist;
+      }
+
+      const addResponse = await fetch("/api/wishlists", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ wishlistId: wishlist.id, propertyId: property.id }),
+      });
+      if (!addResponse.ok) {
+        const data = await addResponse.json().catch(() => ({}));
+        if (!String(data.error).includes("déjà")) throw new Error(data.error ?? "Impossible d'ajouter le favori");
+      }
+      setFavoriteState("saved");
+    } catch (error) {
+      setFavoriteState("idle");
+      setFavoriteError(error instanceof Error ? error.message : "Erreur");
+    }
+  }
 
   return (
     <Link
@@ -35,14 +80,12 @@ export function PropertyCard({ property, showFavorite = true }: PropertyCardProp
         />
         {showFavorite && (
           <button
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-            }}
-            aria-label="Ajouter aux favoris"
+            onClick={addToFavorites}
+            aria-label={favoriteState === "saved" ? "Ajouté aux favoris" : "Ajouter aux favoris"}
+            title={favoriteError ?? (favoriteState === "saved" ? "Ajouté aux favoris" : "Ajouter aux favoris")}
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
           >
-            <Heart className="w-5 h-5 text-gray-600" aria-hidden="true" />
+            {favoriteState === "loading" ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className={`w-5 h-5 ${favoriteState === "saved" ? "fill-[#FF5A5F] text-[#FF5A5F]" : "text-gray-600"}`} aria-hidden="true" />}
           </button>
         )}
         {property.isBestrewards && (
@@ -96,8 +139,14 @@ export function PropertyCard({ property, showFavorite = true }: PropertyCardProp
 
         <div className="flex items-end justify-between pt-3 border-t border-gray-100">
           <div>
-            <span className="text-lg font-bold text-gray-900">Dès €{minPrice}</span>
-            <span className="text-sm text-gray-500">/nuit</span>
+            {minPrice !== null && minPrice !== undefined ? (
+              <>
+                <span className="text-lg font-bold text-gray-900">Dès €{minPrice.toFixed(2)}</span>
+                <span className="text-sm text-gray-500">/nuit</span>
+              </>
+            ) : (
+              <span className="text-sm text-gray-500">Prix indisponible</span>
+            )}
           </div>
           <span className="text-sm text-[#1B3A6B] font-medium group-hover:underline">
             Voir les chambres →

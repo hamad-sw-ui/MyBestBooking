@@ -51,7 +51,27 @@ export function PriceAlertsSection({ properties }: Props) {
     }
   }
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadAlerts() {
+      try {
+        const r = await fetch("/api/price-alerts");
+        const j = await r.json();
+        if (!r.ok) throw new Error(j.error ?? "Erreur");
+        if (mounted) setAlerts(j.alerts);
+      } catch (e) {
+        if (mounted) setError(e instanceof Error ? e.message : "Erreur");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    }
+
+    void loadAlerts();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   async function remove(id: string) {
     if (!confirm("Supprimer cette alerte ?")) return;

@@ -10,6 +10,7 @@ import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
   password: z.string().min(1, "Le mot de passe est requis"),
+  rememberMe: z.boolean().optional(),
   // BUG-019 (Session 11 xtreme) : totpCode requis si user.twoFactorEnabled=true.
   // Si absent, la réponse renvoie 401 { twoFactorRequired: true }.
   totpCode: z.string().regex(/^\d{6}$/).optional(),
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       .where(eq(users.id, user.id));
 
     // Create session
-    await createSession(user.id);
+    await createSession(user.id, data.rememberMe === true);
 
     return NextResponse.json({
       message: "Connexion réussie",

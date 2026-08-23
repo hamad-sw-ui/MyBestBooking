@@ -209,13 +209,13 @@ export default async function MyBookingsPage() {
                           
                           {booking.status === "completed" && (
                             <div className="mt-3">
-                              <a
-                                href={`mailto:support@mybestbooking.com?subject=Avis pour réservation ${booking.bookingReference}&body=Note (sur 10) : %0A%0ACommentaire :`}
+                              <Link
+                                href={`/mes-reservations/avis/${booking.id}`}
                                 className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F5A623] text-white text-sm font-medium hover:bg-[#e0951f] transition"
                               >
                                 <Star className="w-4 h-4 mr-2" />
                                 Laisser un avis
-                              </a>
+                              </Link>
                             </div>
                           )}
                         </div>

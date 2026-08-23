@@ -13,9 +13,12 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [requiresTwoFactor, setRequiresTwoFactor] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
     password: "",
+    totpCode: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -27,12 +30,15 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ ...formData, rememberMe }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.twoFactorRequired) {
+          setRequiresTwoFactor(true);
+        }
         setError(data.error || "Une erreur est survenue");
         setLoading(false);
         return;
@@ -98,9 +104,28 @@ export default function LoginPage() {
           </button>
         </div>
 
+        {requiresTwoFactor && (
+          <Input
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            label="Code de vérification"
+            placeholder="123456"
+            value={formData.totpCode}
+            onChange={(e) => setFormData({ ...formData, totpCode: e.target.value })}
+            required
+            maxLength={6}
+          />
+        )}
+
         <div className="flex items-center justify-between text-sm">
           <label className="flex items-center gap-2">
-            <input type="checkbox" className="rounded border-gray-300" />
+            <input
+              type="checkbox"
+              className="rounded border-gray-300"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+            />
             <span className="text-gray-600">Se souvenir de moi</span>
           </label>
           <Link href="/mot-de-passe-oublie" className="text-[#1B3A6B] hover:underline">

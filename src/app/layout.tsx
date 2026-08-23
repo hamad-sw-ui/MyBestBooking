@@ -1,14 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
+import Script from "next/script";
 import { ToastProvider } from "@/components/ui/toast";
 import "./globals.css";
 
-// T-017 (note) : les fonts sont chargées via <link> plutôt que
-// `next/font/google` parce que le sandbox n'a pas d'accès au CDN
-// Google Fonts au build time et fait échouer `next build`. En prod
-// avec accès CDN, `next/font/google` est préférable (inlining + no
-// FOUT). Migration prévue backlog quand la CI aura un accès réseau
-// stable. Voir KNOWN_LIMITATIONS.md.
+// Les polices restent locales afin que le rendu initial ne dépende pas
+// d'un CDN externe, notamment dans les environnements sans réseau.
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -46,20 +43,14 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="fr">
-      <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap"
-          rel="stylesheet"
-        />
-      </head>
+    <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="bg-gray-50 min-h-screen font-sans">
         {/* T-029 : skip link a11y */}
         <a href="#main-content" className="skip-link">Aller au contenu principal</a>
         {/* T-029 : pré-applique la classe .dark sans FOUC */}
-        <script
+        <Script
+          id="theme-init"
+          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
             __html:
               "try{var t=localStorage.getItem('theme');" +

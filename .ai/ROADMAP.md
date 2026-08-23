@@ -9,37 +9,35 @@ travailler sur autre chose.
 Objectif : ne plus dépendre de valeurs par défaut dangereuses, avoir un
 socle reproductible.
 
-- `JWT_SECRET` obligatoire au démarrage.
-- Protéger / retirer `POST /api/seed`.
-- Créer `README.md`, `.env.example`.
-- Ajouter les scripts npm `db:push` / `db:generate` / `db:studio`.
-- Générer les migrations Drizzle et commiter le dossier `drizzle/`.
-- CI minimale : `lint` + `typecheck` + `build`.
+- ✅ `JWT_SECRET` obligatoire au démarrage.
+- ✅ `POST /api/seed` protégé en production par `SEED_TOKEN`.
+- ✅ `README.md`, `.env.example`, scripts npm et migrations Drizzle présents.
+- ✅ Build, lint et typecheck exécutables.
 
 ## Étape 2 — Réservation réelle
 
 Objectif : rendre le tunnel de réservation exploitable en conditions réelles.
 
-- Intégration paiement Stripe (test mode puis live), webhooks de confirmation.
-- Vérifier la disponibilité (`room_availability`) au moment de la réservation
-  et décrémenter atomiquement.
-- Envoi d'un email de confirmation avec la référence `MBB-YYYY-XXXXXX`.
-- Politique d'annulation appliquée réellement (`cancellationPolicy` du
-  `rate_plan` ou de la `property`).
-- Suspense + fallback propres sur `reservation/page.tsx`.
+- ⚠️ Paiement réel à activer avec les credentials fournisseur ; le mock reste
+  disponible pour le développement.
+- ✅ Disponibilité, `room_availability` et verrouillage anti-surbooking
+  appliqués au moment de la réservation.
+- ✅ Email de confirmation et référence de réservation présents.
+- ✅ Politique d'annulation appliquée côté API.
+- 🟠 Renforcer les états d'erreur et le fallback du checkout.
 
 ## Étape 3 — Confort hôte
 
 Objectif : donner à un hôte de quoi vraiment gérer son offre.
 
-- Éditeur de calendrier (prix / stock / stop-sell) sur `/dashboard/rooms`.
-- Validation admin des `properties` (`status: pending → active`).
-- Analytics : chiffre d'affaires, commissions, taux d'occupation.
-- Messagerie fonctionnelle (endpoints + notifications).
+- ✅ Éditeur calendrier, validation admin, analytics de base et messagerie
+  fonctionnelle présents.
+- 🟠 Ajouter ADR/RevPAR, export et vue mobile dashboard.
 
 ## Étape 4 — Confiance et croissance
 
-- 2FA, vérification email réelle, rate-limiting.
+- ✅ 2FA et rate-limiting présents.
+- 🟠 Rendre la vérification email obligatoire pour les actions sensibles.
 - I18n EN (le modèle est prêt), devises multiples au checkout.
 - Programme BestRewards vraiment récompensant (remises, wallet utilisable).
 - SEO : `sitemap.xml`, `robots.txt`, `next/image`, `metadata` par page,
@@ -47,8 +45,9 @@ Objectif : donner à un hôte de quoi vraiment gérer son offre.
 
 ## Étape 5 — Qualité et exploitation
 
-- Tests d'intégration API par ressource.
-- Smoke test E2E Playwright (recherche → réservation → avis).
+- 🟠 Étendre les tests d'intégration API par ressource.
+- ✅ Smoke test E2E Playwright public et protections de routes.
+- 🟠 Ajouter le parcours E2E complet recherche → réservation → avis.
 - Monitoring erreurs (Sentry ou équivalent).
 - Backups PostgreSQL automatisés.
 - Runbook incident dans `.ai/` (que faire si la DB est HS, si le paiement

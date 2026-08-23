@@ -9,6 +9,53 @@
 
 ---
 
+## Session 14 — 2026-08-23 : audit fonctionnel runtime et synchronisation `.ai/`
+
+### Livré
+
+- 🔨 Sécurisation des réservations invitées : un email déjà rattaché à un
+  compte ne peut plus être réutilisé sans connexion.
+- 🔨 Connexion : `rememberMe` est transmis et la durée longue est explicite ;
+  le champ TOTP apparaît après `twoFactorRequired`.
+- 🔨 Recherche : filtres prix/dates appliqués, disponibilité vérifiée avant
+  affichage, prix minimum réel sur les cartes.
+- 🔨 Favoris : le bouton coeur crée ou utilise `Mes favoris` et gère les
+  doublons/erreurs.
+- 🔨 Avis : nouveau formulaire interne `/mes-reservations/avis/[id]` à la
+  place du `mailto:`.
+- 🔨 Analytics : annulations exclues, panier moyen basé sur les paiements,
+  occupation basée sur les chambres actives et leurs quantités.
+- 🔨 Layout : script de thème via `next/script`, scroll smooth déclaré,
+  JSON-LD corrigé.
+
+### Preuves
+
+- 🔨 `npm run build` : réussi, route d'avis générée.
+- 🔨 `npx tsc --noEmit` : réussi.
+- 🧪 `npx vitest run src/lib/auth.test.ts` : 10/10 réussis.
+- ▶️ `npx playwright test tests/e2e/smoke.spec.ts --workers=1` : 6/6 réussis.
+- 🔍 ESLint ciblé : aucune erreur ; avertissements `<img>` résiduels.
+
+### Limites
+
+- ❓ Le full Vitest peut expirer lorsque les tests bulk dépendent d'une API
+  live absente sur le port 3000.
+- 🧠 La pagination filtrée et la vue cartes mobile restent à finaliser.
+
+### Référence
+
+Voir `REPORTS/rapport_analyse_2026-08-23_parcours-fonctionnels.md`.
+
+### Synchronisation framework
+
+- 🔨 `scripts/check-ai.mjs` rendu compatible Windows pour les parcours de
+  fichiers et le contrôle des permissions smoke.
+- 🔨 Manifeste complété : documents, rôles et niveaux T/L/S/C alignés.
+- ▶️ `npm run ai:check` : **18 OK · 2 warnings · 0 fail**.
+- 🔍 Les deux warnings sont informatifs et ne bloquent pas la clôture.
+
+---
+
 ## Session 13 — 2026-08-21 : T-034 dashboards bulk étendus (rooms/promotions/messages/audit + delete icons)
 
 ### Contexte utilisateur

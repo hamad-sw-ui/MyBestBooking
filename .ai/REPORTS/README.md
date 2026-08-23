@@ -41,3 +41,4 @@ missing_impact_analysis_for_S_or_C`).
 |---|---|---|---|
 | 2026-08-20 | analyse_impact | governance_setup | T-000 |
 | 2026-08-20 | analyse_conception | governance_setup | T-000 |
+| 2026-08-23 | rapport_analyse | parcours fonctionnels runtime | audit produit |

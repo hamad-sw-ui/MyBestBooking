@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
-import { properties, rooms } from "@/db/schema";
-import { eq, and, ilike, or, desc, sql } from "drizzle-orm";
+import { bookings, properties, rooms } from "@/db/schema";
+import { eq, and, ilike, or, desc, sql, min } from "drizzle-orm";
 
 export const metadata: Metadata = {
   title: "Recherche d'hébergements",
@@ -11,7 +11,7 @@ import { PropertyCard } from "@/components/property-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, SlidersHorizontal, Building2 } from "lucide-react";
+import { Search, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
 
 interface SearchPageProps {
@@ -46,14 +46,71 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
     conditions.push(eq(properties.type, params.type));
   }
 
+  if (params.minPrice) {
+    const minPrice = Number(params.minPrice);
+    if (Number.isFinite(minPrice) && minPrice >= 0) {
+      conditions.push(sql`EXISTS (
+        SELECT 1 FROM rooms r
+        WHERE r.property_id = ${properties.id}
+          AND r.is_active = true
+          AND r.base_price >= ${minPrice}
+      )`);
+    }
+  }
+
+  if (params.maxPrice) {
+    const maxPrice = Number(params.maxPrice);
+    if (Number.isFinite(maxPrice) && maxPrice >= 0) {
+      conditions.push(sql`EXISTS (
+        SELECT 1 FROM rooms r
+        WHERE r.property_id = ${properties.id}
+          AND r.is_active = true
+          AND r.base_price <= ${maxPrice}
+      )`);
+    }
+  }
+
+  if (
+    params.checkIn &&
+    params.checkOut &&
+    /^\d{4}-\d{2}-\d{2}$/.test(params.checkIn) &&
+    /^\d{4}-\d{2}-\d{2}$/.test(params.checkOut) &&
+    params.checkOut > params.checkIn
+  ) {
+    conditions.push(sql`EXISTS (
+      SELECT 1 FROM rooms r
+      WHERE r.property_id = ${properties.id}
+        AND r.is_active = true
+        AND r.quantity > (
+          SELECT COUNT(*) FROM bookings b
+          WHERE b.room_id = r.id
+            AND b.status <> 'cancelled'
+            AND b.check_in < ${params.checkOut}
+            AND b.check_out > ${params.checkIn}
+        )
+        AND NOT EXISTS (
+          SELECT 1 FROM room_availability ra
+          WHERE ra.room_id = r.id
+            AND ra.date >= ${params.checkIn}
+            AND ra.date < ${params.checkOut}
+            AND ra.stop_sell = true
+        )
+    )`);
+  }
+
   const results = await db
-    .select()
+    .select({ property: properties, minPrice: min(rooms.basePrice) })
     .from(properties)
+    .leftJoin(rooms, and(eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)))
     .where(and(...conditions))
+    .groupBy(properties.id)
     .orderBy(desc(properties.averageRating))
     .limit(20);
 
-  return results;
+  return results.map(({ property, minPrice }) => ({
+    ...property,
+    minPrice: minPrice === null ? null : Number(minPrice),
+  }));
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
@@ -122,6 +179,30 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 ))}
               </select>
             </div>
+            <div className="w-[120px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Prix min.</label>
+              <input
+                type="number"
+                name="minPrice"
+                min="0"
+                step="1"
+                defaultValue={params.minPrice}
+                placeholder="€ min"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+              />
+            </div>
+            <div className="w-[120px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">Prix max.</label>
+              <input
+                type="number"
+                name="maxPrice"
+                min="0"
+                step="1"
+                defaultValue={params.maxPrice}
+                placeholder="€ max"
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+              />
+            </div>
             <Button type="submit" size="md">
               <Search className="w-4 h-4 mr-2" />
               Rechercher
@@ -146,10 +227,6 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               {results.length} résultat{results.length !== 1 ? "s" : ""} trouvé{results.length !== 1 ? "s" : ""}
             </p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
-            <SlidersHorizontal className="w-4 h-4" />
-            Filtres
-          </button>
         </div>
 
         {/* Results Grid */}

@@ -77,7 +77,8 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - 🟢 Rate-limit Redis (multi-instance) — remplace le Map en mémoire
 - 🟠 CSP fine (`Content-Security-Policy`) dans `next.config.ts`
 - 🟢 CSRF token explicite (double-submit) sur formulaires HTML
-- 🟢 Support du 2FA (`users.twoFactorEnabled` en DB)
+- ✅ Support du 2FA TOTP côté réglages et connexion ; ajouter davantage de
+  tests E2E autour de la récupération reste souhaitable.
 - 🟠 Procédure documentée de rotation `JWT_SECRET` en cas de fuite
 
 ## Base de données & performance
@@ -97,26 +98,25 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - 🟠 `useToast` réellement utilisé dans les formulaires (aujourd'hui
   monté mais jamais appelé)
 - 🟠 `Modal` réellement utilisée pour confirmations destructives
-- 🟢 Mode invité au checkout (aujourd'hui compte obligatoire)
-- 🟢 Filtre par équipements (`amenities`) sur la recherche
+- ✅ Mode invité au checkout ; email déjà associé exige une connexion.
+- ✅ Filtre par équipements (`amenities`) côté API ; UI de recherche à exposer.
 - 🟢 Comparateur d'hébergements
 
 ## Dashboard hôte étendu
 
-- 🟠 Analytics réelles : taux d'occupation, ADR (Average Daily Rate),
-  RevPAR (Revenue Per Available Room), export CSV
+- 🟠 Analytics complémentaires : ADR, RevPAR et export CSV. Le taux
+  d'occupation de base est déjà calculé avec les chambres actives.
 - 🟠 Notifications email/webhook sur nouvelle réservation (T-013 + T-015)
-- 🟢 Édition d'une property complète (aujourd'hui page détail lit
-  seulement)
-- 🟢 Édition d'une room complète (idem)
+- ✅ Édition d'une property disponible ; renforcer validation et UX mobile.
+- 🟢 Édition d'une room complète et calendrier avancé.
 
 ## Idées produit
 
 - 🟢 Carte géographique (Mapbox/Leaflet) sur `/recherche` et fiche
 - 🟢 Programme parrainage lié à `walletBalance`
 - 🟢 Réductions réelles BestRewards sur properties `isBestrewards:true`
-- 🟢 Alertes prix (`priceAlertEnabled` sur `wishlist_items`)
-- 🟢 Système d'avis « utile » (`helpfulCount` sur reviews)
+- 🟢 Cron de notification des alertes prix (`priceAlertEnabled` est présent).
+- ✅ Système d'avis de base ; votes « utile » restent à améliorer.
 
 ## Observabilité & prod
 

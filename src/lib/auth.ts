@@ -25,7 +25,8 @@ const JWT_SECRET = new TextEncoder().encode(jwtSecretEnv);
 // UX/sécurité : 7j = confortable pour un utilisateur régulier, forcé à
 // se ré-authentifier hebdomadairement. Refresh token flow non requis
 // à ce stade (sessions DB permettent la révocation immédiate).
-const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000; // 7 days (was 30)
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
+const REMEMBERED_SESSION_DURATION = 30 * 24 * 60 * 60 * 1000;
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -57,9 +58,11 @@ export async function verifyToken(token: string): Promise<{ userId: string } | n
   }
 }
 
-export async function createSession(userId: string): Promise<string> {
+export async function createSession(userId: string, rememberMe = false): Promise<string> {
   const token = await createToken(userId);
-  const expiresAt = new Date(Date.now() + SESSION_DURATION);
+  const expiresAt = new Date(
+    Date.now() + (rememberMe ? REMEMBERED_SESSION_DURATION : SESSION_DURATION),
+  );
 
   await db.insert(sessions).values({
     userId,

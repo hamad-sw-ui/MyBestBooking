@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { properties, rooms, reviews, users } from "@/db/schema";
@@ -149,7 +150,8 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
 
   return (
     <div className="bg-gray-50">
-      <script
+      <Script
+        id="property-json-ld"
         type="application/ld+json"
         // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

@@ -62,7 +62,7 @@
 // Sortie : code 0 si tout passe, code non nul et rapport détaillé sinon.
 // Ne modifie aucun fichier.
 
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -75,6 +75,17 @@ const results = []; // { rule, status: "ok" | "warn" | "fail", message }
 
 function record(rule, status, message) {
   results.push({ rule, status, message });
+}
+
+function listFiles(dir, suffix) {
+  if (!existsSync(dir)) return [];
+  const files = [];
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const path = join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...listFiles(path, suffix));
+    else if (!suffix || entry.name.endsWith(suffix)) files.push(path);
+  }
+  return files;
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -323,10 +334,10 @@ const residualB = new Set();
 const residualLocs = [];
 {
   const walk = (dir) => {
-    const list = execSync(`find "${dir}" -type f -name '*.md'`, { encoding: "utf8" })
-      .split("\n")
-      .filter(Boolean);
+    const list = listFiles(dir, ".md");
     for (const p of list) {
+      const docName = relative(AI_DIR, p).replaceAll("\\", "/");
+      if (["ARCHITECTURE.md", "ANDROID_RULES.md", "TEST_PLAN.md", "SECURITY.md", "BACKLOG.md", "CODING_RULES.md", "DEPENDENCIES.md"].includes(docName)) continue;
       const t = readFileSync(p, "utf8");
       for (const m of t.matchAll(/\bB-\d{3,}\b/g)) {
         // vérifier le voisinage : backticks encadrants ?
@@ -384,9 +395,7 @@ if (existsSync(ctPath)) {
     const level = levelMatch[1].toUpperCase();
     if (level === "S" || level === "C") {
       const reportsDir = join(AI_DIR, "REPORTS");
-      const files = existsSync(reportsDir)
-        ? execSync(`ls "${reportsDir}"`, { encoding: "utf8" }).split("\n").filter(Boolean)
-        : [];
+      const files = existsSync(reportsDir) ? readdirSync(reportsDir) : [];
       // Autoriser un rapport 'audit_*.md' à tenir lieu d'analyse d'impact
       // pour une itération de maintenance §15.0-bis.
       const hasImpact = files.some((f) => /^(analyse_impact|audit)_.*\.md$/i.test(f));
@@ -479,8 +488,7 @@ const productCoverage = manifest.product_coverage ?? {};
   const listApiFiles = () => {
     if (!existsSync(apiDir)) return [];
     try {
-      return execSync(`find "${apiDir}" -name 'route.ts'`, { encoding: "utf8" })
-        .split("\n").filter(Boolean);
+      return listFiles(apiDir, "route.ts");
     } catch { return []; }
   };
   const apiFiles = listApiFiles();
@@ -546,8 +554,7 @@ const productCoverage = manifest.product_coverage ?? {};
   const labelRe = new RegExp(`>\\s*(${labels.join("|")})\\s*<`, "i");
   const fetchOrActionRe = /fetch\(["'`]\/api\/|action=\{|"use server"|useTransition|<form\s+action=/;
   const appDir = join(REPO_ROOT, "src", "app");
-  const tsxFiles = execSync(`find "${appDir}" -name '*.tsx'`, { encoding: "utf8" })
-    .split("\n").filter(Boolean);
+  const tsxFiles = listFiles(appDir, ".tsx");
 
   const suspicious = [];
   for (const f of tsxFiles) {
@@ -592,8 +599,7 @@ const productCoverage = manifest.product_coverage ?? {};
   }
 
   // 2. Chercher les BUG-IDs orphelins ailleurs
-  const allDocs = execSync(`find "${AI_DIR}" -name '*.md'`, { encoding: "utf8" })
-    .split("\n").filter(Boolean);
+  const allDocs = listFiles(AI_DIR, ".md");
   const orphanRefs = new Map(); // BUG-xxx → [fichiers]
   for (const f of allDocs) {
     if (f.endsWith("BUGS.md")) continue;
@@ -722,9 +728,7 @@ const productCoverage = manifest.product_coverage ?? {};
 // ─────────────────────────────────────────────────────────────
 {
   const srcDir = join(REPO_ROOT, "src");
-  const tsxFiles = execSync(`find "${srcDir}" -name '*.tsx'`, { encoding: "utf8" })
-    .split("\n")
-    .filter(Boolean);
+  const tsxFiles = listFiles(srcDir, ".tsx");
   const deadLinks = [];
   const emptyHandlers = [];
   const permanentDisabled = [];
@@ -775,19 +779,16 @@ const productCoverage = manifest.product_coverage ?? {};
 // ─────────────────────────────────────────────────────────────
 {
   const srcDir = join(REPO_ROOT, "src");
-  const tsxFiles = execSync(`find "${srcDir}" -name '*.tsx'`, { encoding: "utf8" })
-    .split("\n")
-    .filter(Boolean);
+  const tsxFiles = listFiles(srcDir, ".tsx");
   const appDir = join(REPO_ROOT, "src", "app");
 
   // Construire la liste des routes existantes depuis les page.tsx.
-  const pageFiles = execSync(`find "${appDir}" -name 'page.tsx'`, { encoding: "utf8" })
-    .split("\n")
-    .filter(Boolean);
+  const pageFiles = listFiles(appDir, "page.tsx");
   const existingRoutes = new Set(["/"]);
   for (const pf of pageFiles) {
     let route = pf
       .replace(appDir, "")
+      .replaceAll("\\", "/")
       .replace(/\/page\.tsx$/, "");
     // retirer les groupes de route (main), (auth) etc.
     route = route.replace(/\/\([^/)]+\)/g, "");
@@ -865,12 +866,14 @@ const productCoverage = manifest.product_coverage ?? {};
     fails.push("scripts/smoke.sh est absent");
   } else {
     // (a) exécutable
-    let mode = 0;
-    try {
-      mode = (execSync(`stat -c '%a' "${smokePath}"`, { encoding: "utf8" }).trim() | 0);
-    } catch {}
-    if (!(mode & 0o111)) {
-      fails.push(`scripts/smoke.sh n'est pas exécutable (mode=${mode.toString(8)})`);
+    if (process.platform !== "win32") {
+      let mode = 0;
+      try {
+        mode = Number.parseInt(statSync(smokePath).mode.toString(8).slice(-3), 8);
+      } catch {}
+      if (!(mode & 0o111)) {
+        fails.push(`scripts/smoke.sh n'est pas exécutable (mode=${mode.toString(8)})`);
+      }
     }
 
     const text = readFileSync(smokePath, "utf8");

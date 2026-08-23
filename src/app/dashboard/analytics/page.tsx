@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
-import { bookings, properties, reviews, users } from "@/db/schema";
+import { bookings, properties, reviews, rooms, users } from "@/db/schema";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -37,12 +37,12 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
 
   // Get bookings for current period (last 30 days)
   const currentPeriodBookings = allBookings.filter(
-    b => new Date(b.createdAt) >= thirtyDaysAgo
+    b => new Date(b.createdAt) >= thirtyDaysAgo && b.status !== "cancelled"
   );
 
   // Get bookings for previous period (30-60 days ago)
   const previousPeriodBookings = allBookings.filter(
-    b => new Date(b.createdAt) >= sixtyDaysAgo && new Date(b.createdAt) < thirtyDaysAgo
+    b => new Date(b.createdAt) >= sixtyDaysAgo && new Date(b.createdAt) < thirtyDaysAgo && b.status !== "cancelled"
   );
 
   // Calculate metrics
@@ -65,17 +65,24 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     : 100;
 
   // Average booking value
-  const avgBookingValue = currentPeriodBookings.length > 0
-    ? currentRevenue / currentPeriodBookings.length
+  const currentPaidBookings = currentPeriodBookings.filter(b => b.paymentStatus === "paid");
+  const previousPaidBookings = previousPeriodBookings.filter(b => b.paymentStatus === "paid");
+  const avgBookingValue = currentPaidBookings.length > 0
+    ? currentRevenue / currentPaidBookings.length
     : 0;
 
-  const previousAvgBookingValue = previousPeriodBookings.length > 0
-    ? previousRevenue / previousPeriodBookings.length
+  const previousAvgBookingValue = previousPaidBookings.length > 0
+    ? previousRevenue / previousPaidBookings.length
     : 0;
 
-  // Occupancy rate (simplified)
+  // Occupation basée sur la capacité réelle des chambres actives.
+  const propertyRooms = propertyIds.length > 0
+    ? await db.select({ quantity: rooms.quantity }).from(rooms).where(
+        and(eq(rooms.isActive, true), sql`${rooms.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`),
+      )
+    : [];
   const totalNights = currentPeriodBookings.reduce((sum, b) => sum + b.numNights, 0);
-  const potentialNights = allProperties.length * 30; // Assuming 1 room per property for simplicity
+  const potentialNights = propertyRooms.reduce((sum, room) => sum + (room.quantity ?? 1) * 30, 0);
   const occupancyRate = potentialNights > 0 ? (totalNights / potentialNights) * 100 : 0;
 
   // Average rating

@@ -78,8 +78,7 @@ serverTest("POST /api/admin/bulk (T-033)", () => {
     if (dbAvailable) {
       const { Pool } = await import("pg");
       const pool = new Pool({
-        connectionString:
-          "postgresql://postgres:postgres@127.0.0.1:55432/app_db",
+        connectionString: process.env.DATABASE_URL,
       });
       await pool.query(
         "UPDATE users SET two_factor_enabled=false, two_factor_secret=null WHERE email LIKE '%@mybestbooking.com'",

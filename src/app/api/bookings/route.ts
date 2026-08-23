@@ -152,7 +152,10 @@ export async function POST(request: NextRequest) {
         .where(eq(users.email, data.guestEmail.toLowerCase()))
         .limit(1);
       if (existing) {
-        user = existing;
+        return NextResponse.json(
+          { error: "Connectez-vous pour réserver avec cet email" },
+          { status: 409 },
+        );
       } else {
         const [created] = await db
           .insert(users)

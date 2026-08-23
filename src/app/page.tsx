@@ -6,21 +6,26 @@ import { Footer } from "@/components/layout/footer";
 import { getCurrentUser } from "@/lib/auth";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { db } from "@/db";
-import { properties, reviews, users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { properties, reviews, users, rooms } from "@/db/schema";
+import { eq, desc, and, min } from "drizzle-orm";
 import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 import { Star, Shield, MessageCircle, Zap, Award, ChevronRight, MapPin, Heart } from "lucide-react";
 import { PropertyCard } from "@/components/property-card";
 
 async function getFeaturedProperties() {
   const results = await db
-    .select()
+    .select({ property: properties, minPrice: min(rooms.basePrice) })
     .from(properties)
+    .leftJoin(rooms, and(eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)))
     .where(eq(properties.status, "active"))
+    .groupBy(properties.id)
     .orderBy(desc(properties.averageRating))
     .limit(4);
-  
-  return results;
+
+  return results.map(({ property, minPrice }) => ({
+    ...property,
+    minPrice: minPrice === null ? null : Number(minPrice),
+  }));
 }
 
 export default async function HomePage() {

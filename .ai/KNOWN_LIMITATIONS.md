@@ -21,12 +21,9 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   vers cette liste le 2026-08-20 (session 4). À rouvrir en tâche
   T-011 dès qu'un compte test est fourni.
 
-- **Vérification d'email non implémentée.** Depuis T-008, l'inscription
-  crée un compte avec `emailVerified: false`, mais aucun mail de
-  vérification n'est envoyé. L'utilisateur peut se connecter sans
-  vérifier. Complet impliquerait : service SMTP (Resend/SendGrid/SES),
-  route `/api/auth/verify?token=...`, table `verification_tokens`,
-  UI dédiée. Voir BACKLOG.md.
+- **Vérification d'email non bloquante.** L'inscription envoie un mail de
+  vérification best-effort et crée la session immédiatement. Le produit ne
+  bloque pas encore les actions sensibles tant que `emailVerified` est faux.
 
 - **Rate-limit en mémoire (mono-instance).** `src/lib/rate-limit.ts` de
   T-009 utilise une Map process-local. En déploiement multi-instance
@@ -42,25 +39,24 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   Assumé tant que le marché cible est francophone.
 - **Une seule devise affichée** au niveau utilisateur (EUR par défaut),
   bien que la table `bookings.currency` soit multi-devises.
-- **Pas de mode invité** au checkout : il faut créer un compte pour
-  réserver. Choix pour simplifier le programme BestRewards.
+- **Mode invité limité.** Le checkout accepte un email non enregistré et crée
+  un profil sans mot de passe. Un email déjà associé à un compte doit être
+  utilisé après connexion pour éviter le rattachement de données.
 
 ## Technique
 
-- **Aucune migration Drizzle versionnée.** Le schéma est synchronisé via
-  `drizzle-kit push` en dev. Assumé jusqu'au premier déploiement, ensuite
-  ce devient un bloqueur (tracé en BUG-015).
-- **Aucun test automatisé.** État courant, cible : voir `TEST_PLAN.md`.
-- **`<img>` HTML natif** partout au lieu de `next/image`. Assumé pour aller
-  vite sur le prototype ; à migrer avant tout SEO sérieux (BUG-006).
-- **Fallback `JWT_SECRET`** hard-codé. Assumé **uniquement en dev**. Devient
-  une faille P1 en prod (BUG-001).
+- **Migrations Drizzle présentes**, mais `drizzle-kit push` reste le chemin
+  local le plus utilisé ; vérifier le pipeline de migration avant production.
+- **Tests automatisés partiels.** Les tests unitaires et smoke existent, mais
+  les parcours métier complets et les tests DB live ne sont pas tous stables.
+- **Quelques `<img>` HTML natifs** restent dans des écrans secondaires ; ils
+  doivent être migrés vers `next/image` pour un SEO/performance complet.
 - **`POST /api/seed` public.** Assumé en dev, à supprimer/protéger en prod
   (BUG-002).
-- **Pas de rate-limiting.** Assumé sans utilisateurs réels. Devient bug avec
-  premier utilisateur (BUG-009).
-- **`averageRating` recalculé à la main** dans `POST /api/reviews`. Race
-  condition théorique acceptée tant que le trafic est faible (BUG-010).
+- **Rate-limit en mémoire** : présent sur les routes critiques, mais non
+  distribué entre plusieurs instances. Voir la limite produit ci-dessus.
+- **Pagination recherche à consolider** : les filtres de disponibilité et de
+  prix sont appliqués, mais le total paginé doit encore être calculé en SQL.
 
 ## Framework
 

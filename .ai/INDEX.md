@@ -1,109 +1,38 @@
 # 📇 INDEX DU FRAMEWORK IA
 
-Ce document est le **point d'entrée unique et obligatoire** du framework. Il
-répertorie tous les documents constituant la « Source de Vérité » du projet
-MyBestBooking et prescrit l'ordre de lecture.
-
-## 🚦 Ordre de lecture obligatoire au démarrage de session
-
-1. **[STATE.md](STATE.md)** — mémoire officielle courante
-2. **[INDEX.md](INDEX.md)** — ce document
-3. **[framework.manifest.json](framework.manifest.json)** — règles
-   machine-lisibles. Pour un aperçu lisible, `npm run ai:check` affiche
-   les règles actives.
-4. **[MISSION.md](MISSION.md)** — mandat permanent
-5. **[CURRENT_TASK.md](CURRENT_TASK.md)** — la seule tâche autorisée en cours
-6. **[FEATURES.md](FEATURES.md)** — inventaire de complétude produit
-   (v1.1.0, ADR-006)
-7. **[PROJECT.md](PROJECT.md)** — contexte métier
-8. **[ARCHITECTURE.md](ARCHITECTURE.md)** — architecture réelle du code
-9. **[CODING_RULES.md](CODING_RULES.md)** — règles non négociables
-   (§13, §14, §15.0-bis, §16, §22)
-
-Cet ordre est prescriptif : sauter une étape est une violation du framework
-(voir `framework.manifest.json → blocking_rules`).
+Ce document est le point d'entrée obligatoire du framework. Il répertorie les documents constituant la source de vérité de MyBestBooking.
 
 ## 📜 Documents Fondamentaux (Obligatoires)
 
-- **[STATE.md](STATE.md)** — État courant du projet (Source de Vérité n°1)
-- **[MISSION.md](MISSION.md)** — Objectifs globaux et périmètre d'intervention
-- **[PROJECT.md](PROJECT.md)** — Identité, périmètre métier, glossaire
-- **[FEATURES.md](FEATURES.md)** — Inventaire de complétude produit
-  (✅/🚧/🎯/❌ par capacité) — v1.1.0, ADR-006
-- **[PRODUCT_ACCEPTANCE.md](PRODUCT_ACCEPTANCE.md)** — Parcours utilisateur
-  critiques (PAR-xxx) — v1.1.0, ADR-006
-- **[ARCHITECTURE.md](ARCHITECTURE.md)** — Architecture réellement constatée dans le code
-- **[DATABASE.md](DATABASE.md)** — Schéma Drizzle, tables, index, migrations
-- **[API.md](API.md)** — Endpoints REST, contrats d'entrée/sortie, auth
-- **[SECURITY.md](SECURITY.md)** — Modèle d'auth, cookies, hachage, headers
-- **[CODING_RULES.md](CODING_RULES.md)** — Règles §1-§22 (clôture,
-  impact, conception, §15.0-bis évolution framework, honnêteté, rétro,
-  audit)
-- **[CODING_STYLE.md](CODING_STYLE.md)** — Conventions TS/React/Drizzle/Tailwind
-- **[ROADMAP.md](ROADMAP.md)** — Planification des jalons
-- **[BACKLOG.md](BACKLOG.md)** — Actions à faire par domaine (v1.1.0 réécrit)
-- **[BUGS.md](BUGS.md)** — Registre des défauts (BUG-xxx) et statuts
-- **[CURRENT_TASK.md](CURRENT_TASK.md)** — Tâche en cours (une seule, T-xxx)
-- **[TRACEABILITY.md](TRACEABILITY.md)** — Matrice Bug/Tâche ↔ Preuve
-- **[TEST_PLAN.md](TEST_PLAN.md)** — Stratégie et couverture de tests
-- **[PROGRESS.md](PROGRESS.md)** — Journal horodaté des sessions
+* **[STATE.md](STATE.md)** : Mémoire officielle et état courant du projet (Source de Vérité n°1).
+* **[MISSION.md](MISSION.md)** : Objectifs globaux et périmètre d'intervention.
+* **[PROJECT.md](PROJECT.md)** : État actuel, historique et environnement.
+* **[ARCHITECTURE_MYBESTBOOKING.md](ARCHITECTURE_MYBESTBOOKING.md)** : Architecture réelle Next.js/Drizzle.
+* **[ARCHITECTURE.md](ARCHITECTURE.md)** : Archive historique MobileCaisse, non normative.
+* **[DATABASE.md](DATABASE.md)** : Schéma PostgreSQL et synchronisation Drizzle.
+* **[SECURITY.md](SECURITY.md)** : Authentification, sessions, secrets et données personnelles.
+* **[CODING_RULES.md](CODING_RULES.md)** : Règles de développement, de nommage, de validation (§13) et d'audit des preuves (§22).
+* **[ANDROID_RULES.md](ANDROID_RULES.md)** : Archive historique, non applicable à MyBestBooking.
+* **[DEPENDENCIES.md](DEPENDENCIES.md)** : Dépendances npm et versions.
+* **[TEST_PLAN.md](TEST_PLAN.md)** : Validation TypeScript, lint, build et API.
+* **[ROADMAP.md](ROADMAP.md)** : Planification des jalons et état d'avancement.
+* **[BACKLOG.md](BACKLOG.md)** : Liste exhaustive des tâches (B-xxx).
+* **[BUGS.md](BUGS.md)** : Registre des défauts identifiés et statut des correctifs.
+* **[TRACEABILITY.md](TRACEABILITY.md)** : Matrice de traçabilité des preuves (Lien Bug/Tâche ↔ Preuve).
+* **[CURRENT_TASK.md](CURRENT_TASK.md)** : Détail de la tâche en cours d'exécution.
+* **[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)** : Contraintes techniques et dettes identifiées.
 
-## 🛠️ Documents Complémentaires
+## 🛠️ Outils et Processus
 
-- **[UI.md](UI.md)** — Charte, design system, cartographie des pages
-- **[DEPENDENCIES.md](DEPENDENCIES.md)** — Bibliothèques et versions
-- **[DEV_ENVIRONMENT.md](DEV_ENVIRONMENT.md)** — `.env`, scripts, seed
-- **[KNOWN_LIMITATIONS.md](KNOWN_LIMITATIONS.md)** — Limites assumées (non-bugs)
-- **[PROCESS_IMPROVEMENTS.md](PROCESS_IMPROVEMENTS.md)** — Rétrospectives (§17)
-- **[DEVLOG.md](DEVLOG.md)** — Journal libre, complément de `PROGRESS.md`
+* **[STATE.md](STATE.md)** : Mémoire officielle et état courant du projet (Source de Vérité n°1).
+* **[DEVLOG.md](DEVLOG.md)** : Journal de développement et historique des cycles.
+* **[ADR/](ADR/TEMPLATE.md)** : Architecture Decision Records (Registre des décisions).
+* **[framework.manifest.json](framework.manifest.json)** : Manifeste technique du framework AI-DOS.
+* **[DEV_ENVIRONMENT.md](DEV_ENVIRONMENT.md)** : Node.js, PostgreSQL, environnement et démarrage.
 
 ## 📂 Dossiers Spécifiques
 
-- **[ADR/](ADR/README.md)** — Architecture Decision Records (obligatoires pour S et C)
-- **[REPORTS/](REPORTS/README.md)** — Analyses d'impact, débats techniques, audits (obligatoires pour S et C)
-- **[CHECKLISTS/](CHECKLISTS/README.md)** — Contrôles bloquants avant commit / PR / release
-- **[PROMPTS/](PROMPTS/README.md)** — Prompts réutilisables (démarrage, revue, rôles)
-- **[LOGS/](LOGS/README.md)** — Journaux bruts de session
-
-## 🎚️ Proportionnalité T/L/S/C
-
-La profondeur des rituels **suit l'impact, pas la taille du diff**
-(`CODING_RULES.md` §15.0). Résumé :
-
-| Niveau | Exemple | Impact | Conception | Débat | Opportunités | ADR |
-|---|---|---|---|---|---|---|
-| **T** Trivial | typo, commentaire | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| **L** Local | refactor interne, ajout de test | allégée | ⬜ | ⬜ | ⬜ | ⬜ |
-| **S** Structurant | route API, page, signature publique | ✅ | ✅ | si désaccord | ✅ | ✅ |
-| **C** Critique | auth, paiement, migration DB destructive | ✅ | ✅ | ✅ | ✅ | ✅ + double validation |
-
-Un niveau **C** exige en plus la **double validation** (§13.5) : implémentation
-+ test automatisé indépendant validant le comportement.
-
-## 🔍 Honnêteté technique — tags de preuve
-
-Toute affirmation dans `.ai/` doit être classée (`CODING_RULES.md` §16) :
-
-- 🔍 **OBSERVED** — constaté dans le code
-- 🔨 **COMPILED** — typecheck ou build a réussi
-- 🧪 **TESTED** — test automatisé passe
-- ▶️ **EXECUTED** — exécuté à la main (dev server, curl)
-- 🧠 **DEDUCED** — déduit logiquement, non vérifié
-- ❓ **HYPOTHESIS** — hypothèse à confirmer
-
-Un rapport sans aucune preuve ▶️/🔨/🧪 pour une tâche S ou C est **refusé**.
-
-## ⛔ Règles bloquantes (extrait `framework.manifest.json`)
-
-- Document obligatoire manquant → **blocage**
-- Roadmap obsolète → **blocage**
-- État Git incohérent (branche autre que `arena/01a01eee-mybestbooking`) → **blocage**
-- Checklist `avant_commit` non déroulée sans justification → **blocage**
-- Tâche S/C sans analyse d'impact préalable → **blocage**
-- Clôture sans preuve d'exécution → **blocage**
-
-Ces règles sont **appliquées par la personne (humaine ou IA) qui reçoit le
-livrable**, pas par un outil. La règle « je n'ai pas vérifié parce que
-l'environnement ne permettait pas » est **acceptée** à condition d'être
-écrite explicitement dans `PROGRESS.md` — l'invisibilité est refusée, pas
-l'honnêteté sur les limites.
+* **[REPORTS/](REPORTS/README.md)** : Analyses d'impact, débats techniques et rapports de build.
+* **[CHECKLISTS/](CHECKLISTS/README.md)** : Protocoles avant commit, PR et release.
+* **[PROMPTS/](PROMPTS/session_start.md)** : Modèles d'instructions pour les changements de contexte.
+* **[LOGS/](LOGS/README.md)** : Historique des sessions et progression.
