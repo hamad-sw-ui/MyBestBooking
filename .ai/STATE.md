@@ -5,6 +5,8 @@
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
+- **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
+- **HEAD Git** : à mettre à jour en fin de session après le dernier commit de doc.
 - **Version Framework** : AI-DOS 3.0.1
 - **Dernière tâche validée** : T-112 — conversations idempotentes sous
   concurrence (clé métier unique + tests), et réalignement du framework.
