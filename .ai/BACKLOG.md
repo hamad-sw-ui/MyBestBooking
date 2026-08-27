@@ -252,3 +252,36 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - 🟢 `SECURITY.md` racine (policy de divulgation responsable)
 - 🟢 `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
 - 🟢 OpenAPI / Swagger auto-généré pour `/api/*`
+
+---
+
+### Audit 4 (2026-08-27) — `REPORTS/audit_fonctionnel_profond4_2026-08-27.md`
+
+- ✅ ~~**T-122 (L/P2)** — G1 : routes API dynamiques → **500 sur id non-UUID**~~
+  **LIVRÉ** 2026-08-27. Helper `isUuid()` ajouté dans `src/lib/http.ts` ;
+  garde-fou `if (!isUuid(id)) → 400` en tête de **tous** les handlers dynamiques
+  (`rooms/[id]` GET/PUT, `rooms/[id]/{rate-plans,availability}`, `properties/[id]`
+  GET/PUT + `validate`, `bookings/[id]` GET/PUT + `{invoice,cancellation,payment}`,
+  `messages/attachments/[id]`, `price-alerts/[id]`, `promotions/[id]` PATCH/DELETE,
+  `reviews/[id]/{helpful,reply,moderate}`, `users/[id]/suspend`). UUID valide
+  absent → reste **404** ; id mal formé → **400**. Tests `src/lib/http.test.ts`.
+- ✅ ~~**T-123 (S/P2)** — G2 : la **garde de rôle des pages `/dashboard/*` ne
+  s'appliquait pas au plein-chargement**~~ **LIVRÉ** 2026-08-27 (vérifié en
+  build de production). Le JWT embarque désormais le `role`
+  (`createToken(userId, exp, role)`, `createSession` lit le rôle en base) ;
+  `src/proxy.ts` applique la garde par segment au chargement direct :
+  customer → 307 `/` ; host sur sections admin-only
+  (`users`,`settings`,`audit`,`promotions`) → 307 `/dashboard` ; host/admin
+  sur leurs sections → 200. Anciens tokens (sans claim role) tolérés
+  (proxy laisse passer, gardes RSC tranchent). Colonne `sessions.token`
+  passée en `text` (migration `0016_sessions-token-text.sql`) car le JWT
+  avec rôle dépassait varchar(255) (erreur 22001). Tests `src/proxy.test.ts`
+  (11 cas). Gardes RSC conservées en 2e couche.
+- ✅ ~~**T-124 (L/P3)** — E2 : pages RSC par `[id]`~~ **LIVRÉ** 2026-08-27 :
+  validation UUID avant SQL dans `dashboard/messages/[id]`,
+  `dashboard/bookings/[id]`, `dashboard/rooms/[id]/calendrier`,
+  `(main)/messages/[id]` → `notFound()` propre, plus aucune erreur Postgres
+  `22P02` dans les logs.
+- ℹ️ **Confirmé (produit)** : la promotion est **admin-only** (page ET API,
+  403 pour un host). C'est cohérent avec la sidebar admin ; le smoke a été
+  aligné (host → 307 sur `/dashboard/promotions*`).

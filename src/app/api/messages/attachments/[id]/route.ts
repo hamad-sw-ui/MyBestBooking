@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { conversations, messages, properties } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { getUploader } from "@/lib/storage";
 
 /** Télécharge une pièce jointe privée après vérification du participant. */
@@ -13,6 +14,7 @@ export async function GET(
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const { id } = await params;
+  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   const [row] = await db
     .select({ message: messages, conversation: conversations, property: properties })
     .from(messages)

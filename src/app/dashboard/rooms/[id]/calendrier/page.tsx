@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { rooms, properties, ratePlans, roomAvailability } from "@/db/schema";
 import { and, eq, gte, lte } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { AvailabilityCalendar } from "@/components/availability-calendar";
 import { RatePlansSection } from "@/components/rate-plans-section";
 import { RoomEditSection } from "@/components/room-edit-section";
@@ -21,6 +22,8 @@ export default async function RoomCalendarPage({
   if (user.role !== "host" && user.role !== "admin") redirect("/dashboard");
 
   const { id } = await params;
+  // T-124 (E2) : identifiant mal formé → 404 propre (pas d'erreur Postgres 22P02).
+  if (!isUuid(id)) notFound();
   const [row] = await db
     .select({ room: rooms, property: properties })
     .from(rooms)

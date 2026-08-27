@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { rooms, properties, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { stayNightsWithinLimit } from "@/lib/booking-rules";
 
@@ -41,6 +42,7 @@ export async function GET(
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const { id } = await params;
+  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   const row = await checkOwnership(user.id, id);
   if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   if (row.property?.hostId !== user.id && user.role !== "admin") {
@@ -85,6 +87,7 @@ export async function PUT(
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const row = await checkOwnership(user.id, id);
     if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
     if (row.property?.hostId !== user.id && user.role !== "admin") {

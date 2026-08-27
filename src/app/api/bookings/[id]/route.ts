@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings, properties, rooms, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSetting } from "@/lib/settings";
@@ -33,6 +34,7 @@ export async function GET(
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const [result] = await db
       .select({
         booking: bookings,
@@ -69,6 +71,7 @@ export async function PUT(
     await assertNotMaintenance(user);
 
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const data = updateBookingSchema.parse(await request.json());
     const [existing] = await db
       .select({ booking: bookings, property: properties })

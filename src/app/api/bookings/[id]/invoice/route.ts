@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookings, properties } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { getSetting } from "@/lib/settings";
 import { buildInvoiceData, renderInvoiceHtml, type InvoiceLegal } from "@/lib/invoice";
 
@@ -22,6 +23,7 @@ export async function GET(
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   const { id } = await params;
+  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   const [result] = await db
     .select({ booking: bookings, property: properties })
     .from(bookings)

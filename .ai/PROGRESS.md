@@ -2247,3 +2247,31 @@ touchée). Environnement reconstitué après réinitialisation de la sandbox
 - Preuves : 🔨 typecheck 0 err · build OK · lint 0 err (15 warnings
   préexistants) · 🧪 216 tests (+12 skip intégration) · ▶️ smoke **91/91** ·
   ai:check **20 OK / 0 warn / 0 fail**.
+
+## Session — T-122/T-123/T-124 robustesse RBAC & identifiants (audit 4, 2026-08-27)
+
+Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
+- **T-122 (G1 / BUG-046)** — toutes les routes API dynamiques valident le
+  format UUID (`isUuid()` dans `src/lib/http.ts`) → **400** sur id mal formé
+  (au lieu de 500/`22P02`), **404** sur UUID valide absent, 200 sur ressource
+  réelle. Couvre rooms/properties/bookings (+rate-plans, availability, invoice,
+  cancellation, payment), attachments, price-alerts, promotions, reviews
+  (helpful/reply/moderate), users/suspend, properties/validate.
+- **T-123 (G2 / BUG-047)** — le JWT embarque le `role` ; le proxy edge
+  (`src/proxy.ts`) applique les gardes de rôle **au plein-chargement** :
+  customer → 307 `/` ; host hors sections admin-only (users/settings/audit/
+  promotions) → 307 `/dashboard` ; host/admin → 200. Anciens tokens sans
+  claim role tolérés (RSC tranche). Gardes RSC conservées (2e couche).
+  Colonne `sessions.token` → `text` (BUG-049, migration 0016, le JWT avec rôle
+  dépassait varchar(255) → erreur 22001).
+- **T-124 (E2 / BUG-048)** — pages RSC par `[id]` : `notFound()` avant SQL
+  dans dashboard/messages|bookings, rooms/calendrier, (main)/messages → plus
+  d'erreurs `22P02` dans les logs.
+- Environnement reconstitué après réinit sandbox (npm install, .env.local
+  régénéré, Postgres relancé, schéma poussé + migration 0016, seed).
+- Preuves : 🔨 `tsc` 0 err · build prod OK · lint 0 err (15 warnings
+  préexistants) · 🧪 **240/240 tests** (37 fichiers ; +11 cas proxy rôles,
+  +6 cas isUuid) · ▶️ vérif **build de production** (next start :3100) pour
+  G1+G2 · smoke **94/94** (aligné sur promotions admin-only) · ai:check
+  **20 OK / 0 warn / 0 fail**.
+- Données de test nettoyées (34 réservations smoke supprimées).

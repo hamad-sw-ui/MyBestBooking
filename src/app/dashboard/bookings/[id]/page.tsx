@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { db } from "@/db";
 import { bookings, properties, rooms, users, reviews } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -65,6 +66,8 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   if (!user) redirect("/connexion");
 
   const { id } = await params;
+  // T-124 (E2) : identifiant mal formé → 404 propre (pas d'erreur Postgres 22P02).
+  if (!isUuid(id)) notFound();
   const isAdmin = user.role === "admin";
   const data = await getBookingDetails(id, user.id, isAdmin);
 

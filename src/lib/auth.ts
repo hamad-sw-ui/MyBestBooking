@@ -36,12 +36,19 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createToken(userId: string, expiresIn: "7d" | "30d" = "7d"): Promise<string> {
+export async function createToken(
+  userId: string,
+  expiresIn: "7d" | "30d" = "7d",
+  role?: string,
+): Promise<string> {
   // T-017 (BUG-016) : ajout d'un jti aléatoire pour éviter que deux
   // logins simultanés du même user à la même seconde produisent le
   // même JWT (violation de sessions_token_unique).
+  // T-123 (G2) : le rôle est embarqué dans le JWT pour que le proxy edge
+  // (`src/proxy.ts`) puisse appliquer les gardes d'accès par rôle au
+  // plein-chargement (le runtime edge n'a pas accès à la base).
   const { randomUUID } = await import("node:crypto");
-  return new SignJWT({ userId })
+  return new SignJWT(role ? { userId, role } : { userId })
     .setProtectedHeader({ alg: "HS256" })
     .setJti(randomUUID())
     .setExpirationTime(expiresIn)
@@ -49,17 +56,37 @@ export async function createToken(userId: string, expiresIn: "7d" | "30d" = "7d"
     .sign(JWT_SECRET);
 }
 
-export async function verifyToken(token: string): Promise<{ userId: string } | null> {
+export async function verifyToken(
+  token: string,
+): Promise<{ userId: string; role?: string } | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return { userId: payload.userId as string };
+    // Rétrocompatibilité T-123 : les tokens émis avant embarquaient
+    // seulement `userId` ; `role` est alors `undefined` (l'appelant doit
+    // retomber sur une vérification RSC/base plutôt que de casser la
+    // session existante).
+    return {
+      userId: payload.userId as string,
+      role: typeof payload.role === "string" ? payload.role : undefined,
+    };
   } catch {
     return null;
   }
 }
 
 export async function createSession(userId: string, rememberMe = false): Promise<string> {
-  const token = await createToken(userId, rememberMe ? "30d" : "7d");
+  // T-123 (G2) : embarquer le rôle dans le JWT pour le garde-fou du proxy
+  // edge. On lit le rôle en base (source de vérité) ; un échec de lecture
+  // ne bloque pas la connexion (le token embarque alors userId seul, et les
+  // gardes RSC prennent le relai).
+  let role: string | undefined;
+  try {
+    const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+    role = u?.role;
+  } catch {
+    role = undefined;
+  }
+  const token = await createToken(userId, rememberMe ? "30d" : "7d", role);
   const expiresAt = new Date(
     Date.now() + (rememberMe ? REMEMBERED_SESSION_DURATION : SESSION_DURATION),
   );

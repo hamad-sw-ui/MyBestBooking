@@ -169,7 +169,10 @@ export const verificationTokens = pgTable("verification_tokens", {
 export const sessions = pgTable("sessions", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id").references(() => users.id).notNull(),
-  token: varchar("token", { length: 255 }).unique().notNull(),
+  // T-123 (G2) : le JWT de session embarque désormais aussi le rôle (proxy
+  // edge). Un token signé approche/dépasse 255 caractères selon le jti et les
+  // claims ; `text` évite tout écrêtage (erreur 22001) sans limite arbitraire.
+  token: text("token").unique().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });

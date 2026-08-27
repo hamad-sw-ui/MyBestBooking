@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { priceAlerts } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { and, eq } from "drizzle-orm";
 
 /**
@@ -14,6 +15,7 @@ export async function DELETE(
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const { id } = await params;
+  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   const [deleted] = await db
     .delete(priceAlerts)
     .where(and(eq(priceAlerts.id, id), eq(priceAlerts.userId, user.id)))

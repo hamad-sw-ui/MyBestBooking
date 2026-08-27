@@ -1,4 +1,4 @@
-import type { NextRequest } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * Lecture tolérante du corps JSON d'une requête.
@@ -34,4 +34,34 @@ export function invalidBodyResponse(message = "Corps de requête invalide ou man
     body: { error: message },
     init: { status: 400 } as const,
   };
+}
+
+/**
+ * T-122 (G1) : vrai si la valeur est un UUID syntaxiquement valide. Léger
+ * (regex) pour être utilisable dans n'importe quel runtime, y compris le
+ * proxy edge.
+ *
+ * Sans ce garde-fou, un identifiant issu d'une route dynamique (ex.
+ * `/api/rooms/abc`) était passé tel quel à une comparaison Drizzle sur une
+ * colonne `uuid` : Postgres levait `22P02 invalid input syntax for type
+ * uuid` qui, non capturée, devenait une erreur serveur **500** (bruit de
+ * monitoring, contrat HTTP incorrect). Un UUID bien formé mais absent doit
+ * continuer à renvoyer **404** ; un identifiant syntaxiquement invalide doit
+ * renvoyer **400**.
+ */
+export function isUuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      value,
+    )
+  );
+}
+
+/**
+ * T-122 (G1) : réponse 400 standard pour un identifiant de ressource
+ * mal formé (route dynamique [id]).
+ */
+export function invalidIdResponse(message = "Identifiant invalide") {
+  return NextResponse.json({ error: message }, { status: 400 });
 }

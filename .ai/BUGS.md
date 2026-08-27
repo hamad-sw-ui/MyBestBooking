@@ -370,3 +370,31 @@ fournisseur de test dans l’environnement.
   ▶️ après : `limit` borné (1–100, défaut 20), `offset` négatif/non
   numérique → **400**, `minRating`/prix hors bornes ou non numériques →
   **400**. Non-régressif (valeurs valides inchangées).
+
+- [x] **2026-08-27 — BUG-046** (L, T-122 / G1) : routes API dynamiques
+  `/api/<ressource>/<id>` avec un identifiant **non-UUID** (`abc`) → **500**
+  (Postgres `22P02 invalid input syntax for type uuid`) au lieu d'une erreur
+  4xx. Touche rooms/properties/bookings + sous-routes (rate-plans,
+  availability, invoice, cancellation, payment), messages/attachments,
+  price-alerts, promotions, reviews (helpful/reply/moderate), users/suspend,
+  properties/validate. ▶️ après : id syntaxiquement invalide → **400** ;
+  UUID valide absent → **404** (inchangé). Helper `isUuid()` dans `src/lib/http.ts`.
+- [x] **2026-08-27 — BUG-047** (S, T-123 / G2) : au **plein-chargement**, un
+  utilisateur authentifié au mauvais rôle recevait **200** sur les pages
+  `/dashboard/*` (customer sur tout le dashboard, host sur les sections
+  admin-only). Le proxy edge ne vérifiait que la validité du JWT (le token ne
+  contenait pas le rôle) et les `redirect()` RSC ne produisent pas de 307 en
+  chargement direct. Aucune fuite de données (API → 403), mais enveloppe
+  dashboard/ formulaires visibles. ▶️ après : rôle embarqué dans le JWT +
+  gardes par segment dans `src/proxy.ts` (customer → 307 `/`, host hors
+  admin-only → 307 `/dashboard`). Vérifié en build de production.
+- [x] **2026-08-27 — BUG-048** (L, T-124 / E2) : pages RSC par `[id]`
+  (`dashboard/messages/[id]`, `dashboard/bookings/[id]`,
+  `dashboard/rooms/[id]/calendrier`, `(main)/messages/[id]`) levaient une
+  erreur `22P02` journalisée sur id non-UUID (l'utilsateur voyait une 404
+  grâce au error boundary, mais le bruit de logs restait). ▶️ après :
+  `notFound()` déclenché avant toute requête SQL.
+- [x] **2026-08-27 — BUG-049** (S, T-123) : l'ajout du claim `role` au JWT
+  faisait dépasser la colonne `sessions.token` (varchar(255)) → erreur
+  `22001 value too long` à la connexion. ▶️ colonne passée en `text`
+  (migration `drizzle/0016_sessions-token-text.sql`).

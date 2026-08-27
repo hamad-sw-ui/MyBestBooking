@@ -244,12 +244,18 @@ done
 # ─────────────────────────────────────────────────────────────
 # 8. Host dashboard (11 pages autorisées)
 # ─────────────────────────────────────────────────────────────
-sect "7. Host — 11 pages dashboard"
+sect "7. Host — pages dashboard autorisées (hôte)"
+# T-123 (G2) : le proxy edge applique la garde de rôle au plein-chargement.
+# Le host accède aux sections hôte (200) mais est renvoyé (307) hors des
+# sections admin-only (users, settings, audit, promotions).
 for u in /dashboard /dashboard/bookings /dashboard/properties /dashboard/rooms \
          /dashboard/rooms/new /dashboard/reviews /dashboard/messages \
-         /dashboard/promotions /dashboard/promotions/new \
          /dashboard/analytics /dashboard/billing; do
   assert_code "$u" "200" "host" "$JAR_DIR/host.jar"
+done
+for u in /dashboard/promotions /dashboard/promotions/new \
+         /dashboard/users /dashboard/settings /dashboard/audit; do
+  assert_code "$u" "307 302 308" "host→admin-only (proxy edge)" "$JAR_DIR/host.jar"
 done
 
 # ─────────────────────────────────────────────────────────────

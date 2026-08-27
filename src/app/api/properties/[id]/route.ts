@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { properties, ratePlans, rooms, reviews, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { toPublicProperty } from "@/lib/public-property";
@@ -36,6 +37,9 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
     const user = await getCurrentUser();
     const [property] = await db
       .select()
@@ -113,6 +117,9 @@ export async function PUT(
     }
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
     const body = await request.json();
     const data = updatePropertySchema.parse(body);
 

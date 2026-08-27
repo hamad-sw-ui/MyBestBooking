@@ -6,9 +6,14 @@ beforeAll(() => {
   process.env.JWT_SECRET = "test-secret-64chars-abcdefghijklmnopqrstuvwxyz0123456789ABCDEF";
 });
 
-async function makeSession(userId: string): Promise<string> {
+async function makeSession(
+  userId: string,
+  role?: string,
+): Promise<string> {
   const secret = new TextEncoder().encode(process.env.JWT_SECRET);
-  return await new SignJWT({ userId })
+  const claims: Record<string, unknown> = { userId };
+  if (role) claims.role = role;
+  return await new SignJWT(claims)
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("30d")
     .setIssuedAt()
@@ -21,26 +26,32 @@ function makeRequest(path: string, cookie?: string): NextRequest {
   });
 }
 
+function status(res: Response): number {
+  return res.status;
+}
+function location(res: Response): string {
+  return res.headers.get("location") ?? "";
+}
+
 describe("middleware auth (T-003, §13.5)", () => {
   it("redirige /mon-compte sans cookie vers /connexion?next=/mon-compte", async () => {
     const { proxy } = await import("./proxy");
     const res = await proxy(makeRequest("/mon-compte"));
-    expect(res.status).toBe(307);
-    const loc = res.headers.get("location") ?? "";
-    expect(loc).toMatch(/\/connexion\?next=%2Fmon-compte/);
+    expect(status(res)).toBe(307);
+    expect(location(res)).toMatch(/\/connexion\?next=%2Fmon-compte/);
   });
 
   it("redirige /dashboard sans cookie", async () => {
     const { proxy } = await import("./proxy");
     const res = await proxy(makeRequest("/dashboard"));
-    expect(res.status).toBe(307);
-    expect(res.headers.get("location")).toMatch(/\/connexion/);
+    expect(status(res)).toBe(307);
+    expect(location(res)).toMatch(/\/connexion/);
   });
 
   it("redirige un cookie invalide", async () => {
     const { proxy } = await import("./proxy");
     const res = await proxy(makeRequest("/mes-reservations", "not-a-jwt"));
-    expect(res.status).toBe(307);
+    expect(status(res)).toBe(307);
   });
 
   it("laisse passer un cookie session JWT valide", async () => {
@@ -55,5 +66,63 @@ describe("middleware auth (T-003, §13.5)", () => {
   it("laisse /reservation hors du matcher afin de permettre l'achat invité", async () => {
     const { config } = await import("./proxy");
     expect(config.matcher).not.toContain("/reservation/:path*");
+  });
+});
+
+describe("garde de rôle dashboard (T-123 / G2)", () => {
+  it("redirige un CUSTOMER hors du dashboard vers l'accueil", async () => {
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("cust-1", "customer");
+    for (const path of ["/dashboard", "/dashboard/users", "/dashboard/properties/new"]) {
+      const res = await proxy(makeRequest(path, token));
+      expect(status(res)).toBe(307);
+      expect(location(res)).toBe("http://localhost:3000/");
+    }
+  });
+
+  it("redirige un HOST hors des sections admin-only vers /dashboard", async () => {
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("host-1", "host");
+    for (const path of ["/dashboard/users", "/dashboard/settings", "/dashboard/audit", "/dashboard/promotions"]) {
+      const res = await proxy(makeRequest(path, token));
+      expect(status(res)).toBe(307);
+      expect(location(res)).toBe("http://localhost:3000/dashboard");
+    }
+  });
+
+  it("laisse un HOST accéder aux sections hôte", async () => {
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("host-1", "host");
+    for (const path of ["/dashboard", "/dashboard/properties", "/dashboard/bookings", "/dashboard/analytics", "/dashboard/billing"]) {
+      const res = await proxy(makeRequest(path, token));
+      expect(res.headers.get("location")).toBeNull();
+    }
+  });
+
+  it("laisse un ADMIN accéder à tout le dashboard", async () => {
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("admin-1", "admin");
+    for (const path of ["/dashboard", "/dashboard/users", "/dashboard/settings", "/dashboard/promotions", "/dashboard/audit"]) {
+      const res = await proxy(makeRequest(path, token));
+      expect(res.headers.get("location")).toBeNull();
+    }
+  });
+
+  it("ne bloque pas un token d'avant T-123 (sans claim role) sur le dashboard", async () => {
+    // Rétrocompatibilité : les anciens JWT n'embarquent pas le rôle. Le proxy
+    // laisse passer et les gardes RSC (base) tranchent.
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("legacy-1"); // pas de role
+    const res = await proxy(makeRequest("/dashboard", token));
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("continue de laisser un customer sur les routes voyageur hors dashboard", async () => {
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("cust-1", "customer");
+    for (const path of ["/mon-compte", "/mes-reservations", "/mes-favoris", "/messages"]) {
+      const res = await proxy(makeRequest(path, token));
+      expect(res.headers.get("location")).toBeNull();
+    }
   });
 });

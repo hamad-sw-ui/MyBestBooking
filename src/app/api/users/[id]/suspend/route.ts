@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 
@@ -28,6 +29,9 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
     if (id === user.id) {
       return NextResponse.json(
         { error: "Vous ne pouvez pas vous suspendre vous-même" },

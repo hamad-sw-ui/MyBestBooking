@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { resumePaymentIntentForBooking } from "@/lib/payment-intents";
 
@@ -11,6 +12,7 @@ export async function POST(_request: NextRequest, { params }: { params: Promise<
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
     if (!booking) return NextResponse.json({ error: "Réservation non trouvée" }, { status: 404 });
     if (booking.userId !== user.id && user.role !== "admin") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });

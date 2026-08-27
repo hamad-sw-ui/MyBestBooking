@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { promotions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { eq } from "drizzle-orm";
 
 const updateSchema = z.object({
@@ -23,6 +24,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
     }
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const patch = updateSchema.parse(await request.json());
     const [updated] = await db
       .update(promotions)
@@ -59,6 +61,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
   }
   const { id } = await params;
+  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   const result = await db.delete(promotions).where(eq(promotions.id, id)).returning({ id: promotions.id });
   if (!result.length) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   return NextResponse.json({ ok: true });

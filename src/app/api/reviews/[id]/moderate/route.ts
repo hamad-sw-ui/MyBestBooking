@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
@@ -45,6 +46,9 @@ export async function PATCH(
     }
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
     const body = await request.json().catch(() => null);
     if (!body) {
       return NextResponse.json({ error: "JSON invalide" }, { status: 400 });

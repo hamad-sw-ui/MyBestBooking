@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { reviews, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { and, eq } from "drizzle-orm";
 
 const schema = z.object({ reply: z.string().min(1).max(2000) });
@@ -22,6 +23,9 @@ export async function POST(
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
     const { reply } = schema.parse(await request.json());
 
     const [row] = await db

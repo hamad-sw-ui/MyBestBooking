@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { rooms, properties, ratePlans } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { and, eq } from "drizzle-orm";
 
 const createSchema = z.object({
@@ -35,6 +36,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
   const { id } = await params;
+  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
   const row = await ownership(user.id, id);
   if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
   if (row.property?.hostId !== user.id && user.role !== "admin") {
@@ -53,6 +55,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     const { id } = await params;
+    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const row = await ownership(user.id, id);
     if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
     if (row.property?.hostId !== user.id && user.role !== "admin") {
@@ -93,6 +96,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     const { id: roomId } = await params;
+    if (!isUuid(roomId)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const row = await ownership(user.id, roomId);
     if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
     if (row.property?.hostId !== user.id && user.role !== "admin") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });

@@ -300,3 +300,13 @@ Les 3 % restants sont **strictement sandbox-limited** et documentés
 
 Chacun activable en **1 commit** ou **1 clic** quand la contrainte
 disparaît (CI hébergée, permissions GitHub, credentials prod).
+
+## Robustesse & RBAC (T-122/T-123/T-124, 2026-08-27)
+- Les API par identifiant rejettent un UUID mal formé en **400** (au lieu de
+  500) via le helper `isUuid()` ; UUID absent → 404.
+- L'accès au dashboard est contrôlé par **rôle dès le proxy edge** : un client
+  est renvoyé à l'accueil et un hôte hors des sections admin (utilisateurs,
+  réglages, audit, promotions) est renvoyé au tableau de bord — y compris en
+  chargement direct. Le rôle est embarqué dans le JWT de session.
+- Les pages de détail (conversation, réservation, calendrier) renvoient une
+  page 404 propre sur identifiant invalide, sans erreur serveur journalisée.

@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { conversations, messages, properties, users } from "@/db/schema";
 import { and, eq, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { MessageComposer } from "@/components/message-composer";
 import { MessageAttachment } from "@/components/message-attachment";
 import { formatDate } from "@/lib/utils";
@@ -19,6 +20,9 @@ export default async function ConversationPage({
   const user = await getCurrentUser();
   if (!user) redirect("/connexion");
   const { id } = await params;
+  // T-124 (E2) : un identifiant mal formé faisait lever une erreur Postgres
+  // 22P02 (journalisée) avant d'atteindre notFound(). On renvoie 404 proprement.
+  if (!isUuid(id)) notFound();
 
   // Charge la conversation avec property + host
   const [row] = await db

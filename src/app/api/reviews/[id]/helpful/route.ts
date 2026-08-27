@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { reviews, reviewVotes } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { eq, sql } from "drizzle-orm";
 
@@ -24,6 +25,9 @@ export async function POST(
     }
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
 
     // Rate-limit : un même user ne peut incrémenter le même avis qu'une
     // fois toutes les 24h (approximation « anti double clic »).

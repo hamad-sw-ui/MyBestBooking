@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 
@@ -29,6 +30,9 @@ export async function POST(
     }
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
     const { action } = schema.parse(await request.json());
 
     const [prop] = await db.select().from(properties).where(eq(properties.id, id));
