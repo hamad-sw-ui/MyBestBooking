@@ -6,14 +6,25 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : `50692b5` (commit T-119 poussé ; le champ HEAD lui-même
+- **HEAD Git** : `8378ea7` (commit T-120 poussé ; le champ HEAD lui-même
   est **à mettre à jour en fin de session** car un commit ne peut pas
   contenir son propre hash — R7 rend alors 1 warn toléré, 0 fail).
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-119 (corrections d'audit recherche & CTA :
-  filtre capacité API, validation params, sélecteur adultes borné, CTA sans
-  chambre, champ voyageurs home) — 2026-08-27. Avant : T-116 (factures
-  légales), T-117 (PRODUCT_ACCEPTANCE), T-112/113/114/115.
+- **Dernière tâche validée** : T-120 (robustesse API JSON→400, confirmation
+  mot de passe à l'inscription, message de compte suspendu) — 2026-08-27.
+  Avant : T-119 (recherche & CTA), T-116 (factures légales),
+  T-117 (PRODUCT_ACCEPTANCE), T-112/113/114/115.
+
+## Preuves session 2026-08-27 (T-120)
+
+- 🔨 `typecheck` 0 erreur · `build` OK · `lint` 0 erreur (15 warnings préexistants).
+- 🧪 `npm test` : **228/228** (36 fichiers).
+- ▶️ `npm run smoke` : **91/91** · `npm run ai:check` : **19 OK · 1 warn (R7) · 0 fail**.
+- Runtime : corps JSON vide/mal formé sur register/bookings/reviews/wishlists/
+  2fa/login/messages/promotions → **400** (avant 500) ; appels valides → 200 ;
+  compte suspendu → « Ce compte est désactivé… » (401) ; `/inscription` rend le
+  champ « Confirmer le mot de passe ». Réservation de test nettoyée, compte de
+  test suspendu puis réactivé. Process arrêtés en fin de session.
 
 ## Preuves session 2026-08-27 (T-119)
 
