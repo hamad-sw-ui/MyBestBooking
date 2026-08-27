@@ -6,13 +6,24 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : `e53a45f4` (commit de sync STATE précédent ; le HEAD réel
+- **HEAD Git** : `50692b5` (commit T-119 poussé ; le champ HEAD lui-même
   est **à mettre à jour en fin de session** car un commit ne peut pas
   contenir son propre hash — R7 rend alors 1 warn toléré, 0 fail).
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-116 (facture/reçu légal imprimable avec
-  mentions société/TVA configurables, reçu honnête sinon) et T-117
-  (régénération de PRODUCT_ACCEPTANCE.md) — 2026-08-27. Avant : T-112/113/114/115.
+- **Dernière tâche validée** : T-119 (corrections d'audit recherche & CTA :
+  filtre capacité API, validation params, sélecteur adultes borné, CTA sans
+  chambre, champ voyageurs home) — 2026-08-27. Avant : T-116 (factures
+  légales), T-117 (PRODUCT_ACCEPTANCE), T-112/113/114/115.
+
+## Preuves session 2026-08-27 (T-119)
+
+- 🔨 `typecheck` 0 erreur · `build` OK · `lint` 0 erreur (15 warnings préexistants).
+- 🧪 `npm test` : **228/228** (36 fichiers).
+- ▶️ `npm run smoke` : **91/91** · `npm run ai:check` : **19 OK · 1 warn (R7) · 0 fail**.
+- Runtime : `guests=6/99` → 0 hébergement (avant 8 impossibles), `guests=2` → 8,
+  `guests=3` → 4 ; `guests=-5/abc` → 400 ; dates inversées → liste vide ;
+  fiche Montmartre (chambre 2 ad.) → options adultes [1,2] ; home → champ
+  Voyageurs 1–8 présent. Réservation de test smoke nettoyée.
 
 ## Preuves session 2026-08-27 (T-116/T-117)
 
