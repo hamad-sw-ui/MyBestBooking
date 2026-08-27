@@ -16,3 +16,7 @@ pnpm-debug.log*
 
 # Base Postgres embarquée (dev/CI locale)
 .data/
+
+# Uploads publics runtime (photos de bien) — garder le dossier, ignorer les fichiers
+public/uploads/*
+!public/uploads/.gitkeep

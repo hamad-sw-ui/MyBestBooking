@@ -18,6 +18,22 @@ export default function ReviewPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  // T-115 : sous-notes par critère (champs optionnels côté API). Elles
+  // suivent la note globale tant que l'utilisateur ne les affine pas, ce
+  // qui rend la saisie non bloquante et conserve le comportement actuel.
+  const SUB_RATINGS = [
+    { key: "cleanlinessRating", label: "Propreté" },
+    { key: "comfortRating", label: "Confort" },
+    { key: "locationRating", label: "Emplacement" },
+    { key: "facilitiesRating", label: "Équipements" },
+    { key: "staffRating", label: "Accueil / service" },
+    { key: "valueRating", label: "Rapport qualité-prix" },
+  ] as const;
+  const [subRatings, setSubRatings] = useState<Record<string, number>>({});
+  const subRating = (key: string) => subRatings[key] ?? Math.round(rating);
+  const setSubRating = (key: string, value: number) =>
+    setSubRatings((prev) => ({ ...prev, [key]: Math.max(1, Math.min(10, Math.round(value))) }));
+
   async function submitReview(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -29,6 +45,12 @@ export default function ReviewPage() {
         body: JSON.stringify({
           bookingId: params.id,
           overallRating: rating,
+          cleanlinessRating: subRating("cleanlinessRating"),
+          comfortRating: subRating("comfortRating"),
+          locationRating: subRating("locationRating"),
+          facilitiesRating: subRating("facilitiesRating"),
+          staffRating: subRating("staffRating"),
+          valueRating: subRating("valueRating"),
           positiveComment: positiveComment || undefined,
           negativeComment: negativeComment || undefined,
           travelerType: travelerType === "leisure" ? undefined : travelerType,
@@ -65,6 +87,34 @@ export default function ReviewPage() {
                 <span className="block text-sm font-medium text-gray-700 mb-2">Note globale : <strong>{rating}/10</strong></span>
                 <input type="range" min="1" max="10" step="0.5" value={rating} onChange={(event) => setRating(Number(event.target.value))} className="w-full accent-[#1B3A6B]" />
               </label>
+
+              <fieldset className="border-t border-gray-100 pt-4">
+                <legend className="block text-sm font-medium text-gray-700 mb-3">
+                  Notes par critère <span className="text-gray-400 font-normal">(facultatif — égales à la note globale par défaut)</span>
+                </legend>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+                  {SUB_RATINGS.map((criterion) => (
+                    <label key={criterion.key} className="flex items-center justify-between gap-3">
+                      <span className="text-sm text-gray-600">{criterion.label}</span>
+                      <span className="flex items-center gap-2">
+                        <input
+                          type="range"
+                          min={1}
+                          max={10}
+                          step={1}
+                          value={subRating(criterion.key)}
+                          onChange={(event) => setSubRating(criterion.key, Number(event.target.value))}
+                          className="w-28 accent-[#1B3A6B]"
+                          aria-label={`Note pour ${criterion.label}`}
+                        />
+                        <span className="w-8 text-right text-sm font-medium text-gray-900">
+                          {subRating(criterion.key)}/10
+                        </span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
               <Select
                 label="Type de voyage"
                 value={travelerType}

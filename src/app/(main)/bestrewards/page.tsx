@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 import { Badge } from "@/components/ui/badge";
 import { Award, Star, Percent, Wallet } from "lucide-react";
 import Link from "next/link";
+import { BestRewardsStatus } from "@/components/bestrewards-status";
 
 export default async function BestRewardsPage() {
   const user = await getCurrentUser();
@@ -25,7 +26,7 @@ export default async function BestRewardsPage() {
       color: "from-blue-500 to-blue-600",
       requirement: "Dès l'inscription",
       benefits: [
-        { icon: Percent, text: "Réduction de ${level1Discount}% configurée sur hébergements BestRewards" },
+        { icon: Percent, text: `Réduction de ${level1Discount}% sur les hébergements BestRewards` },
         { icon: Star, text: "Suivi de votre niveau dans Mon compte" },
       ],
     },
@@ -35,7 +36,7 @@ export default async function BestRewardsPage() {
       color: "from-purple-500 to-purple-600",
       requirement: `${level2Threshold} séjours terminés`,
       benefits: [
-        { icon: Percent, text: "Réduction de ${level2Discount}% niveau Voyageur sur BestRewards" },
+        { icon: Percent, text: `Réduction de ${level2Discount}% niveau Voyageur sur BestRewards` },
         { icon: Star, text: "Tous les avantages Explorer" },
       ],
     },
@@ -45,7 +46,7 @@ export default async function BestRewardsPage() {
       color: "from-[#F5A623] to-yellow-500",
       requirement: `${level3Threshold} séjours terminés`,
       benefits: [
-        { icon: Percent, text: "Réduction de ${level3Discount}% niveau Ambassador sur BestRewards" },
+        { icon: Percent, text: `Réduction de ${level3Discount}% niveau Ambassador sur BestRewards` },
         { icon: Wallet, text: "Cashback 5% en wallet après séjour" },
         { icon: Star, text: "Tous les avantages Voyageur" },
       ],
@@ -82,6 +83,13 @@ export default async function BestRewardsPage() {
               </Badge>
             </div>
           )}
+        </div>
+      </section>
+
+      {/* Statut réel du compte connecté (T-114) */}
+      <section className="py-12 bg-gray-50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+          <BestRewardsStatus thresholds={[level2Threshold, level3Threshold]} />
         </div>
       </section>
 

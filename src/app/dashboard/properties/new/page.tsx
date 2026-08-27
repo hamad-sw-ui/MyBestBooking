@@ -48,6 +48,8 @@ export default function NewPropertyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     type: "hotel",
@@ -63,6 +65,28 @@ export default function NewPropertyPage() {
     amenities: [] as string[],
     mainImage: "",
   });
+
+  // T-113 : upload d'une photo via /api/properties/upload (image publique).
+  // Le champ URL reste disponible comme alternative.
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/properties/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      setFormData((prev) => ({ ...prev, mainImage: data.url }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
 
   const handleAmenityToggle = (amenityId: string) => {
     setFormData((prev) => ({
@@ -292,7 +316,29 @@ export default function NewPropertyPage() {
           <CardHeader>
             <CardTitle>Photo principale</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Téléverser une photo
+              </label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handlePhotoUpload}
+                disabled={uploading}
+                className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#1B3A6B] file:text-white file:font-medium hover:file:bg-[#0f2444] disabled:opacity-60"
+                aria-describedby="photo-help"
+              />
+              <p id="photo-help" className="text-xs text-gray-500 mt-1">
+                {uploading ? "Téléversement en cours…" : "JPEG, PNG, WebP ou GIF — 5 Mo max."}
+              </p>
+              {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400">ou</span>
+            </div>
+
             <Input
               label="URL de l'image"
               placeholder="https://..."
@@ -301,9 +347,10 @@ export default function NewPropertyPage() {
             />
             {formData.mainImage && (
               <div className="mt-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={formData.mainImage}
-                  alt="Preview"
+                  alt="Aperçu de la photo principale"
                   className="w-full max-w-md h-48 object-cover rounded-lg"
                 />
               </div>

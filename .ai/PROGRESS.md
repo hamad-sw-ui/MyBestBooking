@@ -2109,3 +2109,33 @@ Ajouter la couche gouvernance manquante — devenu la Session 2 ci-dessus.
 - Note : 2 échecs transitoires de tests d'intégration en début de session
   = base non ensemencée (le seed s'exécute via le serveur/smoke) ; résolus
   après `npm run smoke` (seed), pas une régression.
+
+---
+
+## Session 2026-08-27 (suite) — Implémentation T-113/T-114/T-115 (remarques d'audit)
+
+- **T-113 — Upload photos d'annonce** : ajout d'un stockage PUBLIC
+  (`src/lib/storage/public-local.ts` → `public/uploads/`, servi
+  statiquement ; S3/R2 via `getPublicUploader()`), distinct du stockage
+  privé des pièces jointes. Endpoint `POST /api/properties/upload`
+  (host/admin, MIME whitelist, 5 MB, rate-limit). Formulaire
+  `dashboard/properties/new` : `<input type=file>` + aperçu, URL gardée en
+  alternative. Preuve ▶️ : upload 200 → image servie en image/jpeg,
+  403 customer, 401 anon, 400 texte.
+- **T-114 — BestRewards réel** : composant client `<BestRewardsStatus>`
+  (niveau, séjours, wallet via /api/auth/me + code parrainage via
+  /api/users/me/referral, barre de progression, copie). Correction d'un
+  bug d'affichage : les réductions étaient en littéral `${levelXDiscount}`
+  (jamais interpolé) → affiche maintenant 10/15/20 %.
+- **T-115 — Sous-notes d'avis** : 6 critères (propreté, confort,
+  emplacement, équipements, accueil, rapport qualité-prix) dans le
+  formulaire, alimentent les champs déjà acceptés par POST /api/reviews
+  (optionnels, bornés 1–10, défaut = note globale).
+- FEATURES.md corrigé (sur-déclaration d'un composant `<ImageUploader>`
+  inexistant ; distinction stockage public/privé). TRACEABILITY, BACKLOG
+  mis à jour.
+- Preuves : 🔨 typecheck 0 err · build 57/57 · 🧪 216 tests unitaires OK
+  (+12 tests bulk servis par le smoke/serveur) · lint 0 err · ▶️ smoke
+  **91/91** (base nettoyée : le smoke crée une réservation aux dates
+  2027-01-15, non rejouable à l'identique sur quantity=1 — les échecs
+  observés étaient une pollution de données, pas une régression).

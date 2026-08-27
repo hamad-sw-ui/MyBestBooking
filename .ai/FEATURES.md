@@ -70,6 +70,7 @@ modification de code.
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Créer un avis vérifié après séjour | ✅ | `POST /api/reviews` | initial |
+| Notes détaillées par critère | ✅ | 6 sous-notes (propreté, confort, emplacement, équipements, accueil, rapport qualité-prix) envoyées par le formulaire d'avis, validées Zod 1–10 par `POST /api/reviews` (T-115) | T-115 |
 | Lecture des avis d'une property | ✅ | `GET /api/reviews?propertyId=` | initial |
 | Recalcul atomique `averageRating` | ✅ | `UPDATE...FROM(SELECT AVG…)` | T-007 |
 | **Réponse hôte à un avis** | ✅ | `POST /api/reviews/[id]/reply` (T-015) + `<HostReplyForm>` branchée (T-016) | T-016 |
@@ -110,6 +111,7 @@ modification de code.
 | Compteur de bookings + niveau (1→3) | ✅ | Incrément dans `POST /api/bookings` | initial |
 | Affichage niveau dans le header | ✅ | Composant Header | initial |
 | Page publique explicative | ✅ | `/bestrewards` | initial |
+| **Statut personnalisé connecté** | ✅ | `<BestRewardsStatus>` affiche niveau réel, séjours, cagnotte wallet (`/api/auth/me`) et code parrainage (`/api/users/me/referral`) avec barre de progression + copie (T-114) | T-114 |
 | **Réduction pour properties `isBestrewards`** | ✅ | `POST /api/bookings` : +2 pp de réduction si user Level ≥ 2 et `property.isBestrewards` (borné à 30%) (T-027) | T-027 |
 | **Wallet utilisable au checkout** | ✅ | `POST /api/bookings { useWalletCredits:true }` applique `walletBalance` en réduction plafonnée + débite (T-027). ▶️ wallet 50 → total réduit + DB=0 | T-027 |
 | Parrainage / codes personnels | ✅ | `GET /api/users/me/referral` auto-génère un code 8-char lisible (alphabet sans 0/O/1/I) et persiste `users.referralCode` (T-026) | T-026 |
@@ -119,8 +121,9 @@ modification de code.
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Vue d'ensemble | ✅ | `/dashboard` | initial |
-| Liste properties + création formulaire | ✅ | `POST /api/properties` + formulaire branché + `<ImageUploader>` (T-014) | T-014 |
-| **Upload d'images (photo hébergement, chambre, avatar)** | ✅ | `POST /api/uploads` (multipart, MIME whitelist, 5MB max, rate-limit 20/h) + composant `<ImageUploader>` + adapter LocalUploader (dev) + S3Uploader (prod, R2/S3/DO compat) | T-014 |
+| Liste properties + création formulaire | ✅ | `POST /api/properties` + formulaire branché ; photo principale via upload **ou** URL (T-113) | T-113 |
+| **Upload photo de bien (image publique)** | ✅ | `POST /api/properties/upload` (multipart, host/admin, MIME whitelist, 5MB, rate-limit 30/h) → `PublicLocalUploader` (`public/uploads/`, servi statiquement) ou S3/R2 publique ; `<input type=file>` dans `properties/new`, URL conservée en alternative (T-113) | T-113 |
+| **Pièces jointes de message (privées)** | ✅ | `POST /api/uploads` (multipart, MIME whitelist, 5MB, rate-limit 20/h) + LocalUploader/S3 privés + `message-composer` (T-014) | T-014 |
 | Édition property | ✅ | `PUT /api/properties/[id]` avec ownership check + `commissionRate` admin-only. UI dashboard opérationnelle | T-015, T-023 |
 | Suppression property | ✅ | `DELETE /api/properties/[id]` | initial |
 | Liste rooms | ✅ | Page dashboard `/dashboard/rooms` + création via API `POST /api/rooms` | T-015 |
@@ -168,9 +171,10 @@ modification de code.
 
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
-| Adapter stockage (S3/R2/local dev) | ✅ | `src/lib/storage/` : LocalUploader écrit public/uploads/, S3Uploader signature v4 sans SDK (R2/S3/DO/MinIO compat), factory selon env | T-014 |
-| Endpoint `POST /api/uploads` (auth, MIME, taille) | ✅ | JPEG/PNG/WebP/GIF, ≤ 5 MB, rate-limit 20/h/user | T-014 |
-| Composant `<ImageUploader>` | ✅ | `src/components/ui/image-uploader.tsx` (drag+preview+remove) | T-014 |
+| Adapter stockage (S3/R2/local dev) | ✅ | `src/lib/storage/` : **LocalUploader** privé (`.data/uploads`, pièces jointes messages) + **PublicLocalUploader** (`public/uploads`, photos de bien) + S3Uploader signature v4 sans SDK (R2/S3/DO/MinIO). Factories `getUploader()` (privé) / `getPublicUploader()` (public) | T-014, T-113 |
+| Endpoint `POST /api/uploads` (auth, MIME, taille) | ✅ | JPEG/PNG/WebP/GIF, ≤ 5 MB, rate-limit 20/h/user — **pièces jointes privées** | T-014 |
+| Endpoint `POST /api/properties/upload` | ✅ | Photos de bien **publiques**, host/admin, JPEG/PNG/WebP/GIF, ≤ 5 MB, rate-limit 30/h → URL servable statiquement/CDN (T-113) | T-113 |
+| Upload photo dans le formulaire d'annonce | ✅ | `<input type=file>` branché dans `dashboard/properties/new` (aperçu + champ URL alternatif). NB : il n'existe pas de composant `ui/image-uploader.tsx` générique (l'upload est inline) | T-113 |
 | Suppression d'un upload | ✅ | `DELETE /api/uploads?key=` (owner ou admin, path traversal bloqué) + méthode `remove` sur Uploader interface Local + S3 (T-026) | T-026 |
 
 ## SEO & metadata

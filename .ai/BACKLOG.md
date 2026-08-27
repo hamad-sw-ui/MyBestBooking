@@ -40,18 +40,23 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 #### Écarts fonctionnels relevés à l'exécution (audit 2026-08-27, voir
 `REPORTS/audit_fonctionnel_2026-08-27_execution.md`)
 
-- 🔵 **T-113 (L/P2)** — Upload des photos d'annonce : `dashboard/properties/new`
-  demande une URL d'image ; réutiliser `POST /api/uploads` (déjà utilisé par
-  `message-composer`) via un `<input type="file">`, garder l'URL en alternative.
-- 🔵 **T-114 (L/P3)** — Page `/bestrewards` réellement personnalisée : afficher
-  niveau/wallet (`/api/auth/me`) et code de parrainage (`/api/users/me/referral`)
-  de l'utilisateur connecté ; la page est aujourd'hui purement descriptive.
-- ⚪ **T-115 (L/P3)** — Formulaire d'avis : exposer les 7 sous-notes
-  optionnelles déjà acceptées par `POST /api/reviews` (propreté, confort…).
+- 🔵 ~~**T-113 (L/P2)** — Upload des photos d'annonce~~ ✅ livré 2026-08-27 :
+  `POST /api/properties/upload` (image publique, host/admin) + stockage
+  `PublicLocalUploader`/S3 + `<input type=file>` dans `properties/new`
+  (URL gardée en alternative). Voir rapport d'audit fonctionnel.
+- 🔵 ~~**T-114 (L/P3)** — Page `/bestrewards` personnalisée~~ ✅ livré
+  2026-08-27 : `<BestRewardsStatus>` affiche niveau réel, séjours, wallet et
+  code de parrainage (`/api/auth/me` + `/api/users/me/referral`) ; bug
+  d'affichage des réductions `${...}` corrigé.
+- ⚪ ~~**T-115 (L/P3)** — Sous-notes d'avis~~ ✅ livré 2026-08-27 : 6 critères
+  (propreté, confort, emplacement, équipements, accueil, rapport qualité-prix)
+  alimentent les champs déjà acceptés par `POST /api/reviews`.
 - 🟡 **T-116 (C/P2)** — Factures légales (PDF, mentions TVA) : seul l'export
   CSV opérationnel existe ; évolution finance à cadrer.
 - 🔵 **T-117 (T/P3)** — Régénérer `PRODUCT_ACCEPTANCE.md` (obsolète : marque
   ❌ des parcours déjà livrés et testés à l'exécution).
+- ⚪ **T-118 (T/P3)** — FEATURES.md annonçait un composant `<ImageUploader>`
+  (`src/components/ui/image-uploader.tsx`) inexistant ; corriger la doc.
 
 ### Chantiers Sessions 5-7 (livrés)
 

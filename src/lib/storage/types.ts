@@ -11,6 +11,24 @@ export interface RetrievedFile {
   mimeType: string | null;
 }
 
+/**
+ * Fichier PUBLIC (ex : photo d'annonce). `url` est toujours renseignée et
+ * accessible sans authentification (statique `/uploads/...` en dev, CDN
+ * S3/R2 en production).
+ */
+export interface PublicStoredFile {
+  url: string;
+  key: string;
+  size: number;
+  mimeType: string;
+}
+
+export interface PublicUploader {
+  /** Sauvegarde une image publique et renvoie son URL servable. */
+  put(file: Buffer, mimeType: string, ownerId: string): Promise<PublicStoredFile>;
+  remove(key: string): Promise<boolean>;
+}
+
 export interface Uploader {
   /**
    * Sauvegarde un fichier binaire et renvoie son URL publique.
