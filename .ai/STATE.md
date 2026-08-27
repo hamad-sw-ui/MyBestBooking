@@ -6,10 +6,22 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : à mettre à jour en fin de session après le dernier commit de doc.
+- **HEAD Git** : `f630820` (poussé sur `arena/01a042cf-mybestbooking`, PR #2).
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-112 — conversations idempotentes sous
-  concurrence (clé métier unique + tests), et réalignement du framework.
+- **Dernière tâche validée** : T-116 (facture/reçu légal imprimable avec
+  mentions société/TVA configurables, reçu honnête sinon) et T-117
+  (régénération de PRODUCT_ACCEPTANCE.md) — 2026-08-27. Avant : T-112/113/114/115.
+
+## Preuves session 2026-08-27 (T-116/T-117)
+
+- 🔨 `typecheck` 0 erreur · `lint` 0 erreur (15 warnings préexistants) · `build` OK.
+- 🧪 `npm test` : **228/228** (36 fichiers).
+- ▶️ `npm run smoke` : **91/91** · `npm run ai:check` : **19 OK · 1 warn · 0 fail**
+  (le warn R7 porte sur ce champ HEAD, résolu par le commit de doc).
+- Runtime T-116 : `GET /api/bookings/[id]/invoice` 200 owner/host/admin,
+  401 anonyme, 404 inexistant ; REÇU↔FACTURE selon réglages ; base de test
+  nettoyée (réservations de test supprimées, réglage billing remis par défaut).
+- Process de test arrêtés en fin de session (Next :3000, Postgres :55432).
 
 ## Preuves de la session 2026-08-27
 
