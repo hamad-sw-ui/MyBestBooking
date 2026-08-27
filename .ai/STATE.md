@@ -6,7 +6,9 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : `e51ea3b` (poussé sur `arena/01a042cf-mybestbooking`, PR #2).
+- **HEAD Git** : `e53a45f4` (commit de sync STATE précédent ; le HEAD réel
+  est **à mettre à jour en fin de session** car un commit ne peut pas
+  contenir son propre hash — R7 rend alors 1 warn toléré, 0 fail).
 - **Version Framework** : AI-DOS 3.0.1
 - **Dernière tâche validée** : T-116 (facture/reçu légal imprimable avec
   mentions société/TVA configurables, reçu honnête sinon) et T-117
