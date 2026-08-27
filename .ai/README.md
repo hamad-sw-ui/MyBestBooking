@@ -11,13 +11,23 @@ d'archive et ne décrivent pas l'architecture actuelle.
 
 ## 🧰 Commandes de validation
 
-```powershell
-Set-Location MyBestBooking
+```bash
+# Cohérence du framework .ai (garde-fous R1–R20)
+npm run ai:check
+# Qualité du code
 npm run typecheck
 npm run lint
+npm test
 npm run build
-npx drizzle-kit push
+# Base de données locale (embedded-postgres) + schéma
+npm run db:dev
+npm run db:push
+# Preuve runtime HTTP (≥ 40 assertions, ADR-008)
+npm run smoke
 ```
+
+> La CI (`.github/workflows/ci.yml`) exécute automatiquement
+> `ai:check · lint · typecheck · test · build` à chaque push/PR (ADR-002).
 
 ---
 
@@ -65,24 +75,30 @@ Prompt de démarrage prêt à copier : [`PROMPTS/session_start.md`](PROMPTS/sess
 
 | Fichier | Rôle | Fréquence de mise à jour |
 |---|---|---|
+| `STATE.md` | État courant du projet et HEAD Git validé (source n°1) | **Chaque session** |
 | `MISSION.md` | Mandat permanent de l'équipe technique | Rare |
-| `PROJECT_CONTEXT.md` | Quoi, pour qui, pourquoi — métier et contraintes terrain | Rare |
-| `ARCHITECTURE.md` | Architecture **réelle** constatée dans le code | À chaque changement structurel |
-| `CODING_RULES.md` | Règles de code non négociables | Rare |
+| `PROJECT.md` | Quoi, pour qui, pourquoi — métier et contraintes terrain | Rare |
+| `ARCHITECTURE_MYBESTBOOKING.md` | Architecture **réelle** Next.js/Drizzle constatée dans le code | À chaque changement structurel |
+| `ARCHITECTURE.md` | Archive historique MobileCaisse (Kotlin/Android), non normative | Ne pas utiliser |
+| `CODING_RULES.md` | Processus §13–§22 (validation, impact, honnêteté technique) ; le corps des règles Kotlin est une archive | Rare |
 | `ANDROID_RULES.md` | Archive historique, non applicable à MyBestBooking | Ne pas utiliser |
-| `DATABASE.md` | Entités, DAO, migrations, chiffrement | À chaque changement de schéma |
-| `API.md` | Interfaces externes (SMS, Bluetooth, Intents, licence) | À chaque nouvelle intégration |
+| `DATABASE.md` | Entités, schéma PostgreSQL, migrations, chiffrement | À chaque changement de schéma |
+| `FEATURES.md` | Inventaire de complétude produit (✅/🚧/🎯/❌) | À chaque changement API/schéma (R17) |
+| `PRODUCT_ACCEPTANCE.md` | Parcours utilisateur critiques et état E2E | À chaque parcours livré |
+| `API.md` | Interfaces externes (Stripe, emails, uploads, webhooks) | À chaque nouvelle intégration |
 | `ROADMAP.md` | Ordre logique de complétion du projet | À chaque jalon |
-| `BACKLOG.md` | Toutes les tâches restantes (□ / ☑) | **Chaque session** |
+| `BACKLOG.md` | Toutes les tâches restantes (T-xxx) | **Chaque session** |
 | `CURRENT_TASK.md` | La seule tâche autorisée en cours | **Chaque session** |
 | `PROGRESS.md` | Journal horodaté des sessions | **Chaque session** |
-| `BUGS.md` | Bugs identifiés, avec gravité et statut | Dès qu'un bug est trouvé/corrigé |
+| `BUGS.md` | Bugs identifiés (BUG-xxx), avec gravité et statut | Dès qu'un bug est trouvé/corrigé |
+| `TRACEABILITY.md` | Matrice preuves ↔ tâches/bugs | À chaque validation |
 | `KNOWN_LIMITATIONS.md` | Limites assumées (non-bugs) | Rare |
-| `DEPENDENCIES.md` | Dépendances, versions, risques | À chaque `libs.versions.toml` modifié |
+| `DEPENDENCIES.md` | Dépendances npm, versions, risques | À chaque changement de `package.json` |
 | `SECURITY.md` | Modèle de menace et posture sécurité | À chaque changement crypto/permission |
 | `TEST_PLAN.md` | Stratégie et couverture de tests | À chaque nouveau test |
 | `PROCESS_IMPROVEMENTS.md` | Rétrospectives et évolutions du framework (§17) | Après chaque tâche |
 | `DEV_ENVIRONMENT.md` | Node.js, PostgreSQL et variables d'environnement | À chaque changement d'outillage |
+| `framework.manifest.json` | Manifeste pilotant `scripts/check-ai.mjs` (R1–R20) | À chaque évolution du framework |
 | `PROMPTS/` | Prompts réutilisables (démarrage, revue, rôles) | Rare |
 | `CHECKLISTS/` | Contrôles avant commit / avant PR / avant release | Rare |
 | `REPORTS/` | Modèles + rapports datés générés au fil du projet | À la demande |

@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.0.1",
   "name": "MyBestBooking AI Development Operating System (AI-DOS)",
   "description": "Gouvernance et traçabilité des preuves techniques pour Next.js et PostgreSQL",
   "mandatory_documents": [
@@ -14,11 +14,43 @@
     "CODING_RULES.md",
     "ANDROID_RULES.md",
     "ROADMAP.md",
+    "FEATURES.md",
+    "PRODUCT_ACCEPTANCE.md",
     "BUGS.md",
     "CURRENT_TASK.md",
     "TEST_PLAN.md",
     "DEVLOG.md"
   ],
+  "git": {
+    "branch_patterns": ["^arena/[0-9a-f]+-mybestbooking$"],
+    "protected_branches": ["main"]
+  },
+  "product_coverage": {
+    "exempted_tables": [
+      "sessions",
+      "verification_tokens",
+      "email_outbox",
+      "payment_event_inbox",
+      "provider_test_logs"
+    ],
+    "endpoint_aliases": {
+      "review_votes": ["reviews"],
+      "upload_objects": ["uploads", "messages"],
+      "wishlist_items": ["wishlists"],
+      "provider_credentials": ["admin/providers", "providers/stripe"],
+      "audit_log": ["admin/audit"]
+    },
+    "expected_endpoint_tables": [],
+    "ui_action_labels": [
+      "Envoyer", "Répondre", "Publier", "Annuler", "Valider",
+      "Supprimer", "Uploader", "Enregistrer", "Confirmer", "Créer",
+      "Modifier", "Approuver", "Rejeter", "Suspendre", "Réserver",
+      "Payer", "Contacter"
+    ],
+    "max_commits_without_features_update": 30,
+    "max_commits_without_progress_update": 5,
+    "max_sessions_without_product_audit": 5
+  },
   "optional_documents": [
     "DEPENDENCIES.md",
     "KNOWN_LIMITATIONS.md",

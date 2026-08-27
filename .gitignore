@@ -13,3 +13,6 @@ pnpm-debug.log*
 # Local tooling
 .vscode/
 .idea/
+
+# Base Postgres embarquée (dev/CI locale)
+.data/

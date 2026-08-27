@@ -1,11 +1,19 @@
-# 📐 RÈGLES DE CODE — ARCHIVE HISTORIQUE
+# 📐 RÈGLES DE CODE & DE GOUVERNANCE
 
-> ⚠️ Ces règles décrivent Kotlin/Android et ne s'appliquent pas à MyBestBooking.
-> Les règles actuelles sont résumées dans `PROJECT.md` et `ARCHITECTURE_MYBESTBOOKING.md`.
+> **Ce fichier a deux parties distinctes :**
+>
+> - **§1 à §12 — ARCHIVE HISTORIQUE (MobileCaisse, Kotlin/Android).**
+>   Ces règles décrivent MVVM/Room/Compose/Hilt et **ne s'appliquent pas**
+>   à MyBestBooking (Next.js/React/PostgreSQL). Elles sont conservées pour
+>   traçabilité. La technique actuelle est dans `ARCHITECTURE_MYBESTBOOKING.md`.
+> - **§13 à §23 — RÈGLES AI-DOS EN VIGUEUR pour MyBestBooking.**
+>   Définition de « terminé » et chaîne de validation (§13), analyse d'impact
+>   (§14), workflow des évolutions (§15), honnêteté technique (§16),
+>   rétrospective (§17), classification (§18), échecs de build (§19),
+>   gel/ROI des règles (§20), source de vérité (§21), audit des preuves
+>   (§22), conventions de gouvernance (§23). Ces sections sont opposables et
+>   partiellement vérifiées par `scripts/check-ai.mjs`.
 
-Ces règles s'appliquent à **tout code nouveau**. Le code existant qui les viole
-est recensé dans `BACKLOG.md` et corrigé progressivement, **jamais en masse au
-milieu d'une autre tâche**.
 
 ---
 
@@ -703,3 +711,36 @@ Pour chaque point critique du rapport :
 > **Preuve** : [Lien vers log ou fichier]  
 > **Limites** : [Ce qui n'est pas prouvé]  
 > **Action restante** : [Ce qu'il faut faire pour monter de niveau]
+
+---
+
+## 23. Conventions de gouvernance (vérifiées par check-ai)
+
+> Ces conventions étaient jusqu'ici implicites (ou citées par R10/R11 sans
+> emplacement canonique). Elles sont ici documentées pour que les
+> références « §8 / §8.1 » du script pointent vers un contenu réel.
+
+### 23.1 Branche de travail (R10)
+
+- Le travail se fait sur une branche de session Arena, de la forme
+  `arena/<identifiant-session>-mybestbooking` (ex.
+  `arena/01a042cf-mybestbooking`).
+- Le motif exact est piloté par le manifeste :
+  `framework.manifest.json → git.branch_patterns` (RegExp) et
+  `git.protected_branches` (`main`).
+- Une branche qui ne correspond à aucun motif déclaré fait **échouer** R10.
+
+### 23.2 Convention d'identifiants (R11)
+
+Deux séries **strictement séparées et indépendantes** :
+
+| Série | Format | Source de vérité | Objet |
+|---|---|---|---|
+| Tâches | `T-xxx` (3+ chiffres) | `CURRENT_TASK.md`, `BACKLOG.md`, `TRACEABILITY.md` | évolution/fonctionnalité |
+| Bugs | `BUG-xxx` (3+ chiffres) | `BUGS.md` | défaut constaté |
+
+- Les deux séries peuvent partager un numéro (`T-001` et `BUG-001` coexistent) :
+  ce n'est **pas** une collision.
+- En revanche tout identifiant résiduel de l'**ancienne** série `B-xxx`
+  (ambigu, ni T- ni BUG-) est interdit et fait échouer R11, sauf mention
+  littérale entre backticks ou dans une URL (référence historique).

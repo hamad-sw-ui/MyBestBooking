@@ -2056,3 +2056,56 @@ Ajouter la couche gouvernance manquante — devenu la Session 2 ci-dessus.
 3. **Erreur évitée** : ack webhook sans persistance et stock bloque par pending.
 4. **Amélioration proposée** : idempotency key fournisseur et worker dédié.
 5. **Règle permanente** : aucune nouvelle règle.
+
+---
+
+## Session 2026-08-27 — Analyse & réalignement du framework .ai (niveau S)
+
+- **Contexte** : audit demandé de la configuration, de l'architecture et de
+  l'usage du framework `.ai/` (AI-DOS) au regard des objectifs du projet.
+- **Constats principaux** (détail dans le rapport d'analyse) :
+  - R10 échouait en dur : branche `arena/01a02dbb-…` codée en dur, cassée
+    pour toute nouvelle session Arena.
+  - R14 (couverture schéma↔API, ADR-006) était **vacante** : elle lisait
+    `manifest.product_coverage.expected_endpoint_tables` absent du manifest,
+    et passait sur « 0 tables ».
+  - R15 (UI↔API) produisait 29 faux positifs (`RegExp` avec capture vide).
+  - R11 noyait le signal sous 34 avertissements « numéros partagés ».
+  - R12 n'exigeait pas les rapports de *la tâche courante*.
+  - CI GitHub Actions (ADR-002) jamais créée ; docs INDEX/README désalignées
+    (réf. Android, PowerShell, fichiers inexistants).
+- **Correctifs** :
+  - `scripts/check-ai.mjs` : R10 pilotée manifest (`git.branch_patterns`),
+    R14 lit `src/db/schema.ts` (pgTable) + alias manifest, R15 labels par
+    défaut + capture non vide, R11 signal réduit aux vrais résiduels, R12
+    filtrée par ID de tâche.
+  - `framework.manifest.json` v3.0.1 : section `git`, `product_coverage`
+    (exemptions, alias, labels, seuils), `FEATURES.md`/`PRODUCT_ACCEPTANCE.md`
+    déclarés obligatoires.
+  - `.github/workflows/ci.yml` créée (ai:check · lint · typecheck · test · build).
+  - `.ai/INDEX.md`, `.ai/README.md`, `.ai/STATE.md` réalignés.
+- **Preuves** :
+  - 🔨 `node --check scripts/check-ai.mjs` OK ; R14 testée par injection
+    d'une table fictive → warning déclenché, puis restauration.
+  - 🧪 `npm run ai:check` : **20 OK · 0 warn · 0 fail** (avant : 16 OK ·
+    2 warn · 2 fail).
+  - ❓ `tsc`/`eslint` non exécutés : `node_modules` absent du sandbox ;
+    aucun fichier `src/` ou config TS modifié (seulement `.ai/`, `scripts/`,
+    `.github/`).
+
+### Clôture session 2026-08-27 — preuves finales
+
+- T-112 complétée par le test manquant `src/app/api/conversations/route.test.ts`
+  (3 cas : idempotence séquentielle, 5 insertions concurrentes → 1 ligne,
+  violation unique 23505 sur insert brut). Aucun code applicatif modifié.
+- Chaîne de preuve §13 exécutée en environnement réel (Postgres embarqué
+  55432 + seed) :
+  - 🔨 typecheck **0 erreur** ; lint **0 erreur** (16 warnings préexistants) ;
+    `npm run build` **57/57 pages** ✓.
+  - 🧪 `npm test` **216 passés / 0 échec** (12 ignorés auto-skip DB).
+  - ▶️ `npm run smoke` **91/91 PASS** ; `npm run ai:check` **20 OK · 0 warn · 0 fail**.
+- T-112 passée CORRIGÉ (VALIDÉ) dans TRACEABILITY + rapport
+  `REPORTS/validation_T-112_2026-08-27.md`.
+- Note : 2 échecs transitoires de tests d'intégration en début de session
+  = base non ensemencée (le seed s'exécute via le serveur/smoke) ; résolus
+  après `npm run smoke` (seed), pas une régression.

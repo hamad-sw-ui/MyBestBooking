@@ -17,10 +17,10 @@
 //       clôture — motif toléré : "à mettre à jour en fin de session").
 //   R8  CURRENT_TASK.md référence bien une tâche T-xxx et un statut valide.
 //   R9  Aucun lien Markdown interne cassé dans les documents obligatoires.
-//   R10 La branche Git courante = branche Arena active de MyBestBooking (§8).
+//   R10 La branche Git courante = branche Arena active de MyBestBooking (CODING_RULES §23.1).
 //   R11 Aucune collision d'ID entre les BUG-xxx (dans BUGS.md) et les
 //       T-xxx (dans BACKLOG.md, CURRENT_TASK.md, STATE.md, TRACEABILITY,
-//       PROGRESS) — voir §8.1.
+//       PROGRESS) — voir CODING_RULES §23.2.
 //   R12 CURRENT_TASK.md de niveau S ou C → un rapport
 //       REPORTS/analyse_impact_*_<slug>.md ET un rapport
 //       REPORTS/analyse_conception_*_<slug>.md existent (§14, §15.1).
@@ -229,7 +229,7 @@ if (existsSync(statePath)) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Règle 8 : CURRENT_TASK.md référence une tâche B-xxx + statut valide
+// Règle 8 : CURRENT_TASK.md référence une tâche T-xxx + statut valide
 // ─────────────────────────────────────────────────────────────
 const ctPath = join(AI_DIR, "CURRENT_TASK.md");
 if (existsSync(ctPath)) {
@@ -241,7 +241,7 @@ if (existsSync(ctPath)) {
     record("R8 current_task_shape", "ok", "CURRENT_TASK.md référence une tâche T-xxx avec statut valide");
   } else {
     const details = [];
-    if (!hasId) details.push("pas d'ID B-xxx trouvé");
+    if (!hasId) details.push("pas d'ID T-xxx trouvé");
     if (!validStatus) details.push("statut absent ou invalide");
     record("R8 current_task_shape", "fail", details.join(" ; "));
   }
@@ -279,29 +279,44 @@ if (broken.length === 0) {
 }
 
 // ─────────────────────────────────────────────────────────────
-// Règle 10 : branche Git de la session Arena active (§8)
+// Règle 10 : branche Git de la session Arena active
+//
+// Le nom de branche exact change à CHAQUE session Arena
+// (arena/<id-session>-mybestbooking). Le coder en dur cassait la
+// règle pour toute nouvelle session (faux positif bloquant). La
+// règle est donc pilotée par le manifest : `git.branch_pattern`
+// (RegExp). On accepte aussi `main` (branche de production).
 // ─────────────────────────────────────────────────────────────
-const EXPECTED_BRANCH = "arena/01a02dbb-mybestbooking";
-try {
-  const branch = execSync("git rev-parse --abbrev-ref HEAD", {
-    cwd: REPO_ROOT,
-    encoding: "utf8",
-  }).trim();
-  if (branch === EXPECTED_BRANCH) {
-    record("R10 git_branch", "ok", `branche courante = ${branch}`);
-  } else {
-    record(
-      "R10 git_branch",
-      "fail",
-      `branche courante '${branch}' ≠ attendue '${EXPECTED_BRANCH}' (§8)`,
-    );
+{
+  const branchPatterns = (
+    manifest.git?.branch_patterns ?? ["^arena/[0-9a-f]+-mybestbooking$"]
+  ).map((p) => new RegExp(p));
+  const protectedBranches = (manifest.git?.protected_branches ?? ["main"]);
+  try {
+    const branch = execSync("git rev-parse --abbrev-ref HEAD", {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+    }).trim();
+    const isSessionBranch = branchPatterns.some((re) => re.test(branch));
+    const isProtected = protectedBranches.includes(branch);
+    if (isSessionBranch || isProtected) {
+      record("R10 git_branch", "ok", `branche courante = ${branch}`);
+    } else {
+      record(
+        "R10 git_branch",
+        "fail",
+        `branche courante '${branch}' ne correspond à aucun motif de ` +
+          `session ${branchPatterns.map((r) => r.source).join(", ")} ` +
+          `et n'est pas une branche protégée (${protectedBranches.join(", ")})`,
+      );
+    }
+  } catch {
+    record("R10 git_branch", "warn", "git non disponible, vérification ignorée");
   }
-} catch {
-  record("R10 git_branch", "warn", "git non disponible, vérification ignorée");
 }
 
 // ─────────────────────────────────────────────────────────────
-// Règle 11 : pas de collision d'IDs BUG-xxx ↔ T-xxx (§8.1)
+// Règle 11 : pas de collision d'IDs BUG-xxx ↔ T-xxx (CODING_RULES §23.2)
 // ─────────────────────────────────────────────────────────────
 function grepIds(files, prefixRe) {
   const found = new Set();
@@ -324,7 +339,7 @@ const taskIds = grepIds(
   ["TRACEABILITY.md", "CURRENT_TASK.md", "BACKLOG.md", "STATE.md", "PROGRESS.md"],
   /\bT-\d{3,}\b/g,
 );
-// Chercher aussi des B-xxx résiduels dans tout .ai/ (post-migration §8.1).
+// Chercher aussi des B-xxx résiduels dans tout .ai/ (post-migration §23.2).
 // Ignorer :
 //   - les mentions entre backticks (`B-001`) — références historiques ou
 //     citations littérales dans les rapports d'audit ;
@@ -367,17 +382,21 @@ if (residualB.size > 0) {
 // Extraire les nombres et comparer
 const bugNums = new Set([...bugIds].map((id) => id.replace(/^BUG-/, "")));
 const taskNums = new Set([...taskIds].map((id) => id.replace(/^T-/, "")));
+// Les séries BUG-xxx et T-xxx sont indépendantes par conception (§23.2) :
+// partager un numéro (BUG-001 et T-001) n'est PAS une collision. Un
+// avertissement permanent pour tous les numéros noyait le vrai signal
+// (les IDs B-xxx résiduels, ambigus, post-migration). On ne rend donc
+// compte que des B-xxx résiduels ; le partage de numéros est mentionné
+// dans le message OK pour information, sans avertissement.
 const shared = [...bugNums].filter((n) => taskNums.has(n));
-if (shared.length > 0) {
-  collisionMsgs.push(
-    `Numéros partagés entre BUG- et T- : ${shared.join(", ")}. Ce n'est pas interdit (séries indépendantes), c'est signalé pour information.`,
-  );
-}
 if (collisionMsgs.length === 0) {
   record(
     "R11 id_collision",
     "ok",
-    `${bugIds.size} BUG-* trouvés, ${taskIds.size} T-* trouvés, aucun B-* résiduel`,
+    `${bugIds.size} BUG-* et ${taskIds.size} T-* trouvés, aucun B-* résiduel` +
+      (shared.length
+        ? ` (${shared.length} numéros communs aux deux séries, normal — séries indépendantes)`
+        : ""),
   );
 } else if (residualB.size > 0) {
   record("R11 id_collision", "fail", collisionMsgs.join(" | "));
@@ -396,27 +415,37 @@ if (existsSync(ctPath)) {
     if (level === "S" || level === "C") {
       const reportsDir = join(AI_DIR, "REPORTS");
       const files = existsSync(reportsDir) ? readdirSync(reportsDir) : [];
+      // Les rapports doivent porter sur LA TÂCHE COURANTE, pas sur une
+      // tâche antérieure. On extrait l'ID (T-112 → « 112 ») et on exige
+      // sa présence dans le nom de fichier (avec ou sans tiret).
+      const idMatch = ct.match(/\bT-(\d{3,})\b/i);
+      const taskNum = idMatch ? idMatch[1] : null;
+      // « 112 » suivi d'un chiffre = pas le bon (T1120…), mais suivi de
+      // '_' ou '.' ou fin doit matcher — d'où (?!\d) plutôt que \b.
+      const taskToken = taskNum ? new RegExp(`T[-_]?0*${parseInt(taskNum, 10)}(?!\\d)`, "i") : null;
       // Autoriser un rapport 'audit_*.md' à tenir lieu d'analyse d'impact
       // pour une itération de maintenance §15.0-bis.
-      const hasImpact = files.some((f) => /^(analyse_impact|audit)_.*\.md$/i.test(f));
-      const hasDesign = files.some((f) => /^(analyse_conception|audit)_.*\.md$/i.test(f));
+      const aboutTask = (re) =>
+        files.some((f) => re.test(f) && (!taskToken || taskToken.test(f)));
+      const hasImpact = aboutTask(/^(analyse_impact|audit)_.*\.md$/i);
+      const hasDesign = aboutTask(/^(analyse_conception|audit)_.*\.md$/i);
       if (hasImpact && hasDesign) {
         record(
           "R12 impact_reports_for_S_or_C",
           "ok",
-          `niveau ${level} → rapport d'impact et de conception présents`,
+          `niveau ${level}${taskNum ? ` (T-${taskNum})` : ""} → rapport d'impact et de conception présents pour la tâche courante`,
         );
       } else {
         const missing = [
-          !hasImpact ? "analyse_impact_*.md" : null,
-          !hasDesign ? "analyse_conception_*.md" : null,
+          !hasImpact ? `analyse_impact_*T-${taskNum ?? "xxx"}*.md` : null,
+          !hasDesign ? `analyse_conception_*T-${taskNum ?? "xxx"}*.md` : null,
         ]
           .filter(Boolean)
           .join(" + ");
         record(
           "R12 impact_reports_for_S_or_C",
           "fail",
-          `niveau ${level} exige ${missing} dans REPORTS/ (§14, §15.1)`,
+          `niveau ${level} exige ${missing} dans REPORTS/ pour la tâche courante (§14, §15.1)`,
         );
       }
     } else {
@@ -480,7 +509,26 @@ const productCoverage = manifest.product_coverage ?? {};
 // src/app/api/<table>/route.ts (ou variante) doit exister.
 // ─────────────────────────────────────────────────────────────
 {
-  const expected = productCoverage.expected_endpoint_tables ?? [];
+  // ADR-006 : la source de vérité est src/db/schema.ts — on extrait
+  // toutes les tables pgTable(...) et on exempte les tables techniques
+  // via manifest.product_coverage.exempted_tables. Une liste
+  // manifest.product_coverage.expected_endpoint_tables peut venir en
+  // SUPPLÉMENT (garder la possibilité de déclarer une couverture
+  // attendue non dérivable du schéma). Avant ce correctif, la règle se
+  // fiait uniquement à expected_endpoint_tables, absent du manifest :
+  // elle passait alors sur « 0 tables » — garde-fou mort.
+  const schemaPath = join(REPO_ROOT, "src", "db", "schema.ts");
+  const exempted = new Set(productCoverage.exempted_tables ?? []);
+  const schemaTables = [];
+  if (existsSync(schemaPath)) {
+    const schemaText = readFileSync(schemaPath, "utf8");
+    for (const m of schemaText.matchAll(/pgTable\(\s*["'`]([a-z_]+)["'`]/g)) {
+      if (!exempted.has(m[1])) schemaTables.push(m[1]);
+    }
+  }
+  const manifestExpected = productCoverage.expected_endpoint_tables ?? [];
+  const expected = [...new Set([...schemaTables, ...manifestExpected])];
+
   const apiDir = join(REPO_ROOT, "src", "app", "api");
   const missing = [];
   const partial = [];
@@ -493,14 +541,27 @@ const productCoverage = manifest.product_coverage ?? {};
   };
   const apiFiles = listApiFiles();
 
+  if (expected.length === 0) {
+    record(
+      "R14 db_api_coverage",
+      "fail",
+      `aucune table trouvée dans ${relative(REPO_ROOT, schemaPath)} ` +
+        `(pgTable) et expected_endpoint_tables absent du manifest — garde-fou non opérant`,
+    );
+  }
+
+  const aliases = productCoverage.endpoint_aliases ?? {};
   for (const rawTable of expected) {
     // Normaliser : "rate_plans" → dossier possible "rate-plans" ou
     // "rate_plans" ou "rate-plan"/"availability" (dernier segment).
+    // Y ajouter les alias explicites du manifest (ex: audit_log →
+    // admin/audit) quand le nom de la table ne dérive pas du chemin API.
     const bases = new Set([
       rawTable,
       rawTable.replace(/_/g, "-"),
       rawTable.replace(/^[^_]+_/, "").replace(/_/g, "-"), // room_availability → availability
       rawTable.split("_").pop() ?? rawTable, // wishlist_items → items
+      ...(aliases[rawTable] ?? []),
     ]);
     const found = [...bases].some((c) =>
       apiFiles.some(
@@ -536,9 +597,13 @@ const productCoverage = manifest.product_coverage ?? {};
   const msgs = [];
   if (missing.length) msgs.push(`Aucun endpoint pour : ${missing.join(", ")}`);
   if (partial.length) msgs.push(`Mention seulement (pas de route dédiée) : ${partial.join(", ")}`);
-  if (msgs.length === 0) {
-    record("R14 db_api_coverage", "ok", `${expected.length} tables métier ont au moins un endpoint dédié`);
-  } else {
+  if (expected.length > 0 && msgs.length === 0) {
+    record(
+      "R14 db_api_coverage",
+      "ok",
+      `${expected.length} tables métier (schema.ts + manifest) ont au moins un endpoint dédié ou une mention`,
+    );
+  } else if (expected.length > 0) {
     record("R14 db_api_coverage", "warn", msgs.join(" | "));
   }
 }
@@ -550,8 +615,23 @@ const productCoverage = manifest.product_coverage ?? {};
 // même fichier.
 // ─────────────────────────────────────────────────────────────
 {
-  const labels = productCoverage.ui_action_labels ?? [];
-  const labelRe = new RegExp(`>\\s*(${labels.join("|")})\\s*<`, "i");
+  // Labels d'action métier (ADR-006). Valeurs par défaut si le manifest
+  // n'en fournit pas. Avant ce correctif, une liste vide produisait une
+  // RegExp `>\s*()\s*<` qui matche toute paire de balises adjacentes
+  // (capture vide) → faux positifs sur ~29 composants sans bouton
+  // d'action. On exige désormais un label non vide.
+  const defaultLabels = [
+    "Envoyer", "Répondre", "Publier", "Annuler", "Valider",
+    "Supprimer", "Uploader", "Enregistrer", "Confirmer", "Créer",
+    "Modifier", "Approuver", "Rejeter", "Suspendre", "Réserver",
+    "Payer", "Contacter",
+  ];
+  const labels = (productCoverage.ui_action_labels ?? []).length
+    ? productCoverage.ui_action_labels
+    : defaultLabels;
+  // Mot de label non vide (lettres uniquement), insensible à la casse.
+  const labelRe = new RegExp(`>\\s*([A-Za-zÀ-ÿ][A-Za-zÀ-ÿ\\s'-]*?)\\s*<`, "i");
+  const labelSet = new Set(labels.map((l) => l.toLowerCase()));
   const fetchOrActionRe = /fetch\(["'`]\/api\/|action=\{|"use server"|useTransition|<form\s+action=/;
   const appDir = join(REPO_ROOT, "src", "app");
   const tsxFiles = listFiles(appDir, ".tsx");
@@ -562,13 +642,14 @@ const productCoverage = manifest.product_coverage ?? {};
     try { text = readFileSync(f, "utf8"); } catch { continue; }
     // Exclut les tests
     if (f.endsWith(".test.tsx")) continue;
-    // Doit contenir un bouton avec un label d'action
-    if (!labelRe.test(text)) continue;
+    // Chercher un label d'action métier réel entre deux balises.
+    const matched = text.match(labelRe);
+    const label = matched?.[1]?.trim();
+    if (!label || !labelSet.has(label.toLowerCase())) continue;
     // Doit contenir un appel API OU une Server Action
     if (fetchOrActionRe.test(text)) continue;
     // Fichier suspect
-    const matched = text.match(labelRe);
-    suspicious.push(`${relative(REPO_ROOT, f)} (bouton "${matched?.[1]}")`);
+    suspicious.push(`${relative(REPO_ROOT, f)} (bouton "${label}")`);
   }
 
   if (suspicious.length === 0) {

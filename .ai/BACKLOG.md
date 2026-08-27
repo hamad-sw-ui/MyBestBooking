@@ -32,8 +32,10 @@ Voir `CURRENT_TASK.md` pour la tâche active.
   implémentées. Voir audit profond post T-109.
 - 🟠 **T-111 (C/P1)** — chiffrement TOTP, devise/ledger, timezone/dates,
   inventaire compatible booking et settings réellement appliqués.
-- 🟠 **T-112 (S/P2)** — referral/promos, conversations uniques, rétention,
-  support/ticketing, UX restantes, navigateur CI et upgrade dépendances.
+- 🟠 **T-112 (S/P2)** — referral/promos, ~~conversations uniques~~ ✅
+  (validé 2026-08-27, tests idempotence/concurrence, voir
+  `REPORTS/validation_T-112_2026-08-27.md`), rétention, support/ticketing,
+  UX restantes, navigateur CI et upgrade dépendances.
 
 ### Chantiers Sessions 5-7 (livrés)
 

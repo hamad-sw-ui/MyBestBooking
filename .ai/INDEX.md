@@ -16,7 +16,11 @@ Ce document est le point d'entrée obligatoire du framework. Il répertorie les 
 * **[DEPENDENCIES.md](DEPENDENCIES.md)** : Dépendances npm et versions.
 * **[TEST_PLAN.md](TEST_PLAN.md)** : Validation TypeScript, lint, build et API.
 * **[ROADMAP.md](ROADMAP.md)** : Planification des jalons et état d'avancement.
-* **[BACKLOG.md](BACKLOG.md)** : Liste exhaustive des tâches (B-xxx).
+* **[FEATURES.md](FEATURES.md)** : Inventaire de complétude produit ✅/🚧/🎯/❌ par domaine (ADR-006, R14/R17).
+* **[PRODUCT_ACCEPTANCE.md](PRODUCT_ACCEPTANCE.md)** : Parcours utilisateur critiques et leur état de validation E2E (ADR-006).
+* **[UI.md](UI.md)** : Inventaire des écrans et composants branchés.
+* **[API.md](API.md)** : Interfaces externes (Stripe, emails, uploads, webhooks).
+* **[BACKLOG.md](BACKLOG.md)** : Liste exhaustive des tâches (T-xxx).
 * **[BUGS.md](BUGS.md)** : Registre des défauts identifiés et statut des correctifs.
 * **[TRACEABILITY.md](TRACEABILITY.md)** : Matrice de traçabilité des preuves (Lien Bug/Tâche ↔ Preuve).
 * **[CURRENT_TASK.md](CURRENT_TASK.md)** : Détail de la tâche en cours d'exécution.

@@ -3,10 +3,21 @@
 ## 📌 Identification
 
 - **Projet** : MyBestBooking
-- **Branche actuelle** : `arena/01a02dbb-mybestbooking`
-- **HEAD validé T-110** : `ab6777c`
-- **Version Framework** : AI-DOS 3.0.0
-- **Dernière tâche validée** : T-109 — claim invité et reprise opérationnelle
+- **Branche actuelle** : `arena/01a042cf-mybestbooking`
+- **HEAD de base** : `46b2ca8`
+- **Version Framework** : AI-DOS 3.0.1
+- **Dernière tâche validée** : T-112 — conversations idempotentes sous
+  concurrence (clé métier unique + tests), et réalignement du framework.
+
+## Preuves de la session 2026-08-27
+
+- 🔨 `typecheck` 0 erreur · `lint` 0 erreur (16 warnings préexistants) ·
+  `build` 57/57 pages · migration `0015` appliquée (index
+  `conversations_conversation_key_unique`).
+- 🧪 `npm test` : **216/216** (3 nouveaux tests T-112
+  idempotence/concurrence ; auto-skip si DB absente).
+- ▶️ `npm run smoke` : **91/91** · `npm run ai:check` : **20 OK · 0 warn · 0 fail**.
+- Environnement : Postgres embarqué :55432, `db:push`, seed via smoke.
 
 ## 🛠️ État technique
 
