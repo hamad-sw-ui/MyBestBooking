@@ -40,7 +40,7 @@ modification de code.
 | Filtres découverte et pagination | ✅ | `/recherche` : ville, dates, type, voyageurs, équipement, prix min/max sur une même chambre, tri, `COUNT(*)`, dernière page réelle et ordre stable (`properties.id`). | T-004, T-026, T-104, T-107 |
 | Filtre par équipements (`amenities`) | ✅ | `GET /api/properties?amenities=wifi,pool` : filtre JSONB `@>` PostgreSQL (T-026). ▶️ 4 properties trouvées avec wifi+pool | T-026 |
 | Filtre par dates (disponibilité) | ✅ | `GET /api/properties?checkIn=X&checkOut=Y` : exclut les properties dont toutes les rooms sont bookées ou stop-sell (T-026) | T-026 |
-| Filtre par nombre de voyageurs | ✅ | `?guests=N` filtre `rooms.maxOccupancy >= N` au JOIN (T-026) | T-026 |
+| Filtre par nombre de voyageurs | ✅ | `?guests=N` filtre `rooms.maxOccupancy >= N` ; les hébergements sans chambre compatible sont **exclus** (`roomCount=0` retiré, T-119 corrige le LEFT JOIN). `guests` invalide (négatif/non numérique) → 400, dates inversées → liste vide. Champ « Voyageurs » présent sur la home ET borné sur la carte de réservation selon la capacité réelle (T-119) | T-026, T-119 |
 | Tri (prix, note, distance) | ✅ | `?sort=rating|price_asc|price_desc|popularity` (T-026). Distance via `?near=lat,lng,km` (haversine) | T-026 |
 | Fiche property complète (photos, chambres, avis) | ✅ | `GET /api/properties/[id]` + page `/hebergement/[slug]` | initial |
 | Carte géographique | 🚧 | Filtre `?near=lat,lng,km` livré (T-026) ; rendu Mapbox/Leaflet visuel = 🎯 backlog UX (rare). Endpoint exploitable | T-026 partiel |
@@ -133,7 +133,7 @@ modification de code.
 | Détail booking | ✅ | Page + endpoint | initial |
 | Répondre à un avis | ✅ | `POST /api/reviews/[id]/reply` + `<HostReplyForm>` branchée dans /dashboard/reviews (T-016) | T-016 |
 | Répondre à un message | ✅ | POST /api/messages + `<MessageComposer>` (T-015, T-029 pièces jointes) | T-015, T-029 |
-| Analytics revenus / occupation | ✅ | Page `/dashboard/analytics` : revenus + occupation 30j. ADR/RevPAR avancés = 🎯 backlog métier | T-015 |
+| Analytics revenus | ✅ | Page `/dashboard/analytics` : revenus 30 j + variation vs période précédente, nb réservations, panier moyen. Taux d'occupation = 🎯 backlog (T-B4, non encore calculé) ; ADR/RevPAR avancés = 🎯 backlog métier | T-015 |
 | Facturation (billing) | ✅ | Dashboard + export CSV privé des réservations payées non annulées. | T-015, T-104 |
 | **Facture / reçu imprimable** | ✅ | `GET /api/bookings/[id]/invoice` → document HTML imprimable (PDF via navigateur, zéro dépendance). Mentions légales configurables dans les réglages admin (raison sociale, SIREN/SIRET/RCCM, TVA, adresse, email, préfixe, pied de page). Tant qu'elles sont absentes : **REÇU** avec mention « non conforme facturation légale » ; dès que société + n° légal sont saisis : **FACTURE** numérotée. Accès owner/hôte/admin (401 anonyme, 404 inexistant). Lien « Facture / Reçu » dans les actions de réservation (T-116) | T-116 |
 | Notifications email/webhook sur nouvelle réservation | ✅ | Email host via template `bookingHostNotification` dans `POST /api/bookings` (T-013). Webhook Stripe pour paiement dans `/api/webhooks/stripe` (T-020) | T-013, T-020 |

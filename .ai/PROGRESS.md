@@ -2168,3 +2168,35 @@ Ajouter la couche gouvernance manquante — devenu la Session 2 ci-dessus.
 - Preuves globales : 🔨 typecheck 0 err · build OK · lint 0 err (15
   warnings préexistants) · 🧪 **228/228** tests · ▶️ smoke **91/91** ·
   ai:check 19 OK / 1 warn (R7, sync STATE en fin de session) / 0 fail.
+
+## Session — T-119 corrections d'audit fonctionnel (2026-08-27)
+
+Suite à l'audit profond à l'exécution
+(`REPORTS/audit_fonctionnel_profond_2026-08-27_T116.md`), 5 corrections
+non régressives livrées :
+
+- **A1 (BUG-041)** — `GET /api/properties?guests=N` laissait passer des
+  hébergements sans chambre compatible (filtre capacité en condition de
+  LEFT JOIN → `roomCount=0` non exclu). ▶️ avant `guests=6` → 8 résultats
+  (aucun logeable) ; après `guests=6/99` → 0, `guests=2` → 8, `guests=3` → 4.
+- **A2 (BUG-042)** — paramètres de recherche invalides ignorés en silence.
+  `guests` négatif/non numérique → **400** explicite ; dates de séjour
+  incohérentes (départ ≤ arrivée) → **liste vide** (au lieu d'ignorer le
+  filtre et tout renvoyer).
+- **B1** — la carte de réservation borne désormais le sélecteur d'adultes à
+  la capacité réelle de la chambre (`maxAdults` propagé, optionnel → repli
+  1–6). ▶️ fiche Montmartre (chambre 2 ad.) : options adultes [1,2].
+- **B2** — sans chambre disponible, le CTA affiche « Aucune chambre
+  disponible » (bouton désactivé) au lieu d'une redirection muette vers
+  /recherche.
+- **B3** — la barre de recherche de la home gagne un champ « Voyageurs »
+  (1–8), déjà interprété par /recherche.
+
+Toutes additives/restrictives (champs optionnels, validation en tête de
+handler), aucun contrat existant modifié. B4 (taux d'occupation analytics)
+laissé en backlog métier.
+
+- Preuves : 🔨 typecheck 0 err · build OK · lint 0 err (15 warnings
+  préexistants) · 🧪 **228/228** tests · ▶️ smoke **91/91** ·
+  ai:check 19 OK / 1 warn R7 (toléré) / 0 fail. Réservation de test smoke
+  nettoyée en base.

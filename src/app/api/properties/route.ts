@@ -47,6 +47,31 @@ export async function GET(request: NextRequest) {
     const sort = searchParams.get("sort") || "rating"; // rating | price_asc | price_desc | popularity
     const near = searchParams.get("near"); // "lat,lng,km"
 
+    // T-119 (A2) — validation des paramètres de recherche.
+    // Un paramètre `guests` explicite mais invalide doit produire une 400
+    // claire plutôt que d'être silencieusement ignoré (ce qui renvoyait
+    // alors TOUS les hébergements, dont aucun ne convenait).
+    let guestsNum: number | null = null;
+    if (guests !== null) {
+      const parsed = Number(guests);
+      if (!Number.isInteger(parsed) || parsed < 1) {
+        return NextResponse.json(
+          { error: "Le paramètre guests doit être un entier positif" },
+          { status: 400 },
+        );
+      }
+      guestsNum = parsed;
+    }
+    // Dates incohérentes (départ <= arrivée) alors qu'une recherche par
+    // dates est demandée → aucun hébergement ne peut correspondre. On le
+    // note pour renvoyer une liste vide au lieu d'ignorer le filtre.
+    const stayDatesValid =
+      checkIn && checkOut
+        ? /^\d{4}-\d{2}-\d{2}$/.test(checkIn) &&
+          /^\d{4}-\d{2}-\d{2}$/.test(checkOut) &&
+          checkOut > checkIn
+        : true;
+
     let query = db.select().from(properties).where(eq(properties.status, "active"));
 
     const conditions = [eq(properties.status, "active")];
@@ -90,11 +115,8 @@ export async function GET(request: NextRequest) {
     // On filtre les rooms compatibles côté JOIN pour éviter d'exclure
     // une property qui a d'autres rooms plus petites.
     const roomJoinConds = [eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)];
-    if (guests) {
-      const g = parseInt(guests, 10);
-      if (Number.isFinite(g) && g > 0) {
-        roomJoinConds.push(gte(rooms.maxOccupancy, g));
-      }
+    if (guestsNum !== null) {
+      roomJoinConds.push(gte(rooms.maxOccupancy, guestsNum));
     }
 
     // T-026 : ordre configurable.
@@ -136,6 +158,20 @@ export async function GET(request: NextRequest) {
       minPrice: r.minPrice !== null ? parseFloat(r.minPrice as string) : null,
       roomCount: Number(r.roomCount),
     }));
+
+    // T-119 (A1) — corrige le bug du LEFT JOIN : quand un filtre de
+    // capacité (guests) ou de prix est demandé, une propriété dont
+    // AUCUNE chambre ne satisfait la condition ressort avec roomCount=0 /
+    // minPrice=null à cause du LEFT JOIN. On l'explicite : elle n'est pas
+    // bookable pour ces critères → on la retire des résultats.
+    if (guestsNum !== null || minPrice !== null) {
+      filteredResults = filteredResults.filter((p) => p.roomCount > 0);
+    }
+    // T-119 (A2) — dates demandées mais incohérentes/invalides : aucune
+    // disponibilité possible → liste vide (au lieu d'ignorer le filtre).
+    if (!stayDatesValid) {
+      filteredResults = [];
+    }
 
     // Filter by price if needed (post-agrégation, borne côté JS car
     // Drizzle 0.45 n'expose pas `having` sur select simple ; tolerable

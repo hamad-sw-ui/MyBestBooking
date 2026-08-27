@@ -450,6 +450,8 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                   id: cheapestRoom.id,
                   basePrice: cheapestRoom.basePrice,
                   currency: cheapestRoom.currency,
+                  maxAdults: cheapestRoom.maxAdults,
+                  maxOccupancy: cheapestRoom.maxOccupancy,
                 } : null}
                 initialCheckIn={query.checkIn}
                 initialCheckOut={query.checkOut}

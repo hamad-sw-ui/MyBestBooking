@@ -8,7 +8,18 @@ import { Card, CardContent } from "@/components/ui/card";
 
 interface Props {
   propertyId: string;
-  room: { id: string; basePrice: string; currency: string | null } | null;
+  // T-119 (B1) : on propage la capacité de la chambre pour borner le
+  // sélecteur d'adultes dès la fiche (au lieu de laisser l'utilisateur
+  // choisir 6 adultes pour une chambre de 2 et n'être recadré qu'au
+  // checkout). Les champs de capacité sont optionnels : à défaut, on
+  // retombe sur le comportement historique (1–6), sans rien casser.
+  room: {
+    id: string;
+    basePrice: string;
+    currency: string | null;
+    maxAdults?: number | null;
+    maxOccupancy?: number | null;
+  } | null;
   initialCheckIn?: string;
   initialCheckOut?: string;
   initialAdults?: number;
@@ -31,6 +42,13 @@ export function PropertyBookingCard({
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [adults, setAdults] = useState(initialAdults);
   const [children, setChildren] = useState(initialChildren);
+  // T-119 (B1) : capacité d'accueil connue → on borne les adultes à la
+  // chambre ; sinon on garde le sélecteur 1–6 d'origine.
+  const adultsLimit =
+    room?.maxAdults && Number.isFinite(Number(room.maxAdults)) && Number(room.maxAdults) > 0
+      ? Math.min(6, Number(room.maxAdults))
+      : 6;
+  const adultOptions = Array.from({ length: adultsLimit }, (_, i) => i + 1);
   const href = useMemo(
     () => room ? buildReservationUrl({ propertyId, roomId: room.id, checkIn, checkOut, numAdults: adults, numChildren: children }) : "/recherche",
     [propertyId, room, checkIn, checkOut, adults, children],
@@ -62,7 +80,7 @@ export function PropertyBookingCard({
             <label className="text-xs font-medium text-gray-500">
               Adultes
               <select value={adults} onChange={(event) => setAdults(Number(event.target.value))} className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900">
-                {[1, 2, 3, 4, 5, 6].map((count) => <option key={count} value={count}>{count}</option>)}
+                {adultOptions.map((count) => <option key={count} value={count}>{count}</option>)}
               </select>
             </label>
             <label className="text-xs font-medium text-gray-500">
@@ -74,9 +92,22 @@ export function PropertyBookingCard({
           </div>
         </div>
 
-        <Link href={href} className="block w-full text-center px-6 py-3 rounded-lg bg-[#FF5A5F] text-white font-medium hover:bg-[#e54a4f] transition">
-          Voir les disponibilités
-        </Link>
+        {room ? (
+          <Link href={href} className="block w-full text-center px-6 py-3 rounded-lg bg-[#FF5A5F] text-white font-medium hover:bg-[#e54a4f] transition">
+            Voir les disponibilités
+          </Link>
+        ) : (
+          // T-119 (B2) : aucune chambre dérivable → on n'envoie plus
+          // silencieusement vers /recherche ; on explique l'état.
+          <button
+            type="button"
+            disabled
+            aria-disabled="true"
+            className="block w-full text-center px-6 py-3 rounded-lg bg-gray-200 text-gray-500 font-medium cursor-not-allowed"
+          >
+            Aucune chambre disponible
+          </button>
+        )}
         <p className="text-xs text-center text-gray-500 mt-3">✓ Conditions d&apos;annulation affichées avant confirmation</p>
       </CardContent>
     </Card>

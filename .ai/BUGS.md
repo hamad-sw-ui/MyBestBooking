@@ -333,3 +333,17 @@ fournisseur de test dans l’environnement.
   warn si < 32 caractères. Tâche **T-001** (niveau C), ADR-003,
   9 tests automatisés dans `src/lib/auth.test.ts`. Voir
   `TRACEABILITY.md` pour les preuves.
+
+- [x] **2026-08-27 — BUG-041** (L, T-119 / A1) : `GET /api/properties?guests=N`
+  renvoyait des hébergements impossibles à réserver. Le filtre capacité était
+  posé en condition d'un LEFT JOIN : une propriété sans chambre compatible
+  ressortait quand même (`roomCount=0`, `minPrice=null`). ▶️ preuve avant :
+  `guests=6` → 8 résultats dont 0 chambre logeable (capacités max 2/3/4) ;
+  après : `guests=6/99` → 0, `guests=2` → 8, `guests=3` → 4. Correctif :
+  exclusion des `roomCount=0` quand un filtre capacité/prix est explicite.
+- [x] **2026-08-27 — BUG-042** (L, T-119 / A2) : paramètres de recherche
+  invalides silencieusement ignorés par l'API. `guests=-5`/`guests=abc`
+  n'appliquaient pas le filtre (→ tous les résultats) et des dates inversées
+  (`checkOut<=checkIn`) faisaient sauter le filtre de disponibilité.
+  ▶️ après : `guests` invalide → **400** « entier positif », dates incohérentes
+  → **liste vide**. Non-régressif (requêtes valides inchangées).

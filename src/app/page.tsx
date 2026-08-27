@@ -103,6 +103,19 @@ export default async function HomePage() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label htmlFor="home-guests" className="block text-xs font-medium text-gray-500 mb-1">Voyageurs</label>
+                  <select
+                    id="home-guests"
+                    name="guests"
+                    defaultValue="2"
+                    className="px-4 py-3 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <option key={n} value={n}>{n} voyageur{n > 1 ? "s" : ""}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex items-end">
                   <button
                     type="submit"

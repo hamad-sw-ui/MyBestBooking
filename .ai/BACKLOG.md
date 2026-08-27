@@ -66,6 +66,22 @@ Voir `CURRENT_TASK.md` pour la tâche active.
   2026-08-27 : parcours réévalués sur l'exécution réelle (smoke 91/91,
   curl, tests). Couverture P1 fonctionnelle ~100 % ; restent hors-code la
   validation Stripe réelle et les E2E Playwright (Chromium indisponible).
+- ⚪ ~~**T-119 (L/P2)** — Corrections d'audit fonctionnel (recherche & CTA)~~
+  ✅ livré 2026-08-27, suite à l'audit profond `REPORTS/audit_fonctionnel_profond_2026-08-27_T116.md` :
+  - **A1** : `GET /api/properties?guests=N` exclut désormais les hébergements
+    dont aucune chambre n'a la capacité demandée (le LEFT JOIN laissait
+    passer des résultats `roomCount=0` impossibles à réserver).
+  - **A2** : `guests` invalide (négatif, non numérique) → **400** explicite ;
+    dates de séjour incohérentes (départ ≤ arrivée) → liste vide au lieu
+    d'ignorer le filtre.
+  - **B1** : la carte de réservation borne le sélecteur d'adultes à la
+    capacité réelle de la chambre (`maxAdults` propagé), au lieu de 1–6 figé.
+  - **B2** : sans chambre disponible, le CTA affiche « Aucune chambre
+    disponible » (désactivé) au lieu de rediriger en silence vers /recherche.
+  - **B3** : la barre de recherche de la page d'accueil a un champ
+    « Voyageurs » (1–8), déjà compris par /recherche.
+  Toutes non régressives (champs optionnels, validation additive) ; B4
+  (taux d'occupation analytics) reste en backlog.
 - ⚪ **T-118 (T/P3)** — FEATURES.md annonçait un composant `<ImageUploader>`
   (`src/components/ui/image-uploader.tsx`) inexistant ; corriger la doc.
 
