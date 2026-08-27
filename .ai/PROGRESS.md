@@ -2139,3 +2139,32 @@ Ajouter la couche gouvernance manquante — devenu la Session 2 ci-dessus.
   **91/91** (base nettoyée : le smoke crée une réservation aux dates
   2027-01-15, non rejouable à l'identique sur quantity=1 — les échecs
   observés étaient une pollution de données, pas une régression).
+
+## Session — T-116 factures légales + T-117 acceptation (2026-08-27)
+
+- **T-116 — Facture / reçu légal** : nouvelle route
+  `GET /api/bookings/[id]/invoice` (`src/lib/invoice.ts`) qui génère un
+  document HTML imprimable (PDF via impression navigateur, **aucune
+  dépendance**). Réglages `billing` étendus (raison sociale, SIREN/SIRET/
+  RCCM, n° TVA, adresse, email contact, préfixe de numérotation, pied de
+  facture), tous **optionnels** (schéma non régressif) et éditables dans
+  le panneau admin `Fiscalité & commissions`.
+  - Logique d'honnêteté comptable : tant que société **et** n° légal
+    (SIRET ou TVA) n'ont pas été renseignés, le document est un **REÇU**
+    portant la mention explicite « non conforme facturation légale » ;
+    dès que les mentions existent, il devient **FACTURE** avec numéro
+    `{préfixe}{code}` (ex. `FAC-N62DZB`, doublon d'année corrigé).
+  - Accès : propriétaire de la réservation, hôte du bien, admin ;
+    anonyme 401, réservation inexistante 404. `?format=json` pour la
+    méta. Lien « Facture / Reçu » ajouté aux actions de réservation.
+  - Preuves ▶️ : 200 HTML owner/host/admin, 401 anonyme, 404 inconnu,
+    bascule REÇU→FACTURE après config puis retour REÇU après reset.
+- **T-117 — PRODUCT_ACCEPTANCE.md régénéré** : parcours réévalués sur
+  l'exécution réelle (smoke 91/91, curl, tests) ; le doc précédent
+  marquait ❌ des parcours livrés. Bilan : P1 fonctionnels ~100 % ;
+  restants explicitement hors-code (Stripe réel, E2E Playwright/Chromium).
+- Base de test nettoyée (réservations 2031/2027 supprimées, réglage
+  `billing` remis aux valeurs par défaut : mentions légales vides).
+- Preuves globales : 🔨 typecheck 0 err · build OK · lint 0 err (15
+  warnings préexistants) · 🧪 **228/228** tests · ▶️ smoke **91/91** ·
+  ai:check 19 OK / 1 warn (R7, sync STATE en fin de session) / 0 fail.

@@ -52,6 +52,21 @@ export const billingSchema = z.object({
   taxRate: z.number().min(0).max(1),
   /** Commission par défaut appliquée aux nouvelles propriétés (%). */
   defaultCommissionRate: z.number().min(0).max(100),
+  /**
+   * Mentions légales de la plateforme émettrice des factures (T-116).
+   * Toutes optionnelles : tant qu'elles ne sont pas renseignées, les
+   * documents générés portent la mention « document non conforme
+   * facturation légale » plutôt que de simuler une facture fiscale.
+   */
+  companyLegalName: z.string().max(150).default(""),
+  companyLegalId: z.string().max(80).default(""), // SIREN/SIRET/RCCM
+  vatNumber: z.string().max(80).default(""), // n° TVA intracommunautaire
+  companyAddress: z.string().max(300).default(""),
+  companyContactEmail: z.union([z.string().email(), z.literal("")]).default(""),
+  /** Préfixe des numéros de facture, ex : « FAC- ». */
+  invoicePrefix: z.string().max(20).default("FAC-"),
+  /** Texte libre en pied de facture (CGV, mentions, IBAN…). */
+  invoiceFooter: z.string().max(1000).default(""),
 });
 
 export const bestrewardsSchema = z.object({
@@ -152,6 +167,13 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
   billing: {
     taxRate: 0.1,
     defaultCommissionRate: 15,
+    companyLegalName: "",
+    companyLegalId: "",
+    vatNumber: "",
+    companyAddress: "",
+    companyContactEmail: "",
+    invoicePrefix: "FAC-",
+    invoiceFooter: "",
   },
   bestrewards: {
     thresholds: [5, 15],

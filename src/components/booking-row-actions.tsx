@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Download, XCircle, Loader2 } from "lucide-react";
+import { MessageSquare, FileText, XCircle, Loader2 } from "lucide-react";
 
 interface Props {
   bookingId: string;
@@ -77,37 +77,22 @@ export function BookingRowActions({
     }
   }
 
-  function downloadConfirmation() {
-    // Génère un .txt côté client (pas de PDF pour rester léger V1).
-    const content =
-      `MyBestBooking — Confirmation de réservation\n` +
-      `===========================================\n\n` +
-      `Référence : ${bookingReference}\n` +
-      `Statut    : ${status}\n\n` +
-      `Cet email confirme votre réservation. Un email détaillé\n` +
-      `a été envoyé à votre adresse. Retrouvez le détail complet\n` +
-      `dans "Mes réservations" sur mybestbooking.com.\n`;
-    const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${bookingReference}-confirmation.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
   return (
     <>
       <Button variant="ghost" size="sm" onClick={contactHost}>
         <MessageSquare className="w-4 h-4 mr-2" />
         Écrire à l&apos;hébergeur
       </Button>
-      <Button variant="ghost" size="sm" onClick={downloadConfirmation}>
-        <Download className="w-4 h-4 mr-2" />
-        Confirmation
-      </Button>
+      <a
+        href={`/api/bookings/${bookingId}/invoice`}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={`Voir la facture ou le reçu de la réservation ${bookingReference}`}
+        className="inline-flex items-center text-sm px-3 py-1.5 rounded-lg bg-transparent hover:bg-gray-100 text-gray-700 transition-all duration-200"
+      >
+        <FileText className="w-4 h-4 mr-2" />
+        Facture / Reçu
+      </a>
       {status === "confirmed" && (
         <Button
           variant="ghost"

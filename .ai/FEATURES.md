@@ -134,7 +134,8 @@ modification de code.
 | Répondre à un avis | ✅ | `POST /api/reviews/[id]/reply` + `<HostReplyForm>` branchée dans /dashboard/reviews (T-016) | T-016 |
 | Répondre à un message | ✅ | POST /api/messages + `<MessageComposer>` (T-015, T-029 pièces jointes) | T-015, T-029 |
 | Analytics revenus / occupation | ✅ | Page `/dashboard/analytics` : revenus + occupation 30j. ADR/RevPAR avancés = 🎯 backlog métier | T-015 |
-| Facturation (billing) | ✅ | Dashboard + export CSV privé des réservations payées non annulées. Facture légale/payout restent hors périmètre comptable. | T-015, T-104 |
+| Facturation (billing) | ✅ | Dashboard + export CSV privé des réservations payées non annulées. | T-015, T-104 |
+| **Facture / reçu imprimable** | ✅ | `GET /api/bookings/[id]/invoice` → document HTML imprimable (PDF via navigateur, zéro dépendance). Mentions légales configurables dans les réglages admin (raison sociale, SIREN/SIRET/RCCM, TVA, adresse, email, préfixe, pied de page). Tant qu'elles sont absentes : **REÇU** avec mention « non conforme facturation légale » ; dès que société + n° légal sont saisis : **FACTURE** numérotée. Accès owner/hôte/admin (401 anonyme, 404 inexistant). Lien « Facture / Reçu » dans les actions de réservation (T-116) | T-116 |
 | Notifications email/webhook sur nouvelle réservation | ✅ | Email host via template `bookingHostNotification` dans `POST /api/bookings` (T-013). Webhook Stripe pour paiement dans `/api/webhooks/stripe` (T-020) | T-013, T-020 |
 
 ## Admin

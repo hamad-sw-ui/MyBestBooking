@@ -51,10 +51,21 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 - ⚪ ~~**T-115 (L/P3)** — Sous-notes d'avis~~ ✅ livré 2026-08-27 : 6 critères
   (propreté, confort, emplacement, équipements, accueil, rapport qualité-prix)
   alimentent les champs déjà acceptés par `POST /api/reviews`.
-- 🟡 **T-116 (C/P2)** — Factures légales (PDF, mentions TVA) : seul l'export
-  CSV opérationnel existe ; évolution finance à cadrer.
-- 🔵 **T-117 (T/P3)** — Régénérer `PRODUCT_ACCEPTANCE.md` (obsolète : marque
-  ❌ des parcours déjà livrés et testés à l'exécution).
+- ⚪ ~~**T-116 (C/P2)** — Factures légales~~ ✅ livré 2026-08-27 :
+  `GET /api/bookings/[id]/invoice` produit un document HTML imprimable
+  (→ PDF via le navigateur, zéro dépendance). Réglages `billing` étendus
+  (raison sociale, SIREN/SIRET/RCCM, n° TVA, adresse, email, préfixe,
+  pied de facture) éditables dans le panneau admin. Si ces mentions ne
+  sont pas renseignées, le document est un **« REÇU »** portant la mention
+  explicite « non conforme facturation légale » ; dès que société + n°
+  légal sont saisis, il devient **« FACTURE »** numérotée. Accès réservé
+  au voyageur propriétaire, à l'hôte du bien et à l'admin (401 anonyme,
+  404 inexistant). Vérifié à l'exécution (200 owner/host/admin, bascule
+  REÇU↔FACTURE). Aucune fausse facture fiscale tant que non configuré.
+- ⚪ ~~**T-117 (T/P3)** — Régénérer `PRODUCT_ACCEPTANCE.md`~~ ✅ fait
+  2026-08-27 : parcours réévalués sur l'exécution réelle (smoke 91/91,
+  curl, tests). Couverture P1 fonctionnelle ~100 % ; restent hors-code la
+  validation Stripe réelle et les E2E Playwright (Chromium indisponible).
 - ⚪ **T-118 (T/P3)** — FEATURES.md annonçait un composant `<ImageUploader>`
   (`src/components/ui/image-uploader.tsx`) inexistant ; corriger la doc.
 

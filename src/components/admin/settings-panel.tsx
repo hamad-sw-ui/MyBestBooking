@@ -206,6 +206,67 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
           propriétés qui possèdent une commission spécifique gardent leur
           valeur.
         </p>
+
+        <div className="border-t border-gray-100 pt-4 mt-2">
+          <h3 className="text-sm font-semibold text-gray-800 mb-1">Mentions légales des factures</h3>
+          <p className="text-xs text-gray-500 mb-4">
+            Renseigner la société émettrice et ses numéros légaux fait passer
+            les documents de « Reçu » à « Facture » conforme. Tant que ces
+            champs sont vides, le document porte la mention « non conforme
+            facturation légale ».
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label="Raison sociale"
+              value={v.companyLegalName ?? ""}
+              onChange={(e) => setV({ ...v, companyLegalName: e.target.value })}
+              placeholder="MyBestBooking SAS"
+            />
+            <Input
+              label="SIREN / SIRET / RCCM"
+              value={v.companyLegalId ?? ""}
+              onChange={(e) => setV({ ...v, companyLegalId: e.target.value })}
+              placeholder="SIRET 123 456 789 00010"
+            />
+            <Input
+              label="N° de TVA"
+              value={v.vatNumber ?? ""}
+              onChange={(e) => setV({ ...v, vatNumber: e.target.value })}
+              placeholder="FR 12 345678901"
+            />
+            <Input
+              label="Email de contact facturation"
+              type="email"
+              value={v.companyContactEmail ?? ""}
+              onChange={(e) => setV({ ...v, companyContactEmail: e.target.value })}
+              placeholder="facturation@exemple.com"
+            />
+            <Input
+              label="Préfixe des numéros de facture"
+              value={v.invoicePrefix ?? "FAC-"}
+              onChange={(e) => setV({ ...v, invoicePrefix: e.target.value })}
+            />
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Adresse de la société</label>
+            <textarea
+              className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900"
+              rows={2}
+              value={v.companyAddress ?? ""}
+              onChange={(e) => setV({ ...v, companyAddress: e.target.value })}
+              placeholder="12 rue du Plateau, 75019 Paris, France"
+            />
+          </div>
+          <div className="mt-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pied de facture (CGV, pénalités, IBAN…)</label>
+            <textarea
+              className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900"
+              rows={3}
+              value={v.invoiceFooter ?? ""}
+              onChange={(e) => setV({ ...v, invoiceFooter: e.target.value })}
+            />
+          </div>
+        </div>
       </CardContent>
       <CardFooter className="flex items-center gap-3">
         <Button onClick={save} disabled={isPending}>Enregistrer</Button>
