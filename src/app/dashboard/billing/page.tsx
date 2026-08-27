@@ -245,9 +245,13 @@ export default async function BillingPage() {
                         ) : (
                           <Badge variant="warning">En attente</Badge>
                         )}
-                        <button className="text-[#1B3A6B] hover:underline">
-                          <Download className="w-4 h-4" />
-                        </button>
+                        <a
+                          href="/api/dashboard/billing/export"
+                          aria-label={`Télécharger l'export CSV de la période ${invoice.period}`}
+                          className="inline-flex items-center text-[#1B3A6B] hover:underline"
+                        >
+                          <Download className="w-4 h-4" aria-hidden="true" />
+                        </a>
                       </div>
                     </div>
                   </div>

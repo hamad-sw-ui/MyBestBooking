@@ -37,6 +37,22 @@ Voir `CURRENT_TASK.md` pour la tâche active.
   `REPORTS/validation_T-112_2026-08-27.md`), rétention, support/ticketing,
   UX restantes, navigateur CI et upgrade dépendances.
 
+#### Écarts fonctionnels relevés à l'exécution (audit 2026-08-27, voir
+`REPORTS/audit_fonctionnel_2026-08-27_execution.md`)
+
+- 🔵 **T-113 (L/P2)** — Upload des photos d'annonce : `dashboard/properties/new`
+  demande une URL d'image ; réutiliser `POST /api/uploads` (déjà utilisé par
+  `message-composer`) via un `<input type="file">`, garder l'URL en alternative.
+- 🔵 **T-114 (L/P3)** — Page `/bestrewards` réellement personnalisée : afficher
+  niveau/wallet (`/api/auth/me`) et code de parrainage (`/api/users/me/referral`)
+  de l'utilisateur connecté ; la page est aujourd'hui purement descriptive.
+- ⚪ **T-115 (L/P3)** — Formulaire d'avis : exposer les 7 sous-notes
+  optionnelles déjà acceptées par `POST /api/reviews` (propreté, confort…).
+- 🟡 **T-116 (C/P2)** — Factures légales (PDF, mentions TVA) : seul l'export
+  CSV opérationnel existe ; évolution finance à cadrer.
+- 🔵 **T-117 (T/P3)** — Régénérer `PRODUCT_ACCEPTANCE.md` (obsolète : marque
+  ❌ des parcours déjà livrés et testés à l'exécution).
+
 ### Chantiers Sessions 5-7 (livrés)
 
 - ✅ **T-011** Framework v1.1.0 — livré Session 5
