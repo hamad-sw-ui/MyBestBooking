@@ -6,15 +6,45 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : `76fc5aa` (commit T-121 poussé ; le champ HEAD lui-même
+- **HEAD Git** : `d7b8f81` (commit T-122→T-124 poussé ; le champ HEAD lui-même
   est **à mettre à jour en fin de session** car un commit de doc ne peut pas
   contenir son propre hash — R7 rend alors 1 warn toléré, 0 fail).
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-121 (robustesse GET /api/properties :
-  bornage limit/offset/minRating/prix → 400 au lieu de 500, pagination
-  `total` fidèle, devise `currency`) — 2026-08-27.
-  Avant : T-120 (robustesse API JSON→400), T-119 (recherche & CTA),
-  T-116 (factures légales), T-117 (PRODUCT_ACCEPTANCE), T-112/113/114/115.
+- **Dernière tâche validée** : T-122/T-123/T-124 (4e audit) — validation UUID
+  des routes API dynamiques (400 au lieu de 500), **garde de rôle `/dashboard/*`
+  au plein-chargement** via rôle embarqué dans le JWT + proxy edge, pages RSC
+  par `[id]` en 404 propre ; migration `0016` (sessions.token → text) —
+  2026-08-27.
+  Avant : T-121 (robustesse GET /api/properties : bornage limit/offset/
+  minRating/prix → 400, pagination `total`, devise `currency`), T-120
+  (robustesse API JSON→400), T-119, T-116, T-117, T-112/113/114/115.
+
+## Preuves session 2026-08-27 (T-122/T-123/T-124)
+
+- 🔨 `tsc --noEmit` 0 erreur (vérifié après rebase) · `build` production OK ·
+  `lint` 0 erreur (15 warnings préexistants).
+- 🧪 `vitest` : **240/240** (37 fichiers) — dont **11 cas proxy rôles**
+  (customer→`/`, host admin-only→`/dashboard`, admin→200, token legacy
+  toléré) et **6 cas `isUuid`**.
+- ▶️ vérifié en **build de production** (`next start` :3100) ET en dev :
+  - T-123 (G2) : customer sur tout `/dashboard/*` → **307 vers `/`** ; host
+    sur `/dashboard/{users,settings,audit,promotions,promotions/new}` →
+    **307 vers `/dashboard`** ; host sur pages hôte (properties, rooms,
+    bookings, reviews, messages, analytics, billing) → **200** ; admin → 200
+    partout ; anonyme → 307 `/connexion`. Customer garde ses pages voyageur
+    (`/mon-compte`, `/mes-reservations`, `/mes-favoris`, `/messages`,
+    `/recherche`) → 200.
+  - T-122 (G1) : `/api/{rooms,properties,bookings}/abc` (+sous-routes,
+    attachments, price-alerts, promotions, reviews, suspend, validate) →
+    **400** ; UUID valide absent → **404** ; ressource réelle → **200**.
+  - T-124 (E2) : pages RSC `dashboard/{messages,bookings}`+`rooms/calendrier`
+    et `(main)/messages` avec id non-UUID → page **404 propre**, plus aucune
+    erreur Postgres `22P02` dans les logs.
+  - Migration `0016_sessions-token-text.sql` appliquée (colonne `token`
+    varchar(255)→text, corrige l'erreur `22001` à la connexion).
+- ▶️ smoke : **94/94** (aligné : promotions admin-only, host→307).
+- ai:check : **20 OK / 0 warn / 0 fail**. Données de test nettoyées
+  (34 réservations smoke supprimées).
 
 ## Preuves session 2026-08-27 (T-121)
 
