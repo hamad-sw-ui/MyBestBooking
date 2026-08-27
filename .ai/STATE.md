@@ -6,7 +6,7 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : `f630820` (poussé sur `arena/01a042cf-mybestbooking`, PR #2).
+- **HEAD Git** : `e51ea3b` (poussé sur `arena/01a042cf-mybestbooking`, PR #2).
 - **Version Framework** : AI-DOS 3.0.1
 - **Dernière tâche validée** : T-116 (facture/reçu légal imprimable avec
   mentions société/TVA configurables, reçu honnête sinon) et T-117
