@@ -6,14 +6,33 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : `8378ea7` (commit T-120 poussé ; le champ HEAD lui-même
-  est **à mettre à jour en fin de session** car un commit ne peut pas
+- **HEAD Git** : `76fc5aa` (commit T-121 poussé ; le champ HEAD lui-même
+  est **à mettre à jour en fin de session** car un commit de doc ne peut pas
   contenir son propre hash — R7 rend alors 1 warn toléré, 0 fail).
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-120 (robustesse API JSON→400, confirmation
-  mot de passe à l'inscription, message de compte suspendu) — 2026-08-27.
-  Avant : T-119 (recherche & CTA), T-116 (factures légales),
-  T-117 (PRODUCT_ACCEPTANCE), T-112/113/114/115.
+- **Dernière tâche validée** : T-121 (robustesse GET /api/properties :
+  bornage limit/offset/minRating/prix → 400 au lieu de 500, pagination
+  `total` fidèle, devise `currency`) — 2026-08-27.
+  Avant : T-120 (robustesse API JSON→400), T-119 (recherche & CTA),
+  T-116 (factures légales), T-117 (PRODUCT_ACCEPTANCE), T-112/113/114/115.
+
+## Preuves session 2026-08-27 (T-121)
+
+- 🔨 `typecheck` 0 erreur (après rebase, `tsc --noEmit` OK) · `build` OK ·
+  `lint` 0 erreur (15 warnings préexistants).
+- 🧪 `npm test` : **216 réussis / 12 skip** (intégration PG) / 0 échec.
+- ▶️ `npm run smoke` : **91/91** · `npm run ai:check` : **19 OK · 1 warn (R7) · 0 fail**.
+- Runtime (3e audit `REPORTS/audit_fonctionnel_profond3_2026-08-27.md`) :
+  F1 — `offset=-10`/`offset=abc`/`minRating=abc`/`minRating=99`/`minPrice=abc`
+  → **400** (avant 500) ; `limit=-5` borné (défaut 20), `limit=2` → 2 ;
+  F2 — réponse `{ properties, total, limit, offset }`, `total=8` cohérent
+  (offset 0/3/99), pagination en JS après tous les filtres ;
+  F3 — `currency:"EUR"` exposée avec `minPrice`.
+  Non-régression : `guests=2`→8, `guests=6`→0, `guests=-5/abc`→400,
+  `city=Paris`→2, `minPrice=99999`→0, prix 100–130→3, dates inversées→0,
+  `minRating=9`→3, tri `price_asc` croissant [89 … 148.33].
+  Page `/recherche` (SQL SSR propre) non touchée. Réservation de test
+  (`MBB-2026-VAE8EX`) nettoyée.
 
 ## Preuves session 2026-08-27 (T-120)
 
