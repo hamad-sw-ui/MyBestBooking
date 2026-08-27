@@ -97,6 +97,23 @@ Voir `CURRENT_TASK.md` pour la tâche active.
   - **E2** : un compte suspendu (soft-delete **réversible**) affichait
     « Ce compte a été supprimé » à la connexion → reformulé
     « Ce compte est désactivé. Contactez le support pour le réactiver. »
+- ⚪ ~~**T-121 (L/P2)** — Robustesse GET /api/properties + pagination/devise (3e audit)~~
+  ✅ livré 2026-08-27, suite à l'audit
+  `REPORTS/audit_fonctionnel_profond3_2026-08-27.md` :
+  - **F1** : paramètres numériques de `GET /api/properties` faisaient 500
+    (`?offset=-10` → « OFFSET must not be negative », `?minRating=abc` → cast
+    SQL échoué) ou étaient ignorés (`?limit=-5`). Désormais `limit` borné
+    (1–100, défaut 20), `offset` négatif/non numérique → **400**,
+    `minRating`/`minPrice`/`maxPrice` non numériques ou hors bornes → **400**.
+  - **F2** : réponse enrichie `{ properties, total, limit, offset }` ; la
+    pagination est appliquée APRÈS tous les filtres (prix JS, disponibilité,
+    distance, capacité) pour que `total` et la tranche soient cohérents.
+    Champs additifs (aucun appelant cassé).
+  - **F3** : chaque propriété expose `currency` (devise de la chambre la
+    moins chère) avec `minPrice`.
+  Non régressif : guests/ville/prix/dates/tri vérifiés à l'exécution ; page
+  `/recherche` (SQL SSR propre) non touchée. B4 (taux d'occupation) reste
+  en backlog.
 - ⚪ **T-118 (T/P3)** — FEATURES.md annonçait un composant `<ImageUploader>`
   (`src/components/ui/image-uploader.tsx`) inexistant ; corriger la doc.
 

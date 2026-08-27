@@ -362,3 +362,11 @@ fournisseur de test dans l’environnement.
   connexion d'un compte suspendu — « Ce compte a été supprimé » pour un
   soft-delete **réversible**. Reformulé « Ce compte est désactivé. Contactez
   le support pour le réactiver. » (changement de chaîne uniquement).
+
+- [x] **2026-08-27 — BUG-045** (L, T-121 / F1) : `GET /api/properties`
+  plantait en **500** sur paramètres numériques invalides : `?offset=-10` →
+  Postgres « OFFSET must not be negative » ; `?minRating=abc` →
+  « invalid input syntax for type numeric » ; `?limit=-5` était ignoré.
+  ▶️ après : `limit` borné (1–100, défaut 20), `offset` négatif/non
+  numérique → **400**, `minRating`/prix hors bornes ou non numériques →
+  **400**. Non-régressif (valeurs valides inchangées).

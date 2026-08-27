@@ -36,9 +36,54 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
     const minRating = searchParams.get("minRating");
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
     const search = searchParams.get("search");
+
+    // T-121 (F1) — borner/valider les paramètres numériques de pagination et
+    // de filtre. Avant, un `offset` négatif faisait planter Postgres
+    // (« OFFSET must not be negative » → 500) et un `minRating` non
+    // numérique (« abc ») faisait échouer le cast SQL (→ 500). On normalise
+    // ici pour répondre 400 proprement ou retomber sur une valeur sûre.
+    const parsePositiveInt = (raw: string | null, fallback: number, max: number): number => {
+      if (raw === null) return fallback;
+      const n = Number.parseInt(raw, 10);
+      if (!Number.isFinite(n) || n < 1) return fallback;
+      return Math.min(n, max);
+    };
+    const limit = parsePositiveInt(searchParams.get("limit"), 20, 100);
+    const offsetRaw = searchParams.get("offset");
+    if (offsetRaw !== null) {
+      const o = Number.parseInt(offsetRaw, 10);
+      if (!Number.isFinite(o) || o < 0) {
+        return NextResponse.json(
+          { error: "Le paramètre offset doit être un entier positif ou nul" },
+          { status: 400 },
+        );
+      }
+    }
+    const offset = Math.max(0, Number.parseInt(offsetRaw || "0", 10) || 0);
+    if (minRating !== null) {
+      const r = Number(minRating);
+      if (!Number.isFinite(r) || r < 0 || r > 10) {
+        return NextResponse.json(
+          { error: "Le paramètre minRating doit être un nombre entre 0 et 10" },
+          { status: 400 },
+        );
+      }
+    }
+    const minRatingNum = minRating !== null ? Number(minRating) : null;
+    // Prix : un filtre de prix non numérique est rejeté (sinon parseFloat →
+    // NaN produisait un filtrage incohérent).
+    for (const [name, val] of [["minPrice", minPrice], ["maxPrice", maxPrice]] as const) {
+      if (val !== null) {
+        const p = Number(val);
+        if (!Number.isFinite(p) || p < 0) {
+          return NextResponse.json(
+            { error: `Le paramètre ${name} doit être un nombre positif` },
+            { status: 400 },
+          );
+        }
+      }
+    }
     // T-026 : nouveaux filtres
     const amenitiesParam = searchParams.get("amenities"); // csv
     const guests = searchParams.get("guests");
@@ -88,8 +133,8 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(properties.type, type));
     }
 
-    if (minRating) {
-      conditions.push(sql`${properties.averageRating} >= ${minRating}`);
+    if (minRatingNum !== null) {
+      conditions.push(sql`${properties.averageRating} >= ${minRatingNum}`);
     }
 
     if (search) {
@@ -137,12 +182,18 @@ export async function GET(request: NextRequest) {
     }
 
     // ── T-004 (BUG-004) : remplace le N+1 par un unique LEFT JOIN
-    //    + agrégation SQL. Le filtre price est appliqué avec un
-    //    HAVING plutôt qu'en JS.
+    //    + agrégation SQL. Le filtre price est appliqué en JS après
+    //    agrégation, ainsi que la disponibilité et la distance. Pour que le
+    //    `total` (T-121/F2) et la pagination soient fidèles à TOUS les
+    //    filtres (pas seulement ceux de la requête SQL), on récupère un
+    //    jeu large borné, on applique les filtres JS, puis on pagine en JS.
     const rows = await db
       .select({
         property: properties,
         minPrice: min(rooms.basePrice),
+        // T-121 (F3) — devise de la chambre la moins chère (toutes les
+        // chambres d'une propriété partagent la même devise en pratique).
+        currency: min(rooms.currency),
         roomCount: count(rooms.id),
       })
       .from(properties)
@@ -150,14 +201,28 @@ export async function GET(request: NextRequest) {
       .where(and(...conditions))
       .groupBy(properties.id)
       .orderBy(orderClause)
-      .limit(limit)
-      .offset(offset);
+      .limit(1000);
 
     let filteredResults = rows.map((r) => ({
       ...r.property,
       minPrice: r.minPrice !== null ? parseFloat(r.minPrice as string) : null,
+      currency: (r.currency as string | null) ?? "EUR",
       roomCount: Number(r.roomCount),
-    }));
+}));
+
+    // T-119 (A1) — corrige le bug du LEFT JOIN : quand un filtre de
+    // capacité (guests) ou de prix est demandé, une propriété dont
+    // AUCUNE chambre ne satisfait la condition ressort avec roomCount=0 /
+    // minPrice=null à cause du LEFT JOIN. On l'explicite : elle n'est pas
+    // bookable pour ces critères → on la retire des résultats.
+    if (guestsNum !== null || minPrice !== null) {
+      filteredResults = filteredResults.filter((p) => p.roomCount > 0);
+    }
+    // T-119 (A2) — dates demandées mais incohérentes/invalides : aucune
+    // disponibilité possible → liste vide (au lieu d'ignorer le filtre).
+    if (!stayDatesValid) {
+      filteredResults = [];
+    }
 
     // T-119 (A1) — corrige le bug du LEFT JOIN : quand un filtre de
     // capacité (guests) ou de prix est demandé, une propriété dont
@@ -242,6 +307,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // T-121 (F2) — `total` compte l'ensemble filtré (avant pagination), pour
+    // permettre à un client de construire une pagination. La pagination est
+    // appliquée en JS, APRÈS tous les filtres (prix, disponibilité, distance,
+    // capacité) afin que `total` et la tranche renvoyée soient cohérents.
+    const total = filteredResults.length;
+    const paginated = filteredResults.slice(offset, offset + limit);
+
     // BUG-021 (Session 11 paranoid) : filtrer les champs métier
     // sensibles (commissionRate, validatedBy, hostId interne) pour
     // les listings publics. Un admin peut lire tous les champs via
@@ -249,8 +321,8 @@ export async function GET(request: NextRequest) {
     const currentUser = await getCurrentUser();
     const isAdmin = currentUser?.role === "admin";
     const sanitized = isAdmin
-      ? filteredResults
-      : filteredResults.map((p) => {
+      ? paginated
+      : paginated.map((p) => {
           const {
             commissionRate: _cr,
             validatedBy: _vb,
@@ -259,7 +331,14 @@ export async function GET(request: NextRequest) {
           } = p as typeof p & { commissionRate?: unknown; validatedBy?: unknown; hostId?: unknown };
           return safe;
         });
-    return NextResponse.json({ properties: sanitized });
+    // T-121 (F2) — métadonnées de pagination additifs (aucun appelant
+    // existant cassé). La page /recherche garde son propre SQL/SSR.
+    return NextResponse.json({
+      properties: sanitized,
+      total,
+      limit,
+      offset,
+    });
   } catch (error) {
     console.error("Error fetching properties:", error);
     return NextResponse.json(

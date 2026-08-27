@@ -2226,3 +2226,24 @@ Non régressif : aucune route valide modifiée, aucun contrat changé.
   préexistants) · 🧪 **228/228** tests · ▶️ smoke **91/91** ·
   ai:check 19 OK / 1 warn R7 (toléré) / 0 fail. Réservation de test smoke
   nettoyée ; compte de test suspendu puis réactivé.
+
+## Session — T-121 robustesse GET /api/properties + pagination/devise (2026-08-27)
+
+Suite au 3e audit (`REPORTS/audit_fonctionnel_profond3_2026-08-27.md`) :
+- **F1 (BUG-045)** — `limit` borné (1–100, défaut 20) ; `offset` négatif/non
+  numérique → **400** (avant 500 « OFFSET must not be negative ») ;
+  `minRating` non numérique/hors 0–10 → **400** (avant 500 cast SQL) ;
+  `minPrice`/`maxPrice` non numériques → **400** ; `limit` négatif borné au
+  défaut au lieu d'être ignoré.
+- **F2** — réponse `{ properties, total, limit, offset }` ; pagination en JS
+  APRÈS tous les filtres (prix, dispo, distance, capacité) pour un `total`
+  cohérent. Champs additifs, aucun appelant cassé.
+- **F3** — chaque propriété expose `currency` (devise de la chambre la moins
+  chère) avec `minPrice`.
+
+Non régressif (guests/ville/prix/dates/tri vérifiés ; /recherche SSR non
+touchée). Environnement reconstitué après réinitialisation de la sandbox
+(npm install, .env.local régénéré, Postgres relancé, schéma poussé, seed).
+- Preuves : 🔨 typecheck 0 err · build OK · lint 0 err (15 warnings
+  préexistants) · 🧪 216 tests (+12 skip intégration) · ▶️ smoke **91/91** ·
+  ai:check **20 OK / 0 warn / 0 fail**.

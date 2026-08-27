@@ -38,6 +38,7 @@ modification de code.
 |---|---|---|---|
 | Liste properties actives paginée | ✅ | `GET /api/properties` + limit/offset | T-004 |
 | Filtres découverte et pagination | ✅ | `/recherche` : ville, dates, type, voyageurs, équipement, prix min/max sur une même chambre, tri, `COUNT(*)`, dernière page réelle et ordre stable (`properties.id`). | T-004, T-026, T-104, T-107 |
+| API liste `GET /api/properties` robuste | ✅ | Réponse `{ properties, total, limit, offset }` (pagination fidèle après tous les filtres), chaque propriété expose `minPrice` + `currency`. Paramètres validés/bornés : `limit` 1–100, `offset` ≥ 0, `minRating` 0–10, prix ≥ 0 → **400** sur valeur aberrante (avant : 500). (T-121) | T-121 |
 | Filtre par équipements (`amenities`) | ✅ | `GET /api/properties?amenities=wifi,pool` : filtre JSONB `@>` PostgreSQL (T-026). ▶️ 4 properties trouvées avec wifi+pool | T-026 |
 | Filtre par dates (disponibilité) | ✅ | `GET /api/properties?checkIn=X&checkOut=Y` : exclut les properties dont toutes les rooms sont bookées ou stop-sell (T-026) | T-026 |
 | Filtre par nombre de voyageurs | ✅ | `?guests=N` filtre `rooms.maxOccupancy >= N` ; les hébergements sans chambre compatible sont **exclus** (`roomCount=0` retiré, T-119 corrige le LEFT JOIN). `guests` invalide (négatif/non numérique) → 400, dates inversées → liste vide. Champ « Voyageurs » présent sur la home ET borné sur la carte de réservation selon la capacité réelle (T-119) | T-026, T-119 |

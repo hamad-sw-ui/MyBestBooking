@@ -131,3 +131,4 @@ preuve **rejouable** (commande shell, requête curl, test qui passe)
 incombe à celui qui a marqué l'item `VALIDÉ`. Si l'environnement a évolué
 et que la preuve n'est plus rejouable, il faut le **dire** et proposer une
 preuve équivalente à jour, pas prétendre que rien n'a changé.
+| T-121 | Robustesse GET /api/properties (F1 bornage limit/offset/minRating/prix → 400 au lieu de 500), pagination `total` fidèle (F2), devise `currency` (F3) | L | LIVRÉ (VALIDÉ) | 🔨 typecheck 0 err/build · lint 0 err · 🧪 216 tests (+12 skip intégration) · ▶️ `offset=-10`/`minRating=abc`/`minPrice=abc` → **400** (avant 500) ; `limit=-5` borné à 20 ; réponse `{properties,total,limit,offset}` ; pagination fidèle après filtres (limit=3&offset=3 → 3, total=8) ; `currency:"EUR"` ; non-régression guests/ville/prix/dates/tri (guests=6→0, guests=-5→400, prix trié croissant) · smoke 91/91 · ai:check 20/0/0 | `79c19cf`+ | `.ai/REPORTS/audit_fonctionnel_profond3_2026-08-27.md` |
