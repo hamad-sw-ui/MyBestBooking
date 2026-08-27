@@ -76,6 +76,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     return NextResponse.json({ ratePlan: created }, { status: 201 });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }
@@ -101,6 +105,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const [ratePlan] = await db.update(ratePlans).set(update).where(eq(ratePlans.id, data.id)).returning();
     return NextResponse.json({ ratePlan });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     console.error("rate-plans PATCH error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

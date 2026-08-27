@@ -40,6 +40,10 @@ export async function POST(request: NextRequest) {
     await db.update(users).set({ twoFactorPendingSecret: secret.base32, updatedAt: new Date() }).where(eq(users.id, user.id));
     return NextResponse.json({ secret: secret.base32 });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
     console.error("[2fa/setup]", error);
     return NextResponse.json({ error: "Erreur" }, { status: 500 });

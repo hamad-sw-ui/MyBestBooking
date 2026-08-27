@@ -15,6 +15,9 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isHost, setIsHost] = useState(false);
+  // T-120 (E1) : confirmation du mot de passe (validation purement client,
+  // le backend ne reçoit que `password`).
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -26,6 +29,13 @@ export default function RegisterPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // T-120 (E1) : les deux saisies doivent correspondre avant l'appel API.
+    if (formData.password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/auth/register", {
@@ -152,6 +162,21 @@ export default function RegisterPage() {
             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
           </button>
         </div>
+
+        {/* T-120 (E1) : confirmation du mot de passe */}
+        <Input
+          type={showPassword ? "text" : "password"}
+          label="Confirmer le mot de passe"
+          placeholder="Ressaisissez votre mot de passe"
+          icon={<Lock className="w-5 h-5" />}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          minLength={8}
+          // Le navigateur signale l'incohérence avant même la soumission.
+          pattern={formData.password ? formData.password.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : undefined}
+          title="Les mots de passe doivent correspondre"
+        />
 
         <p className="text-xs text-gray-500">
           En créant un compte, vous acceptez nos{" "}

@@ -38,6 +38,10 @@ export async function PATCH(
     if (!updated) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
     return NextResponse.json({ promotion: updated });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }

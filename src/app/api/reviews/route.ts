@@ -80,6 +80,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({ reviews: results });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Paramètres invalides" }, { status: 400 });
     console.error("Error fetching reviews:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
@@ -129,6 +133,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ review: created }, { status: 201 });
   } catch (error) {
     if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
     console.error("Error creating review:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

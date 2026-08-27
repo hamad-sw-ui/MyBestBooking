@@ -82,6 +82,21 @@ Voir `CURRENT_TASK.md` pour la tâche active.
     « Voyageurs » (1–8), déjà compris par /recherche.
   Toutes non régressives (champs optionnels, validation additive) ; B4
   (taux d'occupation analytics) reste en backlog.
+- ⚪ ~~**T-120 (L/P2)** — Robustesse API & finitions auth (2e audit)~~
+  ✅ livré 2026-08-27, suite à l'audit
+  `REPORTS/audit_fonctionnel_profond2_2026-08-27.md` :
+  - **D1** : un corps JSON vide/mal formé sur les routes d'écriture
+    provoquait une fausse erreur **500** (`SyntaxError` de
+    `request.json()` non capturée). Désormais toutes les routes répondent
+    **400** « Corps de requête invalide ou manquant » (garde-fou
+    `instanceof SyntaxError` devant le test ZodError, sur les 32 routes
+    d'écriture). Le chemin valide est inchangé.
+  - **E1** : formulaire d'inscription enrichi d'un champ
+    « Confirmer le mot de passe » avec vérification client (et `pattern`
+    HTML) — aucune modification d'API.
+  - **E2** : un compte suspendu (soft-delete **réversible**) affichait
+    « Ce compte a été supprimé » à la connexion → reformulé
+    « Ce compte est désactivé. Contactez le support pour le réactiver. »
 - ⚪ **T-118 (T/P3)** — FEATURES.md annonçait un composant `<ImageUploader>`
   (`src/components/ui/image-uploader.tsx`) inexistant ; corriger la doc.
 

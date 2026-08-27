@@ -81,6 +81,10 @@ export async function POST(request: NextRequest) {
     await db.update(users).set({ priceAlertEnabled: true, updatedAt: new Date() }).where(eq(users.id, user.id));
     return NextResponse.json({ alert }, { status: 201 });
   } catch (e) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (e instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (e instanceof z.ZodError) {
       return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
     }

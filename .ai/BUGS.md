@@ -347,3 +347,18 @@ fournisseur de test dans l’environnement.
   (`checkOut<=checkIn`) faisaient sauter le filtre de disponibilité.
   ▶️ après : `guests` invalide → **400** « entier positif », dates incohérentes
   → **liste vide**. Non-régressif (requêtes valides inchangées).
+
+- [x] **2026-08-27 — BUG-043** (L, T-120 / D1) : corps de requête JSON vide ou
+  mal formé sur les routes d'écriture → erreur serveur **500** au lieu de 400.
+  Cause : `await request.json()` lève une `SyntaxError` que les blocs `catch`
+  ne filtraient pas (ils ne traitaient que `ZodError`). ▶️ preuve avant :
+  `POST /api/auth/register`, `/bookings`, `/reviews`, `/wishlists`,
+  `/auth/2fa/setup`, `/messages`, `/promotions` avec corps vide ou `{name:}`
+  → **500**. Correctif : garde-fou `if (e instanceof SyntaxError) → 400`
+  inséré devant le test ZodError sur les 32 routes d'écriture (chemin valide
+  inchangé). ▶️ après : ces mêmes appels → **400** « Corps de requête
+  invalide ou manquant » ; les appels valides restent 200.
+- [x] **2026-08-27 — BUG-044** (L, T-120 / E2) : libellé trompeur à la
+  connexion d'un compte suspendu — « Ce compte a été supprimé » pour un
+  soft-delete **réversible**. Reformulé « Ce compte est désactivé. Contactez
+  le support pour le réactiver. » (changement de chaîne uniquement).

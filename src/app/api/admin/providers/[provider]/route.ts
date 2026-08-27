@@ -56,6 +56,10 @@ export async function PUT(
     });
     return NextResponse.json({ provider: await providerMetadata(rawProvider) });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
     if (error instanceof ProviderCredentialsError) return NextResponse.json({ error: error.message }, { status: 503 });
     console.error("[admin/providers] PUT", error);
@@ -136,6 +140,10 @@ export async function DELETE(
     });
     return NextResponse.json({ provider: await providerMetadata(rawProvider) });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
     console.error("[admin/providers] DELETE", error);
     return NextResponse.json({ error: "Impossible de réinitialiser le provider" }, { status: 500 });

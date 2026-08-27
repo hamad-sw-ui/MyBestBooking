@@ -31,6 +31,10 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ ok: true, reencrypted: result.reencrypted });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: "Confirmation de rotation requise" }, { status: 400 });
     if (error instanceof ProviderCredentialsError) return NextResponse.json({ error: error.message }, { status: 503 });
     console.error("[admin/providers/rotation]", error);

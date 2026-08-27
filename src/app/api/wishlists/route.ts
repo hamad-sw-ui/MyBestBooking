@@ -154,6 +154,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ wishlist: newWishlist }, { status: 201 });
     }
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { error: error.issues[0].message },
@@ -191,6 +195,10 @@ export async function PATCH(request: NextRequest) {
       .returning();
     return NextResponse.json({ wishlist: updated });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     console.error("Error updating wishlist:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

@@ -2200,3 +2200,29 @@ laissé en backlog métier.
   préexistants) · 🧪 **228/228** tests · ▶️ smoke **91/91** ·
   ai:check 19 OK / 1 warn R7 (toléré) / 0 fail. Réservation de test smoke
   nettoyée en base.
+
+## Session — T-120 robustesse API & finitions auth (2026-08-27)
+
+Suite au 2e audit profond (`REPORTS/audit_fonctionnel_profond2_2026-08-27.md`) :
+
+- **D1 (BUG-043)** — les routes d'écriture renvoyaient **500** sur un corps
+  JSON vide/mal formé (`request.json()` lève SyntaxError, non capturée par
+  les catch qui ne géraient que ZodError). Garde-fou `instanceof SyntaxError
+  → 400` ajouté devant le test ZodError sur les 32 routes d'écriture (36
+  blocs). Le chemin valide est strictement inchangé. Helper
+  `src/lib/http.ts` (`readJsonBody`/`isJsonObject`) ajouté pour usage futur.
+  ▶️ register/bookings/reviews/wishlists/2fa/login/messages/promotions :
+  corps vide ou `{name:}` → **400** (avant 500) ; appels valides → 200.
+- **E1** — formulaire d'inscription : champ « Confirmer le mot de passe » +
+  contrôle de correspondance côté client (et `pattern` HTML). Aucun
+  changement d'API (le backend ne reçoit que `password`).
+- **E2 (BUG-044)** — compte suspendu (soft-delete réversible) : message
+  « Ce compte a été supprimé » → « Ce compte est désactivé. Contactez le
+  support pour le réactiver. »
+
+Non régressif : aucune route valide modifiée, aucun contrat changé.
+
+- Preuves : 🔨 typecheck 0 err · build OK · lint 0 err (15 warnings
+  préexistants) · 🧪 **228/228** tests · ▶️ smoke **91/91** ·
+  ai:check 19 OK / 1 warn R7 (toléré) / 0 fail. Réservation de test smoke
+  nettoyée ; compte de test suspendu puis réactivé.

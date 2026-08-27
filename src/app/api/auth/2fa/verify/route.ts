@@ -28,6 +28,10 @@ export async function POST(request: NextRequest) {
     if (result.state === "invalid") return NextResponse.json({ error: "Code invalide" }, { status: 400 });
     return NextResponse.json({ enabled: true });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
     console.error("[2fa/verify]", error);
     return NextResponse.json({ error: "Erreur" }, { status: 500 });

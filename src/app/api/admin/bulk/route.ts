@@ -465,6 +465,10 @@ export async function POST(request: NextRequest) {
   try {
     data = bulkSchema.parse(await request.json());
   } catch (e) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (e instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         { error: e.issues[0]?.message ?? "Payload invalide" },

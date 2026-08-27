@@ -157,6 +157,10 @@ export async function POST(request: NextRequest) {
     if (error instanceof Error && error.message === "ATTACHMENT_UNAVAILABLE") {
       return NextResponse.json({ error: "Pièce jointe introuvable ou déjà utilisée" }, { status: 400 });
     }
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     }

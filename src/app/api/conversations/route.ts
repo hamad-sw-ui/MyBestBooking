@@ -64,6 +64,10 @@ export async function POST(request: NextRequest) {
     if (!conversation) throw new Error("CONVERSATION_CREATE_FAILED");
     return NextResponse.json({ conversation }, { status: 201 });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
     console.error("conversations POST error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
