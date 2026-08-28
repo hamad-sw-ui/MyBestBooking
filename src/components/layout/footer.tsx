@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 /**
  * Footer public. Ne référence QUE des routes qui existent réellement
@@ -6,18 +8,19 @@ import Link from "next/link";
  * Les liens marketing/entreprise non implémentés sont volontairement
  * remplacés par du texte grisé plutôt que par des liens morts.
  */
-export function Footer() {
+export async function Footer() {
+  const t = makeT(await getServerLocale());
   return (
     <footer className="bg-[#1B3A6B] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
           {/* Découvrir */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">Découvrir</h3>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.discover")}</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/recherche" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Rechercher un hébergement
+                  {t("footer.searchAccommodation")}
                 </Link>
               </li>
               <li>
@@ -27,7 +30,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/aide" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Centre d&apos;aide
+                  {t("footer.helpCenter")}
                 </Link>
               </li>
             </ul>
@@ -35,26 +38,26 @@ export function Footer() {
 
           {/* Voyageurs */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">Voyageurs</h3>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.travelers")}</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/mon-compte" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Mon compte
+                  {t("nav.myAccount")}
                 </Link>
               </li>
               <li>
                 <Link href="/mes-reservations" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Mes réservations
+                  {t("nav.bookings")}
                 </Link>
               </li>
               <li>
                 <Link href="/mes-favoris" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Mes favoris
+                  {t("nav.favorites")}
                 </Link>
               </li>
               <li>
                 <Link href="/messages" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Messagerie
+                  {t("footer.messaging")}
                 </Link>
               </li>
             </ul>
@@ -62,21 +65,21 @@ export function Footer() {
 
           {/* Hébergeurs */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">Hébergeurs</h3>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.hosts")}</h3>
             <ul className="space-y-2">
               <li>
                 <Link href="/dashboard/properties/new" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Ajouter mon hébergement
+                  {t("footer.addProperty")}
                 </Link>
               </li>
               <li>
                 <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Espace hébergeur
+                  {t("footer.hostArea")}
                 </Link>
               </li>
               <li>
                 <Link href="/inscription" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Créer un compte
+                  {t("footer.createAccount")}
                 </Link>
               </li>
             </ul>
@@ -84,7 +87,7 @@ export function Footer() {
 
           {/* Contact */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">Contact</h3>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.contact")}</h3>
             <ul className="space-y-2">
               <li>
                 <a
@@ -116,19 +119,19 @@ export function Footer() {
               <span className="text-xs text-gray-400">.com</span>
             </div>
             <p className="text-sm text-gray-400">
-              &quot;Réservez mieux. Voyagez plus.&quot;
+              &ldquo;{t("footer.tagline")}&rdquo;
             </p>
             <div className="flex items-center gap-4 text-sm text-gray-400">
               <Link href="/mentions-legales" className="hover:text-white transition-colors">
-                Mentions légales
+                {t("footer.legal")}
               </Link>
               <Link href="/confidentialite" className="hover:text-white transition-colors">
-                Confidentialité
+                {t("footer.privacy")}
               </Link>
             </div>
           </div>
           <p className="text-center text-xs text-gray-500 mt-6">
-            © 2025 mybestbooking.com — Tous droits réservés
+            {t("footer.rights")}
           </p>
         </div>
       </div>

@@ -8,6 +8,8 @@ import { useState } from "react";
 import type { User as UserType } from "@/db/schema";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 interface HeaderProps {
   user: UserType | null;
@@ -15,6 +17,8 @@ interface HeaderProps {
 
 export function Header({ user }: HeaderProps) {
   const pathname = usePathname();
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -40,7 +44,7 @@ export function Header({ user }: HeaderProps) {
                 isActive("/recherche") ? "text-[#1B3A6B]" : "text-gray-600 hover:text-[#1B3A6B]"
               )}
             >
-              Hébergements
+              {t("nav.accommodations")}
             </Link>
             <Link
               href="/bestrewards"
@@ -58,7 +62,7 @@ export function Header({ user }: HeaderProps) {
                 isActive("/aide") ? "text-[#1B3A6B]" : "text-gray-600 hover:text-[#1B3A6B]"
               )}
             >
-              Aide
+              {t("nav.help")}
             </Link>
           </nav>
 
@@ -69,7 +73,7 @@ export function Header({ user }: HeaderProps) {
               <div className="relative">
                 <button
                   onClick={() => setUserMenuOpen(!userMenuOpen)}
-                  aria-label="Menu utilisateur"
+                  aria-label={t("nav.userMenu")}
                   aria-expanded={userMenuOpen}
                   aria-haspopup="menu"
                   className="flex items-center gap-2 p-2 rounded-full hover:bg-gray-100 transition-colors"
@@ -98,7 +102,7 @@ export function Header({ user }: HeaderProps) {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <User className="w-4 h-4" />
-                        Mon compte
+                        {t("nav.myAccount")}
                       </Link>
                       <Link
                         href="/mes-reservations"
@@ -106,7 +110,7 @@ export function Header({ user }: HeaderProps) {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <Calendar className="w-4 h-4" />
-                        Mes réservations
+                        {t("nav.bookings")}
                       </Link>
                       <Link
                         href="/mes-favoris"
@@ -114,7 +118,7 @@ export function Header({ user }: HeaderProps) {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <Heart className="w-4 h-4" />
-                        Mes favoris
+                        {t("nav.favorites")}
                       </Link>
                       <Link
                         href="/messages"
@@ -122,7 +126,7 @@ export function Header({ user }: HeaderProps) {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <MessageSquare className="w-4 h-4" />
-                        Messages
+                        {t("nav.messages")}
                         <UnreadMessagesBadge viewerRole={user.role} userId={user.id} />
                       </Link>
                       {(user.role === "host" || user.role === "admin") && (
@@ -131,7 +135,7 @@ export function Header({ user }: HeaderProps) {
                           className="flex items-center gap-3 px-4 py-2 text-sm text-[#1B3A6B] font-medium hover:bg-gray-50 border-t border-gray-100 mt-2 pt-2"
                           onClick={() => setUserMenuOpen(false)}
                         >
-                          Dashboard
+                          {t("nav.dashboard")}
                         </Link>
                       )}
                       <form action="/api/auth/logout" method="POST">
@@ -140,7 +144,7 @@ export function Header({ user }: HeaderProps) {
                           className="flex items-center gap-3 w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
                         >
                           <LogOut className="w-4 h-4" />
-                          Déconnexion
+                          {t("nav.logout")}
                         </button>
                       </form>
                     </div>
@@ -153,13 +157,13 @@ export function Header({ user }: HeaderProps) {
                   href="/connexion"
                   className="text-sm font-medium text-gray-600 hover:text-[#1B3A6B] transition-colors"
                 >
-                  Se connecter
+                  {t("nav.login")}
                 </Link>
                 <Link
                   href="/inscription"
                   className="text-sm font-medium px-4 py-2 bg-[#1B3A6B] text-white rounded-lg hover:bg-[#152d54] transition-colors"
                 >
-                  S&apos;inscrire
+                  {t("nav.signup")}
                 </Link>
               </div>
             )}
@@ -167,7 +171,7 @@ export function Header({ user }: HeaderProps) {
             {/* Mobile menu button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? "Fermer le menu" : "Ouvrir le menu"}
+              aria-label={mobileMenuOpen ? t("nav.closeMenu") : t("nav.openMenu")}
               aria-expanded={mobileMenuOpen}
               className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
             >
@@ -186,7 +190,7 @@ export function Header({ user }: HeaderProps) {
               className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Hébergements
+              {t("nav.accommodations")}
             </Link>
             <Link
               href="/bestrewards"
@@ -200,21 +204,21 @@ export function Header({ user }: HeaderProps) {
               className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg"
               onClick={() => setMobileMenuOpen(false)}
             >
-              Aide
+              {t("nav.help")}
             </Link>
             {!user ? (
               <div className="pt-4 border-t border-gray-100 space-y-2">
-                <Link href="/connexion" className="block w-full px-4 py-2 text-center text-sm font-medium text-[#1B3A6B] border border-[#1B3A6B] rounded-lg" onClick={() => setMobileMenuOpen(false)}>Se connecter</Link>
-                <Link href="/inscription" className="block w-full px-4 py-2 text-center text-sm font-medium text-white bg-[#1B3A6B] rounded-lg" onClick={() => setMobileMenuOpen(false)}>S&apos;inscrire</Link>
+                <Link href="/connexion" className="block w-full px-4 py-2 text-center text-sm font-medium text-[#1B3A6B] border border-[#1B3A6B] rounded-lg" onClick={() => setMobileMenuOpen(false)}>{t("nav.login")}</Link>
+                <Link href="/inscription" className="block w-full px-4 py-2 text-center text-sm font-medium text-white bg-[#1B3A6B] rounded-lg" onClick={() => setMobileMenuOpen(false)}>{t("nav.signup")}</Link>
               </div>
             ) : (
               <div className="pt-4 border-t border-gray-100 space-y-1">
-                <Link href="/mon-compte" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Mon compte</Link>
-                <Link href="/mes-reservations" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Mes réservations</Link>
-                <Link href="/mes-favoris" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Mes favoris</Link>
-                <Link href="/messages" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Messages</Link>
-                {(user.role === "host" || user.role === "admin") && <Link href="/dashboard" className="block px-4 py-2 text-sm font-medium text-[#1B3A6B] hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>Dashboard</Link>}
-                <form action="/api/auth/logout" method="POST" className="pt-2"><button type="submit" className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">Déconnexion</button></form>
+                <Link href="/mon-compte" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>{t("nav.myAccount")}</Link>
+                <Link href="/mes-reservations" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>{t("nav.bookings")}</Link>
+                <Link href="/mes-favoris" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>{t("nav.favorites")}</Link>
+                <Link href="/messages" className="block px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>{t("nav.messages")}</Link>
+                {(user.role === "host" || user.role === "admin") && <Link href="/dashboard" className="block px-4 py-2 text-sm font-medium text-[#1B3A6B] hover:bg-gray-50 rounded-lg" onClick={() => setMobileMenuOpen(false)}>{t("nav.dashboard")}</Link>}
+                <form action="/api/auth/logout" method="POST" className="pt-2"><button type="submit" className="w-full text-left px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg">{t("nav.logout")}</button></form>
               </div>
             )}
           </div>

@@ -39,6 +39,8 @@ import { PropertyBookingCard } from "@/components/property-booking-card";
 import { LocalizedRoomPrice } from "@/components/localized-room-price";
 import { LocalizedDescription } from "@/components/localized-description";
 import { ContactHostButton } from "@/components/contact-host-button";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import {
   Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
@@ -117,6 +119,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
   const { slug } = await params;
   const query = await searchParams;
   const viewer = await getCurrentUser();
+  const t = makeT(await getServerLocale());
   const data = await getProperty(slug, viewer?.id, viewer?.role === "admin");
 
   if (!data) {
@@ -268,7 +271,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="w-4 h-4 text-[#F5A623]" />
-                    <span>Avis vérifiés</span>
+                    <span>{t("property.verifiedReviews")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4 text-[#1B3A6B]" />
@@ -281,7 +284,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
             {/* Description */}
             <Card>
               <CardHeader>
-                <CardTitle>À propos</CardTitle>
+                <CardTitle>{t("property.about")}</CardTitle>
               </CardHeader>
               <CardContent>
                 <LocalizedDescription
@@ -295,7 +298,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
             {amenities.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Équipements</CardTitle>
+                  <CardTitle>{t("property.amenities")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -313,11 +316,11 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
             {/* Rooms */}
             <Card>
               <CardHeader>
-                <CardTitle>Chambres disponibles</CardTitle>
+                <CardTitle>{t("property.rooms")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {propertyRooms.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">Aucune chambre disponible pour le moment</p>
+                  <p className="text-gray-500 text-center py-8">{t("property.noRooms")}</p>
                 ) : (
                   <div className="space-y-4">
                     {propertyRooms.map((room) => (
@@ -335,7 +338,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                             {room.sizeSqm && <span>{room.sizeSqm} m²</span>}
                           </div>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="info">Politique : {property.cancellationPolicy === "free" ? "annulation gratuite" : property.cancellationPolicy === "non_refundable" ? "non remboursable" : property.cancellationPolicy ?? "voir le tarif"}</Badge>
+                            <Badge variant="info">{property.cancellationPolicy === "free" ? t("property.cancellationFree") : property.cancellationPolicy === "non_refundable" ? t("property.cancellationNonRefundable") : property.cancellationPolicy ?? t("property.cancellationSeeRate")}</Badge>
                             {room.amenities && (room.amenities as string[]).includes("wifi") && (
                               <Badge variant="info">WiFi</Badge>
                             )}
@@ -367,7 +370,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Avis vérifiés ✓</CardTitle>
+                  <CardTitle>{t("property.verifiedReviews")} ✓</CardTitle>
                   {rating && (
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1 px-3 py-1 bg-[#1B3A6B] text-white font-semibold rounded">
@@ -385,7 +388,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 {propertyReviews.length === 0 ? (
                   <div className="text-center py-8">
                     <Award className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-500">Nouveau partenaire — pas encore d&apos;avis</p>
+                    <p className="text-gray-500">{t("property.newPartner")}</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -425,7 +428,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                         )}
                         {review.hostReply && (
                           <div className="mt-3 ml-3 border-l-2 border-[#1B3A6B] bg-blue-50/60 p-3 rounded-r-lg">
-                            <p className="text-xs font-semibold text-[#1B3A6B]">Réponse de l&apos;hébergement</p>
+                            <p className="text-xs font-semibold text-[#1B3A6B]">{t("property.hostReply")}</p>
                             <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{review.hostReply}</p>
                           </div>
                         )}
@@ -481,7 +484,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
               {/* Policies */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Politiques</CardTitle>
+                  <CardTitle className="text-base">{t("property.policies")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">

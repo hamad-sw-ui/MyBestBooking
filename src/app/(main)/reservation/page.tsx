@@ -3,6 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -61,6 +63,8 @@ function ReservationPageInner() {
   const roomId = reservationParams?.roomId ?? null;
 
   const [step, setStep] = useState(1);
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -287,7 +291,7 @@ function ReservationPageInner() {
           <CardContent className="text-center py-12">
             <p className="text-gray-500 mb-4">Informations de réservation manquantes</p>
             <Link href="/recherche">
-              <Button>Rechercher un hébergement</Button>
+              <Button>{t("footer.searchAccommodation")}</Button>
             </Link>
           </CardContent>
         </Card>
@@ -304,10 +308,10 @@ function ReservationPageInner() {
   }
 
   const steps = [
-    { num: 1, label: "Votre sélection" },
-    { num: 2, label: "Vos informations" },
-    { num: 3, label: "Paiement" },
-    { num: 4, label: "Confirmé !" },
+    { num: 1, label: t("reservation.stepSelection") },
+    { num: 2, label: t("reservation.stepInfo") },
+    { num: 3, label: t("reservation.stepPayment") },
+    { num: 4, label: t("reservation.stepDone") },
   ];
 
   return (
@@ -423,7 +427,7 @@ function ReservationPageInner() {
             {step === 2 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Vos informations</CardTitle>
+                  <CardTitle>{t("reservation.yourInfo")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
@@ -544,7 +548,7 @@ function ReservationPageInner() {
                     </Button>
                     <Button onClick={handleSubmit} loading={submitting} size="lg" variant="secondary">
                       <Lock className="w-4 h-4 mr-2" />
-                      Continuer vers le paiement {total > 0 ? `€${total.toFixed(2)}` : ""}
+                      {t("reservation.continuePayment")} {total > 0 ? `€${total.toFixed(2)}` : ""}
                     </Button>
                   </CardFooter>
                 )}
@@ -568,12 +572,12 @@ function ReservationPageInner() {
                   </p>
 
                   <div className="inline-block p-6 bg-gray-50 rounded-xl mb-6">
-                    <p className="text-sm text-gray-500 mb-1">Référence</p>
+                    <p className="text-sm text-gray-500 mb-1">{t("reservation.refLabel")}</p>
                     <p className="text-2xl font-mono font-bold text-[#1B3A6B]">{confirmation.bookingReference}</p>
                     <div className="mt-4 space-y-1 text-sm text-gray-600">
                       <p>🏨 {property?.name}, {property?.city}</p>
                       <p>📅 {formData.checkIn} → {formData.checkOut}</p>
-                      <p>💰 {confirmation.paymentPending ? "Montant à confirmer" : "Total payé"} : €{parseFloat(confirmation.total).toFixed(2)} tout inclus</p>
+                      <p>💰 {confirmation.paymentPending ? t("reservation.amountToConfirm") : t("reservation.totalPaid")} : €{parseFloat(confirmation.total).toFixed(2)} {t("reservation.allInclusive")}</p>
                     </div>
                   </div>
 
@@ -665,7 +669,7 @@ function ReservationPageInner() {
                         </div>
                       )}
                       <div className="flex justify-between text-sm mb-2">
-                        <span className="text-gray-600">Taxes et frais</span>
+                        <span className="text-gray-600">{t("reservation.taxesFees")}</span>
                         <span>€{taxes.toFixed(2)}</span>
                       </div>
                       {promo && (
@@ -688,7 +692,7 @@ function ReservationPageInner() {
                           />
                           <div className="text-xs">
                             <p className="font-medium text-amber-900">
-                              💰 Utiliser mon crédit wallet (€{walletBalance.toFixed(2)} dispo)
+                              💰 {t("reservation.walletAvailable")} (€{walletBalance.toFixed(2)} {t("reservation.walletAvail")})
                             </p>
                             <p className="text-amber-700">
                               Sera appliqué en réduction sur le total, plafonné au montant restant.
@@ -715,7 +719,7 @@ function ReservationPageInner() {
                       {/* T-030 : bannière mode invité */}
                       {!isAuthed && guestMode && (
                         <div className="mt-3 p-2 rounded-lg bg-blue-50 border border-blue-200 text-xs text-blue-900">
-                          👤 <strong>Mode invité</strong> — vous réservez sans créer de compte.
+                          👤 <strong>{t("reservation.guestMode")}</strong> — {t("reservation.guestModeDesc")}
                           Un email de confirmation vous sera envoyé.{" "}
                           <a href="/inscription" className="underline">Créer un compte plutôt</a>
                         </div>

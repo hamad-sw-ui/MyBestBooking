@@ -9,6 +9,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { PropertyCard } from "@/components/property-card";
 import { WishlistActions } from "@/components/wishlist-actions";
 import { CreateWishlistButton } from "@/components/create-wishlist-button";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 import { PriceAlertsSection } from "@/components/price-alerts-section";
 import { Heart, Bell } from "lucide-react";
 import Link from "next/link";
@@ -44,6 +46,7 @@ async function getWishlists(userId: string) {
 
 export default async function FavoritesPage() {
   const user = await getCurrentUser();
+  const t = makeT(await getServerLocale());
 
   if (!user) {
     redirect("/connexion");
@@ -61,10 +64,10 @@ export default async function FavoritesPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Mes favoris
+              {t("fav.title")}
             </h1>
             <p className="text-gray-600 mt-1">
-              {allFavoriteProperties.length} hébergement{allFavoriteProperties.length !== 1 ? "s" : ""} sauvegardé{allFavoriteProperties.length !== 1 ? "s" : ""}
+              {allFavoriteProperties.length} {allFavoriteProperties.length === 1 ? t("fav.countOne") : t("fav.countMany")}
             </p>
           </div>
           <CreateWishlistButton />
@@ -74,11 +77,11 @@ export default async function FavoritesPage() {
           <Card>
             <EmptyState
               icon={<Heart className="w-8 h-8" />}
-              title="Aucun favori"
-              description="Sauvegardez vos hébergements préférés pour les retrouver facilement"
+              title={t("fav.emptyTitle")}
+              description={t("fav.emptyDesc")}
               action={
                 <Link href="/recherche">
-                  <Button>Explorer les hébergements</Button>
+                  <Button>{t("bookings.explore")}</Button>
                 </Link>
               }
               className="py-16"
@@ -99,8 +102,7 @@ export default async function FavoritesPage() {
 
             <p className="text-xs text-gray-500 flex items-center gap-1">
               <Bell className="w-3 h-3" />
-              Vos alertes prix sont gérées ci-dessus. Ajoutez-en depuis
-              la fiche d&apos;un hébergement (bouton « Suivre le prix »).
+              {t("fav.alertsManaged")}
             </p>
 
             {/* Wishlists */}
@@ -167,9 +169,9 @@ export default async function FavoritesPage() {
               <Bell className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-blue-900">Alertes prix</h3>
+              <h3 className="font-semibold text-blue-900">{t("fav.priceAlertsTitle")}</h3>
               <p className="text-sm text-blue-700 mt-1">
-                Activez les alertes pour être notifié quand le prix d&apos;un de vos favoris baisse.
+                {t("fav.priceAlertsDesc")}
                 Vous recevrez un email dès qu&apos;une bonne affaire se présente !
               </p>
             </div>

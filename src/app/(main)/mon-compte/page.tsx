@@ -12,6 +12,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 import { UserAvatar } from "@/components/user-avatar";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { TwoFactorSection } from "@/components/two-factor-section";
@@ -38,6 +40,8 @@ interface UserData {
 
 export default function MyAccountPage() {
   const router = useRouter();
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -83,8 +87,8 @@ export default function MyAccountPage() {
   const tabs = [
     { id: "profile", label: "Profil", icon: User },
     { id: "bestrewards", label: "BestRewards", icon: Award },
-    { id: "security", label: "Sécurité", icon: Shield },
-    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "security", label: t("account.security"), icon: Shield },
+    { id: "notifications", label: t("account.notifications"), icon: Bell },
   ];
 
   return (
@@ -140,7 +144,7 @@ export default function MyAccountPage() {
                 {/* Profile Info */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Informations personnelles</CardTitle>
+                    <CardTitle>{t("account.personalInfo")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-4 mb-6">
@@ -239,7 +243,7 @@ export default function MyAccountPage() {
                       </Link>
                     </div>
                     <p className="text-sm text-gray-500 mt-3">
-                      Cochez « Utiliser mon crédit wallet » sur la page de réservation.
+                      {t("account.walletHint")}
                     </p>
                   </CardContent>
                 </Card>
@@ -289,7 +293,7 @@ export default function MyAccountPage() {
               <>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Mot de passe</CardTitle>
+                    <CardTitle>{t("account.password")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ChangePasswordForm />

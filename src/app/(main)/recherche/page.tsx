@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
 import { RATES_FROM_EUR, priceBoundToStorage } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 import { SearchPriceFilter } from "@/components/search-price-filter";
 
 interface SearchPageProps {
@@ -166,6 +168,7 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
+  const t = makeT(await getServerLocale());
   const search = await searchProperties(params);
   const { results, total, page: currentPage, totalPages } = search;
   const pageQuery = new URLSearchParams();
@@ -180,14 +183,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   if (params.checkOut) stayQuery.set("checkOut", params.checkOut);
 
   const propertyTypes = [
-    { value: "", label: "Tous les types" },
-    { value: "hotel", label: "Hôtel" },
-    { value: "apartment", label: "Appartement" },
-    { value: "villa", label: "Villa" },
-    { value: "hostel", label: "Auberge" },
-    { value: "guesthouse", label: "Maison d'hôtes" },
-    { value: "riad", label: "Riad" },
-    { value: "resort", label: "Resort" },
+    { value: "", label: t("search.allTypes") },
+    { value: "hotel", label: t("search.type.hotel") },
+    { value: "apartment", label: t("search.type.apartment") },
+    { value: "villa", label: t("search.type.villa") },
+    { value: "hostel", label: t("search.type.hostel") },
+    { value: "guesthouse", label: t("search.type.guesthouse") },
+    { value: "riad", label: t("search.type.riad") },
+    { value: "resort", label: t("search.type.resort") },
   ];
 
   return (
@@ -197,20 +200,20 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <form method="get" action="/recherche" className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Destination</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.destination")}</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   name="city"
                   defaultValue={params.city}
-                  placeholder="Ville ou hébergement"
+                  placeholder={t("search.destinationPlaceholder")}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
                 />
               </div>
             </div>
             <div className="w-[140px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Arrivée</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.arrival")}</label>
               <input
                 type="date"
                 name="checkIn"
@@ -219,7 +222,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               />
             </div>
             <div className="w-[140px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Départ</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.departure")}</label>
               <input
                 type="date"
                 name="checkOut"
@@ -228,7 +231,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               />
             </div>
             <div className="w-[160px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.type")}</label>
               <select
                 name="type"
                 defaultValue={params.type}
@@ -242,25 +245,25 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               </select>
             </div>
             <div className="w-[110px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Voyageurs</label>
-              <input type="number" name="guests" min="1" defaultValue={params.guests} placeholder="Pers." className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.travelers")}</label>
+              <input type="number" name="guests" min="1" defaultValue={params.guests} placeholder={t("search.travelersPlaceholder")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
             </div>
             <div className="w-[150px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Équipement</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.amenity")}</label>
               <select name="amenity" defaultValue={params.amenity ?? ""} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="">Tous</option><option value="wifi">WiFi</option><option value="parking">Parking</option><option value="pool">Piscine</option><option value="spa">Spa</option><option value="restaurant">Restaurant</option>
+                <option value="">{t("search.amenity.all")}</option><option value="wifi">WiFi</option><option value="parking">Parking</option><option value="pool">{t("amenity.pool")}</option><option value="spa">Spa</option><option value="restaurant">{t("amenity.restaurant")}</option>
               </select>
             </div>
             <div className="w-[150px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Tri</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.sort")}</label>
               <select name="sort" defaultValue={params.sort ?? "rating"} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option>
+                <option value="rating">{t("search.sort.rating")}</option><option value="price_asc">{t("search.sort.priceAsc")}</option><option value="price_desc">{t("search.sort.priceDesc")}</option>
               </select>
             </div>
             <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} />
             <Button type="submit" size="md">
               <Search className="w-4 h-4 mr-2" />
-              Rechercher
+              {t("search.button")}
             </Button>
           </form>
         </div>
@@ -273,13 +276,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <div>
             <h1 className="text-xl font-bold text-gray-900">
               {params.city ? (
-                <>Hébergements à {params.city}</>
+                <>{t("search.accommodationsIn")} {params.city}</>
               ) : (
-                <>Tous les hébergements</>
+                <>{t("search.allAccommodations")}</>
               )}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {total} résultat{total !== 1 ? "s" : ""} · page {currentPage} sur {totalPages}
+              {total} {total !== 1 ? t("search.resultsPlural") : t("search.resultsCount")} · {t("search.pageShort")} {currentPage} {t("search.pageOf")} {totalPages}
             </p>
           </div>
         </div>
@@ -288,14 +291,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         {results.length === 0 ? (
           <EmptyState
             icon={<Building2 className="w-8 h-8" />}
-            title="Aucun résultat"
+            title={t("search.noResults")}
             description={params.city 
-              ? `Aucun hébergement trouvé à "${params.city}". Essayez une autre destination.`
-              : "Commencez votre recherche pour trouver des hébergements."
+              ? t("search.noneInCity").replace("{city}", params.city)
+              : t("search.startSearch")
             }
             action={
               <Link href="/">
-                <Button variant="outline">Retour à l&apos;accueil</Button>
+                <Button variant="outline">{t("search.backHome")}</Button>
               </Link>
             }
           />
@@ -306,9 +309,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <PropertyCard key={property.id} property={property} searchQuery={stayQuery.toString()} />
               ))}
             </div>
-            <nav aria-label="Pagination des résultats" className="mt-8 flex justify-center gap-3">
-              {currentPage > 1 && <Link href={pageHref(currentPage - 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Précédent</Link>}
-              {currentPage < totalPages && <Link href={pageHref(currentPage + 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">Suivant</Link>}
+            <nav aria-label={t("search.pagination")} className="mt-8 flex justify-center gap-3">
+              {currentPage > 1 && <Link href={pageHref(currentPage - 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">{t("search.prev")}</Link>}
+              {currentPage < totalPages && <Link href={pageHref(currentPage + 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">{t("search.next")}</Link>}
             </nav>
           </>
         )}

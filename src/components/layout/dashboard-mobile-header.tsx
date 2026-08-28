@@ -11,6 +11,8 @@ import {
 import { useState } from "react";
 import type { User } from "@/db/schema";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 interface DashboardMobileHeaderProps {
   user: User;
@@ -18,32 +20,34 @@ interface DashboardMobileHeaderProps {
 
 export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
   const pathname = usePathname();
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [open, setOpen] = useState(false);
 
   const isAdmin = user.role === "admin";
 
   const links = isAdmin
     ? [
-        { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
-        { href: "/dashboard/properties", icon: Building2, label: "Hébergements" },
-        { href: "/dashboard/bookings", icon: Calendar, label: "Réservations" },
-        { href: "/dashboard/users", icon: Users, label: "Utilisateurs" },
-        { href: "/dashboard/reviews", icon: Star, label: "Avis" },
-        { href: "/dashboard/promotions", icon: Tag, label: "Promotions" },
-        { href: "/dashboard/analytics", icon: BarChart3, label: "Statistiques" },
-        { href: "/dashboard/billing", icon: CreditCard, label: "Facturation" },
-        { href: "/dashboard/audit", icon: ScrollText, label: "Journal d'audit" },
-        { href: "/dashboard/settings", icon: Settings, label: "Paramètres" },
+        { href: "/dashboard", icon: LayoutDashboard, label: t("dash.overview") },
+        { href: "/dashboard/properties", icon: Building2, label: t("dash.properties") },
+        { href: "/dashboard/bookings", icon: Calendar, label: t("dash.bookings") },
+        { href: "/dashboard/users", icon: Users, label: t("dash.users") },
+        { href: "/dashboard/reviews", icon: Star, label: t("dash.reviews") },
+        { href: "/dashboard/promotions", icon: Tag, label: t("dash.promotions") },
+        { href: "/dashboard/analytics", icon: BarChart3, label: t("dash.analytics") },
+        { href: "/dashboard/billing", icon: CreditCard, label: t("dash.billing") },
+        { href: "/dashboard/audit", icon: ScrollText, label: t("dash.audit") },
+        { href: "/dashboard/settings", icon: Settings, label: t("dash.settings") },
       ]
     : [
-        { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
-        { href: "/dashboard/properties", icon: Building2, label: "Hébergements" },
-        { href: "/dashboard/rooms", icon: BedDouble, label: "Chambres" },
-        { href: "/dashboard/bookings", icon: Calendar, label: "Réservations" },
-        { href: "/dashboard/reviews", icon: Star, label: "Avis" },
-        { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
-        { href: "/dashboard/analytics", icon: BarChart3, label: "Statistiques" },
-        { href: "/dashboard/billing", icon: CreditCard, label: "Facturation" },
+        { href: "/dashboard", icon: LayoutDashboard, label: t("dash.overview") },
+        { href: "/dashboard/properties", icon: Building2, label: t("dash.properties") },
+        { href: "/dashboard/rooms", icon: BedDouble, label: t("dash.rooms") },
+        { href: "/dashboard/bookings", icon: Calendar, label: t("dash.bookings") },
+        { href: "/dashboard/reviews", icon: Star, label: t("dash.reviews") },
+        { href: "/dashboard/messages", icon: MessageSquare, label: t("dash.messages") },
+        { href: "/dashboard/analytics", icon: BarChart3, label: t("dash.analytics") },
+        { href: "/dashboard/billing", icon: CreditCard, label: t("dash.billing") },
       ];
 
   return (
@@ -76,7 +80,7 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
                 </div>
                 <div>
                   <p className="text-sm text-white font-medium truncate">{user.firstName} {user.lastName}</p>
-                  <p className="text-xs text-white/60 capitalize">{user.role === "admin" ? "Administrateur" : "Hébergeur"}</p>
+                  <p className="text-xs text-white/60 capitalize">{user.role === "admin" ? t("dash.roleAdmin") : t("dash.roleHost")}</p>
                 </div>
               </div>
             </div>
@@ -116,7 +120,7 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white"
               >
                 <HelpCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">Aide</span>
+                <span className="text-sm font-medium">{t("dash.help")}</span>
               </Link>
               <form action="/api/auth/logout" method="POST">
                 <button

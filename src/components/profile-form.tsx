@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 interface Props {
   initial: {
@@ -23,6 +25,8 @@ interface Props {
  */
 export function ProfileForm({ initial }: Props) {
   const router = useRouter();
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [form, setForm] = useState({
     firstName: initial.firstName,
     lastName: initial.lastName,
@@ -84,28 +88,28 @@ export function ProfileForm({ initial }: Props) {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <label htmlFor="pf-first" className="block text-sm font-medium text-gray-700 mb-1">Prénom</label>
+          <label htmlFor="pf-first" className="block text-sm font-medium text-gray-700 mb-1">{t("auth.firstName")}</label>
           <input id="pf-first" required minLength={2} value={form.firstName} onChange={(e) => set("firstName", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
         </div>
         <div>
-          <label htmlFor="pf-last" className="block text-sm font-medium text-gray-700 mb-1">Nom</label>
+          <label htmlFor="pf-last" className="block text-sm font-medium text-gray-700 mb-1">{t("auth.lastName")}</label>
           <input id="pf-last" required minLength={2} value={form.lastName} onChange={(e) => set("lastName", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
         </div>
         <div>
-          <label htmlFor="pf-phone" className="block text-sm font-medium text-gray-700 mb-1">Téléphone</label>
+          <label htmlFor="pf-phone" className="block text-sm font-medium text-gray-700 mb-1">{t("account.phone")}</label>
           <input id="pf-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+33 6 00 00 00 00" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
         </div>
         <div>
-          <label htmlFor="pf-country" className="block text-sm font-medium text-gray-700 mb-1">Pays (ISO-2)</label>
+          <label htmlFor="pf-country" className="block text-sm font-medium text-gray-700 mb-1">{t("account.country")}</label>
           <input id="pf-country" maxLength={2} value={form.country} onChange={(e) => set("country", e.target.value.toUpperCase())} placeholder="FR" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
         </div>
         <div className="md:col-span-2">
-          <label htmlFor="pf-avatar" className="block text-sm font-medium text-gray-700 mb-1">Photo de profil (URL)</label>
+          <label htmlFor="pf-avatar" className="block text-sm font-medium text-gray-700 mb-1">{t("account.avatar")}</label>
           <input id="pf-avatar" type="url" value={form.avatarUrl} onChange={(e) => set("avatarUrl", e.target.value)} placeholder="https://…/photo.jpg" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
-          <p className="mt-1 text-xs text-gray-400">Laissez vide pour afficher vos initiales. URL d&apos;image publique.</p>
+          <p className="mt-1 text-xs text-gray-400">{t("account.avatarHint")}</p>
         </div>
         <div>
-          <label htmlFor="pf-lang" className="block text-sm font-medium text-gray-700 mb-1">Langue</label>
+          <label htmlFor="pf-lang" className="block text-sm font-medium text-gray-700 mb-1">{t("account.language")}</label>
           <select id="pf-lang" value={form.language} onChange={(e) => set("language", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]">
             <option value="fr">Français</option>
             <option value="en">English</option>
@@ -116,7 +120,7 @@ export function ProfileForm({ initial }: Props) {
           <p className="mt-1 text-xs text-gray-400">Applique les libellés traduits et les descriptions en anglais. L&apos;arabe reste en français en V1.</p>
         </div>
         <div>
-          <label htmlFor="pf-currency" className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
+          <label htmlFor="pf-currency" className="block text-sm font-medium text-gray-700 mb-1">{t("account.currency")}</label>
           <select id="pf-currency" value={form.currency} onChange={(e) => set("currency", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]">
             <option value="EUR">EUR</option>
             <option value="USD">USD</option>
@@ -130,7 +134,7 @@ export function ProfileForm({ initial }: Props) {
           <p className="mt-1 text-xs text-gray-400">Aperçu des prix converti (taux indicatifs) ; paiement en devise de l&apos;hébergement.</p>
         </div>
         <div>
-          <label htmlFor="pf-tz" className="block text-sm font-medium text-gray-700 mb-1">Fuseau horaire</label>
+          <label htmlFor="pf-tz" className="block text-sm font-medium text-gray-700 mb-1">{t("account.timezone")}</label>
           <select id="pf-tz" value={form.timezone} onChange={(e) => set("timezone", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]">
             <option value="UTC">UTC</option>
             <option value="Europe/Paris">Europe/Paris</option>
@@ -147,7 +151,7 @@ export function ProfileForm({ initial }: Props) {
       </div>
       <div className="flex items-center gap-3">
         <button type="submit" disabled={loading} className="px-6 py-2 bg-[#FF5A5F] text-white font-medium rounded-lg hover:bg-[#e54a4f] disabled:opacity-50">
-          {loading ? "Enregistrement…" : "Enregistrer"}
+          {loading ? t("action.loading") : t("action.save")}
         </button>
         {saved && <span className="text-sm text-green-600">Modifications enregistrées ✓</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}

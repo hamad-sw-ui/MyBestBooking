@@ -24,6 +24,8 @@ import {
 import { useState } from "react";
 import type { User } from "@/db/schema";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 interface DashboardSidebarProps {
   user: User;
@@ -31,33 +33,35 @@ interface DashboardSidebarProps {
 
 export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname();
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [collapsed, setCollapsed] = useState(false);
 
   const isAdmin = user.role === "admin";
   const isHost = user.role === "host" || isAdmin;
 
   const hostLinks = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
-    { href: "/dashboard/properties", icon: Building2, label: "Hébergements" },
-    { href: "/dashboard/rooms", icon: BedDouble, label: "Chambres" },
-    { href: "/dashboard/bookings", icon: Calendar, label: "Réservations" },
-    { href: "/dashboard/reviews", icon: Star, label: "Avis" },
-    { href: "/dashboard/messages", icon: MessageSquare, label: "Messages" },
-    { href: "/dashboard/analytics", icon: BarChart3, label: "Statistiques" },
-    { href: "/dashboard/billing", icon: CreditCard, label: "Facturation" },
+    { href: "/dashboard", icon: LayoutDashboard, label: t("dash.overview") },
+    { href: "/dashboard/properties", icon: Building2, label: t("dash.properties") },
+    { href: "/dashboard/rooms", icon: BedDouble, label: t("dash.rooms") },
+    { href: "/dashboard/bookings", icon: Calendar, label: t("dash.bookings") },
+    { href: "/dashboard/reviews", icon: Star, label: t("dash.reviews") },
+    { href: "/dashboard/messages", icon: MessageSquare, label: t("dash.messages") },
+    { href: "/dashboard/analytics", icon: BarChart3, label: t("dash.analytics") },
+    { href: "/dashboard/billing", icon: CreditCard, label: t("dash.billing") },
   ];
 
   const adminLinks = [
-    { href: "/dashboard", icon: LayoutDashboard, label: "Tableau de bord" },
-    { href: "/dashboard/properties", icon: Building2, label: "Hébergements" },
-    { href: "/dashboard/bookings", icon: Calendar, label: "Réservations" },
-    { href: "/dashboard/users", icon: Users, label: "Utilisateurs" },
-    { href: "/dashboard/reviews", icon: Star, label: "Avis" },
-    { href: "/dashboard/promotions", icon: Tag, label: "Promotions" },
-    { href: "/dashboard/analytics", icon: BarChart3, label: "Statistiques" },
-    { href: "/dashboard/billing", icon: CreditCard, label: "Facturation" },
-    { href: "/dashboard/audit", icon: ScrollText, label: "Journal d'audit" },
-    { href: "/dashboard/settings", icon: Settings, label: "Paramètres" },
+    { href: "/dashboard", icon: LayoutDashboard, label: t("dash.overview") },
+    { href: "/dashboard/properties", icon: Building2, label: t("dash.properties") },
+    { href: "/dashboard/bookings", icon: Calendar, label: t("dash.bookings") },
+    { href: "/dashboard/users", icon: Users, label: t("dash.users") },
+    { href: "/dashboard/reviews", icon: Star, label: t("dash.reviews") },
+    { href: "/dashboard/promotions", icon: Tag, label: t("dash.promotions") },
+    { href: "/dashboard/analytics", icon: BarChart3, label: t("dash.analytics") },
+    { href: "/dashboard/billing", icon: CreditCard, label: t("dash.billing") },
+    { href: "/dashboard/audit", icon: ScrollText, label: t("dash.audit") },
+    { href: "/dashboard/settings", icon: Settings, label: t("dash.settings") },
   ];
 
   const links = isAdmin ? adminLinks : (isHost ? hostLinks : []);
@@ -135,10 +139,10 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
             "flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors",
             collapsed && "justify-center"
           )}
-          title={collapsed ? "Aide" : undefined}
+          title={collapsed ? t("dash.help") : undefined}
         >
           <HelpCircle className="w-5 h-5 flex-shrink-0" />
-          {!collapsed && <span className="text-sm font-medium">Aide</span>}
+          {!collapsed && <span className="text-sm font-medium">{t("dash.help")}</span>}
         </Link>
         
         <form action="/api/auth/logout" method="POST">

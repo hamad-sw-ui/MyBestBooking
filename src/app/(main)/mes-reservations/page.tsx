@@ -11,6 +11,8 @@ import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
 import { Calendar, MapPin, Star } from "lucide-react";
 import Link from "next/link";
 import { BookingRowActions } from "@/components/booking-row-actions";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getMyBookings(userId: string) {
   return db
@@ -38,7 +40,8 @@ async function getMyBookings(userId: string) {
 
 export default async function MyBookingsPage() {
   const user = await getCurrentUser();
-  
+  const t = makeT(await getServerLocale());
+
   if (!user) {
     redirect("/connexion");
   }
@@ -46,11 +49,11 @@ export default async function MyBookingsPage() {
   const myBookings = await getMyBookings(user.id);
 
   const statusLabels: Record<string, string> = {
-    pending: "En attente",
-    confirmed: "Confirmée",
-    cancelled: "Annulée",
-    completed: "Terminée",
-    no_show: "No-show",
+    pending: t("status.pending"),
+    confirmed: t("status.confirmed"),
+    cancelled: t("status.cancelled"),
+    completed: t("status.completed"),
+    no_show: t("status.no_show"),
   };
 
   // Separate upcoming and past bookings
@@ -64,10 +67,10 @@ export default async function MyBookingsPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            Mes réservations
+            {t("bookings.title")}
           </h1>
           <p className="text-gray-600 mt-1">
-            Retrouvez toutes vos réservations mybestbooking
+            {t("bookings.subtitle")}
           </p>
         </div>
 
@@ -75,11 +78,11 @@ export default async function MyBookingsPage() {
           <Card>
             <EmptyState
               icon={<Calendar className="w-8 h-8" />}
-              title="Aucune réservation"
-              description="Vous n'avez pas encore effectué de réservation. Trouvez votre prochain séjour !"
+              title={t("common.noBooking")}
+              description={t("bookings.emptyDesc")}
               action={
                 <Link href="/recherche">
-                  <Button>Explorer les hébergements</Button>
+                  <Button>{t("bookings.explore")}</Button>
                 </Link>
               }
               className="py-16"
@@ -91,7 +94,7 @@ export default async function MyBookingsPage() {
             {upcomingBookings.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  À venir ({upcomingBookings.length})
+                  {t("bookings.upcoming")} ({upcomingBookings.length})
                 </h2>
                 <div className="space-y-4">
                   {upcomingBookings.map(({ booking, property, room }) => (
@@ -142,7 +145,7 @@ export default async function MyBookingsPage() {
                               <p className="font-medium">{room?.name}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Total</p>
+                              <p className="text-xs text-gray-500">{t("bookings.total")}</p>
                               <p className="font-bold text-[#1B3A6B]">{formatPrice(booking.total, booking.currency)}</p>
                             </div>
                           </div>
@@ -150,7 +153,7 @@ export default async function MyBookingsPage() {
                           <div className="flex items-center gap-3 mt-4">
                             <Link href={`/hebergement/${property?.slug}`}>
                               <Button variant="outline" size="sm">
-                                Voir l&apos;hébergement
+                                {t("bookings.viewProperty")}
                               </Button>
                             </Link>
                             <BookingRowActions
@@ -208,7 +211,7 @@ export default async function MyBookingsPage() {
                           
                           {booking.status === "cancelled" && (
                             <div className="mt-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-900">
-                              Frais : {formatPrice(booking.cancellationFee ?? "0", booking.currency)} · Remboursement : {formatPrice(booking.refundAmount ?? "0", booking.currency)} ({booking.refundStatus === "refunded" ? "effectué" : booking.refundStatus === "pending" ? "en cours" : "non requis"})
+                              {t("bookings.fee")} : {formatPrice(booking.cancellationFee ?? "0", booking.currency)} · {t("bookings.refund")} : {formatPrice(booking.refundAmount ?? "0", booking.currency)} ({booking.refundStatus === "refunded" ? t("bookings.refundDone") : booking.refundStatus === "pending" ? t("bookings.refundPending") : t("bookings.refundNone")})
                             </div>
                           )}
                           {booking.status === "completed" && (
@@ -218,7 +221,7 @@ export default async function MyBookingsPage() {
                                 className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F5A623] text-white text-sm font-medium hover:bg-[#e0951f] transition"
                               >
                                 <Star className="w-4 h-4 mr-2" />
-                                Laisser un avis
+                                {t("bookings.leaveReview")}
                               </Link>
                             </div>
                           )}

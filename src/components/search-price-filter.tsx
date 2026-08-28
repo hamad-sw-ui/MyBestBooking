@@ -1,15 +1,16 @@
 "use client";
 
 import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 /**
- * T-133 (A1) — Champs de filtre de prix de la recherche.
+ * T-133 (A1) / T-134 — Champs de filtre de prix de la recherche.
  *
  * L'utilisateur saisit la fourchette dans sa devise d'affichage (XAF par
  * défaut plateforme, sinon sa préférence). Un champ caché `displayCurrency`
  * accompagne la soumission GET pour que le serveur convertisse les bornes
  * vers la devise de stockage (EUR) avant de filtrer — le filtre reste ainsi
- * cohérent avec les prix affichés en FCFA.
+ * cohérent avec les prix affichés en FCFA. Libellés localisés (T-134).
  */
 export function SearchPriceFilter({
   minPrice,
@@ -18,7 +19,8 @@ export function SearchPriceFilter({
   minPrice?: string;
   maxPrice?: string;
 }) {
-  const { currency } = useDisplayPreferences();
+  const { currency, language } = useDisplayPreferences();
+  const t = makeT(language);
   // Devise effective : XAF par défaut tant que les préférences ne sont pas
   // résolues (cohérent avec le défaut plateforme).
   const cur = (currency ?? "XAF").toUpperCase();
