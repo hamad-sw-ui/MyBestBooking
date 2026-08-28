@@ -9,6 +9,54 @@
 
 ---
 
+## Session 22 — 2026-08-28 : 8e audit fonctionnel (rapport) + T-128 verrou pages maintenance
+
+### Audit n°8 (investigation, aucun code modifié)
+
+Rapport `REPORTS/audit_fonctionnel_profond8_2026-08-28.md`. Périmètre neuf :
+capacité/stop-sell/surbooking à la réservation, mode maintenance (API + pages),
+suspension/réactivation utilisateur, soft-delete RGPD, validation d'hébergements.
+**1 écart** : en maintenance les écritures API sont bien bloquées (503) mais
+un chargement **direct** de page répond 200 avec le contenu normal — la garde
+RSC `redirect("/maintenance")` est appelée mais n'émet pas de 307 au
+plein-chargement (reproductible en dev **et** prod ; le proxy edge, qui émet
+des 307, ne peut pas lire la base). Zones saines : capacité (5 adultes→409,
+enfant sur 0→409), stop-sell (409), suspension (sessions révoquées 401, re-login
+401, auto-suspension 400, réactivation OK), soft-delete anonymisé, cycle
+approve/reject/suspend des hébergements.
+
+### T-128 — correctif (niveau L, aucune migration)
+
+- 🔨 Route publique `GET /api/maintenance-status` → `{ active }` (Node, lit
+  `isMaintenanceActive`, cache 10 s).
+- 🔨 Logique pure `src/lib/maintenance-gate.ts` (`chooseMaintenanceGate`,
+  `isMaintenanceBypassPath`) + 7 tests.
+- 🔨 Composant client `<MaintenanceGate/>` monté dans le **layout racine** :
+  au montage, fetch la route et `window.location.replace("/maintenance")`
+  sauf si maintenance inactive, admin (prop lu serveur), ou chemin en
+  whitelist (`/maintenance`, pages d'auth, assets). Inerte hors maintenance.
+- Les 503 API et gardes RSC existants sont conservés (défense en profondeur).
+
+### Fichiers
+`src/app/api/maintenance-status/route.ts` (nouveau), `src/lib/maintenance-gate.ts`
+(nouveau), `src/lib/maintenance-gate.test.ts` (nouveau),
+`src/components/maintenance-gate.tsx` (nouveau), `src/app/layout.tsx` (montage).
+
+### Validation
+- 🔨 typecheck 0 · lint 0 · build ✓.
+- 🧪 `npm test` **258/258** (40 fichiers ; +7 gate).
+- ▶️ `npm run smoke` **94/94**.
+- ▶️ route d'état `{active:false}`→`{active:true}` ; simulation de la gate
+  contre la vraie route : anonyme/non-admin → `/maintenance`, admin + pages
+  auth/maintenance → restent, maintenance OFF → aucune redirection. Voir
+  `REPORTS/validation_T-128_2026-08-28.md`.
+- 🧹 Maintenance remise à `false` ; résa smoke supprimée.
+- Note : sandbox réinitialisée en cours de session → `node_modules` réinstallé,
+  Postgres embarqué redémarré, schéma `db:push` + seed refaits, `.env.local`
+  reconstitué.
+
+---
+
 ## Session 21 — 2026-08-28 : 7e audit fonctionnel (rapport) + T-127 correctifs P1/P2/P3
 
 ### Audit n°7 (investigation, aucun code modifié)

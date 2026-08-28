@@ -1,5 +1,47 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Audit fonctionnel n°8 (P1) — verrou de pages en mode maintenance.
+En maintenance, les écritures API étaient bien bloquées (503) mais un
+chargement direct de page répondait 200 avec le contenu normal : la garde RSC
+`redirect("/maintenance")` n'émet pas de 307 fiable au plein-chargement (comme
+déjà constaté pour les rôles en T-123). Ajout d'une garde cliente qui force la
+navigation vers /maintenance au montage (donc aussi sur plein-chargement),
+alimentée par une route publique d'état.
+**ID** : T-128 — additif, aucun changement de schéma, aucune migration.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-28.
+
+## Périmètre (T-128)
+
+- Route publique **`GET /api/maintenance-status`** → `{ active }` (runtime
+  Node, lit le réglage via `isMaintenanceActive`, cache court).
+- Logique pure **`src/lib/maintenance-gate.ts`** (`chooseMaintenanceGate`,
+  `isMaintenanceBypassPath`) : redirige sauf si maintenance inactive, admin,
+  ou chemin de la whitelist anti-verrouillage (`/maintenance`, auth, assets).
+- Composant client **`src/components/maintenance-gate.tsx`** monté dans le
+  layout racine : au montage, interroge la route et fait
+  `window.location.replace("/maintenance")` si besoin ; inerte sinon.
+- Le rôle admin est lu côté serveur (`getCurrentUser`) et passé en prop
+  booléen. Les gardes RSC et les 503 API existants sont **conservés**
+  (défense en profondeur).
+
+## Sortie (validé — T-128)
+
+- 🔨 typecheck 0 erreur · lint 0 · build ✓.
+- 🧪 `npm test` **258/258** (40 fichiers ; +7 tests `maintenance-gate`).
+- ▶️ `npm run smoke` **94/94**.
+- ▶️ exécution : route d'état `{active:false}`→`{active:true}` ; simulation
+  de la gate contre la vraie route (anonyme/non-admin → `/maintenance`,
+  admin et pages auth/maintenance → restent, maintenance OFF → aucune
+  redirection). Voir `REPORTS/validation_T-128_2026-08-28.md`.
+
+> Voir `REPORTS/audit_fonctionnel_profond8_2026-08-28.md` (audit),
+> `REPORTS/analyse_impact_T-128_2026-08-28.md` (§14).
+
+---
+
+## Tâche précédente — T-127 (audit n°7)
+
 **Tâche :** Correctifs de l'audit fonctionnel n°7 — existence de la propriété
 avant alerte/favori (404 au lieu de 500 FK), magic bytes sur les pièces
 jointes de messagerie, filtre de période de l'export de facturation.

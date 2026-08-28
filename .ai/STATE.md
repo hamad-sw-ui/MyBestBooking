@@ -13,7 +13,20 @@
   Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
   push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-127 (7e audit fonctionnel profond) —
+- **Dernière tâche validée** : T-128 (8e audit fonctionnel profond) —
+  verrou de pages en mode maintenance. En maintenance les écritures API
+  étaient bien bloquées (503) mais un chargement direct de page répondait 200
+  avec le contenu normal (la redirection RSC n'émet pas de 307 fiable au
+  plein-chargement, comme constaté pour les rôles en T-123). Solution
+  **additive** : route publique `GET /api/maintenance-status` (`{active}`),
+  logique pure `src/lib/maintenance-gate.ts`, et composant client
+  `<MaintenanceGate/>` monté dans le layout racine qui force
+  `window.location.replace("/maintenance")` au montage (donc aussi en
+  plein-chargement), sauf admin / whitelist anti-verrouillage (`/maintenance`,
+  auth, assets). Les 503 API et gardes RSC restent en défense de profondeur.
+  Validation : typecheck/lint 0, tests **258/258** (+7 gate), smoke **94/94**,
+  exécution route d'état + simulation de redirection — 2026-08-28.
+  Avant : T-127 (7e audit fonctionnel profond) —
   corrections **additives** robustesse, aucune migration :
   **P1** `POST /api/price-alerts` et `POST /api/wishlists` (ajout) vérifient
   l'existence de la propriété cible avant insertion → **404** propre au lieu
