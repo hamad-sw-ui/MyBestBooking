@@ -77,6 +77,10 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
 
   const { booking, property, room, guest, review } = data;
 
+  // T-130 : l'hôte du bien (ou l'admin) peut clôturer un séjour / marquer un
+  // no-show. Le voyageur propriétaire ne voit pas ces actions.
+  const canManageStay = isAdmin || property?.hostId === user.id;
+
   const statusLabels: Record<string, string> = {
     pending: "En attente",
     confirmed: "Confirmée",
@@ -377,6 +381,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                 propertyId={booking.propertyId}
                 status={booking.status}
                 messageArea="dashboard"
+                canManageStay={canManageStay}
               />
             </CardContent>
           </Card>

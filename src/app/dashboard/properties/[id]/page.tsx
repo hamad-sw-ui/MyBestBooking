@@ -81,6 +81,9 @@ export default function EditPropertyPage() {
   const [property, setProperty] = useState<Property | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeTab, setActiveTab] = useState("general");
+  // T-130 : upload de photos dans l'édition (réutilise POST /api/properties/upload).
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
 
   useEffect(() => {
     fetch(`/api/properties/${propertyId}`)
@@ -153,6 +156,53 @@ export default function EditPropertyPage() {
         ? property.amenities.filter((a) => a !== amenityId)
         : [...property.amenities, amenityId],
     });
+  };
+
+  // T-130 : upload d'une photo dans l'édition (même endpoint qu'à la création).
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !property) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/properties/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      setProperty((prev) => {
+        if (!prev) return prev;
+        const images = prev.images.includes(data.url) ? prev.images : [...prev.images, data.url];
+        return { ...prev, mainImage: prev.mainImage ?? data.url, images };
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  };
+
+  const addGalleryImage = (url: string) => {
+    if (!property || !url.trim()) return;
+    const value = url.trim();
+    setProperty((prev) => prev
+      ? { ...prev, images: prev.images.includes(value) ? prev.images : [...prev.images, value] }
+      : prev);
+  };
+
+  const removeGalleryImage = (url: string) => {
+    if (!property) return;
+    setProperty((prev) => {
+      if (!prev) return prev;
+      const images = prev.images.filter((img) => img !== url);
+      return { ...prev, images, mainImage: prev.mainImage === url ? (images[0] ?? null) : prev.mainImage };
+    });
+  };
+
+  const setMainImage = (url: string) => {
+    if (!property) return;
+    setProperty((prev) => prev ? { ...prev, mainImage: url } : prev);
   };
 
   if (loading) {
@@ -436,24 +486,100 @@ export default function EditPropertyPage() {
           <CardHeader>
             <CardTitle>Photos</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Input
-                label="Photo principale (URL)"
-                value={property.mainImage || ""}
-                onChange={(e) => setProperty({ ...property, mainImage: e.target.value })}
+          <CardContent className="space-y-6">
+            {/* Upload d'une photo (même mécanisme qu'à la création, T-113) */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ajouter une photo
+              </label>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                onChange={handlePhotoUpload}
+                disabled={uploading}
+                className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#1B3A6B] file:text-white file:cursor-pointer hover:file:bg-[#152d54] disabled:opacity-60"
               />
-              {property.mainImage && (
-                <img
-                  src={property.mainImage}
-                  alt="Preview"
-                  className="w-full max-w-md h-48 object-cover rounded-lg"
-                />
-              )}
-              <p className="text-sm text-gray-500">
-                Ajoutez des URLs d&apos;images supplémentaires pour la galerie
+              <p className="text-xs text-gray-500 mt-1">
+                {uploading
+                  ? "Téléversement en cours…"
+                  : "JPEG, PNG, WebP ou GIF — 5 Mo max. La nouvelle photo est enregistrée quand vous cliquez sur « Enregistrer »."}
               </p>
+              {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
             </div>
+
+            {/* Galerie */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Galerie ({property.images.length} photo{property.images.length > 1 ? "s" : ""})
+              </p>
+              {property.images.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  Aucune photo. Uploadez une image ci-dessus ou ajoutez une URL plus bas.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {property.images.map((url) => {
+                    const isMain = property.mainImage === url;
+                    return (
+                      <div key={url} className="relative group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="w-full h-32 object-cover rounded-lg border" />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 py-1 bg-black/50 rounded-b-lg">
+                          <button
+                            type="button"
+                            onClick={() => setMainImage(url)}
+                            disabled={isMain}
+                            className={`text-xs font-medium ${isMain ? "text-[#F5A623]" : "text-white hover:underline"}`}
+                          >
+                            {isMain ? "★ Principale" : "Définir principale"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => removeGalleryImage(url)}
+                            className="text-white hover:text-red-300"
+                            aria-label="Supprimer cette photo"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* URL alternative */}
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-600 hover:text-[#1B3A6B]">
+                Ou ajouter une photo par URL
+              </summary>
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="url"
+                  placeholder="https://…/photo.jpg"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addGalleryImage((e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={(e) => {
+                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                    addGalleryImage(input.value);
+                    input.value = "";
+                  }}
+                >
+                  Ajouter
+                </Button>
+              </div>
+            </details>
           </CardContent>
         </Card>
       )}

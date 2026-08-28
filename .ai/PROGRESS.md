@@ -9,6 +9,56 @@
 
 ---
 
+## Session 24 — 2026-08-28 : 10e audit fonctionnel (rapport) + T-130 fonctionnalités fantômes exposées (clôture/no-show hôte, parrainage, badge non-lus, photos édition)
+
+### Audit n°10 (investigation, aucun code modifié)
+
+Rapport `REPORTS/audit_fonctionnel_profond10_2026-08-28.md`. Périmètre neuf :
+messagerie/compteurs, compte client & parrainage, édition d'hébergement (photos),
+facturation vs factures par réservation, machine à états (clôture/no-show hôte),
+alertes prix, recherche/favoris. Quatre **fonctionnalités fantômes** (back-end
+livré mais inaccessible/inexact côté UI) ; nombreuses zones confirmées saines
+(machine à états, RBAC, factures, alertes 404, cœur messagerie, recherche).
+
+### T-130 — correctifs (niveau L, aucune migration, aucune route nouvelle)
+
+- 🔨 **P1** : l'hôte n'avait aucun bouton pour clôturer un séjour / marquer un
+  no-show (l'API l'autorisait ; le cron gratifiait alors les no-show en
+  `completed`). `BookingRowActions` gagne `canManageStay` + boutons
+  « Terminer le séjour » / « No-show » (hôte/admin, vue dashboard, résa
+  `confirmed`) ; la page détail dashboard passe le prop.
+- 🔨 **P2** : `<ReferralCard/>` (T-125) n'était monté nulle part et « Mon
+  compte » affirmait « parrainage pas encore ouvert » → carte montée dans
+  l'onglet BestRewards, message mensonger remplacé par un renvoi.
+- 🔨 **P3** : `<UnreadMessagesBadge/>` (nouveau, somme via
+  `GET /api/conversations`) monté dans header + sidebars dashboard.
+- 🔨 **P4** : onglet Photos de l'édition d'hébergement complété (upload
+  fichier via `/api/properties/upload`, galerie : principale/supprimer, ajout
+  par URL) ; le `PUT` existant envoie déjà `images[]`.
+
+### Fichiers
+`src/components/booking-row-actions.tsx`,
+`src/app/dashboard/bookings/[id]/page.tsx`,
+`src/app/(main)/mon-compte/page.tsx`,
+`src/components/unread-messages-badge.tsx` (nouveau),
+`src/components/layout/{header,dashboard-sidebar,dashboard-mobile-header}.tsx`,
+`src/app/dashboard/properties/[id]/page.tsx`.
+
+### Validation (§13)
+- 🔨 typecheck 0 · lint 0 erreur (1 warning `<img>` préexistant) · build ✓.
+- 🧪 `npm test` **264/264** (41 fichiers).
+- ▶️ smoke **94/94** · ai:check **20 OK · 0 warn · 0 fail**.
+- ▶️ E2E : host `no_show` (séjour passé) → 200, `loyaltyAwardedAt=null`, wallet
+  25,00 inchangé ; host `completed` → 200, fidélité posée ; `completed` avant
+  départ → 400, voyageur → 400 ; boutons visibles sur `confirmed`, masqués en
+  terminal, customer `/dashboard` → 307 ; carte parrainage + appel API dans le
+  bundle, ancien message disparu ; badge dans les bundles nav ; galerie PUT 200.
+  Détail : `REPORTS/validation_T-130_2026-08-28.md`.
+- 🧹 Réservations FSM/smoke supprimées, images propriété restaurées (seed),
+  wallet client vérifié à 25,00.
+
+---
+
 ## Session 23 — 2026-08-28 : 9e audit fonctionnel (rapport) + T-129 restitution wallet/promo à l'annulation payée + cohérence capacités chambre
 
 ### Audit n°9 (investigation, aucun code modifié)

@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/db/schema";
+import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
 
 interface DashboardMobileHeaderProps {
   user: User;
@@ -99,6 +100,9 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
                   >
                     <Icon className="w-5 h-5 flex-shrink-0" />
                     <span className="text-sm font-medium">{link.label}</span>
+                    {link.href.includes("/messages") && (
+                      <UnreadMessagesBadge viewerRole={user.role} userId={user.id} />
+                    )}
                   </Link>
                 );
               })}

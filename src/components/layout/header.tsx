@@ -7,6 +7,7 @@ import { Menu, X, User, LogOut, Heart, Calendar, MessageSquare } from "lucide-re
 import { useState } from "react";
 import type { User as UserType } from "@/db/schema";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
+import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
 
 interface HeaderProps {
   user: UserType | null;
@@ -122,6 +123,7 @@ export function Header({ user }: HeaderProps) {
                       >
                         <MessageSquare className="w-4 h-4" />
                         Messages
+                        <UnreadMessagesBadge viewerRole={user.role} userId={user.id} />
                       </Link>
                       {(user.role === "host" || user.role === "admin") && (
                         <Link

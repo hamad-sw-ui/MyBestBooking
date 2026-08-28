@@ -16,6 +16,7 @@ import { ChangePasswordForm } from "@/components/change-password-form";
 import { TwoFactorSection } from "@/components/two-factor-section";
 import { DeleteAccountSection } from "@/components/delete-account-section";
 import { NotificationPrefsSection } from "@/components/notification-prefs-section";
+import { ReferralCard } from "@/components/referral-card";
 
 interface UserData {
   id: string;
@@ -242,6 +243,9 @@ export default function MyAccountPage() {
                   </CardContent>
                 </Card>
 
+                {/* T-130 : parrainage réellement exposé (T-125 livré côté API) */}
+                <ReferralCard />
+
                 {/* Levels */}
                 <Card>
                   <CardHeader>
@@ -307,7 +311,24 @@ export default function MyAccountPage() {
                     priceAlertEnabled: (user as unknown as { priceAlertEnabled?: boolean }).priceAlertEnabled ?? false,
                   }}
                 />
-                <p className="text-xs text-gray-500 border-t border-gray-100 pt-3">Le programme de parrainage n&apos;est pas encore ouvert : aucun avantage ne sera promis tant que son attribution n&apos;est pas traçable.</p>
+                {/* T-130 : le parrainage est disponible (T-125) ; on renvoie vers l'onglet BestRewards */}
+                <Card>
+                  <CardContent className="flex items-start gap-3 py-4">
+                    <Award className="w-5 h-5 text-[#F5A623] mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-gray-600">
+                      Parrainez vos amis et gagnez des crédits : retrouvez votre
+                      code de parrainage dans l&apos;onglet{" "}
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("bestrewards")}
+                        className="text-[#1B3A6B] font-medium hover:underline"
+                      >
+                        BestRewards
+                      </button>
+                      .
+                    </p>
+                  </CardContent>
+                </Card>
               </div>
             )}
           </div>

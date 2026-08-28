@@ -6,14 +6,36 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : T-129 sur `arena/01a042cf-mybestbooking`
-  (base T-128 `5bf67c7`). Le hash exact du HEAD courant est **à mettre à jour
-  en fin de session** : un commit de doc ne peut pas contenir son propre hash,
-  et R7 le tolère explicitement (mode toléré, 0 fail).
+- **HEAD Git** : T-130 sur `arena/01a042cf-mybestbooking`
+  (base T-129 `4644bc8`). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
+  : un commit de doc ne peut pas contenir son propre hash,
+  et R7 le tolère explicitement (motif « à mettre à jour en fin de session »).
   Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
   push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-129 (9e audit fonctionnel profond) —
+- **Dernière tâche validée** : T-130 (10e audit fonctionnel profond) —
+  quatre « fonctionnalités fantômes » (back-end livré, inaccessible/inexact
+  côté interface) corrigées de façon **additive** (aucune migration, aucune
+  route nouvelle) : **P1** l'hôte n'avait aucun bouton pour clôturer un séjour
+  ou marquer un no-show (`PUT /api/bookings` l'autorisait mais l'UI ne
+  l'exposait pas ; le cron gratifiait alors les no-show en `completed`) →
+  boutons « Terminer le séjour » / « No-show » dans `BookingRowActions`
+  (gated `canManageStay` hôte/admin, gardes serveur conservées) ; **P2** le
+  parrainage (T-125) était livré côté API mais son composant `ReferralCard`
+  n'était monté nulle part et « Mon compte » affichait « parrainage pas encore
+  ouvert » → carte montée dans l'onglet BestRewards + message corrigé ; **P3**
+  aucun badge messages non lus dans la navigation → `<UnreadMessagesBadge/>`
+  (réutilise `GET /api/conversations`) dans header + sidebars ; **P4** l'onglet
+  Photos de l'édition d'hébergement n'avait ni upload ni galerie → upload
+  fichier + galerie (définir principale/supprimer) + URL alternative.
+  Validation : typecheck/lint 0, tests **264/264**, smoke **94/94**, ai:check
+  **19 OK · 1 warn R7 · 0 fail** ; preuves d'exécution : host `completed`
+  (fidélité posée) vs `no_show` (aucune gratification, wallet inchangé),
+  boutons visibles sur confirmed/masqués en terminal, customer 307, carte
+  parrainage + badge dans le bundle, galerie PUT 200 — 2026-08-28. Rapports :
+  `REPORTS/audit_fonctionnel_profond10_2026-08-28.md`,
+  `REPORTS/validation_T-130_2026-08-28.md`.
+  Avant : T-129 (9e audit fonctionnel profond) —
   restitution des crédits wallet et de l'usage promo à l'annulation d'une
   réservation **payée**, + cohérence des capacités/prix de chambre. **P1 (finance)**
   : `booking-cancellation.ts` n'appelait `releaseBookingBenefits` que pour les

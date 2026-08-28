@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, FileText, XCircle, Loader2 } from "lucide-react";
+import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX } from "lucide-react";
 
 interface Props {
   bookingId: string;
@@ -11,6 +11,13 @@ interface Props {
   propertyId: string;
   status: string;
   messageArea?: "traveler" | "dashboard";
+  /**
+   * T-130 : true quand l'utilisateur courant est l'hôte du bien (ou admin) en
+   * vue dashboard. Affiche les actions de clôture de séjour (terminer /
+   * no-show), jusque-là joignables uniquement via l'API. Le serveur reste la
+   * source de vérité (transitionError valide l'acteur et la date de départ).
+   */
+  canManageStay?: boolean;
 }
 
 /**
@@ -27,9 +34,11 @@ export function BookingRowActions({
   propertyId,
   status,
   messageArea = "traveler",
+  canManageStay = false,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   async function cancel() {
@@ -77,12 +86,71 @@ export function BookingRowActions({
     }
   }
 
+  // T-130 : clôture du séjour par l'hôte/admin. Le serveur rejette toute
+  // transition invalide (acteur non autorisé, avant la date de départ) avec un
+  // message explicite ; on ne fait que relayer.
+  async function setStayStatus(next: "completed" | "no_show") {
+    setError(null);
+    const label = next === "completed" ? "Terminer le séjour" : "Marquer comme non-présentation";
+    const confirmMsg = next === "completed"
+      ? "Confirmer que ce séjour est terminé ? La récompense BestRewards du voyageur sera alors créditée."
+      : "Marquer cette réservation comme non-présentation (no-show) ? Aucune récompense ne sera versée.";
+    if (!confirm(confirmMsg)) return;
+    setBusyAction(next);
+    try {
+      const r = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: next }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error ?? "Erreur");
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : `Erreur lors de : ${label}`);
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   return (
     <>
       <Button variant="ghost" size="sm" onClick={contactHost}>
         <MessageSquare className="w-4 h-4 mr-2" />
         Écrire à l&apos;hébergeur
       </Button>
+      {canManageStay && status === "confirmed" && (
+        <>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setStayStatus("completed")}
+            disabled={busyAction !== null}
+            className="text-green-700 hover:text-green-800 hover:bg-green-50"
+          >
+            {busyAction === "completed" ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <CheckCircle2 className="w-4 h-4 mr-2" />
+            )}
+            Terminer le séjour
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setStayStatus("no_show")}
+            disabled={busyAction !== null}
+            className="text-gray-600 hover:text-gray-800 hover:bg-gray-100"
+          >
+            {busyAction === "no_show" ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <UserX className="w-4 h-4 mr-2" />
+            )}
+            No-show
+          </Button>
+        </>
+      )}
       <a
         href={`/api/bookings/${bookingId}/invoice`}
         target="_blank"
