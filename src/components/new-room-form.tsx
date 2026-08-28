@@ -44,6 +44,13 @@ export function NewRoomForm({ properties }: Props) {
     if (!form.propertyId) { setError("Sélectionnez un hébergement"); return; }
     if (!form.name.trim()) { setError("Le nom est requis"); return; }
     if (!form.basePrice || parseFloat(form.basePrice) <= 0) { setError("Prix invalide"); return; }
+    // T-129 : cohérence des capacités (même règle que l'API, retour immédiat).
+    if (form.maxAdults > form.maxOccupancy) {
+      setError("Le nombre d'adultes ne peut pas dépasser la capacité maximale"); return;
+    }
+    if (form.maxAdults + form.maxChildren > form.maxOccupancy) {
+      setError("Adultes + enfants ne peuvent pas dépasser la capacité maximale"); return;
+    }
     setBusy(true);
     try {
       const r = await fetch("/api/rooms", {
@@ -161,7 +168,7 @@ export function NewRoomForm({ properties }: Props) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <Input label="Prix / nuit" type="number" min={0} step={0.01}
+              <Input label="Prix / nuit" type="number" min={0.01} step={0.01}
                 value={form.basePrice}
                 onChange={(e) => set("basePrice", e.target.value)}
                 required

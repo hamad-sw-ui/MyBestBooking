@@ -6,15 +6,32 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : T-128 sur `arena/01a042cf-mybestbooking`
-  (commit de code `3b2918e`, commit de doc `b57d52d`). Le hash exact du HEAD
-  courant est **à mettre à jour en fin de session** : un commit de doc ne peut
-  pas contenir son propre hash, et R7 le tolère explicitement (mode toléré,
-  0 fail).
+- **HEAD Git** : T-129 sur `arena/01a042cf-mybestbooking`
+  (base T-128 `5bf67c7`). Le hash exact du HEAD courant est **à mettre à jour
+  en fin de session** : un commit de doc ne peut pas contenir son propre hash,
+  et R7 le tolère explicitement (mode toléré, 0 fail).
   Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
   push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-128 (8e audit fonctionnel profond) —
+- **Dernière tâche validée** : T-129 (9e audit fonctionnel profond) —
+  restitution des crédits wallet et de l'usage promo à l'annulation d'une
+  réservation **payée**, + cohérence des capacités/prix de chambre. **P1 (finance)**
+  : `booking-cancellation.ts` n'appelait `releaseBookingBenefits` que pour les
+  réservations non payées → les crédits wallet d'une résa payée annulée étaient
+  perdus (et l'usage promo non rendu), alors que la part carte est remboursée
+  par le PSP. Preuve avant : wallet 25,00 → 0,00 après annulation. Correctif
+  **additif/sans migration** : appel inconditionnel de `releaseBookingBenefits`
+  (idempotent via `benefitsReleasedAt` + transaction `FOR UPDATE`, sans contact
+  PSP → aucun double remboursement carte ; couvre aussi les résa 100 % wallet).
+  **P2/P3** : helper `src/lib/room-validation.ts` (adultes ≤ capacité,
+  adultes+enfants ≤ capacité, prix > 0, quantité ≤ 99) appliqué à POST/PUT
+  rooms (PUT sur le résultat fusionné) → 400 ; garde miroir formulaire.
+  Validation : typecheck/lint 0, tests **264/264** (+6), smoke **94/94**,
+  ai:check **19 OK · 1 warn R7 · 0 fail** ; preuve d'exécution wallet
+  25→0→25 après annulation, idempotence 409, chambres incohérentes 400/valide
+  201, PUT 400/200 — 2026-08-28. Rapports : `REPORTS/audit_fonctionnel_profond9_2026-08-28.md`,
+  `REPORTS/analyse_impact_T-129_2026-08-28.md`, `REPORTS/validation_T-129_2026-08-28.md`.
+  Avant : T-128 (8e audit fonctionnel profond) —
   verrou de pages en mode maintenance. En maintenance les écritures API
   étaient bien bloquées (503) mais un chargement direct de page répondait 200
   avec le contenu normal (la redirection RSC n'émet pas de 307 fiable au

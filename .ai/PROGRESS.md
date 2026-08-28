@@ -9,6 +9,62 @@
 
 ---
 
+## Session 23 — 2026-08-28 : 9e audit fonctionnel (rapport) + T-129 restitution wallet/promo à l'annulation payée + cohérence capacités chambre
+
+### Audit n°9 (investigation, aucun code modifié)
+
+Rapport `REPORTS/audit_fonctionnel_profond9_2026-08-28.md`. Périmètre neuf :
+création/édition de chambres (cohérence capacité/prix), application réelle d'un
+plan tarifaire au prix, restitution wallet/promo à l'annulation d'une
+réservation **payée**, pagination, page /reservation, préférences notification.
+**1 écart financier réel (P1)** + 2 manques de validation hôte (P2/P3).
+Zones saines vérifiées (à ne pas régresser) : calcul prix/remises (plan
+tarifaire −20 % → sous-total 237,34 → 189,87, BestRewards, wallet), garde-fou
+capacité réservation (409), stop-sell, RBAC création chambre, idempotence
+remboursement PSP, pagination (limit/offset bornés).
+
+### T-129 — correctifs (niveau L, aucune migration, aucun changement de contrat)
+
+- 🔨 **P1 (finance)** : `src/lib/booking-cancellation.ts` appelait
+  `releaseBookingBenefits` seulement pour les réservations **non payées** →
+  les crédits wallet utilisés d'une réservation **payée puis annulée** étaient
+  perdus (et l'usage d'un code promo non rendu). Preuve avant : wallet
+  25,00 → 0,00 après annulation (part carte 191,69 remboursée par le PSP,
+  wallet jamais restitué, `benefits_released_at=null`). Correctif : appel
+  **inconditionnel** de `releaseBookingBenefits` après le traitement PSP.
+  La fonction est idempotente (garde `benefitsReleasedAt`, transaction
+  `FOR UPDATE`) et ne touche pas au PSP → aucun double remboursement carte ;
+  couvre aussi les résa 100 % wallet (total 0, `paymentMethod=wallet`).
+- 🔨 **P2/P3** : nouveau helper pur `src/lib/room-validation.ts`
+  (`validateRoomCapacity`) : adultes ≤ capacité, adultes+enfants ≤ capacité,
+  prix > 0, quantité ≤ 99. Appliqué à `POST /api/rooms` (Zod borné + contrôle)
+  et à `PUT /api/rooms/[id]` (contrôle sur le **résultat fusionné** avec
+  l'existant) → 400. Garde miroir dans `new-room-form.tsx` (retour immédiat).
+
+### Fichiers
+`src/lib/booking-cancellation.ts`, `src/lib/room-validation.ts` (nouveau),
+`src/lib/room-validation.test.ts` (nouveau), `src/app/api/rooms/route.ts`,
+`src/app/api/rooms/[id]/route.ts`, `src/components/new-room-form.tsx`.
+
+### Validation (§13)
+- 🔨 typecheck 0 · lint 0 erreur (15 warnings préexistants, aucun ajouté) ·
+  build ✓.
+- 🧪 `npm test` **264/264** (41 fichiers ; +6 tests room-validation).
+- ▶️ smoke **94/94** · ai:check **19 OK · 1 warn (R7 sync STATE fin de
+  session) · 0 fail**.
+- ▶️ E2E (dev, 3 rôles) : résa payée avec wallet 25 € (J+90→J+92, frais 0) →
+  annulation → `refundStatus=refunded` (carte 191,69) **+ `benefits_released_at`
+  posé + wallet revenu à 25,00** ; double annulation → 409, wallet stable ;
+  chambre capacités incohérentes → 400 (3 cas), prix 0 → 400, quantité 200 →
+  400, chambre valide → 201 ; PUT réduisant la capacité sous les adultes →
+  400, PUT prix 0 → 400, PUT cohérent → 200. Détail :
+  `REPORTS/validation_T-129_2026-08-28.md`.
+- 🧹 Données de test nettoyées (résas `MBB-2026-HXD9LG`, `MBB-2026-HDK2K6`,
+  chambre « Chambre Valide T129 » supprimées) ; wallet customer vérifié à
+  25,00 €.
+
+---
+
 ## Session 22 — 2026-08-28 : 8e audit fonctionnel (rapport) + T-128 verrou pages maintenance
 
 ### Audit n°8 (investigation, aucun code modifié)

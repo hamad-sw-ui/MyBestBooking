@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isUuid } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
 
 const updateRoomSchema = z.object({
   name: z.string().min(3).optional(),
@@ -14,12 +15,12 @@ const updateRoomSchema = z.object({
     type: z.string(),
     count: z.number(),
   })).optional(),
-  maxOccupancy: z.number().min(1).optional(),
-  maxAdults: z.number().min(1).optional(),
-  maxChildren: z.number().min(0).optional(),
+  maxOccupancy: z.number().int().min(1).optional(),
+  maxAdults: z.number().int().min(1).optional(),
+  maxChildren: z.number().int().min(0).optional(),
   sizeSqm: z.number().optional(),
-  quantity: z.number().min(1).optional(),
-  basePrice: z.number().min(0).optional(),
+  quantity: z.number().int().min(1).max(ROOM_MAX_QUANTITY, `La quantité ne peut pas dépasser ${ROOM_MAX_QUANTITY}`).optional(),
+  basePrice: z.number().positive("Le prix de base doit être strictement positif").optional(),
   currency: z.string().length(3).optional(),
   amenities: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
@@ -100,6 +101,20 @@ export async function PUT(
         { error: "Non autorisé" },
         { status: 403 }
       );
+    }
+
+    // T-129 : cohérence des capacités sur le résultat final (valeurs éditées
+    // fusionnées avec l'existant), pour refuser une mise à jour qui rendrait la
+    // chambre incohérente (ex. capacité réduite sous le nombre d'adultes).
+    const capacityError = validateRoomCapacity({
+      maxOccupancy: data.maxOccupancy ?? room.maxOccupancy,
+      maxAdults: data.maxAdults ?? room.maxAdults,
+      maxChildren: data.maxChildren ?? room.maxChildren ?? 0,
+      basePrice: data.basePrice !== undefined ? data.basePrice : Number(room.basePrice),
+      quantity: data.quantity ?? room.quantity ?? null,
+    });
+    if (capacityError) {
+      return NextResponse.json({ error: capacityError }, { status: 400 });
     }
 
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };

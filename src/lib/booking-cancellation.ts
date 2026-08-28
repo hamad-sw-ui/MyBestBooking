@@ -60,7 +60,13 @@ export async function cancelBooking(bookingId: string, reason: string): Promise<
   } else if (prepared.paymentStatus === "pending" && prepared.paymentIntentId) {
     try { await (await getPaymentProvider()).cancel(prepared.paymentIntentId); } catch (error) { console.error("[booking-cancellation] cancel pending intent failed:", error); }
   }
-  if (prepared.paymentStatus !== "paid") await releaseBookingBenefits(prepared.id);
+  // T-129 : la part carte d'une réservation payée est remboursée par le PSP
+  // ci-dessus (idempotent via refundStatus), mais les crédits wallet et l'usage
+  // d'un code promo n'ont pas d'équivalent PSP : on les restitue dans tous les
+  // cas d'annulation. releaseBookingBenefits est idempotent (garde
+  // benefitsReleasedAt, transaction FOR UPDATE) et ne touche pas au PSP :
+  // aucun double remboursement possible.
+  await releaseBookingBenefits(prepared.id);
 
   const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId));
   if (!booking) throw new BookingCancellationError("Réservation non trouvée");
