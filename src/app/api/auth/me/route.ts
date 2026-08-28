@@ -29,6 +29,7 @@ export async function GET() {
       twoFactorEnabled: user.twoFactorEnabled,
       timezone: user.timezone,
       priceAlertEnabled: user.priceAlertEnabled,
+      avatarUrl: user.avatarUrl,
     },
   });
 }

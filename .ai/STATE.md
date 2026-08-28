@@ -13,7 +13,22 @@
   Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
   push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-132 (implémentation des remarques audit n°11) —
+- **Dernière tâche validée** : T-133 (implémentation des remarques audit n°12) —
+  **A1** le filtre de prix de la recherche comparait en EUR alors que l'affichage
+  est en XAF : normalisation du prix en EUR dans le SQL (`priceBoundToStorage`
+  + `CASE currency` avec cast `::numeric`) et `SearchPriceFilter` (champ caché
+  `displayCurrency`, libellés FCFA) ; **A3** bouton « Contacter l'hôte » avant
+  réservation (`ContactHostButton`, masqué à l'hôte sur sa propriété) ; **A4**
+  photo de profil (`avatarUrl` au profil, `UserAvatar` avec repli initiales,
+  exposée par `/api/auth/me`). **A2** s'est révélé être un **faux positif**
+  (l'expiration des réservations `pending` impayées existe déjà :
+  `expirePendingBookings` dans le cron price-alerts, prouvé
+  `expiredPendingBookings=1`). Validation : tsc 0, eslint 0, vitest **273
+  passés**, smoke **94/94**, build ✓, ai:check **19 OK · 1 warn · 0 fail** ;
+  preuves : filtre 50000 XAF→0 / 80000→6 / 100000→8 logements, EUR hist.
+  maxPrice=100→3 ; contact présent client/absent hôte ; avatar 200/400/200 —
+  2026-08-28. Rapport : `REPORTS/validation_T-133_2026-08-28.md`.
+  Avant : T-132 (implémentation des remarques audit n°11) —
   **Franc CFA (XAF) devient la devise d'affichage par défaut** et **la langue a
   un effet réel**. Réglage plateforme `defaultCurrency` → XAF ; nouvelle route
   publique `GET /api/app-preferences` ; hook `useDisplayPreferences` (devise

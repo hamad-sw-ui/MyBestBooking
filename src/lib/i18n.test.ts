@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { pickLocalized, convertAmount, formatMoney, RATES_FROM_EUR } from "./i18n";
+import { pickLocalized, convertAmount, formatMoney, priceBoundToStorage, RATES_FROM_EUR } from "./i18n";
 
 describe("pickLocalized (T-029)", () => {
   it("locale fr → row inchangée", () => {
@@ -70,5 +70,36 @@ describe("formatMoney (T-029)", () => {
   it("devise inconnue → fallback plain", () => {
     const s = formatMoney(100, "ZZZ_BOGUS", "fr-FR");
     expect(s).toMatch(/100/);
+  });
+});
+
+describe("priceBoundToStorage (T-133 / A1)", () => {
+  it("sans devise → valeur saisie inchangée (historique)", () => {
+    expect(priceBoundToStorage(100)).toBe(100);
+    expect(priceBoundToStorage(100, null)).toBe(100);
+  });
+
+  it("EUR → valeur saisie inchangée", () => {
+    expect(priceBoundToStorage(100, "EUR")).toBe(100);
+    expect(priceBoundToStorage(100, "eur")).toBe(100);
+  });
+
+  it("devise inconnue → valeur saisie inchangée", () => {
+    expect(priceBoundToStorage(100, "ZZZ")).toBe(100);
+  });
+
+  it("XAF → conversion en EUR (50000 FCFA ≈ 76 €)", () => {
+    const eur = priceBoundToStorage(50000, "XAF");
+    expect(eur).toBeCloseTo(50000 / RATES_FROM_EUR.XAF, 2);
+    expect(eur).toBeLessThan(100);
+    expect(eur).toBeGreaterThan(70);
+  });
+
+  it("aller-retour EUR→XAF→EUR cohérent avec l'affichage", () => {
+    // Une chambre à 89 € s'affiche ~58 380 FCFA ; filtrer "max 58 380 FCFA"
+    // doit ramener une borne EUR ~89.
+    const displayed = convertAmount(89, "EUR", "XAF");
+    const back = priceBoundToStorage(displayed, "XAF");
+    expect(back).toBeCloseTo(89, 1);
   });
 });

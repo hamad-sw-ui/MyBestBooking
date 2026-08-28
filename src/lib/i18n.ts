@@ -52,6 +52,21 @@ export function convertAmount(
 }
 
 /**
+ * T-133 (A1) — Traduit une borne de filtre de prix saisie dans la devise
+ * d'affichage (ex. FCFA) vers la devise de stockage/facturation (EUR, celle
+ * des chambres). Utilisée par la recherche pour que « prix max 50 000 FCFA »
+ * filtre sur les ~76 € correspondants. Sans devise, en EUR, ou devise
+ * inconnue : renvoie la valeur telle quelle (comportement historique, sans
+ * régression). Taux figés indicatifs (RATES_FROM_EUR).
+ */
+export function priceBoundToStorage(value: number, displayCurrency?: string | null): number {
+  if (!displayCurrency) return value;
+  const cur = displayCurrency.toString().toUpperCase();
+  if (cur === "EUR" || !(cur in RATES_FROM_EUR)) return value;
+  return convertAmount(value, cur, "EUR");
+}
+
+/**
  * Format monétaire localisé (Intl.NumberFormat).
  */
 export function formatMoney(

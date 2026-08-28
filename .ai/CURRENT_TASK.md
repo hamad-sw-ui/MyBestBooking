@@ -1,5 +1,34 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°12.
+- **A1** : le filtre de prix de la recherche comparait en EUR (devise chambre)
+  alors que l'affichage est en XAF → normalisation du prix en EUR dans le SQL
+  (`priceBoundToStorage` + `CASE currency` avec cast `::numeric`), champ caché
+  `displayCurrency` et libellés dynamiques via `SearchPriceFilter`.
+- **A3** : « Contacter l'hôte » avant réservation (back-end déjà prêt) →
+  bouton `ContactHostButton` sur la fiche (masqué à l'hôte sur sa propriété).
+- **A4** : photo de profil `avatarUrl` (champ au profil, `UserAvatar` avec
+  repli initiales, exposé par `/api/auth/me`).
+- **A2** : **faux positif** — l'expiration des réservations `pending` impayées
+  existe déjà (`expirePendingBookings` dans le cron price-alerts), vérifiée à
+  l'exécution (`expiredPendingBookings=1`).
+**ID** : T-133 — additif, aucune migration, aucune route d'écriture.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-28.
+
+## Sortie (validé — T-133)
+
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **273 passés** (+5 `i18n`).
+- ▶️ `smoke` **94/94** · `build` ✓ · `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution : filtre `maxPrice=50000 XAF`→0 logement, `80000`→6,
+  `100000`→8, `maxPrice=100` (EUR hist.)→3, sans filtre→8 ; bouton contact
+  présent client / absent hôte ; avatar PATCH 200, URL invalide 400, null 200.
+- Voir `REPORTS/validation_T-133_2026-08-28.md`.
+
+---
+
+## Tâche précédente — T-132 (audit n°11)
+
 **Tâche :** Suite de l'audit n°11 — implémentation des remarques en suspens :
 **Franc CFA (XAF) comme devise d'affichage par défaut** (réglage plateforme +
 route publique `/api/app-preferences` + hook de préférences avec repli XAF pour

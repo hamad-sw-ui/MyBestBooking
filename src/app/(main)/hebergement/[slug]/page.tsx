@@ -38,6 +38,7 @@ import { ReviewHelpfulButton } from "@/components/review-helpful-button";
 import { PropertyBookingCard } from "@/components/property-booking-card";
 import { LocalizedRoomPrice } from "@/components/localized-room-price";
 import { LocalizedDescription } from "@/components/localized-description";
+import { ContactHostButton } from "@/components/contact-host-button";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import {
   Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
@@ -458,6 +459,12 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 initialAdults={Number(query.adults ?? "2") || 2}
                 initialChildren={Number(query.children ?? "0") || 0}
               />
+
+              {/* T-133 (A3) : contacter l'hôte avant réservation. Masqué pour
+                  l'hôte sur sa propre propriété (l'API refuse déjà ce cas). */}
+              {property.hostId !== viewer?.id && (
+                <ContactHostButton propertyId={property.id} />
+              )}
 
               <div className="-mt-1">
                 <PriceAlertButton

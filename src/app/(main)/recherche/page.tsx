@@ -13,6 +13,8 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
+import { RATES_FROM_EUR, priceBoundToStorage } from "@/lib/i18n";
+import { SearchPriceFilter } from "@/components/search-price-filter";
 
 interface SearchPageProps {
   searchParams: Promise<{
@@ -23,12 +25,19 @@ interface SearchPageProps {
     checkOut?: string;
     minPrice?: string;
     maxPrice?: string;
+    /** T-133/A1 : devise dans laquelle l'utilisateur saisit la fourchette
+     *  de prix (celle affichée, ex. XAF). Les bornes sont converties vers la
+     *  devise de stockage (EUR) avant le filtrage. Absent/EUR = comportement
+     *  historique. */
+    displayCurrency?: string;
     guests?: string;
     amenity?: string;
     sort?: string;
     page?: string;
   }>;
 }
+
+
 
 function validStay(params: Awaited<SearchPageProps["searchParams"]>): params is Awaited<SearchPageProps["searchParams"]> & { checkIn: string; checkOut: string } {
   return Boolean(
@@ -47,10 +56,25 @@ function eligibleRoomPredicate(alias: "r" | "r2", params: Awaited<SearchPageProp
   const guests = Number(params.guests);
   if (Number.isInteger(guests) && guests > 0) clauses.push(sql`${room}.max_occupancy >= ${guests}`);
 
-  const minPrice = params.minPrice ? Number(params.minPrice) : null;
-  const maxPrice = params.maxPrice ? Number(params.maxPrice) : null;
-  if (minPrice !== null && Number.isFinite(minPrice) && minPrice >= 0) clauses.push(sql`${room}.base_price >= ${minPrice}`);
-  if (maxPrice !== null && Number.isFinite(maxPrice) && maxPrice >= 0) clauses.push(sql`${room}.base_price <= ${maxPrice}`);
+  // T-133 (A1) : prix normalisé en EUR dans le SQL, avec les mêmes taux figés
+  // que l'affichage (RATES_FROM_EUR) — source unique, valeurs injectées depuis
+  // le code (jamais depuis l'URL). Une chambre en devise X = prix_X / taux_X.
+  // Les taux sont castés en numeric : sinon le driver infère le type depuis
+  // le premier paramètre (EUR = 1, entier) et refuse « 1.08 » (22P02).
+  const rateCases = Object.entries(RATES_FROM_EUR)
+    .map(([c, rate]) => sql`WHEN ${c} THEN ${rate}::numeric`)
+    .reduce((acc, part) => sql`${acc} ${part}`);
+  const priceEur = sql`(${room}.base_price::numeric / COALESCE((CASE ${room}.currency ${rateCases} ELSE 1::numeric END), 1))`;
+
+  const minRaw = params.minPrice ? Number(params.minPrice) : null;
+  const maxRaw = params.maxPrice ? Number(params.maxPrice) : null;
+  // Bornes saisies dans la devise d'affichage (ex. FCFA) → converties en EUR.
+  const minPrice = minRaw !== null && Number.isFinite(minRaw) && minRaw >= 0
+    ? priceBoundToStorage(minRaw, params.displayCurrency) : null;
+  const maxPrice = maxRaw !== null && Number.isFinite(maxRaw) && maxRaw >= 0
+    ? priceBoundToStorage(maxRaw, params.displayCurrency) : null;
+  if (minPrice !== null) clauses.push(sql`${priceEur} >= ${minPrice}`);
+  if (maxPrice !== null) clauses.push(sql`${priceEur} <= ${maxPrice}`);
 
   if (validStay(params)) {
     clauses.push(sql`
@@ -233,30 +257,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <option value="rating">Mieux notés</option><option value="price_asc">Prix croissant</option><option value="price_desc">Prix décroissant</option>
               </select>
             </div>
-            <div className="w-[120px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Prix min.</label>
-              <input
-                type="number"
-                name="minPrice"
-                min="0"
-                step="1"
-                defaultValue={params.minPrice}
-                placeholder="€ min"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-              />
-            </div>
-            <div className="w-[120px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Prix max.</label>
-              <input
-                type="number"
-                name="maxPrice"
-                min="0"
-                step="1"
-                defaultValue={params.maxPrice}
-                placeholder="€ max"
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-              />
-            </div>
+            <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} />
             <Button type="submit" size="md">
               <Search className="w-4 h-4 mr-2" />
               Rechercher

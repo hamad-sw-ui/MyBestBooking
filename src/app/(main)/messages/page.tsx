@@ -114,7 +114,7 @@ export default async function MessagesPage({
             <EmptyState
               icon={<MessageSquare className="w-8 h-8" />}
               title="Aucun message"
-              description="Vos conversations avec les hébergeurs apparaîtront ici après une réservation"
+              description="Vos conversations avec les hébergeurs apparaîtront ici. Utilisez « Contacter l'hôte » sur une fiche ou depuis une réservation."
               action={
                 <Link href="/recherche">
                   <Button>Trouver un hébergement</Button>

@@ -12,6 +12,8 @@ interface Props {
     language: string | null;
     currency: string | null;
     timezone?: string | null;
+    // T-133 (A4) : photo de profil (URL), optionnelle.
+    avatarUrl?: string | null;
   };
 }
 
@@ -32,6 +34,8 @@ export function ProfileForm({ initial }: Props) {
     // paiement des chambres.
     currency: initial.currency ?? "XAF",
     timezone: initial.timezone ?? "UTC",
+    // T-133 (A4) : URL de la photo de profil (vide = aucune / initiales).
+    avatarUrl: initial.avatarUrl ?? "",
   });
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -56,6 +60,10 @@ export function ProfileForm({ initial }: Props) {
         timezone: form.timezone,
       };
       if (form.country) body.country = form.country;
+      // T-133 (A4) : photo de profil. Une URL non valide est rejetée par
+      // l'API (z.string().url()) ; on envoie null quand le champ est vide
+      // pour permettre de retirer la photo.
+      body.avatarUrl = form.avatarUrl.trim() ? form.avatarUrl.trim() : null;
       const res = await fetch("/api/users/me", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
@@ -90,6 +98,11 @@ export function ProfileForm({ initial }: Props) {
         <div>
           <label htmlFor="pf-country" className="block text-sm font-medium text-gray-700 mb-1">Pays (ISO-2)</label>
           <input id="pf-country" maxLength={2} value={form.country} onChange={(e) => set("country", e.target.value.toUpperCase())} placeholder="FR" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
+        </div>
+        <div className="md:col-span-2">
+          <label htmlFor="pf-avatar" className="block text-sm font-medium text-gray-700 mb-1">Photo de profil (URL)</label>
+          <input id="pf-avatar" type="url" value={form.avatarUrl} onChange={(e) => set("avatarUrl", e.target.value)} placeholder="https://…/photo.jpg" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
+          <p className="mt-1 text-xs text-gray-400">Laissez vide pour afficher vos initiales. URL d&apos;image publique.</p>
         </div>
         <div>
           <label htmlFor="pf-lang" className="block text-sm font-medium text-gray-700 mb-1">Langue</label>

@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
+import { UserAvatar } from "@/components/user-avatar";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { TwoFactorSection } from "@/components/two-factor-section";
 import { DeleteAccountSection } from "@/components/delete-account-section";
@@ -32,6 +33,7 @@ interface UserData {
   walletBalance: string | null;
   emailVerified: boolean | null;
   twoFactorEnabled: boolean | null;
+  avatarUrl?: string | null;
 }
 
 export default function MyAccountPage() {
@@ -142,9 +144,7 @@ export default function MyAccountPage() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-4 mb-6">
-                      <div className="w-20 h-20 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white text-2xl font-bold">
-                        {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-                      </div>
+                      <UserAvatar avatarUrl={user.avatarUrl} firstName={user.firstName} lastName={user.lastName} size={80} className="text-2xl font-bold" />
                       <div>
                         <h3 className="text-lg font-semibold">{user.firstName} {user.lastName}</h3>
                         <p className="text-gray-500">{user.email}</p>
@@ -168,6 +168,7 @@ export default function MyAccountPage() {
                       language: user.language ?? null,
                       currency: user.currency ?? null,
                       timezone: (user as unknown as { timezone?: string | null }).timezone ?? null,
+                      avatarUrl: user.avatarUrl ?? null,
                     }} />
                   </CardContent>
                 </Card>

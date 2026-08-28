@@ -9,6 +9,45 @@
 
 ---
 
+## Session 27 — 2026-08-28 : 12e audit fonctionnel (rapport) + T-133 implémentation des remarques (filtre prix XAF, contact hôte pré-résa, avatar)
+
+**Audit n°12** (rapport `REPORTS/audit_fonctionnel_profond12_2026-08-28.md`,
+investigation à l'exécution) : 4 findings. Zones saines vérifiées en runtime :
+messagerie (403/404/400), cycle propriété hôte (pending→approve→visible),
+**anti-sur-réservation** (3 réservations simultanées sur qty=2 → 2×201 +
+1×409), recherche par disponibilité aux dates, compte invité + claim, facture
+RBAC, avis.
+
+**T-133 — implémentation, sans régression :**
+- **A1** 🔴 : le filtre de prix comparait `base_price` en EUR alors que
+  l'affichage est en XAF (saisir « max 50000 FCFA » ≈ 76 € ne filtrait rien).
+  → `priceBoundToStorage()` dans `i18n.ts` convertit les bornes en EUR ; le
+  prédicat SQL normalise le prix chambre en EUR (`CASE currency` avec taux
+  figés + cast `::numeric`, corrige l'erreur 22P02 « 1.08 » entier) ;
+  composant `SearchPriceFilter` (champ caché `displayCurrency` + libellés
+  FCFA).
+- **A3** 🟡 : bouton **« Contacter l'hôte »** sur la fiche (`ContactHostButton`,
+  `POST /api/conversations` puis redirection `/messages/[id]`, 401→connexion),
+  masqué à l'hôte sur sa propriété ; texte `/messages` corrigé.
+- **A4** ⚪ : photo de profil — champ URL dans le profil, `UserAvatar` (repli
+  initiales), `avatarUrl` exposé par `/api/auth/me`.
+- **A2** 🟠 : **faux positif** d'audit — l'expiration des `pending` impayées
+  existe déjà (`expirePendingBookings` dans le cron price-alerts) ; prouvé à
+  l'exécution (`expiredPendingBookings=1`, résa annulée « Paiement non
+  finalisé dans le délai »). Aucun code ajouté.
+- 🧪 `vitest` **273 passés** (+5 `i18n`) · 🔨 `tsc` 0 · `eslint` 0 · ▶️ `smoke`
+  **94/94** · `build` ✓ · `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Preuves filtre : 50000 XAF→0, 80000→6, 100000→8 logements ; EUR hist.
+  `maxPrice=100`→3 ; sans devise `50000`→8 (historique préservé). Contact
+  présent client / absent hôte. Avatar PATCH 200 / URL invalide 400 / null 200.
+- Rapport : `REPORTS/validation_T-133_2026-08-28.md`.
+- **Fichiers** : `search-price-filter.tsx`, `contact-host-button.tsx`,
+  `user-avatar.tsx` (nouveaux) ; `i18n.ts` (+tests), `recherche/page.tsx`,
+  `profile-form.tsx`, `mon-compte/page.tsx`, `messages/page.tsx`,
+  `hebergement/[slug]/page.tsx`, `api/auth/me/route.ts`. Aucune migration.
+
+---
+
 ## Session 26 — 2026-08-28 : T-132 XAF devise par défaut + langue avec effet réel (implémentation des remarques de l'audit n°11)
 
 **Demande** : implémenter les remarques/manques de l'audit n°11 sans régression,
