@@ -6,6 +6,7 @@ import {
   MAX_UPLOAD_BYTES,
   ALLOWED_UPLOAD_MIMES,
 } from "@/lib/storage";
+import { sniffImageMime } from "@/lib/storage/sniff";
 import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
 
 /**
@@ -69,7 +70,20 @@ export async function POST(request: NextRequest) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const stored = await (await getPublicUploader()).put(buffer, mimeType, user.id);
+
+    // T-126 (P3) : on vérifie la signature réelle du fichier (magic bytes),
+    // pas seulement l'en-tête Content-Type déclaré par le client (qu'on peut
+    // falsifier en renommant un .txt en .jpg). Le contenu doit être une
+    // véritable image, et d'un type autorisé.
+    const realMime = sniffImageMime(buffer);
+    if (!realMime || !ALLOWED_UPLOAD_MIMES.has(realMime)) {
+      return NextResponse.json(
+        { error: "Le fichier n'est pas une image valide (JPEG, PNG, WebP ou GIF attendu)." },
+        { status: 400 },
+      );
+    }
+
+    const stored = await (await getPublicUploader()).put(buffer, realMime, user.id);
     return NextResponse.json({
       url: stored.url,
       key: stored.key,

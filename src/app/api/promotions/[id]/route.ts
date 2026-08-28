@@ -26,6 +26,22 @@ export async function PATCH(
     const { id } = await params;
     if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     const patch = updateSchema.parse(await request.json());
+
+    // T-126 (P1) : si on décale la date de fin, elle ne doit pas passer
+    // avant la date de début (sinon la promo devient inutilisable).
+    if (patch.validUntil) {
+      const [existing] = await db
+        .select({ validFrom: promotions.validFrom })
+        .from(promotions)
+        .where(eq(promotions.id, id));
+      if (existing && new Date(patch.validUntil).getTime() <= existing.validFrom.getTime()) {
+        return NextResponse.json(
+          { error: "La date de fin doit être postérieure à la date de début" },
+          { status: 400 },
+        );
+      }
+    }
+
     const [updated] = await db
       .update(promotions)
       .set({

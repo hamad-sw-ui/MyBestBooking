@@ -4,15 +4,14 @@ import { reviews, reviewVotes } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 /**
  * POST /api/reviews/[id]/helpful — utilisateur connecté (T-026 audit).
  *
- * Incrémente atomiquement `reviews.helpful_count`. Rate-limit par
- * user pour éviter le spam. Un futur schéma pourrait stocker le vote
- * pour empêcher le double comptage — pour l'instant on garde simple
- * (rate-limit strict par user + review).
+ * Vote « utile » unique par (review, user) : la contrainte d'unicité en base
+ * empêche le double comptage. Un re-vote renvoie 409 (T-126). Un rate-limit
+ * haut débit complète le dispositif contre le spam.
  */
 export async function POST(
   _request: NextRequest,
@@ -29,15 +28,28 @@ export async function POST(
       return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     }
 
-    // Rate-limit : un même user ne peut incrémenter le même avis qu'une
-    // fois toutes les 24h (approximation « anti double clic »).
+    // T-126 (P2) : un vote déjà enregistré est un état définitif → 409
+    // Conflict, vérifié AVANT le rate-limit pour qu'un re-clic (même après
+    // 24 h) réponde toujours « déjà voté » plutôt qu'un 429 « réessayez ».
+    const [existingVote] = await db
+      .select({ id: reviewVotes.id })
+      .from(reviewVotes)
+      .where(and(eq(reviewVotes.reviewId, id), eq(reviewVotes.userId, user.id)))
+      .limit(1);
+    if (existingVote) {
+      return NextResponse.json({ error: "Vous avez déjà marqué cet avis comme utile" }, { status: 409 });
+    }
+
+    // Rate-limit anti-spam : un même user ne peut incrémenter le même avis
+    // qu'une fois toutes les 24h (garde haut débit, en plus de la contrainte
+    // d'unicité ci-dessus).
     const rl = rateLimit(`helpful:${user.id}:${id}`, {
-      limit: 1,
-      windowMs: 24 * 60 * 60 * 1000,
+      limit: 3,
+      windowMs: 60 * 60 * 1000,
     });
     if (!rl.ok) {
       return NextResponse.json(
-        { error: "Vous avez déjà marqué cet avis comme utile" },
+        { error: "Trop d'actions, réessayez plus tard" },
         { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
       );
     }
@@ -59,7 +71,11 @@ export async function POST(
       return { review: updated };
     });
     if ("missing" in result) return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
-    if ("duplicate" in result) return NextResponse.json({ error: "Vous avez déjà marqué cet avis comme utile" }, { status: 429 });
+    // T-126 (P2) : l'utilisateur a déjà voté → 409 Conflict (état attendu et
+    // définitif), pas 429 (« réessayez plus tard ») qui laissait croire à une
+    // limitation temporaire. Le 429 reste réservé au vrai spam (rate-limit
+    // en amont, plusieurs actions rapprochées).
+    if ("duplicate" in result) return NextResponse.json({ error: "Vous avez déjà marqué cet avis comme utile" }, { status: 409 });
     return NextResponse.json({ review: result.review });
   } catch (error) {
     console.error("[reviews/helpful] error:", error);

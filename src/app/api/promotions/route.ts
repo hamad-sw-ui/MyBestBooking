@@ -5,17 +5,31 @@ import { promotions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { desc, eq } from "drizzle-orm";
 
-const createSchema = z.object({
-  code: z.string().min(3).max(50).regex(/^[A-Z0-9_-]+$/, "Code alphanumérique majuscule"),
-  name: z.string().min(3).max(100),
-  type: z.enum(["percentage", "fixed_amount"]),
-  value: z.number().positive(),
-  minBookingAmount: z.number().min(0).optional(),
-  maxDiscount: z.number().positive().optional(),
-  validFrom: z.string(),
-  validUntil: z.string(),
-  maxUses: z.number().int().positive().optional(),
-});
+const createSchema = z
+  .object({
+    code: z.string().min(3).max(50).regex(/^[A-Z0-9_-]+$/, "Code alphanumérique majuscule"),
+    name: z.string().min(3).max(100),
+    type: z.enum(["percentage", "fixed_amount"]),
+    value: z.number().positive(),
+    minBookingAmount: z.number().min(0).optional(),
+    maxDiscount: z.number().positive().optional(),
+    validFrom: z.string(),
+    validUntil: z.string(),
+    maxUses: z.number().int().positive().optional(),
+  })
+  // T-126 (P1) : une remise en pourcentage ne peut pas dépasser 100 % (le
+  // calcul reste défensif via Math.min(discount, total), mais on évite de
+  // stocker une promo absurde qui s'afficherait « -150 % »).
+  .refine((d) => d.type !== "percentage" || d.value <= 100, {
+    message: "Une remise en pourcentage doit être comprise entre 0 et 100",
+    path: ["value"],
+  })
+  // T-126 (P1) : la plage de validité doit être cohérente, sinon la promo ne
+  // peut jamais être active (« Code pas encore actif » en permanence).
+  .refine((d) => new Date(d.validUntil).getTime() > new Date(d.validFrom).getTime(), {
+    message: "La date de fin doit être postérieure à la date de début",
+    path: ["validUntil"],
+  });
 
 /**
  * GET /api/promotions — public (liste des promos actives non expirées).

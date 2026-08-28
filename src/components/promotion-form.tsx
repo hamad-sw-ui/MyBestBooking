@@ -31,13 +31,26 @@ export function PromotionForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    // T-126 (P1) : garde miroir côté client (le serveur reste la source de
+    // vérité via les .refine() Zod) pour éviter un aller-retour inutile.
+    const valueNum = parseFloat(form.value);
+    if (form.type === "percentage" && (!Number.isFinite(valueNum) || valueNum <= 0 || valueNum > 100)) {
+      setError("Une remise en pourcentage doit être comprise entre 0 et 100.");
+      return;
+    }
+    if (form.validFrom && form.validUntil && new Date(form.validUntil) <= new Date(form.validFrom)) {
+      setError("La date de fin doit être postérieure à la date de début.");
+      return;
+    }
+
     setLoading(true);
     try {
       const body: Record<string, unknown> = {
         code: form.code.toUpperCase().trim(),
         name: form.name.trim(),
         type: form.type,
-        value: parseFloat(form.value),
+        value: valueNum,
         validFrom: form.validFrom,
         validUntil: form.validUntil,
       };
