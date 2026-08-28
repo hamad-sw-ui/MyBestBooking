@@ -6,10 +6,11 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : T-127 sur `arena/01a042cf-mybestbooking`
-  (commit de code `82bb283`). Le hash exact du HEAD courant est
-  **à mettre à jour en fin de session** : un commit de doc ne peut pas contenir
-  son propre hash, et R7 le tolère explicitement (mode toléré, 0 fail).
+- **HEAD Git** : T-128 sur `arena/01a042cf-mybestbooking`
+  (commit de code `3b2918e`, commit de doc `b57d52d`). Le hash exact du HEAD
+  courant est **à mettre à jour en fin de session** : un commit de doc ne peut
+  pas contenir son propre hash, et R7 le tolère explicitement (mode toléré,
+  0 fail).
   Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
   push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
