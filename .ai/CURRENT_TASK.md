@@ -1,5 +1,37 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Correctifs de l'audit fonctionnel n°7 — existence de la propriété
+avant alerte/favori (404 au lieu de 500 FK), magic bytes sur les pièces
+jointes de messagerie, filtre de période de l'export de facturation.
+**ID** : T-127 — aucun changement de schéma, aucune migration (validations additives).
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-28.
+
+## Périmètre (T-127)
+
+- **P1** : `POST /api/price-alerts` et `POST /api/wishlists` (ajout) vérifient
+  que la propriété cible existe avant insertion → **404** propre au lieu d'un
+  500 par violation de clé étrangère. Existence seulement (pas `status='active'`).
+- **P2** : l'upload des **pièces jointes de messagerie** (`/api/uploads`)
+  applique `sniffImageMime` (T-126) : rejet 400 d'un fichier non-image déguisé,
+  et stockage du MIME réel (et non déclaré).
+- **P3** : l'export CSV de facturation accepte des filtres optionnels
+  `from`/`to` (YYYY-MM-DD, `from ≤ to`) validés → 400 sinon ; sans paramètre,
+  export complet (historique).
+
+## Sortie (validé — T-127)
+
+- 🔨 typecheck 0 erreur · lint 0 · build ✓.
+- 🧪 `npm test` **251/251** · ▶️ `npm run smoke` **94/94**.
+- ▶️ preuves d'exécution P1/P2/P3 — voir `REPORTS/validation_T-127_2026-08-28.md`.
+
+> Voir `REPORTS/audit_fonctionnel_profond7_2026-08-28.md` (audit),
+> `REPORTS/analyse_impact_T-127_2026-08-28.md` (§14).
+
+---
+
+## Tâche précédente — T-126 (audit n°6)
+
 **Tâche :** Correctifs de l'audit fonctionnel n°6 — validation des promotions
 (pourcentage ≤ 100, dates cohérentes), sémantique du double vote utile (409),
 vérification des magic bytes à l'upload d'images.

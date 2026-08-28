@@ -6,14 +6,26 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : T-126 sur `arena/01a042cf-mybestbooking`
-  (commit de code `29013c5`, commit de doc `88bb44f`). Le hash exact du HEAD
-  courant est **à mettre à jour en fin de session** : un commit de doc ne peut
-  pas contenir son propre hash, et R7 le tolère explicitement (mode toléré,
-  0 fail). Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git
-  de ces push car le jeton GitHub App n'a pas la permission `workflows`.
+- **HEAD Git** : T-127 sur `arena/01a042cf-mybestbooking`
+  (commit de code `82bb283`). Le hash exact du HEAD courant est
+  **à mettre à jour en fin de session** : un commit de doc ne peut pas contenir
+  son propre hash, et R7 le tolère explicitement (mode toléré, 0 fail).
+  Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
+  push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-126 (6e audit fonctionnel profond) —
+- **Dernière tâche validée** : T-127 (7e audit fonctionnel profond) —
+  corrections **additives** robustesse, aucune migration :
+  **P1** `POST /api/price-alerts` et `POST /api/wishlists` (ajout) vérifient
+  l'existence de la propriété cible avant insertion → **404** propre au lieu
+  d'un 500 par violation FK ; **P2** l'upload des **pièces jointes de
+  messagerie** (`/api/uploads`) applique `sniffImageMime` (T-126) : rejet 400
+  d'un non-image déguisé, MIME réel stocké ; **P3** l'export CSV de facturation
+  accepte des filtres `from`/`to` validés (400 si incohérents), export complet
+  par défaut. Nombreuses zones confirmées saines (réservation, rate-plans,
+  messagerie, 2FA, wishlist partagée, settings, navigation).
+  Validation : typecheck/lint 0, tests **251/251**, smoke **94/94**, preuves
+  d'exécution P1/P2/P3 — 2026-08-28.
+  Avant : T-126 (6e audit) —
   durcissements **additifs** de validation, aucune migration :
   **P1** promotions refusées à 400 si pourcentage > 100 (type `percentage`) ou
   `validUntil <= validFrom` (`.refine()` Zod POST + garde PATCH + garde

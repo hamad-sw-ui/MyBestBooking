@@ -9,6 +9,45 @@
 
 ---
 
+## Session 21 — 2026-08-28 : 7e audit fonctionnel (rapport) + T-127 correctifs P1/P2/P3
+
+### Audit n°7 (investigation, aucun code modifié)
+
+Rapport `REPORTS/audit_fonctionnel_profond7_2026-08-28.md`. Périmètre neuf :
+rate-plans/disponibilités, wishlist partagée, 2FA, messagerie/pièces jointes,
+alertes de prix, facturation/analytics, réservation (0 nuit, chambre hors
+propriété), settings, navigation. 3 écarts trouvés ; nombreuses zones saines
+vérifiées (à ne pas régresser).
+
+### T-127 — correctifs (niveau L, aucune migration)
+
+- 🔨 **P1** : avant insertion d'une alerte de prix ou d'un favori, vérifier que
+  la propriété existe → **404** au lieu d'un 500 par violation FK
+  (`price-alerts/route.ts`, `wishlists/route.ts`). Existence seulement (pas
+  `status='active'`) pour ne pas casser un favori sur une propriété suspendue.
+- 🔨 **P2** : `/api/uploads` (pièces jointes privées) applique `sniffImageMime`
+  (T-126) : rejet 400 d'un non-image déguisé, MIME réel stocké en base.
+- 🔨 **P3** : export facturation filtrable par `from`/`to` validés (400 si
+  incohérents/mal formés) ; sans paramètre = export complet (historique).
+
+### Fichiers
+`src/app/api/price-alerts/route.ts`, `src/app/api/wishlists/route.ts`,
+`src/app/api/uploads/route.ts`, `src/app/api/dashboard/billing/export/route.ts`.
+
+### Validation
+- 🔨 typecheck 0 · lint 0 · build ✓.
+- 🧪 `npm test` **251/251**.
+- ▶️ `npm run smoke` **94/94**.
+- ▶️ E2E : alerte/favori propriété inexistante → **404** (avant 500), cibles
+  existantes → 201 ; fausse pièce jointe → **400** (avant 200), vraie image →
+  200 ; export complet 36 lignes = période large 36, période 2001 → 0 ligne,
+  période inversée/mal formée → 400, customer → 403. Voir
+  `REPORTS/validation_T-127_2026-08-28.md`.
+- 🧹 Données de test nettoyées (wishlist, alerte, pièce jointe disque+DB, résa
+  smoke) ; 0 orphelin en base.
+
+---
+
 ## Session 20 — 2026-08-28 : 6e audit fonctionnel (rapport) + T-126 correctifs P1/P2/P3
 
 ### Audit n°6 (investigation, aucun code modifié)
