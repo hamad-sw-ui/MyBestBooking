@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Script from "next/script";
 import { ToastProvider } from "@/components/ui/toast";
+import { MaintenanceGate } from "@/components/maintenance-gate";
+import { getCurrentUser } from "@/lib/auth";
 import "./globals.css";
 
 // Les polices restent locales afin que le rendu initial ne dépende pas
@@ -41,10 +43,17 @@ export const metadata: Metadata = {
   robots: { index: true, follow: true },
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  // T-128 : un admin doit pouvoir traverser le site pendant la maintenance
+  // (pour la désactiver). On lit le rôle côté serveur (JWT/session) et on le
+  // passe à la garde cliente sous forme d'un simple booléen.
+  const user = await getCurrentUser().catch(() => null);
+  const isAdmin = user?.role === "admin";
   return (
     <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="bg-gray-50 min-h-screen font-sans">
+        {/* T-128 : bascule l'affichage vers /maintenance sur plein-chargement. */}
+        <MaintenanceGate isAdmin={isAdmin} />
         {/* T-029 : skip link a11y */}
         <a href="#main-content" className="skip-link">Aller au contenu principal</a>
         {/* T-029 : pré-applique la classe .dark sans FOUC */}
