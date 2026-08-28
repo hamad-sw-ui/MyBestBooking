@@ -1,5 +1,36 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°13.
+- **A1** : validation des préférences `language`/`currency` — l'API
+  `PATCH /api/users/me` acceptait n'importe quelle chaîne (« ar », « ZZZ »).
+  Bornage zod (`isUiLocale` fr/en ; devise dans `DISPLAY_CURRENCIES`) +
+  normalisation côté hook (`useDisplayPreferences`). Nouveaux helpers
+  `isDisplayCurrency`/`normalizeDisplayCurrency` dans `src/lib/i18n.ts`.
+- **A2** : un visiteur connecté pouvait ouvrir `/connexion` et `/inscription`.
+  Garde dans `src/proxy.ts` (vrai 307 → `/` en chargement direct ; un
+  `redirect()` RSC dans un layout ne fait pas de 307). Anonyme reste 200,
+  pages d'auth à jeton non touchées.
+- **A3** : soft-404 streamés (`notFound()`) renvoient 200 (comportement
+  documenté Next 16) mais émettent `noindex` ; le layout racine imposait
+  `robots:{index:true}` en conflit → retrait de cette surcharge.
+**ID** : T-135 — additif, aucune migration, aucune route d'écriture.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-28.
+
+## Sortie (validé — T-135)
+
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **281 passés** (+5 `i18n`, +4 `proxy`).
+- ▶️ `smoke` **94/94** · `build` ✓ (58/58) · `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution DEV + PROD (`next start` 3100) : ar/de→400, ZZZ→400,
+  xaf→200 normalisé XAF, en→200 ; connecté /connexion·/inscription→307 /,
+  anonyme→200, /mon-compte anonyme→307 login ; 404 = balise `noindex`
+  seule, pages normales indexables, mentions légales `index,follow`.
+- Voir `REPORTS/validation_T-135_2026-08-28.md`.
+
+---
+
+## Tâche précédente — T-133 (audit n°12)
+
 **Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°12.
 - **A1** : le filtre de prix de la recherche comparait en EUR (devise chambre)
   alors que l'affichage est en XAF → normalisation du prix en EUR dans le SQL

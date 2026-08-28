@@ -1,5 +1,14 @@
 import { describe, it, expect } from "vitest";
-import { pickLocalized, convertAmount, formatMoney, priceBoundToStorage, RATES_FROM_EUR } from "./i18n";
+import {
+  pickLocalized,
+  convertAmount,
+  formatMoney,
+  priceBoundToStorage,
+  RATES_FROM_EUR,
+  isDisplayCurrency,
+  normalizeDisplayCurrency,
+  DISPLAY_CURRENCIES,
+} from "./i18n";
 
 describe("pickLocalized (T-029)", () => {
   it("locale fr → row inchangée", () => {
@@ -101,5 +110,36 @@ describe("priceBoundToStorage (T-133 / A1)", () => {
     const displayed = convertAmount(89, "EUR", "XAF");
     const back = priceBoundToStorage(displayed, "XAF");
     expect(back).toBeCloseTo(89, 1);
+  });
+});
+
+describe("validation devise d'affichage (T-135)", () => {
+  it("isDisplayCurrency reconnaît les devises connues (insensible casse)", () => {
+    expect(isDisplayCurrency("XAF")).toBe(true);
+    expect(isDisplayCurrency("xaf")).toBe(true);
+    expect(isDisplayCurrency("EUR")).toBe(true);
+    expect(isDisplayCurrency("USD")).toBe(true);
+    expect(isDisplayCurrency("ZZZ")).toBe(false);
+    expect(isDisplayCurrency("")).toBe(false);
+    expect(isDisplayCurrency(null)).toBe(false);
+    expect(isDisplayCurrency(undefined)).toBe(false);
+  });
+
+  it("DISPLAY_CURRENCIES contient les 6 devises du sélecteur de profil", () => {
+    for (const c of ["EUR", "USD", "GBP", "CHF", "MAD", "XAF"]) {
+      expect(DISPLAY_CURRENCIES).toContain(c);
+    }
+  });
+
+  it("normalizeDisplayCurrency normalise en majuscules", () => {
+    expect(normalizeDisplayCurrency("xaf")).toBe("XAF");
+    expect(normalizeDisplayCurrency("eur")).toBe("EUR");
+  });
+
+  it("normalizeDisplayCurrency retombe sur le repli si devise absente/inconnue", () => {
+    expect(normalizeDisplayCurrency("ZZZ")).toBe("XAF");
+    expect(normalizeDisplayCurrency(null)).toBe("XAF");
+    expect(normalizeDisplayCurrency(undefined)).toBe("XAF");
+    expect(normalizeDisplayCurrency("ZZZ", "EUR")).toBe("EUR");
   });
 });

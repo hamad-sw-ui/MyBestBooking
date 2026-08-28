@@ -5,14 +5,30 @@ import { users, sessions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
+import { DISPLAY_CURRENCIES } from "@/lib/i18n";
+import { isUiLocale } from "@/lib/ui-strings";
 
+// T-135 — langues de l'UI réellement traduites (fr/en). L'arabe n'a pas
+// de dictionnaire V1 : on le rejette ici plutôt que de stocker une
+// préférence sans effet (le serveur retombe déjà sur « fr » à la lecture).
 const schema = z.object({
   firstName: z.string().min(2).max(100).optional(),
   lastName: z.string().min(2).max(100).optional(),
   phone: z.string().max(20).optional().nullable(),
   country: z.string().length(2).optional().nullable(),
-  language: z.string().max(5).optional(),
-  currency: z.string().length(3).optional(),
+  language: z
+    .string()
+    .max(5)
+    .refine((v) => isUiLocale(v), "Langue non supportée")
+    .optional(),
+  // Devise d'affichage : normalisée en majuscules et bornée aux devises
+  // connues (RATES_FROM_EUR). Une devise inconnue (« ZZZ ») est rejetée 400.
+  currency: z
+    .string()
+    .length(3)
+    .toUpperCase()
+    .refine((v) => DISPLAY_CURRENCIES.includes(v), "Devise non supportée")
+    .optional(),
   timezone: z.string().max(50).optional(),
   avatarUrl: z.string().url().max(500).optional().nullable(),
   // T-030 : préférence user

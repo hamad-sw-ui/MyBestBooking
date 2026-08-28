@@ -40,7 +40,14 @@ export const metadata: Metadata = {
     title: "mybestbooking",
     description: "Réservez mieux. Voyagez plus.",
   },
-  robots: { index: true, follow: true },
+  // T-135 — pas de `robots: { index: true }` forcé ici : il entrait en
+  // conflit avec la balise `<meta name="robots" content="noindex">` que
+  // Next.js émet automatiquement pour les réponses notFound() streamées
+  // (les soft-404 renvoient 200 en streaming — voir doc Next, loading.md
+  // « Status codes »). Sans surcharge, les pages normales restent
+  // indexables (défaut « index, follow ») et les 404 reçoivent bien
+  // « noindex ». Les pages qui veulent forcer une directive le font au
+  // niveau page (ex. maintenance : index:false ; mentions légales).
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {

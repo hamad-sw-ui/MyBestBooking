@@ -40,6 +40,34 @@ export const RATES_FROM_EUR: Record<string, number> = {
   XAF: 655.957,
 };
 
+/**
+ * T-135 — Devises d'affichage supportées (clés de `RATES_FROM_EUR`,
+ * sauf qu'EUR est la devise de facturation mais aussi affichable).
+ * Source de vérité unique pour la validation de la préférence
+ * `currency` du profil (API `PATCH /api/users/me`) et le garde-fou du
+ * hook `useDisplayPreferences`.
+ */
+export const DISPLAY_CURRENCIES = Object.keys(RATES_FROM_EUR) as string[];
+export type DisplayCurrency = (typeof DISPLAY_CURRENCIES)[number];
+
+/** Type-guard : une devise d'affichage est-elle connue/convertible ? */
+export function isDisplayCurrency(cur: string | null | undefined): cur is DisplayCurrency {
+  return typeof cur === "string" && cur.toUpperCase() in RATES_FROM_EUR;
+}
+
+/**
+ * Normalise une devise d'affichage vers une clé connue (majusculisée)
+ * ou le repli `fallback` si elle est absente/inconnue. Évite qu'une
+ * valeur aberrante (« ZZZ ») ne remonte jusqu'à l'affichage des prix.
+ */
+export function normalizeDisplayCurrency(
+  cur: string | null | undefined,
+  fallback: DisplayCurrency = "XAF",
+): DisplayCurrency {
+  const up = typeof cur === "string" ? cur.trim().toUpperCase() : "";
+  return isDisplayCurrency(up) ? up : fallback;
+}
+
 export function convertAmount(
   amount: number,
   from: string,

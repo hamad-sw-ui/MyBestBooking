@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { normalizeDisplayCurrency } from "@/lib/i18n";
+import { isUiLocale } from "@/lib/ui-strings";
 
 /**
  * T-131/T-132 — Préférences d'affichage (devise + langue) du visiteur.
@@ -23,7 +25,7 @@ import { useEffect, useState } from "react";
 export interface DisplayPreferences {
   /** Devise d'affichage (ex. "XAF"). Jamais null une fois prêt. */
   currency: string | null;
-  /** Langue d'affichage ("fr" | "en" | "ar"). Jamais null une fois prêt. */
+  /** Langue d'affichage ("fr" | "en"). Jamais null une fois prêt. */
   language: string | null;
   /** true quand les préférences ont été résolues (ou échoué → défauts). */
   ready: boolean;
@@ -54,21 +56,27 @@ function load(): Promise<Resolved> {
       }
 
       // 2) Préférence utilisateur connecté (prime sur le défaut plateforme).
+      //    T-135 : on borne sur les valeurs réellement supportées pour
+      //    qu'une préférence aberrante (« ZZZ », « ar » — issue d'anciennes
+      //    données ou d'un appel direct à l'API) ne casse pas l'affichage :
+      //    devise inconnue → devise plateforme/XAF, langue non traduite → « fr ».
       try {
         const me = await fetch("/api/auth/me", { cache: "no-store" });
         if (me.ok) {
           const data = await me.json();
           const u = data?.user;
           if (typeof u?.currency === "string" && u.currency) platformCurrency = u.currency.toUpperCase();
-          if (typeof u?.language === "string" && u.language) platformLanguage = u.language;
+          if (typeof u?.language === "string" && u.language && isUiLocale(u.language)) {
+            platformLanguage = u.language;
+          }
         }
       } catch {
         // anonyme : on garde le défaut plateforme
       }
 
       return {
-        currency: platformCurrency ?? "XAF",
-        language: platformLanguage ?? "fr",
+        currency: normalizeDisplayCurrency(platformCurrency, "XAF"),
+        language: isUiLocale(platformLanguage) ? platformLanguage : "fr",
       };
     })();
   }

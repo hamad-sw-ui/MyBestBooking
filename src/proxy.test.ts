@@ -126,3 +126,40 @@ describe("garde de rôle dashboard (T-123 / G2)", () => {
     }
   });
 });
+
+describe("garde pages d'auth pour visiteurs connectés (T-135)", () => {
+  it("redirige un client connecté depuis /connexion vers l'accueil", async () => {
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("cust-1", "customer");
+    const res = await proxy(makeRequest("/connexion", token));
+    expect(status(res)).toBe(307);
+    expect(location(res)).toMatch(/\/$/);
+  });
+
+  it("redirige un client connecté depuis /inscription vers l'accueil", async () => {
+    const { proxy } = await import("./proxy");
+    const token = await makeSession("cust-1", "customer");
+    const res = await proxy(makeRequest("/inscription", token));
+    expect(status(res)).toBe(307);
+    expect(location(res)).toMatch(/\/$/);
+  });
+
+  it("laisse un visiteur anonyme accéder à /connexion et /inscription (pas de boucle)", async () => {
+    const { proxy } = await import("./proxy");
+    for (const path of ["/connexion", "/inscription"]) {
+      const res = await proxy(makeRequest(path));
+      expect(res.headers.get("location")).toBeNull();
+    }
+  });
+
+  it("ne touche pas aux pages d'auth basées sur un jeton (non matchées)", async () => {
+    // /reinitialiser, /activer-compte, /mot-de-passe-oublie ne sont pas dans
+    // le matcher : le proxy ne les invoque pas, donc un connecté y accède.
+    // (Vérifié par l'absence de ces segments dans config.matcher.)
+    const { config } = await import("./proxy");
+    const matcher = JSON.stringify(config.matcher);
+    expect(matcher).not.toContain("reinitialiser");
+    expect(matcher).not.toContain("activer-compte");
+    expect(matcher).not.toContain("mot-de-passe-oublie");
+  });
+});

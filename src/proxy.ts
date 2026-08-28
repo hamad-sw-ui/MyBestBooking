@@ -104,6 +104,27 @@ function redirectToLogin(request: NextRequest): NextResponse {
 
 export async function proxy(request: NextRequest) {
   const session = await getSession(request);
+  const { pathname } = request.nextUrl;
+
+  // T-135 — pages d'authentification publiques (connexion/inscription).
+  // Un visiteur déjà authentifié n'a rien à y faire : on le renvoie à
+  // l'accueil. Un visiteur anonyme, lui, doit y accéder : on court-circuite
+  // la redirection « non authentifié » ci-dessous (sinon boucle
+  // /connexion?next=/connexion). Fait au proxy (pas via redirect() dans un
+  // layout RSC) pour produire un vrai 307 en chargement direct — voir le
+  // commentaire d'en-tête. Les pages d'auth basées sur un jeton
+  // (reinitialiser, activer-compte, verifier-email, mot-de-passe-oublie)
+  // ne sont pas dans le matcher et restent accessibles dans tous les cas.
+  const isAuthPage = pathname === "/connexion" || pathname === "/inscription";
+  if (isAuthPage) {
+    if (session) {
+      const home = request.nextUrl.clone();
+      home.pathname = "/";
+      home.search = "";
+      return NextResponse.redirect(home);
+    }
+    return NextResponse.next();
+  }
 
   // Non authentifié (ou JWT absent/invalide) → connexion sur les routes
   // protégées par le matcher.
@@ -111,7 +132,6 @@ export async function proxy(request: NextRequest) {
     return redirectToLogin(request);
   }
 
-  const { pathname } = request.nextUrl;
 
   // Garde de rôle sur le dashboard (au plein-chargement).
   if (pathname.startsWith("/dashboard")) {
@@ -135,6 +155,9 @@ export const config = {
     "/mes-reservations/:path*",
     "/mes-favoris/:path*",
     "/messages/:path*",
+    // T-135 : pages d'auth à interdire aux visiteurs déjà connectés.
+    "/connexion",
+    "/inscription",
     // /reservation reste public pour permettre l'achat invité. Les règles
     // d'authentification et de propriété sont vérifiées dans les handlers API.
     "/dashboard/:path*",
