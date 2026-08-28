@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { priceAlerts, users } from "@/db/schema";
+import { priceAlerts, properties, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { and, eq, desc } from "drizzle-orm";
 
@@ -40,6 +40,17 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
     const data = schema.parse(await request.json());
+    // T-127 (P1) : on vérifie que la propriété existe avant d'insérer
+    // (propertyId est une clé étrangère NOT NULL) ; sinon la base lèverait une
+    // violation FK non mappée → 500. On renvoie un 404 clair.
+    const [targetProperty] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.id, data.propertyId))
+      .limit(1);
+    if (!targetProperty) {
+      return NextResponse.json({ error: "Hébergement introuvable" }, { status: 404 });
+    }
     const [existing] = await db.select().from(priceAlerts).where(and(eq(priceAlerts.userId, user.id), eq(priceAlerts.propertyId, data.propertyId))).limit(1);
     const date = (value: string | Date | null | undefined) => value ? (typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10)) : null;
     const contextChanged = Boolean(existing) && (

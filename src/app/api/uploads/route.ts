@@ -9,6 +9,7 @@ import {
   MAX_UPLOAD_BYTES,
   ALLOWED_UPLOAD_MIMES,
 } from "@/lib/storage";
+import { sniffImageMime } from "@/lib/storage/sniff";
 import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
 
 /**
@@ -101,13 +102,26 @@ export async function POST(request: NextRequest) {
 
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
-    const stored = await (await getUploader()).put(buffer, mimeType, user.id);
-    await db.insert(uploadObjects).values({ key: stored.key, ownerId: user.id, mimeType, size: stored.size }).onConflictDoNothing({ target: uploadObjects.key });
+
+    // T-127 (P2) : on vérifie la signature réelle (magic bytes), pas seulement
+    // le Content-Type déclaré par le client. Le MIME stocké en base est celui
+    // détecté (« le MIME est une propriété de l'objet uploadé, jamais du
+    // navigateur »), cohérent avec le contrôle de téléchargement.
+    const realMime = sniffImageMime(buffer);
+    if (!realMime || !ALLOWED_UPLOAD_MIMES.has(realMime)) {
+      return NextResponse.json(
+        { error: "Le fichier n'est pas une image valide (JPEG, PNG, WebP ou GIF)." },
+        { status: 400 },
+      );
+    }
+
+    const stored = await (await getUploader()).put(buffer, realMime, user.id);
+    await db.insert(uploadObjects).values({ key: stored.key, ownerId: user.id, mimeType: realMime, size: stored.size }).onConflictDoNothing({ target: uploadObjects.key });
     return NextResponse.json({
       url: stored.url,
       key: stored.key,
       size: stored.size,
-      mimeType,
+      mimeType: realMime,
     });
   } catch (e) {
     console.error("[upload] failed:", e);

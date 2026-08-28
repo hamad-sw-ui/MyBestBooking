@@ -110,6 +110,17 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // T-127 (P1) : la propriété doit exister (propertyId est une clé
+      // étrangère) ; sinon l'insertion lèverait une violation FK → 500.
+      const [targetProperty] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(eq(properties.id, data.propertyId))
+        .limit(1);
+      if (!targetProperty) {
+        return NextResponse.json({ error: "Hébergement introuvable" }, { status: 404 });
+      }
+
       // Check if already in wishlist
       const existing = await db
         .select()
