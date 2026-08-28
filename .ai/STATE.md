@@ -14,15 +14,28 @@
   de session** : un commit de doc ne peut pas contenir son propre hash, et R7 le
   tolère explicitement (0 fail).
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-125 (5e audit fonctionnel profond) —
+- **Dernière tâche validée** : T-126 (6e audit fonctionnel profond) —
+  durcissements **additifs** de validation, aucune migration :
+  **P1** promotions refusées à 400 si pourcentage > 100 (type `percentage`) ou
+  `validUntil <= validFrom` (`.refine()` Zod POST + garde PATCH + garde
+  formulaire ; le calcul reste défensif `Math.min`) ; **P2** double vote
+  « utile » renvoie **409 Conflict** (vérif d'existence avant rate-limit) au
+  lieu de 429, le 429 restant au spam ; **P3** upload d'image vérifie les
+  **magic bytes** via `src/lib/storage/sniff.ts` (rejet 400 d'un fichier non
+  image déguisé). Réponse à l'audit : la **commission hôte** (taux par
+  propriété `commission_rate`, défaut 15 %, admin-only) est un mécanisme
+  distinct des promotions ; elle est calculée sur le montant **après** remises,
+  donc la plateforme absorbe les remises marketing.
+  Validation : typecheck/lint 0 erreur, tests **251/251** (+6 sniff),
+  smoke **94/94**, preuves d'exécution P1/P2/P3 — 2026-08-28.
+  Avant : T-125 (5e audit) —
   modération des avis pilotée par réglage `reviews.requireModeration` (défaut
   `false` = publication immédiate historique) ; **bouclage du parrainage**
   (migration additive `0017` : `users.referred_by` + `referral_rewarded_at`,
   `referralCode` au register + `?ref=` à l'inscription, récompense idempotente
   au séjour terminé via cron, réglable `bestrewards.referral`) ; motif de
   suspension tracé dans l'audit ; page d'avis en RSC avec garde `notFound()`.
-  Validation : typecheck/lint 0 erreur, tests **245/245**, smoke **94/94**,
-  ai:check **20/20** — 2026-08-28.
+  Tests **245/245**, smoke **94/94**, ai:check **20/20** — 2026-08-28.
   Avant : T-122/T-123/T-124 (4e audit) — validation UUID des routes API
   dynamiques (400 au lieu de 500), garde de rôle `/dashboard/*` au
   plein-chargement via rôle embarqué dans le JWT + proxy edge, pages RSC par

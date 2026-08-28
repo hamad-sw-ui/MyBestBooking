@@ -9,6 +9,56 @@
 
 ---
 
+## Session 20 — 2026-08-28 : 6e audit fonctionnel (rapport) + T-126 correctifs P1/P2/P3
+
+### Audit n°6 (investigation, aucun code modifié)
+
+Rapport `REPORTS/audit_fonctionnel_profond6_2026-08-28.md` : 3 points faibles
+de validation trouvés (P1 promo > 100 % / dates inversées acceptées, P2 double
+vote → 429 au lieu de 409, P3 upload sans vérification magic bytes). Nombreuses
+zones confirmées saines (auth secondaire, guest claim, annulation, isolation
+hôte/admin, recherche robuste, pages gatées). Réponse à une question produit :
+la **commission hôte** (`properties.commission_rate`, défaut 15 %, admin-only)
+est un mécanisme **distinct** des promotions ; elle est calculée sur le total
+**après** promo/bestrewards/wallet → la plateforme absorbe les remises
+marketing, l'hôte ne les finance pas.
+
+### T-126 — correctifs (niveau L, aucune migration)
+
+- 🔨 **P1** : `createSchema` promotions → deux `.refine()` Zod (pourcentage ≤
+  100 en type `percentage` ; `validUntil > validFrom`) → 400. Garde PATCH si la
+  nouvelle date de fin précède le début. Garde miroir dans `promotion-form.tsx`.
+  Le calcul reste défensif (`Math.min(discount, total)`).
+- 🔨 **P2** : vote utile — vérification d'existence du vote **avant** le
+  rate-limit → doublon **409 Conflict** ; rate-limit spam assoupli (3/h) en
+  429. Import `and` ajouté.
+- 🔨 **P3** : nouveau helper pur `src/lib/storage/sniff.ts` (`sniffImageMime`)
+  reconnaissant JPEG/PNG/GIF/WebP par signature ; la route upload l'utilise et
+  rejette (400) un contenu non image quel que soit le Content-Type déclaré.
+
+### Fichiers
+
+- `src/app/api/promotions/route.ts`, `src/app/api/promotions/[id]/route.ts`,
+  `src/components/promotion-form.tsx` (P1)
+- `src/app/api/reviews/[id]/helpful/route.ts` (P2)
+- `src/app/api/properties/upload/route.ts`, `src/lib/storage/sniff.ts`,
+  `src/lib/storage/sniff.test.ts` (P3)
+
+### Validation
+
+- 🔨 typecheck 0 · lint 0 · build ✓.
+- 🧪 `npm test` **251/251** (39 fichiers ; +6 tests sniff).
+- ▶️ `npm run smoke` **94/94**.
+- ▶️ E2E 3 rôles : pct 150 → 400, dates inversées → 400, promo valide → 201,
+  fixed_amount 500 → 201 (non plafonné), PATCH date passée → 400 / +60 j → 200 ;
+  1er vote → 200, doublon → **409**, anonyme → 401 ; faux .jpg/.png → 400,
+  vrais JPEG/PNG → 200, customer upload → 403. Voir
+  `REPORTS/validation_T-126_2026-08-28.md`.
+- 🧹 Toutes les données de test nettoyées (promos, vote, fichiers upload,
+  résa smoke).
+
+---
+
 ## Session 19 — 2026-08-28 : T-125 correctifs 5e audit fonctionnel (modération avis, parrainage bouclé, audit suspension, garde page avis)
 
 ### Livré
