@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Mail, Lock, User, Eye, EyeOff, Building2 } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Building2, Gift } from "lucide-react";
 import { safeNextPath } from "@/lib/safe-next";
 
 export default function RegisterPage() {
@@ -18,6 +18,12 @@ export default function RegisterPage() {
   // T-120 (E1) : confirmation du mot de passe (validation purement client,
   // le backend ne reçoit que `password`).
   const [confirmPassword, setConfirmPassword] = useState("");
+  // T-125 (P2) : code de parrainage, pré-rempli depuis ?ref= / ?referral=.
+  const [referralCode, setReferralCode] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("ref") ?? params.get("referral") ?? "").trim().toUpperCase();
+  });
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -44,6 +50,9 @@ export default function RegisterPage() {
         body: JSON.stringify({
           ...formData,
           role: isHost ? "host" : "customer",
+          // T-125 (P2) : code de parrainage optionnel (ignoré côté serveur
+          // s'il est vide ou inconnu — jamais bloquant).
+          ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
         }),
       });
 
@@ -176,6 +185,18 @@ export default function RegisterPage() {
           // Le navigateur signale l'incohérence avant même la soumission.
           pattern={formData.password ? formData.password.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : undefined}
           title="Les mots de passe doivent correspondre"
+        />
+
+        {/* T-125 (P2) : code de parrainage optionnel. */}
+        <Input
+          type="text"
+          label="Code de parrainage (facultatif)"
+          placeholder="Ex : 4WHABQ4M"
+          icon={<Gift className="w-5 h-5" />}
+          value={referralCode}
+          onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+          maxLength={12}
+          autoComplete="off"
         />
 
         <p className="text-xs text-gray-500">

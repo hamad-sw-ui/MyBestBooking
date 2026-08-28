@@ -87,7 +87,7 @@ describe("settings (T-021)", () => {
     await expect(
       setSetting(
         "bestrewards",
-        { thresholds: [10, 5], discounts: [10, 15, 20] },
+        { thresholds: [10, 5], discounts: [10, 15, 20], referral: { enabled: true, referrerAmount: 10, refereeAmount: 5 } },
         null,
       ),
     ).rejects.toThrow();
@@ -134,9 +134,13 @@ describe("settings (T-021)", () => {
       "emailTemplates",
       "general",
       "notifications",
+      "reviews",
       "security",
     ]);
     expect(all.billing.taxRate).toBe(0.1);
+    // T-125 (P1) : la modération des avis est désactivée par défaut
+    // (préserve le comportement historique de publication immédiate).
+    expect(all.reviews.requireModeration).toBe(false);
     // T-025 : emailTemplates est bien exposé
     expect(all.emailTemplates.emailVerification.subject).toContain("Vérifiez");
   });

@@ -6,18 +6,25 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : `d7b8f81` (commit T-122→T-124 poussé ; le champ HEAD lui-même
-  est **à mettre à jour en fin de session** car un commit de doc ne peut pas
-  contenir son propre hash — R7 rend alors 1 warn toléré, 0 fail).
+- **HEAD Git** : (commit T-125 + travail T-122→T-124 validé ; le champ HEAD
+  lui-même est **à mettre à jour en fin de session** car un commit de doc ne peut
+  pas contenir son propre hash — R7 rend alors 1 warn toléré, 0 fail).
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-122/T-123/T-124 (4e audit) — validation UUID
-  des routes API dynamiques (400 au lieu de 500), **garde de rôle `/dashboard/*`
-  au plein-chargement** via rôle embarqué dans le JWT + proxy edge, pages RSC
-  par `[id]` en 404 propre ; migration `0016` (sessions.token → text) —
-  2026-08-27.
-  Avant : T-121 (robustesse GET /api/properties : bornage limit/offset/
-  minRating/prix → 400, pagination `total`, devise `currency`), T-120
-  (robustesse API JSON→400), T-119, T-116, T-117, T-112/113/114/115.
+- **Dernière tâche validée** : T-125 (5e audit fonctionnel profond) —
+  modération des avis pilotée par réglage `reviews.requireModeration` (défaut
+  `false` = publication immédiate historique) ; **bouclage du parrainage**
+  (migration additive `0017` : `users.referred_by` + `referral_rewarded_at`,
+  `referralCode` au register + `?ref=` à l'inscription, récompense idempotente
+  au séjour terminé via cron, réglable `bestrewards.referral`) ; motif de
+  suspension tracé dans l'audit ; page d'avis en RSC avec garde `notFound()`.
+  Validation : typecheck/lint 0 erreur, tests **245/245**, smoke **94/94**,
+  ai:check **20/20** — 2026-08-28.
+  Avant : T-122/T-123/T-124 (4e audit) — validation UUID des routes API
+  dynamiques (400 au lieu de 500), garde de rôle `/dashboard/*` au
+  plein-chargement via rôle embarqué dans le JWT + proxy edge, pages RSC par
+  `[id]` en 404 propre ; migration `0016` (sessions.token → text) — 2026-08-27.
+  Avant : T-121 (robustesse GET /api/properties), T-120 (robustesse API
+  JSON→400), T-119, T-116, T-117, T-112/113/114/115.
 
 ## Preuves session 2026-08-27 (T-122/T-123/T-124)
 

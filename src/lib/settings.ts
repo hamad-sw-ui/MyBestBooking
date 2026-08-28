@@ -27,6 +27,7 @@ export const SETTING_KEYS = [
   "bestrewards",
   "cancellation",
   "notifications",
+  "reviews",
   "security",
   "emailTemplates",
 ] as const;
@@ -69,6 +70,21 @@ export const billingSchema = z.object({
   invoiceFooter: z.string().max(1000).default(""),
 });
 
+/**
+ * T-125 (P2) : récompenses de parrainage, créditées sur le wallet.
+ * Versées une seule fois, quand le filleul termine son premier séjour
+ * (idempotence garantie par `users.referral_rewarded_at`). Montants en
+ * unités du wallet (EUR). `enabled=false` met le programme en pause sans
+ * casser le code de parrainage déjà émis.
+ */
+export const referralSchema = z.object({
+  enabled: z.boolean(),
+  /** Crédit versé au parrain. */
+  referrerAmount: z.number().min(0).max(1000),
+  /** Crédit versé au filleul (en plus de son éventuel cashback BestRewards). */
+  refereeAmount: z.number().min(0).max(1000),
+});
+
 export const bestrewardsSchema = z.object({
   /** Seuils croissants [level2, level3] en nombre de réservations. */
   thresholds: z
@@ -80,6 +96,8 @@ export const bestrewardsSchema = z.object({
     z.number().min(0).max(100),
     z.number().min(0).max(100),
   ]),
+  /** T-125 (P2) : paramètres du programme de parrainage. */
+  referral: referralSchema,
 });
 
 const bucketSchema = z.object({
@@ -110,6 +128,18 @@ export const notificationsSchema = z.object({
   reviewRequest: z.boolean(),
   priceAlerts: z.boolean(),
   newsletter: z.boolean(),
+});
+
+/**
+ * T-125 (P1) : modération des avis.
+ * `requireModeration=false` reproduit le comportement historique (l'avis
+ * d'un voyageur ayant réellement séjourné est publié immédiatement).
+ * `requireModeration=true` fait passer les nouveaux avis en `pending` :
+ * ils rejoignent alors la file « En attente » du back-office de modération
+ * (`/dashboard/reviews`), qui n'était jusqu'ici jamais alimentée.
+ */
+export const reviewsSchema = z.object({
+  requireModeration: z.boolean(),
 });
 
 export const securitySchema = z.object({
@@ -145,6 +175,7 @@ export const settingSchemas = {
   bestrewards: bestrewardsSchema,
   cancellation: cancellationSchema,
   notifications: notificationsSchema,
+  reviews: reviewsSchema,
   security: securitySchema,
   emailTemplates: emailTemplatesSchema,
 } as const satisfies Record<SettingKey, z.ZodTypeAny>;
@@ -178,6 +209,12 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
   bestrewards: {
     thresholds: [5, 15],
     discounts: [10, 15, 20],
+    // T-125 (P2) : parrainage actif par défaut, récompenses raisonnables.
+    referral: {
+      enabled: true,
+      referrerAmount: 10,
+      refereeAmount: 5,
+    },
   },
   cancellation: {
     // Reproduit exactement src/lib/cancellation.ts avant refactor.
@@ -206,6 +243,10 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     reviewRequest: true,
     priceAlerts: true,
     newsletter: false,
+  },
+  // T-125 (P1) : par défaut, comportement historique (publication immédiate).
+  reviews: {
+    requireModeration: false,
   },
   security: {
     minPasswordLength: 8,

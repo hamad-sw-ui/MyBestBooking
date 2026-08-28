@@ -212,7 +212,7 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 ## Idées produit
 
 - 🟢 Carte géographique (Mapbox/Leaflet) sur `/recherche` et fiche
-- 🟢 Programme parrainage lié à `walletBalance`
+- ✅ ~~Programme parrainage lié à `walletBalance`~~ **livré T-125** (2026-08-28) : `referred_by` + `referral_rewarded_at` (migration 0017), `referralCode` au register + `?ref=` à l'inscription, récompense idempotente au séjour terminé (parrain/filleul, réglable `bestrewards.referral`). Voir `REPORTS/validation_T-125_2026-08-28.md`.
 - 🟢 Réductions réelles BestRewards sur properties `isBestrewards:true`
 - 🟢 Monitoring/observabilité du cron d'alertes prix et de clôture des séjours (le handler idempotent est livré T-102).
 - ✅ Système d'avis de base ; votes « utile » restent à améliorer.

@@ -75,7 +75,7 @@ modification de code.
 | Lecture des avis d'une property | ✅ | `GET /api/reviews?propertyId=` | initial |
 | Recalcul atomique `averageRating` | ✅ | `UPDATE...FROM(SELECT AVG…)` | T-007 |
 | **Réponse hôte à un avis** | ✅ | `POST /api/reviews/[id]/reply` (T-015) + `<HostReplyForm>` branchée (T-016) | T-016 |
-| **Modération admin** (approuver, masquer, rejeter, en attente) | ✅ | `PATCH /api/reviews/[id]/moderate` + `<ReviewModerateActions>` dans /dashboard/reviews (T-023). Recalcul atomique averageRating. 5 tests DB-backed | T-023 |
+| **Modération admin** (approuver, masquer, rejeter, en attente) | ✅ | `PATCH /api/reviews/[id]/moderate` + `<ReviewModerateActions>` dans /dashboard/reviews (T-023). Recalcul atomique averageRating. 5 tests DB-backed. **T-125** : la modération préalable est pilotée par le réglage `reviews.requireModeration` (défaut `false` = publication immédiate historique ; `true` → nouveaux avis `pending` alimentant la file « En attente »). Un auteur voit ses propres avis non approuvés (sans fuite) | T-023, T-125 |
 | Marquer un avis comme utile (`helpfulCount`) | ✅ | Bouton fiche + vote DB unique `(review,user)`, rate-limit et incrément atomique. | T-025, T-105 |
 
 ## Favoris (wishlists)
@@ -115,7 +115,7 @@ modification de code.
 | **Statut personnalisé connecté** | ✅ | `<BestRewardsStatus>` affiche niveau réel, séjours, cagnotte wallet (`/api/auth/me`) et code parrainage (`/api/users/me/referral`) avec barre de progression + copie (T-114) | T-114 |
 | **Réduction pour properties `isBestrewards`** | ✅ | `POST /api/bookings` : +2 pp de réduction si user Level ≥ 2 et `property.isBestrewards` (borné à 30%) (T-027) | T-027 |
 | **Wallet utilisable au checkout** | ✅ | `POST /api/bookings { useWalletCredits:true }` applique `walletBalance` en réduction plafonnée + débite (T-027). ▶️ wallet 50 → total réduit + DB=0 | T-027 |
-| Parrainage / codes personnels | ✅ | `GET /api/users/me/referral` auto-génère un code 8-char lisible (alphabet sans 0/O/1/I) et persiste `users.referralCode` (T-026) | T-026 |
+| Parrainage / codes personnels | ✅ | `GET /api/users/me/referral` auto-génère un code 8-char lisible (alphabet sans 0/O/1/I) et persiste `users.referralCode` (T-026). **Bouclé en T-125** : champ `referralCode` au register (non bloquant, normalisé) + pré-remplissage `?ref=` à l'inscription, lien `users.referred_by` (migration 0017), récompense idempotente versée au séjour terminé (`users.referral_rewarded_at`) : parrain +10 €, filleul +5 €, réglables dans `bestrewards.referral` (activable/désactivable). 5 tests purs. ▶️ E2E : parrain 25→35, filleul 0→5, 2nd run cron sans doublon | T-026, T-125 |
 
 ## Hébergeur (dashboard host)
 

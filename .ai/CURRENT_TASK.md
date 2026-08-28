@@ -1,31 +1,35 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Réalignement du framework `.ai/` (AI-DOS) + clôture T-112.
-**ID** : T-113 (framework, niveau S) — inclut la clôture de T-112.
-**Niveau** : **S** — garde-fous de gouvernance, preuves, aucune fonctionnalité
-métier nouvelle.
-**Statut** : **CORRIGÉ (VALIDÉ)**
+**Tâche :** Correctifs de l'audit fonctionnel n°5 — modération des avis,
+bouclage du parrainage, motif de suspension tracé, garde RSC de la page d'avis.
+**ID** : T-125 — 1 migration additive, comportements finance/avis.
+**Niveau** : S
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-28.
 
 ## Périmètre
 
-- Corriger les règles R10–R15 de `scripts/check-ai.mjs` (branche codée en
-  dur, R14 vacante, faux positifs R15, bruit R11, R12 non ciblée).
-- Piloter le framework par `.ai/framework.manifest.json` v3.0.1
-  (`git.branch_patterns`, `product_coverage`, documents ADR-006).
-- Ajouter la CI GitHub Actions (ADR-002).
-- Réaligner les documents (INDEX, README, STATE).
-- Fournir la preuve manquante de T-112 : test d'intégration
-  `src/app/api/conversations/route.test.ts` (idempotence + concurrence).
+- **P1** : modération des avis pilotée par réglage admin
+  `reviews.requireModeration` (défaut `false` = publication immédiate
+  historique ; `true` → avis `pending` alimentant la file `/dashboard/reviews`).
+  Un auteur voit ses propres avis non approuvés (sans fuite).
+- **P2** : bouclage du parrainage — migration `0017` (`users.referred_by`,
+  `users.referral_rewarded_at`), code généré à l'inscription, `referralCode`
+  accepté au register (non bloquant), champ + `?ref=` au formulaire
+  d'inscription, récompense idempotente au séjour terminé (parrain +10 €,
+  filleul +5 €, réglables dans `bestrewards.referral`).
+- **P3** : le motif de suspension (`reason`) est journalisé dans l'audit.
+- **P4** : page de dépôt d'avis en Server Component avec garde (connecté,
+  UUID valide, réservation propre, séjour terminé) → `notFound()` sinon ;
+  formulaire extrait dans `<ReviewForm/>`.
 
-## Sortie
+## Sortie (validé)
 
-- 🔨 typecheck 0 erreur · lint 0 erreur · build 57/57.
-- 🧪 `npm test` **216/216** (3 nouveaux tests T-112).
-- ▶️ `npm run smoke` **91/91** · `npm run ai:check` **20/20**.
+- 🔨 typecheck 0 erreur · lint 0 erreur (15 warnings préexistants) · build ✓.
+- 🧪 `npm test` **245/245** (38 fichiers ; +5 tests `src/lib/referral.test.ts`).
+- ▶️ `npm run smoke` **94/94** · `npm run ai:check` **20/20**.
+- ▶️ E2E 3 rôles : parrainage (lien, récompense, idempotence), modération
+  (pending/public/admin), motif d'audit, gardes RSC — voir
+  `REPORTS/validation_T-125_2026-08-28.md`.
 
-Voir `REPORTS/validation_T-112_2026-08-27.md` et la session du
-`PROGRESS.md` (2026-08-27).
-
-> Prochaine tâche à cadrer par le responsable : la suite du backlog T-110
-> (multi-devises, quote checkout UI, BestRewards/referral, dates bornées,
-> E2E Playwright) — voir `BACKLOG.md`.
+> Voir `REPORTS/analyse_impact_T-125_2026-08-28.md` (§14) et
+> `REPORTS/analyse_conception_T-125_2026-08-28.md` (§15.1).

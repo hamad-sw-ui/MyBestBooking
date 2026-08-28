@@ -20,3 +20,5 @@ pnpm-debug.log*
 # Uploads publics runtime (photos de bien) — garder le dossier, ignorer les fichiers
 public/uploads/*
 !public/uploads/.gitkeep
+
+# CI workflow poussé séparément (permission GitHub App workflows)

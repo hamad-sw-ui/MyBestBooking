@@ -14,6 +14,7 @@ import {
   index,
   uniqueIndex,
   check,
+  type AnyPgColumn,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 
@@ -47,6 +48,12 @@ export const users = pgTable("users", {
   twoFactorPendingSecret: varchar("two_factor_pending_secret", { length: 64 }),
   // T-026 : code de parrainage personnel auto-généré
   referralCode: varchar("referral_code", { length: 12 }).unique(),
+  // T-125 (P2) : parrain de cet utilisateur (code saisi à l'inscription).
+  // Auto-référence ; SET NULL si le parrain est supprimé.
+  referredBy: uuid("referred_by").references((): AnyPgColumn => users.id, { onDelete: "set null" }),
+  // T-125 (P2) : horodatage de la récompense de parrainage déjà versée pour
+  // ce filleul (null = pas encore versée) → garantit l'idempotence.
+  referralRewardedAt: timestamp("referral_rewarded_at"),
   // T-026 : préférences alertes prix
   priceAlertEnabled: boolean("price_alert_enabled").default(false),
   lastLoginAt: timestamp("last_login_at"),

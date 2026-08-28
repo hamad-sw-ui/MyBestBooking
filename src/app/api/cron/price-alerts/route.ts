@@ -7,6 +7,7 @@ import { shouldNotifyPriceAlert } from "@/lib/price-alert-rules";
 import { quotePriceAlert } from "@/lib/price-alert-quote";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { getSetting } from "@/lib/settings";
+import { calculateReferralReward } from "@/lib/referral";
 import { getUploader } from "@/lib/storage";
 import { getPaymentProvider } from "@/lib/payment";
 import { recoverPendingPaymentIntents } from "@/lib/payment-intents";
@@ -37,6 +38,7 @@ async function completeEligibleBookings(today: string): Promise<number> {
       isNull(bookings.loyaltyAwardedAt),
     ));
   const settings = await getSetting("bestrewards");
+  const referralReward = calculateReferralReward(settings.referral);
   let completed = 0;
 
   for (const candidate of candidates) {
@@ -50,12 +52,37 @@ async function completeEligibleBookings(today: string): Promise<number> {
         level: user.bestrewardsLevel,
         walletBalance: user.walletBalance,
       }, Number(booking.total), settings.thresholds);
+      // T-125 (P2) : le wallet du filleul cumule cashback BestRewards +
+      // éventuel bonus de parrainage (une seule fois, garde
+      // referralRewardedAt). Le parrain est crédité dans la même transaction.
+      let refereeBonus = 0;
+      if (user.referredBy && !user.referralRewardedAt && referralReward.refereeCredit > 0) {
+        refereeBonus = referralReward.refereeCredit;
+      }
+      const refereeWallet = (Number(loyalty.walletBalance) + refereeBonus).toFixed(2);
       await tx.update(users).set({
         bestrewardsBookingsCount: loyalty.bookingsCount,
         bestrewardsLevel: loyalty.level,
-        walletBalance: loyalty.walletBalance,
+        walletBalance: refereeWallet,
+        // Marque la récompense de parrainage comme versée (idempotence),
+        // même si les montants sont nuls, pour ne pas re-tenter au prochain run.
+        ...(user.referredBy && !user.referralRewardedAt ? { referralRewardedAt: new Date() } : {}),
         updatedAt: new Date(),
       }).where(eq(users.id, user.id));
+
+      // Crédit du parrain (verrou ligne pour éviter toute course avec un
+      // autre filleul terminant son séjour au même instant).
+      if (user.referredBy && !user.referralRewardedAt && referralReward.referrerCredit > 0) {
+        const [referrer] = await tx.select().from(users).where(eq(users.id, user.referredBy)).for("update");
+        if (referrer) {
+          const referrerWallet = (Number(referrer.walletBalance ?? "0") + referralReward.referrerCredit).toFixed(2);
+          await tx.update(users).set({
+            walletBalance: referrerWallet,
+            updatedAt: new Date(),
+          }).where(eq(users.id, referrer.id));
+        }
+      }
+
       await tx.update(bookings).set({
         status: "completed",
         loyaltyAwardedAt: new Date(),

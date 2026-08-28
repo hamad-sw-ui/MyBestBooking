@@ -8,6 +8,7 @@ import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
+import { assignReferralCode, resolveReferrerId } from "@/lib/referral";
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -15,6 +16,9 @@ const registerSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
   lastName: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   role: z.enum(["customer", "host"]).optional().default("customer"),
+  // T-125 (P2) : code de parrainage optionnel (lien ?ref= ou saisie).
+  // Un code absent/invalide ne bloque jamais l'inscription.
+  referralCode: z.string().max(32).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -46,6 +50,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // T-125 (P2) : résolution du parrain. Non bloquante : un code vide,
+    // inconnu ou supprimé équivaut à « pas de parrain » et n'empêche pas
+    // la création du compte.
+    const referredBy = await resolveReferrerId(data.referralCode);
+
     // Hash password and create user
     const passwordHash = await hashPassword(data.password);
 
@@ -63,8 +72,14 @@ export async function POST(request: NextRequest) {
         // KNOWN_LIMITATIONS.md. Le seed force `emailVerified: true`
         // pour les comptes de démo, ce qui est explicite et acceptable.
         emailVerified: false,
+        referredBy,
       })
       .returning();
+
+    // T-125 (P2) : chaque nouveau compte reçoit immédiatement son propre
+    // code de parrainage (il était jusqu'ici généré au premier GET). Non
+    // bloquant : en cas d'échec, la route GET le régénérera.
+    await assignReferralCode(newUser.id).catch(() => null);
 
     // T-013 : envoi email de vérification (best-effort, ne bloque pas
     // la création du compte si SMTP tombe).

@@ -54,10 +54,10 @@ export function ReferralCard() {
       </CardHeader>
       <CardContent>
         <p className="text-sm text-gray-600 mb-4">
-          Partagez ce code avec vos amis. À chaque nouvelle réservation
-          effectuée avec votre code, vous et votre filleul recevrez des
-          avantages BestRewards (à activer en prod avec les seuils
-          définis dans le panneau d&apos;administration).
+          Partagez ce code — ou votre lien d&apos;inscription — avec vos amis.
+          Quand votre filleul crée un compte avec votre code puis termine son
+          premier séjour, vous recevez tous les deux un crédit sur votre
+          cagnotte BestRewards.
         </p>
         {loading ? (
           <div className="flex items-center gap-2 text-gray-500">
@@ -83,6 +83,14 @@ export function ReferralCard() {
           </div>
         ) : error ? (
           <p className="text-sm text-red-600">{error}</p>
+        ) : null}
+        {code ? (
+          <p className="mt-4 text-xs text-gray-500 break-all">
+            Lien d&apos;inscription :{" "}
+            <span className="text-gray-700 font-medium">
+              {typeof window !== "undefined" ? window.location.origin : ""}/inscription?ref={code}
+            </span>
+          </p>
         ) : null}
       </CardContent>
     </Card>

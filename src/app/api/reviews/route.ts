@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { reviews, properties, users, bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and, or, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
 import {
   assertNotMaintenance,
@@ -12,6 +12,7 @@ import {
 import { rateLimit } from "@/lib/rate-limit";
 import { isReviewEligible, type BookingStatus } from "@/lib/booking-lifecycle";
 import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
+import { getSetting } from "@/lib/settings";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -59,8 +60,15 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(reviews.status, requestedStatus));
       conditions.push(parsed.propertyId ? eq(reviews.propertyId, parsed.propertyId) : inArray(reviews.propertyId, ids));
     } else {
-      // Client anonyme ou voyageur : on ignore volontairement status non public.
-      conditions.push(eq(reviews.status, "approved"));
+      // Client anonyme ou voyageur : on ignore volontairement les status non
+      // publics, SAUF les propres avis de l'utilisateur connecté. T-125 (P1) :
+      // quand la modération préalable est active, l'auteur doit pouvoir voir
+      // son avis « en attente » (aucune fuite : condition sur son propre userId).
+      if (user) {
+        conditions.push(or(eq(reviews.status, "approved"), eq(reviews.userId, user.id)));
+      } else {
+        conditions.push(eq(reviews.status, "approved"));
+      }
       if (parsed.propertyId) conditions.push(eq(reviews.propertyId, parsed.propertyId));
     }
 
@@ -105,6 +113,14 @@ export async function POST(request: NextRequest) {
     if (booking.userId !== user.id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
     if (!isReviewEligible(booking.status as BookingStatus, booking.checkOut)) return NextResponse.json({ error: "Vous ne pouvez laisser un avis qu'après un séjour terminé" }, { status: 400 });
 
+    // T-125 (P1) : la modération préalable est un réglage admin. Par défaut
+    // (`requireModeration=false`) le comportement historique est conservé :
+    // l'avis d'un voyageur ayant réellement séjourné est publié immédiatement.
+    // Si l'admin active la modération, le nouvel avis passe en `pending` et
+    // rejoint la file « En attente » du back-office (`/dashboard/reviews`).
+    const { requireModeration } = await getSetting("reviews");
+    const initialStatus = requireModeration ? "pending" : "approved";
+
     const created = await db.transaction(async (tx) => {
       const [existing] = await tx.select({ id: reviews.id }).from(reviews).where(eq(reviews.bookingId, data.bookingId)).for("update");
       if (existing) return null;
@@ -124,7 +140,7 @@ export async function POST(request: NextRequest) {
         negativeComment: data.negativeComment,
         travelerType: data.travelerType,
         isVerified: true,
-        status: "approved",
+        status: initialStatus,
       }).returning();
       await recomputePropertyReviewAggregate(tx, booking.propertyId);
       return review;

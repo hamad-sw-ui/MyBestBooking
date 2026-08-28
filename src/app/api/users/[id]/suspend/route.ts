@@ -39,7 +39,7 @@ export async function PATCH(
       );
     }
 
-    const { suspended } = schema.parse(await request.json());
+    const { suspended, reason } = schema.parse(await request.json());
     const [updated] = await db
       .update(users)
       .set({
@@ -62,7 +62,9 @@ export async function PATCH(
       action: suspended ? AUDIT_ACTIONS.userSuspend : AUDIT_ACTIONS.userReactivate,
       entityType: "user",
       entityId: id,
-      metadata: { targetEmail: updated.email },
+      // T-125 (P3) : on conserve le motif saisi par l'admin (déjà validé,
+      // max 500 caractères) pour la traçabilité des sanctions.
+      metadata: { targetEmail: updated.email, ...(reason ? { reason } : {}) },
     });
 
     return NextResponse.json({ user: updated });

@@ -9,6 +9,68 @@
 
 ---
 
+## Session 19 — 2026-08-28 : T-125 correctifs 5e audit fonctionnel (modération avis, parrainage bouclé, audit suspension, garde page avis)
+
+### Livré
+
+- 🔨 **P1** : modération des avis pilotée par réglage admin `reviews.requireModeration`
+  (défaut `false` = publication immédiate historique ; `true` → avis `pending`
+  alimentant la file `/dashboard/reviews`). Un auteur connecté voit ses propres
+  avis non approuvés (condition `OR userId = user.id`, aucune fuite).
+- 🔨 **P2** : bouclage du parrainage (était une coquille vide — code généré mais
+  jamais consommé). Migration additive `0017_referral-loop.sql`
+  (`users.referred_by` auto-référence `ON DELETE SET NULL`,
+  `users.referral_rewarded_at`). Nouvelle lib `src/lib/referral.ts`
+  (`generateReferralCode`, `normalizeReferralCode`, `resolveReferrerId` non
+  bloquant, `assignReferralCode`, `calculateReferralReward` pur). Register accepte
+  `referralCode` (normalisé, invalide → ignoré), génère le code du nouveau compte ;
+  formulaire d'inscription : champ optionnel + pré-remplissage `?ref=`. Récompense
+  idempotente versée dans la transaction de complétion de séjour (cron) : parrain
+  +10 €, filleul +5 €, réglables `bestrewards.referral` (activable/désactivable).
+- 🔨 **P3** : `PATCH /api/users/[id]/suspend` journalise désormais le `reason`
+  dans `metadata` de l'audit `user.suspend`/`user.reactivate`.
+- 🔨 **P4** : page `/mes-reservations/avis/[id]` transformée en Server Component
+  avec garde (connecté, UUID valide, réservation propre, séjour terminé via
+  `isReviewEligible`) → `notFound()` sinon ; formulaire extrait dans
+  `<ReviewForm/>` (logique de soumission inchangée).
+
+### Fichiers
+
+- `src/lib/settings.ts` (clés `reviews` + `bestrewards.referral`), `src/lib/referral.ts`
+  (nouveau) + `referral.test.ts`, `src/db/schema.ts`, `drizzle/0017_referral-loop.sql`
+  (+ meta journal/snapshot), `src/app/api/auth/register/route.ts`,
+  `src/app/(auth)/inscription/page.tsx`, `src/app/api/reviews/route.ts`,
+  `src/app/api/cron/price-alerts/route.ts`, `src/app/api/users/[id]/suspend/route.ts`,
+  `src/app/(main)/mes-reservations/avis/[id]/page.tsx`,
+  `src/components/reviews/review-form.tsx` (nouveau), `src/components/referral-card.tsx`,
+  `src/lib/settings.test.ts`.
+
+### Validation (§13)
+
+- 🔨 typecheck 0 erreur · lint 0 erreur (15 warnings préexistants) · build ✓.
+- 🧪 **245/245** tests (38 fichiers ; +5 tests parrainage).
+- ▶️ smoke **94/94** · ai:check **20/20**.
+- ▶️ E2E 3 rôles : parrainage (inscription avec code → `referred_by` lié, code
+  invalide ignoré, host parrainé OK ; cron → parrain 25→35 €, filleul 0→5 €,
+  `referral_rewarded_at` marqué ; 2nd run sans doublon) ; modération
+  (`requireModeration=true` → avis `pending`, invisible au public, visible par
+  l'auteur et dans la file admin, approbation → public ; retour à `false` →
+  `approved`) ; suspension avec `reason` tracé dans l'audit ; gardes RSC page
+  avis (anonyme→307, UUID invalide/inconnu/autrui/futur→page not-found, propre
+  réservation→formulaire).
+
+### Notes / honnêteté
+
+- ▶️/🧠 `notFound()` renvoie un statut HTTP 200 en dev Turbopack **et** en
+  `next start` dans ce projet (vérifié sur `/hebergement/<inexistant>`
+  préexistant) : le corps not-found s'affiche bien, le statut 200 est un
+  comportement Next/config préexistant, pas une régression. La sécurité reste
+  portée par l'API (404/403/400).
+- Données de test nettoyées ; wallet customer seed remis à 25.00 ; réglage
+  `reviews.requireModeration` remis à `false` ; migration 0017 appliquée en dev.
+
+---
+
 ## Session 18 — 2026-08-23 : T-109 claim invité et reprise opérationnelle
 
 ### Livré
