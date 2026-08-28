@@ -94,6 +94,10 @@ export function ProfileForm({ initial }: Props) {
             <option value="fr">Français</option>
             <option value="en">English</option>
           </select>
+          {/* T-131 : l'interface n'est pas encore traduite (V1 en français).
+              Le choix est mémorisé pour préparer l'internationalisation mais
+              ne bascule pas encore les libellés. */}
+          <p className="mt-1 text-xs text-gray-400">Préférence mémorisée ; l&apos;interface reste en français en V1.</p>
         </div>
         <div>
           <label htmlFor="pf-currency" className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
@@ -105,6 +109,9 @@ export function ProfileForm({ initial }: Props) {
             <option value="MAD">MAD</option>
             <option value="XAF">XAF (FCFA)</option>
           </select>
+          {/* T-131 : les prix d'aperçu sont convertis (taux figés indicatifs) ;
+              le paiement reste en devise de l'hébergement. */}
+          <p className="mt-1 text-xs text-gray-400">Aperçu des prix converti (taux indicatifs) ; paiement en devise de l&apos;hébergement.</p>
         </div>
         <div>
           <label htmlFor="pf-tz" className="block text-sm font-medium text-gray-700 mb-1">Fuseau horaire</label>

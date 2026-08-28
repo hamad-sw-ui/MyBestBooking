@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import { formatPrice } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
+import { convertAmount, formatMoney } from "@/lib/i18n";
+import { useDisplayCurrency } from "@/lib/use-display-currency";
 
 interface Props {
   propertyId: string;
@@ -42,6 +44,16 @@ export function PropertyBookingCard({
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [adults, setAdults] = useState(initialAdults);
   const [children, setChildren] = useState(initialChildren);
+  // T-131 : prix d'aperçu converti dans la devise d'affichage du client
+  // (indicatif ; le paiement reste dans la devise de la chambre).
+  const displayCurrency = useDisplayCurrency();
+  const roomCurrency = room?.currency ?? "EUR";
+  const displayPrice = room
+    ? (!displayCurrency || displayCurrency === roomCurrency.toUpperCase()
+        ? formatPrice(room.basePrice, roomCurrency)
+        : formatMoney(convertAmount(Number(room.basePrice), roomCurrency, displayCurrency), displayCurrency))
+    : "—";
+  const isConverted = Boolean(room && displayCurrency && displayCurrency !== roomCurrency.toUpperCase());
   // T-119 (B1) : capacité d'accueil connue → on borne les adultes à la
   // chambre ; sinon on garde le sélecteur 1–6 d'origine.
   const adultsLimit =
@@ -60,9 +72,14 @@ export function PropertyBookingCard({
         <div className="text-center mb-4">
           <p className="text-sm text-gray-500">À partir de</p>
           <p className="text-3xl font-bold text-gray-900">
-            {room ? formatPrice(room.basePrice, room.currency ?? "EUR") : "—"}
+            {displayPrice}
           </p>
           <p className="text-sm text-gray-500">par nuit</p>
+          {isConverted && (
+            <p className="text-[10px] text-gray-400" title="Conversion indicative, taux figés. Le paiement reste en devise de l'hébergement.">
+              Conversion indicative · paiement en {roomCurrency}
+            </p>
+          )}
         </div>
 
         <div className="space-y-3 mb-4">

@@ -13,7 +13,26 @@
   Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
   push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-130 (10e audit fonctionnel profond) —
+- **Dernière tâche validée** : T-131 (11e audit fonctionnel profond) —
+  la préférence **Devise** du profil était enregistrée (`users.currency`) mais
+  sans aucun effet : `convertAmount`/`formatMoney` de `src/lib/i18n.ts` étaient
+  du code mort (jamais importés), tous les prix restant affichés en euros via
+  `formatPrice`. Correctif **additif** (aucune migration, aucune route) : nouveau
+  hook client `src/lib/use-display-currency.ts` (lit `/api/auth/me`, cache
+  module) ; prix d'aperçu convertis dans la devise du client dans
+  `property-card-client.tsx` et `property-booking-card.tsx`, avec mention
+  « Conversion indicative · paiement en <devise source> » — **jamais** de
+  conversion sur les montants transactionnels (paiement/remboursement/wallet
+  restent en devise chambre) ; mention honnête sous les sélecteurs devise et
+  **langue** (interface reste en français en V1, `pickLocalized` inopérant en
+  l'absence de dictionnaires). Audit n°11 : souhait partagé, 2FA, vérif email à
+  usage unique, claim invité, promotions, plans tarifaires, calendrier dispo,
+  annulation+wallet tous vérifiés **sains** à l'exécution (3 rôles + anonyme).
+  Validation : typecheck/lint 0, tests **264/264**, build ✓, ai:check
+  **19 OK · 1 warn R7 · 0 fail** ; `convertAmount(89,"EUR","USD")`=96,12 et
+  EUR→EUR/anonyme identiques (non-régression) — 2026-08-28. Rapport :
+  `REPORTS/audit_fonctionnel_profond11_2026-08-28.md`.
+  Avant : T-130 (10e audit fonctionnel profond) —
   quatre « fonctionnalités fantômes » (back-end livré, inaccessible/inexact
   côté interface) corrigées de façon **additive** (aucune migration, aucune
   route nouvelle) : **P1** l'hôte n'avait aucun bouton pour clôturer un séjour

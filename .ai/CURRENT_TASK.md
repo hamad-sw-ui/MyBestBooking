@@ -1,5 +1,49 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Audit fonctionnel profond n°11 (F1) — la préférence **Devise** du
+profil était sauvegardée (`users.currency`) mais n'avait aucun effet : les
+utilitaires `convertAmount`/`formatMoney` de `src/lib/i18n.ts` n'étaient importés
+nulle part (code mort), et tous les prix restaient affichés en euros via
+`formatPrice`. F2 : la préférence **Langue** est également sans effet (interface
+non traduite) sans aucune mention. Correctif honnête et **additif** : conversion
+des prix d'aperçu (cartes recherche + fiches) dans la devise du client, sans
+jamais toucher aux montants transactionnels ; mention explicite sous les
+sélecteurs langue/devise.
+**ID** : T-131 — additif, aucun changement de schéma, aucune migration, aucune
+nouvelle route API.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-28.
+
+## Périmètre (T-131)
+
+- Nouveau hook client **`src/lib/use-display-currency.ts`** : lit une fois
+  `GET /api/auth/me` (promise mise en cache au niveau module), renvoie
+  `user.currency` ou `null` (anonyme/erreur).
+- **`src/components/property-card-client.tsx`** : prix « Dès … » converti via
+  `convertAmount`/`formatMoney` quand la devise d'affichage diffère, avec mention
+  « Conversion indicative · paiement en <devise source> ».
+- **`src/components/property-booking-card.tsx`** : même traitement sur le prix
+  « à partir de » de la fiche logement.
+- **`src/components/profile-form.tsx`** : mention sous le sélecteur devise
+  (aperçu converti, paiement en devise de l'hébergement) et sous la langue
+  (interface reste en français en V1).
+
+## Sortie (validé — T-131)
+
+- 🔨 `tsc --noEmit` 0 erreur · `eslint` 0.
+- 🧪 `npx vitest run` **264/264**.
+- ▶️ exécution : `convertAmount(89,"EUR","USD")` → 96,12 ; EUR→EUR et devise
+  inconnue → identique (non-régression anonyme/EUR). PATCH `/api/users/me
+  {currency:"USD"}` appliqué puis restauré en EUR. Recherche + fiche anonyme →
+  HTTP 200, prix en EUR inchangés.
+- ▶️ `npm run build` ✓ ; `npm run ai:check` 19 OK · 1 warn · 0 fail.
+
+> Voir `REPORTS/audit_fonctionnel_profond11_2026-08-28.md` (audit + solution).
+
+---
+
+## Tâche précédente — T-128 (audit n°8)
+
 **Tâche :** Audit fonctionnel n°8 (P1) — verrou de pages en mode maintenance.
 En maintenance, les écritures API étaient bien bloquées (503) mais un
 chargement direct de page répondait 200 avec le contenu normal : la garde RSC

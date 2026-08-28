@@ -7,6 +7,8 @@ import { Star, MapPin, Heart, Loader2 } from "lucide-react";
 import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { PublicPropertyCard } from "@/lib/public-property";
+import { convertAmount, formatMoney } from "@/lib/i18n";
+import { useDisplayCurrency } from "@/lib/use-display-currency";
 
 interface PropertyCardProps {
   property: PublicPropertyCard;
@@ -21,7 +23,22 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating) : null;
 
-  const minPrice = property.minPrice;
+  // T-131 : prix d'aperçu converti dans la devise d'affichage du client
+  // (affichage uniquement ; les paiements restent dans la devise de la chambre).
+  const displayCurrency = useDisplayCurrency();
+  const sourceCurrency = property.minCurrency ?? "EUR";
+  const rawPrice = property.minPrice;
+  const showPrice = rawPrice !== null && rawPrice !== undefined;
+  const priceText = (() => {
+    if (!showPrice) return null;
+    const numeric = typeof rawPrice === "number" ? rawPrice : parseFloat(rawPrice);
+    if (!displayCurrency || displayCurrency === sourceCurrency.toUpperCase()) {
+      return formatPrice(numeric, sourceCurrency);
+    }
+    // Taux figés V1 (i18n RATES_FROM_EUR) : indique une conversion approximative.
+    return formatMoney(convertAmount(numeric, sourceCurrency, displayCurrency), displayCurrency);
+  })();
+  const isConverted = showPrice && Boolean(displayCurrency) && displayCurrency !== sourceCurrency.toUpperCase();
 
   async function addToFavorites(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -141,10 +158,15 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
 
         <div className="flex items-end justify-between pt-3 border-t border-gray-100">
           <div>
-            {minPrice !== null && minPrice !== undefined ? (
+            {priceText ? (
               <>
-                <span className="text-lg font-bold text-gray-900">Dès {formatPrice(minPrice, property.minCurrency ?? "EUR")}</span>
+                <span className="text-lg font-bold text-gray-900">Dès {priceText}</span>
                 <span className="text-sm text-gray-500">/nuit</span>
+                {isConverted && (
+                  <span className="block text-[10px] text-gray-400" title="Conversion indicative, taux figés. Le paiement reste en devise de l'hébergement.">
+                    Conversion indicative · paiement en {sourceCurrency}
+                  </span>
+                )}
               </>
             ) : (
               <span className="text-sm text-gray-500">Prix indisponible</span>

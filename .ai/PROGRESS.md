@@ -9,6 +9,52 @@
 
 ---
 
+## Session 25 — 2026-08-28 : 11e audit fonctionnel profond (rapport) + T-131 préférence Devise réellement branchée (aperçu converti) + mention Langue
+
+### Audit n°11 (investigation à l'exécution, 3 rôles + anonyme)
+
+Rapport `REPORTS/audit_fonctionnel_profond11_2026-08-28.md`. Périmètre vérifié
+sain à l'exécution (scripts `.data/t131/`) : **liste de souhaits partagée**
+(jeton unique, pas de fuite d'identité, isolation hôte/client), **2FA complet**
+(setup/verify, 401 sans et avec mauvais code TOTP, disable protégé),
+**vérification d'email à usage unique** (`?ok=1` puis rejeu `?ok=0`), activation
+compte invité (`reset-password {claimGuest:true}`), promotions (bulk/suppression/
+édition), plans tarifaires (édition/archivage/snapshot), calendrier dispo +
+stop-sell, **annulation + wallet** (frais caduques à J3 en politique flexible,
+crédit portefeuille restitué à l'identique 0→25).
+
+**Finding principal F1 🟠** : la préférence **Devise** du profil est enregistrée
+(`users.currency`) mais jamais consommée — `convertAmount`/`formatMoney` de
+`src/lib/i18n.ts` sont du **code mort** (grep vide dans `src/app`+`src/components`)
+; tous les prix restent en euros via `formatPrice`. **F2 🟡** : la préférence
+**Langue** est aussi sans effet (interface non traduite), sans mention.
+**F3 ⚪** : `pickLocalized` ne gère que `en` (arabe absent) et n'est jamais appelé.
+
+### T-131 — correctif additif, sans régression
+
+- 🔨 Nouveau hook client `src/lib/use-display-currency.ts` (lit `/api/auth/me`
+  une fois, cache module → pas de requête par carte).
+- 🔨 `property-card-client.tsx` et `property-booking-card.tsx` : prix d'aperçu
+  convertis dans la devise du client (`convertAmount`/`formatMoney`) avec mention
+  « Conversion indicative · paiement en <devise source> ». **Jamais** de
+  conversion sur les montants transactionnels (checkout, paiement, remboursement,
+  wallet restent en devise chambre).
+- 🔨 `profile-form.tsx` : mention honnête sous devise (aperçu converti) et langue
+  (interface reste en français en V1).
+- 🧪 `vitest` **264/264** · 🔨 `tsc` 0 · `eslint` 0 · ▶️ `build` ✓ ·
+  `ai:check` 19 OK · 1 warn · 0 fail.
+- ▶️ Exécution : `convertAmount(89,"EUR","USD")`=96,12 ; EUR→EUR / devise inconnue
+  = identique (anonyme/EUR non affecté). PATCH devise USD appliqué puis restauré.
+
+**Fichiers** : `src/lib/use-display-currency.ts` (nouveau),
+`src/components/property-card-client.tsx`, `src/components/property-booking-card.tsx`,
+`src/components/profile-form.tsx`, `.ai/REPORTS/audit_fonctionnel_profond11_2026-08-28.md`.
+Aucune migration, aucune nouvelle route.
+**Prochaine étape** : chantier i18ne (dictionnaires FR/EN puis `pickLocalized` sur
+contenus logements) si l'internationalisation devient prioritaire.
+
+---
+
 ## Session 24 — 2026-08-28 : 10e audit fonctionnel (rapport) + T-130 fonctionnalités fantômes exposées (clôture/no-show hôte, parrainage, badge non-lus, photos édition)
 
 ### Audit n°10 (investigation, aucun code modifié)
