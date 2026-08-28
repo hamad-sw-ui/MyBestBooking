@@ -6,13 +6,12 @@
 - **Branche actuelle** : `arena/01a042cf-mybestbooking`
 - **HEAD de base** : `46b2ca8`
 - **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : T-125 poussé sur `arena/01a042cf-mybestbooking`
-  (commit de code `13ca75e`, commit de doc de clôture `9f23433`). Le workflow
-  `.github/workflows/ci.yml` (T-113) est laissé hors suivi git de ces push car le
-  jeton GitHub App n'a pas la permission `workflows` (il reste sur disque et sera
-  poussé séparément). Le hash exact du HEAD courant est **à mettre à jour en fin
-  de session** : un commit de doc ne peut pas contenir son propre hash, et R7 le
-  tolère explicitement (0 fail).
+- **HEAD Git** : T-126 sur `arena/01a042cf-mybestbooking`
+  (commit de code `29013c5`, commit de doc `88bb44f`). Le hash exact du HEAD
+  courant est **à mettre à jour en fin de session** : un commit de doc ne peut
+  pas contenir son propre hash, et R7 le tolère explicitement (mode toléré,
+  0 fail). Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git
+  de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
 - **Dernière tâche validée** : T-126 (6e audit fonctionnel profond) —
   durcissements **additifs** de validation, aucune migration :
