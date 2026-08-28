@@ -36,6 +36,8 @@ import { PriceAlertButton } from "@/components/price-alert-button";
 import { PropertyHeaderActions } from "@/components/property-header-actions";
 import { ReviewHelpfulButton } from "@/components/review-helpful-button";
 import { PropertyBookingCard } from "@/components/property-booking-card";
+import { LocalizedRoomPrice } from "@/components/localized-room-price";
+import { LocalizedDescription } from "@/components/localized-description";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import {
   Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
@@ -281,9 +283,10 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 <CardTitle>À propos</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600 leading-relaxed">
-                  {property.description || "Découvrez cet hébergement exceptionnel et profitez d'un séjour inoubliable."}
-                </p>
+                <LocalizedDescription
+                  description={property.description ?? null}
+                  descriptionEn={property.descriptionEn ?? null}
+                />
               </CardContent>
             </Card>
 
@@ -338,10 +341,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                           </div>
                         </div>
                         <div className="mt-4 md:mt-0 md:text-right">
-                          <p className="text-2xl font-bold text-gray-900">
-                            {formatPrice(room.basePrice, room.currency || "EUR")}
-                          </p>
-                          <p className="text-sm text-gray-500">par nuit</p>
+                          <LocalizedRoomPrice basePrice={room.basePrice} currency={room.currency ?? "EUR"} />
                           <Link href={buildReservationUrl({
                             propertyId: property.id,
                             roomId: room.id,

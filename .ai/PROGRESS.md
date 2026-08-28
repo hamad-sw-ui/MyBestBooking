@@ -9,6 +9,42 @@
 
 ---
 
+## Session 26 — 2026-08-28 : T-132 XAF devise par défaut + langue avec effet réel (implémentation des remarques de l'audit n°11)
+
+**Demande** : implémenter les remarques/manques de l'audit n°11 sans régression,
+tout tester, et faire du **Franc CFA la devise par défaut**.
+
+- 🔨 `src/lib/settings.ts` : `DEFAULTS.general.defaultCurrency` **EUR → XAF**
+  (test mis à jour). Réglage admin reste modifiable.
+- 🔨 Nouvelle route publique **`GET /api/app-preferences`** (defaultCurrency/
+  defaultLanguage/listes ; cache court ; accessible aux anonymes).
+- 🔨 Hook **`useDisplayPreferences`** (devise + langue) : préférence utilisateur
+  connecté, sinon **défaut plateforme XAF / fr** ; cache module (1 requête/page).
+- 🔨 **`src/lib/ui-strings.ts`** dictionnaire FR/EN (+ test 4 cas) : prix,
+  arrivée/départ, adultes/enfants, « voir disponibilités », favoris, avis…
+- 🔨 Cartes recherche (`property-card-client`) et fiche (`property-booking-card`)
+  localisées ; **`LocalizedDescription`** (descriptionEn si langue `en`) et
+  **`LocalizedRoomPrice`** (prix chambre fiche serveur en devise d'affichage).
+- 🔨 Profil : devise initiale XAF ; mention langue corrigée (la langue agit).
+- 🛡️ Garde-fou : **aucune conversion transactionnelle** (chambres/paiements
+  restent en EUR car Stripe ne supporte pas le XAF) ; mention « paiement en EUR ».
+- 🧪 `vitest` **256 passés / 12 skips** · 🔨 `tsc` 0 · `eslint` 0 · ▶️ `smoke`
+  **94/94** · `build` ✓ · `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution : `app-preferences` → `defaultCurrency:"XAF"` anonyme ;
+  89 € → **58 380 FCFA**, 120 € → 78 715 FCFA ; langue `en` → libellés EN +
+  descriptionEn, `en` sans contenu → FR, `ar` → FR. Données de test nettoyées.
+- Rapport : `REPORTS/validation_T-132_2026-08-28.md`.
+- **Limites V1** : taux figés indicatifs ; arabe non traduit (retombe FR) ; seuls
+  les composants publics recherche/fiche sont traduits.
+
+**Fichiers** : `app-preferences/route.ts`, `lib/ui-strings.ts` (+test),
+`components/localized-room-price.tsx`, `components/localized-description.tsx`,
+`lib/use-display-currency.ts`, `lib/settings.ts`, `property-card-client.tsx`,
+`property-booking-card.tsx`, `profile-form.tsx`, `hebergement/[slug]/page.tsx`.
+Aucune migration.
+
+---
+
 ## Session 25 — 2026-08-28 : 11e audit fonctionnel profond (rapport) + T-131 préférence Devise réellement branchée (aperçu converti) + mention Langue
 
 ### Audit n°11 (investigation à l'exécution, 3 rôles + anonyme)

@@ -122,7 +122,7 @@ describe("settings (T-021)", () => {
     const general = await getSetting("general");
     expect(general.siteName).toBe("Custom Name");
     expect(general.supportEmail).toBe(DEFAULTS.general.supportEmail);
-    expect(general.defaultCurrency).toBe("EUR");
+    expect(general.defaultCurrency).toBe("XAF");
   });
 
   it("getAllSettings renvoie toutes les sections avec fallback", async () => {

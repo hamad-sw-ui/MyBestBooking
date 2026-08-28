@@ -27,7 +27,10 @@ export function ProfileForm({ initial }: Props) {
     phone: initial.phone ?? "",
     country: initial.country ?? "",
     language: initial.language ?? "fr",
-    currency: initial.currency ?? "EUR",
+    // T-132 : devise d'affichage par défaut = XAF (cohérent avec le réglage
+    // plateforme). N'affecte que l'aperçu des prix, jamais la devise de
+    // paiement des chambres.
+    currency: initial.currency ?? "XAF",
     timezone: initial.timezone ?? "UTC",
   });
   const [loading, setLoading] = useState(false);
@@ -94,10 +97,10 @@ export function ProfileForm({ initial }: Props) {
             <option value="fr">Français</option>
             <option value="en">English</option>
           </select>
-          {/* T-131 : l'interface n'est pas encore traduite (V1 en français).
-              Le choix est mémorisé pour préparer l'internationalisation mais
-              ne bascule pas encore les libellés. */}
-          <p className="mt-1 text-xs text-gray-400">Préférence mémorisée ; l&apos;interface reste en français en V1.</p>
+          {/* T-132 : la langue pilote les libellés traduits et les contenus
+              anglais des hébergements (description). L'arabe n'est pas encore
+              disponible (retombe en français). */}
+          <p className="mt-1 text-xs text-gray-400">Applique les libellés traduits et les descriptions en anglais. L&apos;arabe reste en français en V1.</p>
         </div>
         <div>
           <label htmlFor="pf-currency" className="block text-sm font-medium text-gray-700 mb-1">Devise</label>

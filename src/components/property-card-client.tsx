@@ -8,7 +8,8 @@ import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { PublicPropertyCard } from "@/lib/public-property";
 import { convertAmount, formatMoney } from "@/lib/i18n";
-import { useDisplayCurrency } from "@/lib/use-display-currency";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { uiStrings } from "@/lib/ui-strings";
 
 interface PropertyCardProps {
   property: PublicPropertyCard;
@@ -23,9 +24,11 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating) : null;
 
-  // T-131 : prix d'aperçu converti dans la devise d'affichage du client
-  // (affichage uniquement ; les paiements restent dans la devise de la chambre).
-  const displayCurrency = useDisplayCurrency();
+  // T-131/T-132 : préférences d'affichage (devise = XAF par défaut plateforme,
+  // langue). L'aperçu des prix est converti dans la devise d'affichage ; les
+  // paiements restent dans la devise de la chambre.
+  const { currency: displayCurrency, language } = useDisplayPreferences();
+  const t = uiStrings(language);
   const sourceCurrency = property.minCurrency ?? "EUR";
   const rawPrice = property.minPrice;
   const showPrice = rawPrice !== null && rawPrice !== undefined;
@@ -100,8 +103,8 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
         {showFavorite && (
           <button
             onClick={addToFavorites}
-            aria-label={favoriteState === "saved" ? "Ajouté aux favoris" : "Ajouter aux favoris"}
-            title={favoriteError ?? (favoriteState === "saved" ? "Ajouté aux favoris" : "Ajouter aux favoris")}
+            aria-label={favoriteState === "saved" ? t["fav.added"] : t["fav.add"]}
+            title={favoriteError ?? (favoriteState === "saved" ? t["fav.added"] : t["fav.add"])}
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
           >
             {favoriteState === "loading" ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className={`w-5 h-5 ${favoriteState === "saved" ? "fill-[#FF5A5F] text-[#FF5A5F]" : "text-gray-600"}`} aria-hidden="true" />}
@@ -138,7 +141,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
               </div>
               {property.totalReviews && property.totalReviews > 0 && (
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {property.totalReviews} avis
+                  {property.totalReviews} {t["card.reviews"]}
                 </p>
               )}
             </div>
@@ -160,20 +163,20 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
           <div>
             {priceText ? (
               <>
-                <span className="text-lg font-bold text-gray-900">Dès {priceText}</span>
-                <span className="text-sm text-gray-500">/nuit</span>
+                <span className="text-lg font-bold text-gray-900">{t["price.from"]} {priceText}</span>
+                <span className="text-sm text-gray-500">{t["price.perNight"]}</span>
                 {isConverted && (
                   <span className="block text-[10px] text-gray-400" title="Conversion indicative, taux figés. Le paiement reste en devise de l'hébergement.">
-                    Conversion indicative · paiement en {sourceCurrency}
+                    {t["price.convertedNote"]} {sourceCurrency}
                   </span>
                 )}
               </>
             ) : (
-              <span className="text-sm text-gray-500">Prix indisponible</span>
+              <span className="text-sm text-gray-500">{t["price.unavailable"]}</span>
             )}
           </div>
           <span className="text-sm text-[#1B3A6B] font-medium group-hover:underline">
-            Voir les chambres →
+            {t["card.viewRooms"]}
           </span>
         </div>
       </div>

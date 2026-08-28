@@ -6,7 +6,8 @@ import { buildReservationUrl } from "@/lib/reservation-url";
 import { formatPrice } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { convertAmount, formatMoney } from "@/lib/i18n";
-import { useDisplayCurrency } from "@/lib/use-display-currency";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { uiStrings } from "@/lib/ui-strings";
 
 interface Props {
   propertyId: string;
@@ -44,9 +45,11 @@ export function PropertyBookingCard({
   const [checkOut, setCheckOut] = useState(initialCheckOut);
   const [adults, setAdults] = useState(initialAdults);
   const [children, setChildren] = useState(initialChildren);
-  // T-131 : prix d'aperçu converti dans la devise d'affichage du client
-  // (indicatif ; le paiement reste dans la devise de la chambre).
-  const displayCurrency = useDisplayCurrency();
+  // T-131/T-132 : prix d'aperçu converti dans la devise d'affichage (XAF par
+  // défaut plateforme) et libellés localisés. Le paiement reste dans la devise
+  // de la chambre.
+  const { currency: displayCurrency, language } = useDisplayPreferences();
+  const t = uiStrings(language);
   const roomCurrency = room?.currency ?? "EUR";
   const displayPrice = room
     ? (!displayCurrency || displayCurrency === roomCurrency.toUpperCase()
@@ -70,14 +73,14 @@ export function PropertyBookingCard({
     <Card>
       <CardContent>
         <div className="text-center mb-4">
-          <p className="text-sm text-gray-500">À partir de</p>
+          <p className="text-sm text-gray-500">{t["price.fromShort"]}</p>
           <p className="text-3xl font-bold text-gray-900">
             {displayPrice}
           </p>
-          <p className="text-sm text-gray-500">par nuit</p>
+          <p className="text-sm text-gray-500">{t["price.perNightLong"]}</p>
           {isConverted && (
             <p className="text-[10px] text-gray-400" title="Conversion indicative, taux figés. Le paiement reste en devise de l'hébergement.">
-              Conversion indicative · paiement en {roomCurrency}
+              {t["price.convertedNote"]} {roomCurrency}
             </p>
           )}
         </div>
@@ -85,23 +88,23 @@ export function PropertyBookingCard({
         <div className="space-y-3 mb-4">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <label htmlFor="property-check-in" className="block text-xs font-medium text-gray-500 mb-1">Arrivée</label>
+              <label htmlFor="property-check-in" className="block text-xs font-medium text-gray-500 mb-1">{t["book.checkIn"]}</label>
               <input id="property-check-in" type="date" value={checkIn} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setCheckIn(event.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
             </div>
             <div>
-              <label htmlFor="property-check-out" className="block text-xs font-medium text-gray-500 mb-1">Départ</label>
+              <label htmlFor="property-check-out" className="block text-xs font-medium text-gray-500 mb-1">{t["book.checkOut"]}</label>
               <input id="property-check-out" type="date" value={checkOut} min={checkIn || new Date().toISOString().slice(0, 10)} onChange={(event) => setCheckOut(event.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs font-medium text-gray-500">
-              Adultes
+              {t["book.adults"]}
               <select value={adults} onChange={(event) => setAdults(Number(event.target.value))} className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900">
                 {adultOptions.map((count) => <option key={count} value={count}>{count}</option>)}
               </select>
             </label>
             <label className="text-xs font-medium text-gray-500">
-              Enfants
+              {t["book.children"]}
               <select value={children} onChange={(event) => setChildren(Number(event.target.value))} className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900">
                 {[0, 1, 2, 3, 4].map((count) => <option key={count} value={count}>{count}</option>)}
               </select>
@@ -111,7 +114,7 @@ export function PropertyBookingCard({
 
         {room ? (
           <Link href={href} className="block w-full text-center px-6 py-3 rounded-lg bg-[#FF5A5F] text-white font-medium hover:bg-[#e54a4f] transition">
-            Voir les disponibilités
+            {t["book.seeAvailability"]}
           </Link>
         ) : (
           // T-119 (B2) : aucune chambre dérivable → on n'envoie plus
@@ -122,10 +125,10 @@ export function PropertyBookingCard({
             aria-disabled="true"
             className="block w-full text-center px-6 py-3 rounded-lg bg-gray-200 text-gray-500 font-medium cursor-not-allowed"
           >
-            Aucune chambre disponible
+            {t["book.noRoom"]}
           </button>
         )}
-        <p className="text-xs text-center text-gray-500 mt-3">✓ Conditions d&apos;annulation affichées avant confirmation</p>
+        <p className="text-xs text-center text-gray-500 mt-3">{t["book.cancelShown"]}</p>
       </CardContent>
     </Card>
   );

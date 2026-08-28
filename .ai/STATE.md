@@ -13,7 +13,20 @@
   Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
   push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-131 (11e audit fonctionnel profond) —
+- **Dernière tâche validée** : T-132 (implémentation des remarques audit n°11) —
+  **Franc CFA (XAF) devient la devise d'affichage par défaut** et **la langue a
+  un effet réel**. Réglage plateforme `defaultCurrency` → XAF ; nouvelle route
+  publique `GET /api/app-preferences` ; hook `useDisplayPreferences` (devise
+  utilisateur sinon défaut plateforme XAF, pour les anonymes aussi) ; dictionnaire
+  de libellés FR/EN `ui-strings` ; `LocalizedDescription` (descriptionEn si
+  langue `en`) et `LocalizedRoomPrice`. **Aucune conversion transactionnelle** :
+  les chambres/paiements restent en EUR (Stripe ne supporte pas le XAF), avec
+  mention « paiement en EUR ». Validation : tsc 0, eslint 0, vitest **256
+  passés/12 skips**, smoke **94/94**, build ✓, ai:check **19 OK · 1 warn · 0
+  fail** ; exécution : `app-preferences` → `defaultCurrency:"XAF"` anonyme,
+  89 € → 58 380 FCFA, langue `en` → libellés/contenu EN (ar/fr → FR) —
+  2026-08-28. Rapport : `REPORTS/validation_T-132_2026-08-28.md`.
+  Avant : T-131 (11e audit fonctionnel profond) —
   la préférence **Devise** du profil était enregistrée (`users.currency`) mais
   sans aucun effet : `convertAmount`/`formatMoney` de `src/lib/i18n.ts` étaient
   du code mort (jamais importés), tous les prix restant affichés en euros via

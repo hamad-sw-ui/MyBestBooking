@@ -190,7 +190,10 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     siteName: "MyBestBooking",
     supportEmail: "support@mybestbooking.com",
     partnersEmail: "partners@mybestbooking.com",
-    defaultCurrency: "EUR",
+    // T-132 : devise d'affichage par défaut = Franc CFA (marché cible CEMAC).
+    // Purement présentiel : les montants transactionnels restent dans la
+    // devise de la chambre/passerelle (Stripe ne supporte pas le XAF).
+    defaultCurrency: "XAF",
     defaultLanguage: "fr",
     supportedCurrencies: ["EUR", "USD", "GBP", "XAF"],
     supportedLocales: ["fr", "en", "ar"],

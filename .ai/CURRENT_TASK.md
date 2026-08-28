@@ -1,5 +1,39 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Suite de l'audit n°11 — implémentation des remarques en suspens :
+**Franc CFA (XAF) comme devise d'affichage par défaut** (réglage plateforme +
+route publique `/api/app-preferences` + hook de préférences avec repli XAF pour
+les anonymes) et **la langue avec un effet réel** (dictionnaire de libellés
+FR/EN `ui-strings`, descriptions EN des hébergements via `LocalizedDescription`,
+prix chambres localisés via `LocalizedRoomPrice`). Les montants transactionnels
+restent dans la devise de la chambre (Stripe ne supporte pas le XAF).
+**ID** : T-132 — additif, aucune migration, aucune table, aucune route d'écriture.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-28.
+
+## Périmètre (T-132)
+
+- `settings.ts` : `defaultCurrency` → **XAF** (+ test). Route publique
+  `GET /api/app-preferences` (devise/langue plateforme, cache court).
+- Hook `useDisplayPreferences` (devise **et** langue ; devise utilisateur sinon
+  défaut plateforme XAF ; requêtes mises en cache module).
+- `ui-strings.ts` (FR/EN) + test ; cartes recherche et fiche localisées ;
+  `LocalizedDescription` (descriptionEn si `en`) ; `LocalizedRoomPrice`.
+- Profil : devise initiale XAF, mention langue mise à jour.
+
+## Sortie (validé — T-132)
+
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **256 passés / 12 skips**.
+- ▶️ `smoke` **94/94** · `build` ✓ (route `/api/app-preferences` générée) ·
+  `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution : `GET /api/app-preferences` → `defaultCurrency:"XAF"` (anonyme) ;
+  89 € → 58 380 FCFA ; langue `en` → libellés EN + descriptionEn, ar/fr → FR.
+  Voir `REPORTS/validation_T-132_2026-08-28.md`.
+
+---
+
+## Tâche précédente — T-131 (audit n°11, F1)
+
 **Tâche :** Audit fonctionnel profond n°11 (F1) — la préférence **Devise** du
 profil était sauvegardée (`users.currency`) mais n'avait aucun effet : les
 utilitaires `convertAmount`/`formatMoney` de `src/lib/i18n.ts` n'étaient importés
