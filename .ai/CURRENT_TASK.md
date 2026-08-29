@@ -1,41 +1,42 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Ajout d'un bouton explicite « Importer depuis l'ordinateur » pour
-les photos de propriété (demande utilisateur), avec remplacement direct d'une
-image existante.
+**Tâche :** Audit fonctionnel profond n°19 (T-142) — analyse à l'exécution des
+scénarios/éléments inachevés ou mal pensés, explication + solution sans
+régression.
 
-**Constat.** Le sélecteur de fichiers de la machine s'ouvrait déjà via un
-`<input type="file">` natif, mais : (1) il avait l'apparence d'un champ générique
-et non d'un bouton ; (2) dans la galerie d'édition on ne pouvait que
-*supprimer* ou *définir principale* — impossible de **remplacer** une photo
-(supprimer + ré-ajouter cassait l'ordre et le statut « principale »).
+**Investigation (3 rôles + anonyme, DEV puis PROD).** Couvert : réglages admin,
+billing/export CSV, BestRewards (page publique + statut + mon-compte), aide,
+chambres (création/calendrier/tarifs), promotions, messagerie, vote « utile »
+avis, recherche (filtres/tri/pagination/vides), favoris(wishlists), tunnel
+réservation (dates/capacité/auth), modération+réponse avis, RBAC dashboard,
+pages légales, liens footer, préférences, upload photos.
 
-**Solution (additive, aucune migration/route).**
-- 🔨 `src/components/photo-upload-button.tsx` (nouveau) : `<Button>` stylé qui
-  déclenche un `<input type="file">` masqué (`ref.click()`), props `onFile`,
-  `accept`, `multiple`, `loading`, `variant/size`, `title`, `ariaLabel` ; reset
-  de la valeur pour re-sélectionner le même fichier.
-- 🔨 Page création : bouton « Importer depuis l'ordinateur » + bouton
-  « Changer l'image » sous l'aperçu.
-- 🔨 Page édition : bouton « Importer » en tête d'onglet + action
-  « Changer cette image » sur chaque vignette ; helper
-  `uploadPhoto(file, replaceUrl?)` qui remplace l'URL en place (ordre conservé,
-  statut « principale » suit la nouvelle URL) ou ajoute en galerie.
-- Réutilise tel quel `POST /api/properties/upload` (multipart, 5 Mo, magic-bytes,
-  réservé hôte/admin).
+**Anomalie corrigée (P2 — bug d'affichage visible).** FAQ de la page publique
+BestRewards : la réponse « Comment monter de niveau ? » était une **chaîne
+simple** (guillemets doubles) contenant `${level2Threshold}` /
+`${level3Threshold}` non interpolés → l'utilisateur voyait le texte littéral
+au lieu des vrais seuils. 🔨 Corrigé en template literal (backticks). Après :
+« Après 5 séjours… Après 15 séjours… » (DEV + PROD), aucun littéral résiduel.
 
-**ID** : T-141 — additif.
+**Observation P3 (non corrigée, aucun impact sous config par défaut).** L'onglet
+BestRewards de `mon-compte` code en dur seuils (5/15) et libellés d'avantages,
+alors que la page publique lit les réglages. Valeurs identiques aux réglages
+par défaut → pas de bug visible ; divergence potentielle si un admin change les
+réglages. Mise en cohérence laissée de côté (nécessiterait un exposant public
+des réglages) pour ne pas risquer de régression.
+
+Tous les autres flux testés sont **sains** (détail dans le rapport).
+
+**ID** : T-142 — correctif additif (1 fichier, aucune migration/route).
 **Niveau** : L
 **Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
 
-## Sortie (validé — T-141)
+## Sortie (validé — T-142)
 
 - 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **288 passés (42 fichiers)**.
 - ▶️ `smoke` **94/94** · `build` ✓ (Compiled successfully, **59 pages**) ·
-  `ai:check` **19 OK · 1 warn · 0 fail** (warn R7 = synchro HEAD, résolu au commit).
-- ▶️ DEV : upload hôte PNG → 200 `{url:/uploads/…}` ; client → 403 ; pages
-  new/edit 200. PROD (`next start` 3100, arrêté) : bouton « Importer » présent
-  dans le HTML (libellé + aria-label).
-- 🧹 PNG de test supprimé de `public/uploads/`, résa smoke supprimée →
-  **32 réservations**.
-- Rapport : `.ai/REPORTS/validation_T-141_2026-08-29.md`.
+  `ai:check` **19 OK · 1 warn · 0 fail** (warn R7 = synchro HEAD).
+- ▶️ DEV + PROD (`next start` 3100, arrêté) : FAQ affiche 5/15, 0 littéral
+  résiduel. Nombreux garde-fous vérifiés (400/401/403/404/409/307).
+- 🧹 Résa smoke supprimée → **32 réservations**.
+- Rapport : `.ai/REPORTS/validation_T-142_2026-08-29.md`.

@@ -175,7 +175,7 @@ export default async function BestRewardsPage() {
               },
               {
                 q: "Comment monter de niveau ?",
-                a: "Chaque séjour terminé compte. Après ${level2Threshold} séjours, vous passez Level 2 Voyageur. Après ${level3Threshold} séjours, vous atteignez Level 3 Ambassador.",
+                a: `Chaque séjour terminé compte. Après ${level2Threshold} séjours, vous passez Level 2 Voyageur. Après ${level3Threshold} séjours, vous atteignez Level 3 Ambassador.`,
               },
               {
                 q: "Les réductions sont-elles cumulables ?",

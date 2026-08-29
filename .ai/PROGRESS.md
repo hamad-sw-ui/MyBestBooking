@@ -9,6 +9,34 @@
 
 ---
 
+## Session 32 — 2026-08-29 : 19e audit fonctionnel (T-142) — correctif interpolation FAQ BestRewards
+
+Audit n°19 à l'exécution (3 rôles + anonyme, DEV puis PROD). Périmètre :
+réglages admin, billing/export, BestRewards (page publique + statut +
+mon-compte), aide, chambres/calendrier/tarifs, promotions, messagerie, vote
+« utile » avis, recherche (filtres/tri/pagination/cas vides), favoris, tunnel
+réservation, modération/réponse avis, RBAC dashboard, pages légales, liens
+footer, préférences, upload photos.
+
+🔨 **Seul bug d'affichage (P2)** : dans la FAQ publique BestRewards, la réponse
+« Comment monter de niveau ? » était une chaîne simple (guillemets doubles)
+avec `${level2Threshold}`/`${level3Threshold}` **non interpolés** → texte
+littéral visible au lieu des seuils 5/15. Corrigé en template literal.
+Vérifié après : « Après 5 séjours… Après 15 séjours… » (DEV + PROD), 0
+littéral résiduel.
+
+🔍 Observation P3 (non corrigée) : l'onglet BestRewards de `mon-compte` code en
+dur seuils (5/15) et libellés alors que la page publique lit les réglages ;
+valeurs identiques aux défauts → aucun bug visible, divergence potentielle si un
+admin modifie les réglages.
+
+Tous les autres flux vérifiés **sains** (garde-fous 400/401/403/404/409/307).
+🧪 `tsc` 0 · `eslint` 0 · `vitest` 288 · `smoke` 94/94 · `build` ✓ 59 pages ·
+`ai:check` 19 OK / 1 warn / 0 fail. Rapport :
+`REPORTS/validation_T-142_2026-08-29.md`.
+
+---
+
 ## Session 31 — 2026-08-29 : T-141 bouton « Importer depuis l'ordinateur » pour les photos de propriété + remplacement direct d'image
 
 **Demande** : lors de l'ajout ou du changement d'une photo d'hébergement, un
