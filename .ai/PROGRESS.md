@@ -9,6 +9,52 @@
 
 ---
 
+## Session 30 — 2026-08-29 : 18e audit fonctionnel (rapport) + T-140 messages français sur routes admin (zod brut → frenchZodMessage)
+
+**Audit n°18** (investigation à l'exécution, 3 rôles + anonyme). Flux vérifiés
+SAINS : 🔍 alertes prix (DELETE bornée à l'utilisateur + UI mes-favoris),
+🔍 wallet en réservation (débit plafonné au total + **restitution intégrale à
+l'annulation** : 25 € débités puis rendus au cancel), 🔍 machine d'états de
+séjour (`booking-lifecycle.ts` : customer annule seulement, host clôture/no-show
+après check-out, terminaux), 🔍 mode maintenance (PATCH
+`/api/admin/settings/security` avec l'objet complet → 503 sur écritures/promo,
+garde cliente `<MaintenanceGate/>`, bypass admin anti-verrouillage), 🔍 webhook
+Stripe (signature + inbox idempotente), 🔍 export billing CSV (403 client,
+200 CSV hôte), 🔍 suspension utilisateur (auto-interdiction, sessions
+révoquées, login bloqué), 🔍 formulaire d'avis (range min=1), 🔍 actions
+voyageur (annuler/contacter hôte/facture/avis toutes câblées).
+
+**T-140 — correctif additif, sans régression :**
+- 🔨 dernières routes admin exposaient le message zod **brut en anglais** sur
+  entrée invalide. Centralisé via `frenchZodMessage` : `admin/bulk`,
+  `admin/providers/[provider]` (2 handlers), `admin/settings/[key]`,
+  `users/[id]/suspend`. 400 → « Valeur invalide ou manquante ».
+
+🧪 validation : tsc 0 · eslint 0 · vitest 288 (42 fichiers) · smoke 94/94 ·
+build Compiled successfully **59 pages** · ai:check 18 OK / 2 warn / 0 fail
+(les 2 warn sont des état de session, non des erreurs). ▶️ preuves runtime DEV.
+Rapport : `REPORTS/validation_T-140_2026-08-29.md`.
+
+---
+
+## Session 29 — 2026-08-29 : T-139 reset-password message français (audit n°17)
+
+17e audit fonctionnel. Seule anomalie : `POST /api/auth/reset-password` avec un
+token `< 10` caractères affichait un message **anglais** (« String must contain
+at least 10 character(s) ») parce que le contrôle de longueur partait avant la
+validation zod francisée. 🔨 corrigé via `frenchZodMessage`. Validé bout-en-bout
+(reset valide 200, nouveau MDP 200, ancien 401, token réutilisé 400).
+Commit `a5b0b58`. Détail : `REPORTS/validation_T-139_2026-08-29.md`.
+
+---
+
+## Session 28 — 2026-08-29 : 16e audit fonctionnel (rapport) + T-138 implémentation des remarques
+
+Audit n°16 à l'exécution (3 rôles + anonyme) puis T-138 : implémentation des
+remarques sans régression. Rapports associés dans `REPORTS/`.
+
+---
+
 ## Session 27 — 2026-08-28 : 12e audit fonctionnel (rapport) + T-133 implémentation des remarques (filtre prix XAF, contact hôte pré-résa, avatar)
 
 **Audit n°12** (rapport `REPORTS/audit_fonctionnel_profond12_2026-08-28.md`,

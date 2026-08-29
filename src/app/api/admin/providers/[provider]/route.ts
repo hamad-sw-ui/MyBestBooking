@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import {
   isKnownProvider,
   PROVIDER_FIELDS,
@@ -60,7 +61,7 @@ export async function PUT(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     if (error instanceof ProviderCredentialsError) return NextResponse.json({ error: error.message }, { status: 503 });
     console.error("[admin/providers] PUT", error);
     return NextResponse.json({ error: "Impossible d'enregistrer le provider" }, { status: 500 });
@@ -144,7 +145,7 @@ export async function DELETE(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("[admin/providers] DELETE", error);
     return NextResponse.json({ error: "Impossible de réinitialiser le provider" }, { status: 500 });
   }

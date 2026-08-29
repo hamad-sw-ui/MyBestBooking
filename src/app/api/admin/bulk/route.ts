@@ -18,6 +18,7 @@ import {
   reviewVotes,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq, inArray, and, ne, or, sql, gte } from "drizzle-orm";
 import { createHash } from "node:crypto";
@@ -471,7 +472,7 @@ export async function POST(request: NextRequest) {
     }
     if (e instanceof z.ZodError) {
       return NextResponse.json(
-        { error: e.issues[0]?.message ?? "Payload invalide" },
+        { error: frenchZodMessage(e) },
         { status: 400 },
       );
     }

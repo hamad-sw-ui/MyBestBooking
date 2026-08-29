@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import {
   SETTING_KEYS,
   SettingKey,
@@ -102,7 +103,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         {
-          error: error.issues[0]?.message ?? "Payload invalide",
+          error: frenchZodMessage(error),
           issues: error.issues,
         },
         { status: 400 },
