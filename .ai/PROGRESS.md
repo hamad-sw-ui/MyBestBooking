@@ -9,6 +9,29 @@
 
 ---
 
+## Session 34 — 2026-08-29 : 20e audit fonctionnel (T-144) — API messages refuse les contenus vides
+
+Re-clone frais : réalignement sur origin (T-143), réinstall dépendances,
+`.env.local`, Postgres embarqué, `db:push`, seed (3 comptes, 8 propriétés).
+
+Audit n°20 (3 rôles + anonyme, DEV puis PROD). 🔨 **Seul correctif (P2)** :
+`POST /api/messages` acceptait un message composé uniquement d'espaces (zod
+`min(1)` sans trim) → bulle vide, alors que l'UI l'empêche. Ajout dans
+`src/app/api/messages/route.ts` : `trim()` + 400 « Le message ne peut pas être
+vide » si texte vide **et** aucune pièce jointe ; stockage
+`trimmedContent || "(pièce jointe)"`. Vérifié DEV + PROD (espaces → 400,
+normal → 201, pièce jointe seule acceptée).
+
+🔍 Sains : partage wishlist (soft-404), disponibilités chambre (401 client,
+400 négatif/date/stock>capacité, messages français), vérif email/activer-compte,
+conversations (401/404/400 + idempotence), permissions messages, déconnexion.
+
+🧪 `tsc` 0 · `eslint` 0 · `vitest` 288 · `smoke` 94/94 · `build` ✓ 59 pages ·
+`ai:check` 19 OK / 1 warn / 0 fail. Rapport :
+`REPORTS/validation_T-144_2026-08-29.md`.
+
+---
+
 ## Session 33 — 2026-08-29 : T-143 onglet BestRewards de « Mon compte » piloté par les réglages
 
 Suite de l'audit n°19 (piste P3). `Mon compte` codait en dur seuils (5/15) et

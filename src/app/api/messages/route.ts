@@ -77,6 +77,14 @@ export async function POST(request: NextRequest) {
     const ok = await checkParticipant(user.id, data.conversationId);
     if (!ok) return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
 
+    // T-144 (audit n°20) : un message d'espaces sans pièce jointe est un
+    // message vide (l'UI envoie "(pièce jointe)" quand il n'y a que le
+    // fichier). On normalise et on exige un contenu OU une pièce jointe.
+    const trimmedContent = data.content.trim();
+    if (!trimmedContent && !data.attachmentKey) {
+      return NextResponse.json({ error: "Le message ne peut pas être vide" }, { status: 400 });
+    }
+
     const senderType = ok.isGuest ? "user" : "host";
     if (data.attachmentKey && !data.attachmentKey.startsWith(`uploads/${user.id.slice(0, 8)}-`)) {
       return NextResponse.json({ error: "Pièce jointe non autorisée" }, { status: 403 });
@@ -96,7 +104,7 @@ export async function POST(request: NextRequest) {
           conversationId: data.conversationId,
           senderId: user.id,
           senderType,
-          content: data.content,
+          content: trimmedContent || "(pièce jointe)",
           attachmentKey: data.attachmentKey ?? null,
           attachmentMimeType,
         })
