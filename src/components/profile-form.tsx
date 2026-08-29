@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Upload } from "lucide-react";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT } from "@/lib/ui-strings";
+import { PhotoUploadButton } from "@/components/photo-upload-button";
 
 interface Props {
   initial: {
@@ -44,10 +46,34 @@ export function ProfileForm({ initial }: Props) {
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // T-145 : import d'une photo de profil depuis le gestionnaire de fichiers.
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   function set<K extends keyof typeof form>(k: K, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
     setSaved(false);
+  }
+
+  // T-145 : import direct d'un avatar (image publique). L'API persiste
+  // `users.avatarUrl` immédiatement ; on synchronise aussi le champ URL pour
+  // que la valeur reste cohérente si l'utilisateur enregistre ensuite.
+  async function handleAvatarFile(file: File) {
+    setError(null);
+    setAvatarUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/users/me/avatar", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      setForm((f) => ({ ...f, avatarUrl: data.url ?? "" }));
+      setSaved(true);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Échec de l'upload");
+    } finally {
+      setAvatarUploading(false);
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -105,8 +131,24 @@ export function ProfileForm({ initial }: Props) {
         </div>
         <div className="md:col-span-2">
           <label htmlFor="pf-avatar" className="block text-sm font-medium text-gray-700 mb-1">{t("account.avatar")}</label>
-          <input id="pf-avatar" type="url" value={form.avatarUrl} onChange={(e) => set("avatarUrl", e.target.value)} placeholder="https://…/photo.jpg" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
-          <p className="mt-1 text-xs text-gray-400">{t("account.avatarHint")}</p>
+          <div className="flex items-center gap-3 flex-wrap">
+            <PhotoUploadButton
+              variant="outline"
+              size="sm"
+              loading={avatarUploading}
+              onFile={handleAvatarFile}
+              ariaLabel="Importer une photo de profil depuis l'ordinateur"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              {avatarUploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+            </PhotoUploadButton>
+            {form.avatarUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={form.avatarUrl} alt="Aperçu de la photo de profil" className="w-12 h-12 rounded-full object-cover border border-gray-200" />
+            )}
+          </div>
+          <input id="pf-avatar" type="url" value={form.avatarUrl} onChange={(e) => set("avatarUrl", e.target.value)} placeholder="https://…/photo.jpg" className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
+          <p className="mt-1 text-xs text-gray-400">Importez une image (JPEG, PNG, WebP ou GIF, 5 Mo max) ou collez une URL. {t("account.avatarHint")}</p>
         </div>
         <div>
           <label htmlFor="pf-lang" className="block text-sm font-medium text-gray-700 mb-1">{t("account.language")}</label>
@@ -114,10 +156,9 @@ export function ProfileForm({ initial }: Props) {
             <option value="fr">Français</option>
             <option value="en">English</option>
           </select>
-          {/* T-132 : la langue pilote les libellés traduits et les contenus
-              anglais des hébergements (description). L'arabe n'est pas encore
-              disponible (retombe en français). */}
-          <p className="mt-1 text-xs text-gray-400">Applique les libellés traduits et les descriptions en anglais. L&apos;arabe reste en français en V1.</p>
+          {/* T-132/T-145 : seuls le français et l'anglais sont des langues
+              d'interface traduites (UiLocale = fr|en). */}
+          <p className="mt-1 text-xs text-gray-400">Applique les libellés traduits et les descriptions en anglais.</p>
         </div>
         <div>
           <label htmlFor="pf-currency" className="block text-sm font-medium text-gray-700 mb-1">{t("account.currency")}</label>

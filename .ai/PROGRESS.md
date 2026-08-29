@@ -9,6 +9,35 @@
 
 ---
 
+## Session 35 — 2026-08-29 : T-145 implémentation des remarques produit (avatar upload, commission admin par hébergement, langue « ar »)
+
+Revue fonctionnelle puis implémentation, sans régression, des points
+testables :
+- 🔨 **Photo de profil importable** (voyageur + hôte) : nouvelle route
+  `POST /api/users/me/avatar` (uploader public, magic bytes, 5 Mo, rate-limit,
+  maintenance, persiste `users.avatarUrl` tout de suite) ; `ProfileForm` ajoute
+  « Importer depuis l'ordinateur » (`PhotoUploadButton`) avec aperçu, champ URL
+  conservé.
+- 🔨 **Commission par hébergement réglable par l'admin** : carte « Commission
+  plateforme » (% , 0–100) dans l'édition d'hébergement, visible/admin seul
+  (rôle via `/api/auth/me`), envoyée au PUT seulement pour un admin (le backend
+  refusait déjà l'hôte → 403).
+- 🔨 **Langue « arabe » retirée** des sélecteurs (la locale UI réelle est
+  fr|en) : `settings-panel` + libellé `profile-form` ; fallback hook déjà sûr.
+- ⏸️ Non implémenté (ressources externes non simulables) : Stripe Connect /
+  versements bancaires hôtes et validation carte réelle — le code bascule dès
+  que les clés Stripe sont fournies.
+
+Preuves DEV + PROD : avatar anon 401 / client+hôte 200 / faux-fichier 400 / image
+publique 200 ; commission admin 18 % → 200, hôte 403 (valeur inchangée,
+restaurée 15). Données de test nettoyées.
+
+🧪 `tsc` 0 · `eslint` 0 · `vitest` 288 · `smoke` 94/94 · `build` ✓ 59 pages ·
+`ai:check` 19 OK / 1 warn / 0 fail. Rapport :
+`REPORTS/validation_T-145_2026-08-29.md`.
+
+---
+
 ## Session 34 — 2026-08-29 : 20e audit fonctionnel (T-144) — API messages refuse les contenus vides
 
 Re-clone frais : réalignement sur origin (T-143), réinstall dépendances,

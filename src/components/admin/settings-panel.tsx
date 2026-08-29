@@ -124,7 +124,9 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
             >
               <option value="fr">🇫🇷 Français</option>
               <option value="en">🇬🇧 English</option>
-              <option value="ar">🇸🇦 العربية</option>
+              {/* T-145 : l'arabe n'est pas une locale UI supportée (UiLocale
+                  = "fr" | "en") ; le proposer faisait retomber l'affichage en
+                  français. Retiré jusqu'à une vraie traduction. */}
             </select>
           </div>
           <div>

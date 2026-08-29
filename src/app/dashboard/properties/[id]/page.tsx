@@ -31,6 +31,8 @@ interface Property {
   status: string | null;
   averageRating: string | null;
   totalReviews: number | null;
+  // T-145 : commission spécifique à l'hébergement (admin uniquement).
+  commissionRate?: string | null;
 }
 
 interface Room {
@@ -86,6 +88,15 @@ export default function EditPropertyPage() {
   // T-130 : upload de photos dans l'édition (réutilise POST /api/properties/upload).
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  // T-145 : seul un admin peut modifier la commission de l'hébergement.
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setIsAdmin(data?.user?.role === "admin"))
+      .catch(() => setIsAdmin(false));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/properties/${propertyId}`)
@@ -132,6 +143,9 @@ export default function EditPropertyPage() {
           amenities: property.amenities,
           mainImage: property.mainImage,
           images: property.images,
+          // T-145 : la commission n'est envoyée que par un admin (l'API
+          // ignore/refuse ce champ pour un hôte) ; on ne l'envoie que si admin.
+          ...(isAdmin ? { commissionRate: property.commissionRate ?? "15" } : {}),
         }),
       });
 
@@ -454,6 +468,40 @@ export default function EditPropertyPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* T-145 : commission spécifique à l'hébergement (admin uniquement).
+              Un hôte ne voit pas ce champ et ne peut pas modifier son taux. */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Commission plateforme</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="max-w-xs">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Taux de commission (%)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={property.commissionRate ?? "15"}
+                      onChange={(e) => setProperty({ ...property, commissionRate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+                    />
+                    <span className="text-gray-500">%</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Prélevé sur chaque réservation. Par défaut : le taux global
+                    défini dans les réglages admin. Le net versé à l&apos;hôte =
+                    total − commission.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 

@@ -1,35 +1,36 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Audit fonctionnel profond n°20 (T-144) — scénarios inachevés/mal
-pensés à l'exécution, explication + solution sans régression.
+**Tâche :** T-145 — implémentation des remarques produit (photo de profil,
+commission par hébergement admin, langue « ar »), sans régression.
 
-**Environnement restauré** (re-clone) : branche réalignée sur origin (T-143),
-dépendances réinstallées, `.env.local` recréé, Postgres embarqué démarré,
-`db:push`, `POST /api/seed` (3 comptes + 8 propriétés). Données d'audit
-nettoyées (conversations/messages/résa smoke/disponibilité de test).
+**Implémenté (additif, aucune migration, paiement non touché) :**
+1. 🔨 **Photo de profil depuis le gestionnaire de fichiers** : nouvelle route
+   `POST /api/users/me/avatar` (tous rôles connectés, uploader public + magic
+   bytes + 5 Mo + rate-limit + maintenance), persiste `users.avatarUrl`
+   immédiatement ; `ProfileForm` gagne un bouton « Importer depuis
+   l'ordinateur » (`PhotoUploadButton`) avec aperçu (le champ URL reste).
+2. 🔨 **Commission par hébergement côté admin** : carte « Commission
+   plateforme » (taux %, 0–100) dans l'édition d'hébergement, visible/admin
+   seulement (`/api/auth/me`) ; envoyée au PUT seulement si admin. Le backend
+   refusait déjà la commission à un hôte (403) — l'UI est désormais cohérente.
+3. 🔨 **Langue « arabe » retirée** des sélecteurs (`settings-panel`, libellé
+   `profile-form`) : seule la locale UI fr|en est réelle. Hook défensif déjà en
+   place (retombe sur fr). Pas de migration de réglage.
 
-**Anomalie corrigée (P2).** `POST /api/messages` acceptait un message composé
-uniquement d'espaces (`content:"   "`, zod `min(1)` ne trim pas) → bulle vide
-stockée, alors que l'UI l'empêche déjà. 🔨 Dans `src/app/api/messages/route.ts`
-: `trimmedContent = data.content.trim()` ; 400 « Le message ne peut pas être
-vide » si pas de texte **et** pas de pièce jointe ; stockage
-`trimmedContent || "(pièce jointe)"`. Message d'espaces → 400 (DEV + PROD),
-message normal → 201, pièce jointe seule reste acceptée.
+**Non implémenté volontairement (ressources externes, non simulables à blanc) :**
+Stripe Connect / versements bancaires hôtes (comptes connectés + transfers) et
+validation du paiement carte réel — le code bascule dès que les clés Stripe sont
+fournies.
 
-**Flux vérifiés SAINS :** partage wishlist (soft-404 token invalide),
-disponibilités chambre (401 client, 400 négatif/date/stock>capacité, messages
-français, stopSell 200), vérif email + activer-compte (messages d'erreur
-clairs), conversations (401 anon, 404 propriété absente, 400 hôte sans
-réservation, idempotence), permissions messages, déconnexion (307 → 401).
+**Preuves :** avatar anon 401 / client+hôte 200 / faux-fichier 400 / image servie
+200 ; commission admin 18%→200, hôte 403 et valeur inchangée (restaurée 15) ;
+PROD (next start 3100) avatar 200/401. Données de test nettoyées.
 
-**ID** : T-144 — additif, 1 fichier, aucune migration/route.
-**Niveau** : L
-**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
+**ID** : T-145. **Niveau** : L. **Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
 
-## Sortie (validé — T-144)
+## Sortie (validé — T-145)
 
-- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **288 passés (42 fichiers)**.
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **288 (42 fichiers)**.
 - ▶️ `smoke` **94/94** · `build` ✓ (Compiled successfully, **59 pages**) ·
   `ai:check` **19 OK · 1 warn · 0 fail**.
-- ▶️ DEV + PROD (`next start` 3100, arrêté) : message vide → 400.
-- Rapport : `.ai/REPORTS/validation_T-144_2026-08-29.md`.
+- Rapport : `.ai/REPORTS/validation_T-145_2026-08-29.md`.
