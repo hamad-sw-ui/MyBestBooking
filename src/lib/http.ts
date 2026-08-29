@@ -65,3 +65,90 @@ export function isUuid(value: unknown): value is string {
 export function invalidIdResponse(message = "Identifiant invalide") {
   return NextResponse.json({ error: message }, { status: 400 });
 }
+
+/**
+ * T-137 (A1) : message français pour la première erreur d'un `ZodError`.
+ *
+ * Une grande partie des schémas de validation ne fournit pas de message
+ * explicite : Zod renvoie alors ses libellés par défaut en anglais
+ * (« Too small: expected number to be >=1 », « Invalid email address »,
+ * « Too big… »). Exposés tels quels via `error.issues[0].message`, ces
+ * textes techniques fuyaient jusqu'au navigateur sur des routes grand
+ * public (réservation, avis, alertes de prix…), en contradiction avec une
+ * interface 100 % française.
+ *
+ * On privilégie toujours un message explicite déjà en français (s'il ne
+ * ressemble pas à un libellé Zod anglais) ; sinon on traduit les codes
+ * d'erreur natifs selon le type de champ et la nature de la validation.
+ * Les messages personnalisés passés dans le schéma restent intacts :
+ * cette fonction ne fait que fournir un libellé de repli.
+ */
+function looksLikeDefaultZodEnglish(message: string): boolean {
+  // Les messages par défaut de Zod sont des phrases types en anglais.
+  return /^(Invalid |Too |Expected |Required|String must|Number must|Array must)/.test(
+    message,
+  );
+}
+
+function issueToFrench(issue: {
+  code: string;
+  message: string;
+  path: PropertyKey[];
+}): string {
+  const field = String(issue.path[issue.path.length - 1] ?? "");
+  switch (issue.code) {
+    case "invalid_type":
+      if (field === "email" || field === "guestEmail") {
+        return "Adresse email invalide";
+      }
+      return "Valeur invalide ou manquante";
+    case "invalid_format":
+      // Zod v4 : email()/uuid() émettent `invalid_format` avec un message
+      // anglais (« Invalid email address »).
+      if (field === "email" || field === "guestEmail" || /email/i.test(issue.message)) {
+        return "Adresse email invalide";
+      }
+      if (/uuid/i.test(issue.message)) return "Identifiant invalide";
+      return "Format invalide";
+    case "invalid_string":
+      // Zod v3 : email()/uuid() émettent `invalid_string`.
+      if (field === "email" || field === "guestEmail" || /email/i.test(issue.message)) {
+        return "Adresse email invalide";
+      }
+      if (/uuid/i.test(issue.message)) return "Identifiant invalide";
+      return "Format invalide";
+    case "too_small":
+      // min(1) sur une note/un nombre d'occupants, min(2/3) sur un texte…
+      if (/number|integer/i.test(issue.message)) {
+        return "Valeur trop petite";
+      }
+      return "Texte trop court";
+    case "too_big":
+      if (/number|integer/i.test(issue.message)) {
+        return "Valeur trop grande";
+      }
+      return "Texte trop long";
+    default:
+      return "Valeur invalide";
+  }
+}
+
+/**
+ * Extrait un message d'erreur en français d'une `ZodError`. Préserve les
+ * messages personnalisés (déjà rédigés en français) et ne traduit que les
+ * libellés Zod par défaut restés en anglais.
+ */
+export function frenchZodMessage(error: {
+  issues?: Array<{
+    code: string;
+    message: string;
+    path: PropertyKey[];
+  }>;
+}): string {
+  const first = error?.issues?.[0];
+  if (!first) return "Paramètres invalides";
+  if (first.message && !looksLikeDefaultZodEnglish(first.message)) {
+    return first.message;
+  }
+  return issueToFrench(first);
+}

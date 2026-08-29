@@ -20,6 +20,7 @@ import { TwoFactorSection } from "@/components/two-factor-section";
 import { DeleteAccountSection } from "@/components/delete-account-section";
 import { NotificationPrefsSection } from "@/components/notification-prefs-section";
 import { ReferralCard } from "@/components/referral-card";
+import { ResendVerificationButton } from "@/components/resend-verification-button";
 
 interface UserData {
   id: string;
@@ -141,6 +142,9 @@ export default function MyAccountPage() {
           <div className="md:col-span-3 space-y-6">
             {activeTab === "profile" && (
               <>
+                {/* T-137 (A3) : renvoi de l'email de vérification si non vérifié. */}
+                <ResendVerificationButton verified={user.emailVerified} />
+
                 {/* Profile Info */}
                 <Card>
                   <CardHeader>

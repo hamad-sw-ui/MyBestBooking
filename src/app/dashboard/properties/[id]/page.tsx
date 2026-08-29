@@ -8,6 +8,7 @@ import { Input, Textarea, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Save, Eye, Plus, Trash2, Star } from "lucide-react";
 import Link from "next/link";
+import { PropertySubmitButton } from "@/components/property-submit-button";
 
 interface Property {
   id: string;
@@ -251,10 +252,14 @@ export default function EditPropertyPage() {
               <Badge className={
                 property.status === "active" ? "bg-green-100 text-green-800" :
                 property.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                property.status === "suspended" ? "bg-red-100 text-red-800" :
                 "bg-gray-100 text-gray-800"
               }>
-                {property.status === "active" ? "Actif" : 
-                 property.status === "pending" ? "En attente" : property.status}
+                {property.status === "active" ? "Actif" :
+                 property.status === "pending" ? "En attente de validation" :
+                 property.status === "suspended" ? "Suspendu" :
+                 property.status === "draft" ? "Brouillon / rejeté" :
+                 property.status === "archived" ? "Archivé" : property.status}
               </Badge>
             </div>
             {property.averageRating && (
@@ -276,9 +281,22 @@ export default function EditPropertyPage() {
               <Save className="w-4 h-4 mr-2" />
               Enregistrer
             </Button>
+            {/* T-137 (A2) : re-soumission après rejet (draft) ou suspension. */}
+            <PropertySubmitButton propertyId={property.id} currentStatus={property.status} />
           </div>
         </div>
       </div>
+
+      {/* T-137 (A2) : explique à l'hôte pourquoi son annonce n'est pas publique
+          et comment la re-soumettre (auparavant, une annonce rejetée restait
+          bloquée en brouillon sans action possible). */}
+      {(property.status === "draft" || property.status === "suspended") && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+          {property.status === "draft"
+            ? "Votre annonce a été rejetée ou est en brouillon : elle n'est pas visible du public. Corrigez les informations puis « Soumettre pour validation »."
+            : "Votre annonce est suspendue et n'est plus visible du public. Corrigez les points demandés puis « Soumettre pour validation »."}
+        </div>
+      )}
 
       {/* Messages */}
       {error && (

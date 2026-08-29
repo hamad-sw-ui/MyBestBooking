@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { priceAlerts, properties, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { and, eq, desc } from "drizzle-orm";
 
 const schema = z.object({
@@ -97,7 +98,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
     if (e instanceof z.ZodError) {
-      return NextResponse.json({ error: e.issues[0].message }, { status: 400 });
+      // T-137 (A1) : libellé français au lieu du message Zod anglais par défaut.
+      return NextResponse.json({ error: frenchZodMessage(e) }, { status: 400 });
     }
     console.error("[price-alerts] POST", e);
     return NextResponse.json({ error: "Erreur" }, { status: 500 });

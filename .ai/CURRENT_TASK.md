@@ -1,5 +1,49 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°15.
+- **A1 (i18n/UX)** : plusieurs routes grand public exposaient les messages
+  d'erreur **zod par défaut en anglais** (« Too small: expected number to be
+  >=1 », « Invalid email address », « Too big… ») jusqu'au navigateur.
+  Nouveau helper `frenchZodMessage()` dans `src/lib/http.ts` (traduit les codes
+  natifs `too_small/too_big/invalid_format/invalid_string/invalid_type`,
+  préserve les messages personnalisés déjà en français) ; appliqué aux routes
+  `bookings`, `bookings/[id]`, `reviews`, `price-alerts`.
+- **A2 (flux inachevé)** : après un rejet admin (`draft`) ou une suspension,
+  l'hôte n'avait **aucun moyen de re-soumettre** son annonce (le changement de
+  statut générique est réservé à l'admin → 403, et l'éditeur n'envoyait pas de
+  statut) : l'annonce restait bloquée/invisible indéfiniment. Ajout de
+  `POST /api/properties/[id]/submit` (hôte/propriétaire ou admin ; autorise
+  `draft`/`suspended` → `pending` ; `active` → 409 ; `pending` idempotent ;
+  l'hôte ne peut jamais s'auto-approuver) + bouton `PropertySubmitButton` et
+  bannière explicatifs dans l'éditeur, badge de statut en français.
+- **A3 (flux inachevé)** : email de vérification envoyé à l'inscription mais
+  **aucun renvoi possible** (lien expiré 24 h/perdu → compte « non vérifié »
+  sans recours). Ajout de `POST /api/auth/resend-verification` (auth requise,
+  rate-limit 5/h, best-effort SMTP, déjà vérifié → message générique) +
+  bannière/bouton `ResendVerificationButton` dans Mon compte ; page
+  `/verifier-email?ok=0` corrigée (le message « inscrivez-vous à nouveau »
+  était trompeur, l'email existe déjà → 409).
+**ID** : T-137 — additif, aucune migration, aucune route d'écriture existante
+cassée (1 nouvelle route POST de soumission, 1 nouvelle route POST de renvoi).
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
+
+## Sortie (validé — T-137)
+
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **286 passés** (42 fichiers, +5).
+- ▶️ `smoke` **94/94** · `build` ✓ (Compiled successfully, 59 pages) ·
+  `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution DEV : messages 400 en français (résa/adultes=0, email invalide,
+  note 99, alerte prix négative) ; cycle propriété rejet→re-soumission hôte
+  (`pending`)→approbation admin (`active`), hôte auto-approve 403, tiers 403,
+  `active`→409 ; renvoi email → token vérifie le compte (ok=1), usage unique
+  (ok=0), déjà vérifié → message générique, anonyme 401.
+- Voir `REPORTS/validation_T-137_2026-08-29.md`.
+
+---
+
+## Tâche précédente — T-136 (audit n°14)
+
 **Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°14.
 - **A1** : un voyageur pouvait voter « utile » sur son **propre** avis
   (gonflage du compteur). Garde serveur dans `reviews/[id]/helpful` → 400 si

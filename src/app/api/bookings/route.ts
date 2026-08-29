@@ -13,6 +13,7 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { ipFromRequest, rateLimit } from "@/lib/rate-limit";
+import { frenchZodMessage } from "@/lib/http";
 import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules";
 import { createPaymentIntentForBooking } from "@/lib/payment-intents";
 import { issueToken } from "@/lib/tokens";
@@ -412,7 +413,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+      // T-137 (A1) : libellé français (les messages Zod par défaut sont en
+      // anglais et fuyaient jusqu'au client : « Too small… », « Invalid email »).
+      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     }
     console.error("Error creating booking:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

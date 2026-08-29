@@ -32,3 +32,54 @@ describe("isUuid (T-122 / G1)", () => {
     expect(isUuid({})).toBe(false);
   });
 });
+
+import { z } from "zod";
+import { frenchZodMessage } from "./http";
+
+describe("frenchZodMessage (T-137 / A1)", () => {
+  it("traduit en français un message Zod anglais par défaut (nombre trop petit)", () => {
+    const schema = z.object({ numAdults: z.number().int().min(1) });
+    const result = schema.safeParse({ numAdults: 0 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const msg = frenchZodMessage(result.error);
+      expect(msg).toBe("Valeur trop petite");
+      expect(msg).not.toMatch(/Too small/i);
+    }
+  });
+
+  it("traduit une note hors bornes (trop grande)", () => {
+    const schema = z.object({ overallRating: z.number().min(1).max(10) });
+    const result = schema.safeParse({ overallRating: 99 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(frenchZodMessage(result.error)).toBe("Valeur trop grande");
+    }
+  });
+
+  it("traduit un email invalide", () => {
+    const schema = z.object({ guestEmail: z.string().email() });
+    const result = schema.safeParse({ guestEmail: "pasunemail" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(frenchZodMessage(result.error)).toBe("Adresse email invalide");
+    }
+  });
+
+  it("préserve un message personnalisé déjà rédigé en français", () => {
+    const schema = z.object({
+      password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
+    });
+    const result = schema.safeParse({ password: "court" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(frenchZodMessage(result.error)).toBe(
+        "Le mot de passe doit contenir au moins 8 caractères",
+      );
+    }
+  });
+
+  it("gère un objet sans erreurs (repli générique)", () => {
+    expect(frenchZodMessage({ issues: [] })).toBe("Paramètres invalides");
+  });
+});
