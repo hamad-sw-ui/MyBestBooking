@@ -16,13 +16,24 @@ import { getSetting } from "@/lib/settings";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const general = await getSetting("general");
+  const [general, bestrewards] = await Promise.all([
+    getSetting("general"),
+    getSetting("bestrewards"),
+  ]);
   return NextResponse.json(
     {
       defaultCurrency: general.defaultCurrency,
       defaultLanguage: general.defaultLanguage,
       supportedCurrencies: general.supportedCurrencies,
       supportedLocales: general.supportedLocales,
+      // T-143 : réglages d'affichage du programme BestRewards, déjà rendus
+      // publiquement sur la page marketing /bestrewards. On expose ici les
+      // seuils et taux pour que les écrans clients (Mon compte) affichent les
+      // mêmes valeurs que la page publique au lieu de les coder en dur.
+      bestrewards: {
+        thresholds: bestrewards.thresholds,
+        discounts: bestrewards.discounts,
+      },
     },
     {
       headers: {

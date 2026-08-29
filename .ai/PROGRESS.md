@@ -9,6 +9,29 @@
 
 ---
 
+## Session 33 — 2026-08-29 : T-143 onglet BestRewards de « Mon compte » piloté par les réglages
+
+Suite de l'audit n°19 (piste P3). `Mon compte` codait en dur seuils (5/15) et
+taux (10/15/20 %) et promettait un « Petit-déj. » qui n'existe dans aucun
+réglage, alors que `/bestrewards` lit les réglages.
+
+🔨 `GET /api/app-preferences` (route publique existante) expose désormais
+`bestrewards:{thresholds,discounts}` (non sensibles) ; l'onglet BestRewards de
+`mon-compte` lit ces valeurs au montage (repli sur les défauts si échec) et en
+dérive niveaux/barre de progression, vocabulaire aligné sur la page publique,
+mention « Petit-déj. » supprimée.
+
+▶️ Cohérence dynamique prouvée en DEV + PROD : admin → seuils [7,20]/[12,18,25]
+→ l'API publique reflète immédiatement (puis restore). Environnement restauré
+après re-clone (`.env.local`, Postgres embarqué, `db:push`, `seed` → 8
+propriétés/32 réservations).
+
+🧪 `tsc` 0 · `eslint` 0 · `vitest` 288 · `smoke` 94/94 · `build` ✓ 59 pages ·
+`ai:check` 19 OK / 1 warn / 0 fail. Rapport :
+`REPORTS/validation_T-143_2026-08-29.md`.
+
+---
+
 ## Session 32 — 2026-08-29 : 19e audit fonctionnel (T-142) — correctif interpolation FAQ BestRewards
 
 Audit n°19 à l'exécution (3 rôles + anonyme, DEV puis PROD). Périmètre :

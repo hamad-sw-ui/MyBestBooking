@@ -47,6 +47,12 @@ export default function MyAccountPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  // T-143 : seuils/taux BestRewards lus depuis les réglages publics (mêmes
+  // valeurs que la page /bestrewards) au lieu d'être codés en dur.
+  const [rewardsConfig, setRewardsConfig] = useState<{
+    thresholds: [number, number];
+    discounts: [number, number, number];
+  }>({ thresholds: [5, 15], discounts: [10, 15, 20] });
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -63,6 +69,20 @@ export default function MyAccountPage() {
         }
         setLoading(false);
       });
+    // Réglages BestRewards (non bloquant : repli sur les valeurs par défaut).
+    fetch("/api/app-preferences")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((prefs) => {
+        if (prefs?.bestrewards?.thresholds && prefs?.bestrewards?.discounts) {
+          setRewardsConfig({
+            thresholds: prefs.bestrewards.thresholds,
+            discounts: prefs.bestrewards.discounts,
+          });
+        }
+      })
+      .catch(() => {
+        /* conserve les valeurs par défaut */
+      });
   }, [router]);
 
   if (loading) {
@@ -75,10 +95,15 @@ export default function MyAccountPage() {
 
   if (!user) return null;
 
+  // Niveaux dérivés des réglages publics (T-143) : mêmes seuils et taux que
+  // la page /bestrewards. Le cashback Ambassador (5%) est une règle fixe de
+  // la plateforme, également annoncée sur la page publique.
+  const [level2Threshold, level3Threshold] = rewardsConfig.thresholds;
+  const [level1Discount, level2Discount, level3Discount] = rewardsConfig.discounts;
   const bestrewardsLevels = [
-    { level: 1, name: "Explorer", bookings: 0, benefits: "-10% sur BestRewards" },
-    { level: 2, name: "Voyageur", bookings: 5, benefits: "-15% + Petit-déj." },
-    { level: 3, name: "Ambassador", bookings: 15, benefits: "-20% + Cashback 5%" },
+    { level: 1, name: "Explorer", bookings: 0, benefits: `-${level1Discount}% sur les hébergements BestRewards` },
+    { level: 2, name: "Voyageur", bookings: level2Threshold, benefits: `-${level2Discount}% + tous les avantages Explorer` },
+    { level: 3, name: "Ambassador", bookings: level3Threshold, benefits: `-${level3Discount}% + Cashback 5% en wallet` },
   ];
 
   const currentLevel = bestrewardsLevels.find((l) => l.level === user.bestrewardsLevel) || bestrewardsLevels[0];
