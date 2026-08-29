@@ -253,7 +253,7 @@ export default function MyAccountPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Wallet className="w-5 h-5" />
-                      Wallet mybestbooking
+                      Wallet MyBestBooking
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

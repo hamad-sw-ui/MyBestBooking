@@ -193,7 +193,7 @@ export default async function DashboardPage() {
           Bonjour, {user.firstName} 👋
         </h1>
         <p className="text-gray-600 mt-1">
-          Voici un aperçu de votre activité sur mybestbooking
+          Voici un aperçu de votre activité sur MyBestBooking
         </p>
       </div>
 

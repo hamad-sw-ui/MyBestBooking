@@ -64,7 +64,7 @@ export default function LoginPage() {
           Connexion
         </h1>
         <p className="text-gray-600 mt-1">
-          Bienvenue sur mybestbooking
+          Bienvenue sur MyBestBooking
         </p>
       </div>
 

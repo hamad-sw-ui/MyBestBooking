@@ -56,8 +56,8 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
       <div className="h-16 bg-[#1B3A6B] flex items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2">
           <span className="text-[#F5A623] text-xl">✦</span>
-          <span className="font-bold text-white">mybest</span>
-          <span className="font-bold text-[#FF5A5F]">booking</span>
+          <span className="font-bold text-white">MyBest</span>
+          <span className="font-bold text-[#FF5A5F]">Booking</span>
         </Link>
         <button
           onClick={() => setOpen(!open)}

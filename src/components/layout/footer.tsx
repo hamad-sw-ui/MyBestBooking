@@ -114,8 +114,8 @@ export async function Footer() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className="text-[#F5A623] text-xl">✦</span>
-              <span className="font-bold">mybest</span>
-              <span className="font-bold text-[#FF5A5F]">booking</span>
+              <span className="font-bold">MyBest</span>
+              <span className="font-bold text-[#FF5A5F]">Booking</span>
               <span className="text-xs text-gray-400">.com</span>
             </div>
             <p className="text-sm text-gray-400">

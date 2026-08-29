@@ -31,8 +31,8 @@ export function Header({ user }: HeaderProps) {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
             <span className="text-[#F5A623] text-xl">✦</span>
-            <span className="font-bold text-[#1B3A6B]">mybest</span>
-            <span className="font-bold text-[#FF5A5F]">booking</span>
+            <span className="font-bold text-[#1B3A6B]">MyBest</span>
+            <span className="font-bold text-[#FF5A5F]">Booking</span>
           </Link>
 
           {/* Desktop Navigation */}

@@ -81,7 +81,7 @@ export default function RegisterPage() {
           Créer un compte
         </h1>
         <p className="text-gray-600 mt-1">
-          Rejoignez mybestbooking gratuitement
+          Rejoignez MyBestBooking gratuitement
         </p>
       </div>
 

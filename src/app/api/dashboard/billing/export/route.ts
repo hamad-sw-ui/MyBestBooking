@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
   return new NextResponse(`\uFEFF${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
-      "Content-Disposition": "attachment; filename=\"mybestbooking-revenus.csv\"",
+      "Content-Disposition": "attachment; filename=\"MyBestBooking-revenus.csv\"",
       "Cache-Control": "private, no-store",
     },
   });

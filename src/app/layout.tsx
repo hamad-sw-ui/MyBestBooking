@@ -14,8 +14,8 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
   title: {
-    default: "mybestbooking — Réservez mieux. Voyagez plus.",
-    template: "%s | mybestbooking",
+    default: "MyBestBooking — Réservez mieux. Voyagez plus.",
+    template: "%s | MyBestBooking",
   },
   description:
     "Trouvez des hébergements, consultez les avis vérifiés et comparez les offres disponibles.",
@@ -30,14 +30,14 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "fr_FR",
-    siteName: "mybestbooking",
-    title: "mybestbooking — Réservez mieux. Voyagez plus.",
+    siteName: "MyBestBooking",
+    title: "MyBestBooking — Réservez mieux. Voyagez plus.",
     description:
       "Trouvez des hébergements, consultez les avis vérifiés et comparez les offres disponibles.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "mybestbooking",
+    title: "MyBestBooking",
     description: "Réservez mieux. Voyagez plus.",
   },
   // T-135 — pas de `robots: { index: true }` forcé ici : il entrait en

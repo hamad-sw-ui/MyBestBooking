@@ -66,7 +66,7 @@ export default async function BestRewardsPage() {
           </div>
           <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
             Les vrais avantages, dès votre 1ère réservation.<br />
-            Rejoignez le programme de fidélité mybestbooking.
+            Rejoignez le programme de fidélité MyBestBooking.
           </p>
           {!user && (
             <Link href="/inscription">
@@ -171,7 +171,7 @@ export default async function BestRewardsPage() {
             {[
               {
                 q: "Comment rejoindre BestRewards ?",
-                a: "C'est automatique ! Dès votre inscription sur mybestbooking, vous êtes Level 1 Explorer et bénéficiez immédiatement de la réduction configurée sur les hébergements BestRewards.",
+                a: "C'est automatique ! Dès votre inscription sur MyBestBooking, vous êtes Level 1 Explorer et bénéficiez immédiatement de la réduction configurée sur les hébergements BestRewards.",
               },
               {
                 q: "Comment monter de niveau ?",
@@ -183,7 +183,7 @@ export default async function BestRewardsPage() {
               },
               {
                 q: "Comment fonctionne le cashback Ambassador ?",
-                a: "Au Level 3, vous gagnez 5% de cashback sur chaque réservation, crédité directement sur votre wallet mybestbooking. Ce solde est utilisable sur vos prochaines réservations.",
+                a: "Au Level 3, vous gagnez 5% de cashback sur chaque réservation, crédité directement sur votre wallet MyBestBooking. Ce solde est utilisable sur vos prochaines réservations.",
               },
               {
                 q: "Mon niveau peut-il expirer ?",

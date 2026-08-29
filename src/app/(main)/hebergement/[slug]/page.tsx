@@ -258,7 +258,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
               <CardContent>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-[#F5A623] text-xl">✦</span>
-                  <span className="font-semibold text-[#1B3A6B]">Informations mybestbooking</span>
+                  <span className="font-semibold text-[#1B3A6B]">Informations MyBestBooking</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="flex items-center gap-2">
