@@ -1,5 +1,29 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°14.
+- **A1** : un voyageur pouvait voter « utile » sur son **propre** avis
+  (gonflage du compteur). Garde serveur dans `reviews/[id]/helpful` → 400 si
+  `reviews.userId === user.id` ; bouton `ReviewHelpfulButton` masqué
+  (`isOwn`) sur la fiche pour l'auteur.
+- **A2** : l'inscription d'un email déjà utilisé renvoyait 400 au lieu de
+  **409 Conflict** (convention ressource existante) ; corrigé, les erreurs de
+  validation restent en 400. Le front teste `!response.ok` (UX inchangée).
+**ID** : T-136 — additif, aucune migration, aucune route d'écriture.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
+
+## Sortie (validé — T-136)
+
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **281 passés**.
+- ▶️ `smoke` **94/94** · `build` ✓ (58/58) · `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution DEV + PROD : email existant→409, MDP faible→400 ; auto-vote
+  →400, autre utilisateur→200, double→409, anonyme→401.
+- Voir `REPORTS/validation_T-136_2026-08-29.md`.
+
+---
+
+## Tâche précédente — T-135 (audit n°13)
+
 **Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°13.
 - **A1** : validation des préférences `language`/`currency` — l'API
   `PATCH /api/users/me` acceptait n'importe quelle chaîne (« ar », « ZZZ »).

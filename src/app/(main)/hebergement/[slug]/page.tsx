@@ -435,7 +435,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                         <p className="text-xs text-gray-400 mt-2">
                           {formatDate(review.createdAt)}
                         </p>
-                        <ReviewHelpfulButton reviewId={review.id} initialCount={review.helpfulCount} />
+                        <ReviewHelpfulButton reviewId={review.id} initialCount={review.helpfulCount} isOwn={review.userId === viewer?.id} />
                       </div>
                     ))}
                   </div>

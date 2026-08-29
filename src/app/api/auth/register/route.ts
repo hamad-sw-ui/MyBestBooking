@@ -44,9 +44,11 @@ export async function POST(request: NextRequest) {
       .where(eq(users.email, data.email.toLowerCase()));
 
     if (existingUser.length > 0) {
+      // T-136 (A2) : 409 Conflict — la ressource (compte sur cet email)
+      // existe déjà. Les erreurs de validation restent en 400.
       return NextResponse.json(
         { error: "Un compte existe déjà avec cet email" },
-        { status: 400 }
+        { status: 409 }
       );
     }
 

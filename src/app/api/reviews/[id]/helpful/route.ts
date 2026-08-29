@@ -11,7 +11,8 @@ import { and, eq, sql } from "drizzle-orm";
  *
  * Vote « utile » unique par (review, user) : la contrainte d'unicité en base
  * empêche le double comptage. Un re-vote renvoie 409 (T-126). Un rate-limit
- * haut débit complète le dispositif contre le spam.
+ * haut débit complète le dispositif contre le spam. L'auteur ne peut pas
+ * voter sur son propre avis (T-136, rejet 400).
  */
 export async function POST(
   _request: NextRequest,
@@ -55,8 +56,14 @@ export async function POST(
     }
 
     const result = await db.transaction(async (tx) => {
-      const [review] = await tx.select({ id: reviews.id }).from(reviews).where(eq(reviews.id, id));
+      const [review] = await tx
+        .select({ id: reviews.id, authorId: reviews.userId })
+        .from(reviews)
+        .where(eq(reviews.id, id));
       if (!review) return { missing: true as const };
+      // T-136 (A1) : l'auteur d'un avis ne peut pas le marquer « utile »
+      // lui-même (gonflage artificiel du compteur d'entraide).
+      if (review.authorId === user.id) return { own: true as const };
       const inserted = await tx
         .insert(reviewVotes)
         .values({ reviewId: id, userId: user.id })
@@ -71,6 +78,12 @@ export async function POST(
       return { review: updated };
     });
     if ("missing" in result) return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
+    if ("own" in result) {
+      return NextResponse.json(
+        { error: "Vous ne pouvez pas marquer votre propre avis comme utile" },
+        { status: 400 },
+      );
+    }
     // T-126 (P2) : l'utilisateur a déjà voté → 409 Conflict (état attendu et
     // définitif), pas 429 (« réessayez plus tard ») qui laissait croire à une
     // limitation temporaire. Le 429 reste réservé au vrai spam (rate-limit

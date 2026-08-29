@@ -3,7 +3,16 @@
 import { useState } from "react";
 import { ThumbsUp } from "lucide-react";
 
-export function ReviewHelpfulButton({ reviewId, initialCount }: { reviewId: string; initialCount: number | null }) {
+export function ReviewHelpfulButton({
+  reviewId,
+  initialCount,
+  isOwn = false,
+}: {
+  reviewId: string;
+  initialCount: number | null;
+  /** T-136 : masqué sur l'avis de l'utilisateur connecté (pas d'auto-vote). */
+  isOwn?: boolean;
+}) {
   const [count, setCount] = useState(initialCount ?? 0);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
 
@@ -20,6 +29,10 @@ export function ReviewHelpfulButton({ reviewId, initialCount }: { reviewId: stri
       setState("error");
     }
   }
+
+  // T-136 : l'auteur ne peut pas voter sur son propre avis. Le serveur rejette
+  // aussi la requête (400) ; on masque le bouton pour ne pas le proposer.
+  if (isOwn) return null;
 
   return (
     <button type="button" onClick={vote} disabled={state === "sending" || state === "done"} className="mt-3 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#1B3A6B] disabled:opacity-60">
