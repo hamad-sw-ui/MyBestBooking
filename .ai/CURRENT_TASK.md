@@ -1,5 +1,42 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°17.
+- **A1 (i18n — dernier reliquat)** : la route `POST /api/auth/reset-password`
+  exposait encore un libellé zod anglais quand le token était trop court
+  (`token: z.string().min(10)` sans message → « Too small: expected string to
+  have >=10 characters »). Message explicite ajouté (« Lien de
+  réinitialisation invalide ») et passage par `frenchZodMessage()`. Toutes les
+  autres routes auth ont été vérifiées à l'exécution (login « Email invalide »,
+  2FA « Code TOTP à 6 chiffres attendu », change-password, register) : déjà en
+  français.
+- Parcours profondément testés bout-en-bout et **jugés sains** (voir rapport) :
+  connexion 2FA TOTP complète (setup/challenge/login valide-invalide/disable),
+  partage public de wishlist (token, rotation qui invalide l'ancien,
+  privé→404), upload de photos propriété (public /uploads, client 403, magic
+  bytes), achat invité (profil sans MDP + email de claim, garde email existant
+  →409, invité ne peut pas toucher au wallet), reset mot de passe légitime
+  (forgot→lien→reset→nouveau MDP accepté / ancien refusé / token usage
+  unique), analytics, préférences langue/devise/notification, soft-delete
+  chambre, sidebar/promotions réservées admin.
+**ID** : T-139 — additif, aucune migration, aucune route d'écriture.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
+
+## Sortie (validé — T-139)
+
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **288 passés**.
+- ▶️ `smoke` **94/94** · `build` ✓ (Compiled successfully, 59 pages) ·
+  `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution DEV **et PROD** (`next start` 3100) : reset token court →
+  « Lien de réinitialisation invalide » (400) ; reset valide 200, ancien MDP
+  401, token réutilisé 400 ; 2FA challenge 401 / mauvais code 401 / bon code
+  200 ; wishlist rotation/private ; invité garde 409/wallet 0.
+- Voir `REPORTS/validation_T-139_2026-08-29.md`.
+
+---
+
+## Tâche précédente — T-138 (audit n°16)
+
 **Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°16.
 - **A1 (i18n/UX — extension de T-137)** : le correctif français des messages
   zod n'avait couvert que 4 routes grand public. Restaient exposés en anglais

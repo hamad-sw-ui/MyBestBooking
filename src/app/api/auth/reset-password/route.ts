@@ -6,9 +6,10 @@ import { eq } from "drizzle-orm";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { consumeToken } from "@/lib/tokens";
 import { createSession, hashPassword } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 
 const schema = z.object({
-  token: z.string().min(10),
+  token: z.string().min(10, "Lien de réinitialisation invalide"),
   password: z.string().min(8, "Le mot de passe doit contenir au moins 8 caractères"),
   /** Claim invité : crée la première session après le mot de passe. */
   claimGuest: z.boolean().optional(),
@@ -38,7 +39,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("reset-password error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
