@@ -6,9 +6,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Eye, Plus, Trash2, Star } from "lucide-react";
+import { ArrowLeft, Save, Eye, Plus, Trash2, Star, Upload, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { PropertySubmitButton } from "@/components/property-submit-button";
+import { PhotoUploadButton } from "@/components/photo-upload-button";
 
 interface Property {
   id: string;
@@ -160,9 +161,10 @@ export default function EditPropertyPage() {
   };
 
   // T-130 : upload d'une photo dans l'édition (même endpoint qu'à la création).
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !property) return;
+  // T-141 : refactorisé pour servir aussi bien l'ajout que le remplacement
+  // (« Changer » une photo existante) depuis le gestionnaire de fichiers.
+  const uploadPhoto = async (file: File, replaceUrl?: string) => {
+    if (!property) return;
     setUploadError("");
     setUploading(true);
     try {
@@ -173,6 +175,16 @@ export default function EditPropertyPage() {
       if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
       setProperty((prev) => {
         if (!prev) return prev;
+        if (replaceUrl) {
+          // Remplacement : on échange l'ancienne URL par la nouvelle, sans
+          // toucher à l'ordre ni au statut « principale ».
+          const images = prev.images.map((img) => (img === replaceUrl ? data.url : img));
+          return {
+            ...prev,
+            images,
+            mainImage: prev.mainImage === replaceUrl ? data.url : prev.mainImage,
+          };
+        }
         const images = prev.images.includes(data.url) ? prev.images : [...prev.images, data.url];
         return { ...prev, mainImage: prev.mainImage ?? data.url, images };
       });
@@ -180,7 +192,6 @@ export default function EditPropertyPage() {
       setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
     } finally {
       setUploading(false);
-      e.target.value = "";
     }
   };
 
@@ -505,18 +516,19 @@ export default function EditPropertyPage() {
             <CardTitle>Photos</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Upload d'une photo (même mécanisme qu'à la création, T-113) */}
+            {/* Import d'une photo depuis le gestionnaire de fichiers de la
+                machine (même mécanisme d'upload qu'à la création, T-113). */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Ajouter une photo
               </label>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={handlePhotoUpload}
-                disabled={uploading}
-                className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#1B3A6B] file:text-white file:cursor-pointer hover:file:bg-[#152d54] disabled:opacity-60"
-              />
+              <PhotoUploadButton
+                onFile={(file) => uploadPhoto(file)}
+                loading={uploading}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {uploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+              </PhotoUploadButton>
               <p className="text-xs text-gray-500 mt-1">
                 {uploading
                   ? "Téléversement en cours…"
@@ -542,7 +554,7 @@ export default function EditPropertyPage() {
                       <div key={url} className="relative group">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={url} alt="" className="w-full h-32 object-cover rounded-lg border" />
-                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between px-2 py-1 bg-black/50 rounded-b-lg">
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-2 py-1 bg-black/50 rounded-b-lg">
                           <button
                             type="button"
                             onClick={() => setMainImage(url)}
@@ -551,14 +563,29 @@ export default function EditPropertyPage() {
                           >
                             {isMain ? "★ Principale" : "Définir principale"}
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => removeGalleryImage(url)}
-                            className="text-white hover:text-red-300"
-                            aria-label="Supprimer cette photo"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            {/* T-141 : remplacer directement cette photo depuis
+                                le gestionnaire de fichiers (sans supprimer/ré-ajouter). */}
+                            <PhotoUploadButton
+                              variant="ghost"
+                              size="sm"
+                              loading={uploading}
+                              onFile={(file) => uploadPhoto(file, url)}
+                              className="text-white hover:bg-white/10 hover:text-white p-1.5"
+                              title="Changer cette image"
+                              ariaLabel={`Changer l'image de la position ${property.images.indexOf(url) + 1}`}
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </PhotoUploadButton>
+                            <button
+                              type="button"
+                              onClick={() => removeGalleryImage(url)}
+                              className="text-white hover:text-red-300 p-1.5"
+                              aria-label="Supprimer cette photo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       </div>
                     );

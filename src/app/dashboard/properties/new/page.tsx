@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { PhotoUploadButton } from "@/components/photo-upload-button";
 
 const PROPERTY_TYPES = [
   { value: "hotel", label: "Hôtel" },
@@ -67,9 +68,9 @@ export default function NewPropertyPage() {
   });
 
   // T-113 : upload d'une photo via /api/properties/upload (image publique).
-  // Le champ URL reste disponible comme alternative.
-  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  // T-141 : déclenché par un bouton « Importer » (gestionnaire de fichiers de
+  // la machine). Le champ URL reste disponible comme alternative.
+  const handlePhotoUpload = async (file: File) => {
     if (!file) return;
     setUploadError("");
     setUploading(true);
@@ -84,7 +85,6 @@ export default function NewPropertyPage() {
       setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
     } finally {
       setUploading(false);
-      e.target.value = "";
     }
   };
 
@@ -321,14 +321,14 @@ export default function NewPropertyPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Téléverser une photo
               </label>
-              <input
-                type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
-                onChange={handlePhotoUpload}
-                disabled={uploading}
-                className="block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-[#1B3A6B] file:text-white file:font-medium hover:file:bg-[#0f2444] disabled:opacity-60"
-                aria-describedby="photo-help"
-              />
+              <PhotoUploadButton
+                onFile={handlePhotoUpload}
+                loading={uploading}
+                ariaLabel="Importer une photo depuis l'ordinateur"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {uploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+              </PhotoUploadButton>
               <p id="photo-help" className="text-xs text-gray-500 mt-1">
                 {uploading ? "Téléversement en cours…" : "JPEG, PNG, WebP ou GIF — 5 Mo max."}
               </p>
@@ -353,6 +353,18 @@ export default function NewPropertyPage() {
                   alt="Aperçu de la photo principale"
                   className="w-full max-w-md h-48 object-cover rounded-lg"
                 />
+                <div className="mt-2">
+                  <PhotoUploadButton
+                    variant="outline"
+                    size="sm"
+                    loading={uploading}
+                    onFile={handlePhotoUpload}
+                    ariaLabel="Changer la photo principale"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Changer l&apos;image
+                  </PhotoUploadButton>
+                </div>
               </div>
             )}
           </CardContent>

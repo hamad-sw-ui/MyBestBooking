@@ -9,6 +9,35 @@
 
 ---
 
+## Session 31 — 2026-08-29 : T-141 bouton « Importer depuis l'ordinateur » pour les photos de propriété + remplacement direct d'image
+
+**Demande** : lors de l'ajout ou du changement d'une photo d'hébergement, un
+bouton explicite ouvrant le gestionnaire de fichiers de la machine.
+
+🔍 Le sélecteur s'ouvrait déjà via un `<input type="file">` natif, mais sans
+apparence de bouton et, dans la galerie d'édition, sans action **remplacer**
+(il fallait supprimer puis ré-ajouter, ce qui changeait l'ordre/perdait le
+statut « principale »).
+
+🔨 **T-141** :
+- nouveau composant réutilisable `src/components/photo-upload-button.tsx`
+  (bouton stylé → input file masqué, props `onFile`/`multiple`/`loading`/
+  `variant`/`ariaLabel`, reset de la valeur) ;
+- page création : bouton « Importer depuis l'ordinateur » + « Changer l'image »
+  sous l'aperçu ;
+- page édition : bouton « Importer » en tête d'onglet Photos + action
+  « Changer cette image » sur chaque vignette ; helper
+  `uploadPhoto(file, replaceUrl?)` qui remplace l'URL en place (ordre et statut
+  « principale » conservés) ou ajoute en galerie.
+- Aucune route nouvelle : réutilise `POST /api/properties/upload` (hôte/admin).
+
+🧪 `tsc` 0 · `eslint` 0 · `vitest` 288 · `smoke` 94/94 · `build` ✓ 59 pages ·
+`ai:check` 19 OK / 1 warn / 0 fail. ▶️ DEV (upload hôte 200 / client 403, pages
+200) et PROD (`next start` 3100, bouton présent dans le HTML, serveur arrêté).
+Rapport : `REPORTS/validation_T-141_2026-08-29.md`.
+
+---
+
 ## Session 30 — 2026-08-29 : 18e audit fonctionnel (rapport) + T-140 messages français sur routes admin (zod brut → frenchZodMessage)
 
 **Audit n°18** (investigation à l'exécution, 3 rôles + anonyme). Flux vérifiés
