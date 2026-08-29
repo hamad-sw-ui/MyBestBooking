@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { conversations, properties, bookings } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 
 const createSchema = z.object({
   propertyId: z.string().uuid(),
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("conversations POST error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }

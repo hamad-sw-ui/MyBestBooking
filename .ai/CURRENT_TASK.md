@@ -1,5 +1,47 @@
 # 🎯 TÂCHE EN COURS
 
+**Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°16.
+- **A1 (i18n/UX — extension de T-137)** : le correctif français des messages
+  zod n'avait couvert que 4 routes grand public. Restaient exposés en anglais
+  sur des routes **client ET hôte** : `POST /api/messages` avec `content:""` →
+  « Too small: expected string to have >=1 characters », `POST
+  /api/conversations` avec `propertyId` mal formé → « Invalid UUID »,
+  `POST .../reviews/[id]/reply` avec réponse vide, `PUT .../rooms/[id]/
+  availability` avec un prix négatif → « Too small… », etc.
+  Le helper `frenchZodMessage()` (src/lib/http.ts) est enrichi : détection
+  UUID par le **champ** (`...Id`) en plus du message, et un texte `min(1)` vide
+  → « Ce champ est requis ». Appliqué à l'ensemble des routes à message
+  exposé (messages, conversations, wishlists, reviews reply/moderate, rooms +
+  availability + rate-plans, properties + validate, promotions, users/me).
+  Les routes auth (register/login/etc.) produisent déjà des messages
+  personnalisés en français → inchangées.
+- Aucune autre anomalie fonctionnelle bloquante détectée sur les flux
+  audités en profondeur (annulation/remboursement persist-first + restitution
+  bénéfices, calendrier de disponibilité borné capacité/upsert, plans
+  tarifaires, suppression de compte RGPD, création chambre/promo gardées,
+  page d'aide, tunnel sans paramètres, propriétés non actives invisibles du
+  public en soft-404 noindex). Voir le rapport.
+**ID** : T-138 — additif, aucune migration, aucune route d'écriture.
+**Niveau** : L
+**Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
+
+## Sortie (validé — T-138)
+
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **288 passés** (42 fichiers, +2).
+- ▶️ `smoke` **94/94** · `build` ✓ (Compiled successfully, 59 pages) ·
+  `ai:check` **19 OK · 1 warn · 0 fail**.
+- ▶️ Exécution DEV **et PROD** (`next start` 3100) : message vide →
+  « Ce champ est requis » (400), UUID mal formé → « Identifiant invalide »
+  (400), disponibilité prix négatif → « Valeur trop petite » (400), réponse
+  avis vide → « Ce champ est requis » ; les messages personnalisés français
+  restent intacts (ex. « Le nom est requis », « Le prix de base doit être
+  strictement positif »).
+- Voir `REPORTS/validation_T-138_2026-08-29.md`.
+
+---
+
+## Tâche précédente — T-137 (audit n°15)
+
 **Tâche :** Implémentation des remarques de l'audit fonctionnel profond n°15.
 - **A1 (i18n/UX)** : plusieurs routes grand public exposaient les messages
   d'erreur **zod par défaut en anglais** (« Too small: expected number to be

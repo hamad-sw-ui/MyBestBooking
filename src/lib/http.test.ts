@@ -83,3 +83,25 @@ describe("frenchZodMessage (T-137 / A1)", () => {
     expect(frenchZodMessage({ issues: [] })).toBe("Paramètres invalides");
   });
 });
+
+describe("frenchZodMessage (T-138 / A1 — extension)", () => {
+  it("traduit un UUID invalide (propertyId mal formé)", () => {
+    const schema = z.object({ propertyId: z.string().uuid() });
+    const result = schema.safeParse({ propertyId: "pas-un-uuid" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(frenchZodMessage(result.error)).toBe("Identifiant invalide");
+    }
+  });
+
+  it("traduit un texte vide en champ requis (message/conversation)", () => {
+    const schema = z.object({ content: z.string().min(1).max(4000) });
+    const result = schema.safeParse({ content: "" });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const msg = frenchZodMessage(result.error);
+      expect(msg).toBe("Ce champ est requis");
+      expect(msg).not.toMatch(/Too small/i);
+    }
+  });
+});

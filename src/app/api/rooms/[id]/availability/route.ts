@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { rooms, properties, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid } from "@/lib/http";
+import { isUuid, frenchZodMessage } from "@/lib/http";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { stayNightsWithinLimit } from "@/lib/booking-rules";
 
@@ -133,7 +133,7 @@ export async function PUT(
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     }
     console.error("availability PUT error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

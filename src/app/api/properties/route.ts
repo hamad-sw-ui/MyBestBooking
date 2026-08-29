@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { properties, rooms, reviews, bookings, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { generateSlug } from "@/lib/utils";
 import { stayNights } from "@/lib/booking-rules";
 import { eq, and, ilike, or, desc, asc, sql, min, count, gte, lte, lt, gt, ne, inArray, notInArray } from "drizzle-orm";
@@ -388,7 +389,7 @@ export async function POST(request: NextRequest) {
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: frenchZodMessage(error) },
         { status: 400 }
       );
     }

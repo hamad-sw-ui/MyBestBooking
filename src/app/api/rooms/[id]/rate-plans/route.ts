@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { rooms, properties, ratePlans } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid } from "@/lib/http";
+import { isUuid, frenchZodMessage } from "@/lib/http";
 import { and, eq } from "drizzle-orm";
 
 const createSchema = z.object({
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     }
     console.error("rate-plans POST error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
@@ -113,7 +113,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("rate-plans PATCH error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid } from "@/lib/http";
+import { isUuid, frenchZodMessage } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
@@ -96,7 +96,7 @@ export async function PATCH(
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0]?.message ?? "Payload invalide" },
+        { error: frenchZodMessage(error) },
         { status: 400 },
       );
     }

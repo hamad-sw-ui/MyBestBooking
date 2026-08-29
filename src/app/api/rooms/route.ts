@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { rooms, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
@@ -117,7 +118,7 @@ export async function POST(request: NextRequest) {
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: frenchZodMessage(error) },
         { status: 400 }
       );
     }

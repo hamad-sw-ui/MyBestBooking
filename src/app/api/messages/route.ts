@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { conversations, messages, properties, uploadObjects, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { and, eq, sql } from "drizzle-orm";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
@@ -162,7 +163,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     }
     console.error("messages POST error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

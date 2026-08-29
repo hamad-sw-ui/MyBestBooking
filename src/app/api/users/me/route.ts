@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { DISPLAY_CURRENCIES } from "@/lib/i18n";
@@ -77,7 +78,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     }
     console.error("users/me PATCH error:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });

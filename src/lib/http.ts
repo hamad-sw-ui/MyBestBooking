@@ -96,6 +96,7 @@ function issueToFrench(issue: {
   path: PropertyKey[];
 }): string {
   const field = String(issue.path[issue.path.length - 1] ?? "");
+  const isUuidField = /(^|_)id$|Id$/.test(field) || field.toLowerCase().includes("uuid");
   switch (issue.code) {
     case "invalid_type":
       if (field === "email" || field === "guestEmail") {
@@ -104,24 +105,26 @@ function issueToFrench(issue: {
       return "Valeur invalide ou manquante";
     case "invalid_format":
       // Zod v4 : email()/uuid() émettent `invalid_format` avec un message
-      // anglais (« Invalid email address »).
+      // anglais (« Invalid email address », « Invalid UUID »).
       if (field === "email" || field === "guestEmail" || /email/i.test(issue.message)) {
         return "Adresse email invalide";
       }
-      if (/uuid/i.test(issue.message)) return "Identifiant invalide";
+      if (isUuidField || /uuid/i.test(issue.message)) return "Identifiant invalide";
       return "Format invalide";
     case "invalid_string":
       // Zod v3 : email()/uuid() émettent `invalid_string`.
       if (field === "email" || field === "guestEmail" || /email/i.test(issue.message)) {
         return "Adresse email invalide";
       }
-      if (/uuid/i.test(issue.message)) return "Identifiant invalide";
+      if (isUuidField || /uuid/i.test(issue.message)) return "Identifiant invalide";
       return "Format invalide";
     case "too_small":
       // min(1) sur une note/un nombre d'occupants, min(2/3) sur un texte…
       if (/number|integer/i.test(issue.message)) {
         return "Valeur trop petite";
       }
+      // Un texte en min(1) vide → champ requis (plus parlant que « trop court »).
+      if (/string/i.test(issue.message)) return "Ce champ est requis";
       return "Texte trop court";
     case "too_big":
       if (/number|integer/i.test(issue.message)) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { wishlists, wishlistItems, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
@@ -171,7 +172,7 @@ export async function POST(request: NextRequest) {
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: frenchZodMessage(error) },
         { status: 400 }
       );
     }
@@ -210,7 +211,7 @@ export async function PATCH(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("Error updating wishlist:", error);
     return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { properties, ratePlans, rooms, reviews, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid } from "@/lib/http";
+import { isUuid, frenchZodMessage } from "@/lib/http";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { toPublicProperty } from "@/lib/public-property";
@@ -177,7 +177,7 @@ export async function PUT(
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: frenchZodMessage(error) },
         { status: 400 }
       );
     }
