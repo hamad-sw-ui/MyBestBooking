@@ -660,7 +660,12 @@ function ReservationPageInner() {
                         <span className="text-gray-600">
                           {numNights} nuit{numNights > 1 ? "s" : ""} × €{pricePerNight.toFixed(2)}
                         </span>
-                        <span>€{subtotal.toFixed(2)}</span>
+                        {/* T-146 : on affiche ici le sous-total de BASE (nuits × tarif),
+                            puis la remise du tarif choisi sur la ligne verte. Auparavant
+                            on affichait `subtotal` (déjà remisé) : la remise était alors
+                            comptée deux fois dans le détail, même si le Total final et le
+                            calcul serveur restaient justes. */}
+                        <span>€{baseSubtotal.toFixed(2)}</span>
                       </div>
                       {selectedRatePlan && (
                         <div className="flex justify-between text-sm mb-2 text-green-700">

@@ -9,6 +9,42 @@
 
 ---
 
+## Session 36 — 2026-08-29 : 21e audit fonctionnel (T-146) — correctif récapitulatif rate plan dans le tunnel
+
+Audit n°21 à l'exécution (3 rôles + anonyme, DEV 3000 puis **PROD 3009**).
+Rapport : `REPORTS/audit_fonctionnel_profond21_2026-08-29.md`.
+
+🔨 **Seul correctif (P2)** : `src/app/(main)/reservation/page.tsx` — la
+première ligne du récapitulatif tarifaire affichait `subtotal` (déjà remisé par
+le rate plan) sous l'étiquette « N nuits × €tarif/nuit », puis la remise était
+re-soustraite sur la ligne verte → **remise comptée deux fois dans le détail**
+(ex. 2×118,67 : le détail additionnait à 211,24 au lieu de 234,97). Le Total
+final et le calcul serveur étaient justes. On affiche désormais `baseSubtotal`
+(produit nuits × tarif) ; sans rate plan `baseSubtotal === subtotal` (aucun
+changement). Aucun calcul/paiement touché.
+
+ℹ️ **Point documenté (non modifié)** : les `notFound()` en streaming RSC
+renvoient HTTP **200** (corps = page 404) à cause de `src/app/loading.tsx` qui
+démarre le streaming (reproductible : sans `loading.tsx` → 404). Comportement
+documenté Next 16 (loading.md « Status codes ») ; déjà mitigé T-135 via
+`<meta robots noindex>` (vérifié). Impact résiduel = analytics/conformité
+seulement ; solution `proxy.ts` non appliquée (latence chemin critique).
+
+🧪 Scénarios vérifiés **sains** : mock/Stripe, rate plans (API + −10 % réel +
+formulaire hôte complet), contact hôte pré-résa, propriété suspendue
+(invisible/404/**réservation bloquée** 400), IDOR réservation/facture/devis/avis
+→ 403, modération propriétés (pending→approve admin, hôte 403), avis après
+séjour uniquement, partage wishlist (rotation de token), auth
+(logout/forgot/reset/change-password), avatar, recherche (0 résultat, tri
+`sort=price_asc`), promotions admin-only, audit/analytics admin.
+
+🧪 `tsc` 0 · `eslint` 0 (1 warning `<img>` préexistant) · `vitest` **288** ·
+▶️ `smoke` **94/94** · `build` ✓ (**60 pages**) · `ai:check` **19 OK / 1 warn**.
+Données de test nettoyées (37 réservations, 0 en 2028, 0 rate-plan/propriété de
+test).
+
+---
+
 ## Session 35 — 2026-08-29 : T-145 implémentation des remarques produit (avatar upload, commission admin par hébergement, langue « ar »)
 
 Revue fonctionnelle puis implémentation, sans régression, des points
