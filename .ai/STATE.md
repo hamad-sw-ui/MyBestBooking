@@ -8,13 +8,10 @@
   `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
 - **PR ouverte** : historique (PR #2) — session T-153 en cours sur
   `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
-- **HEAD Git** : base `52911fa` = docs de l'audit n°30 ; **implémentation
-  T-160→T-166 validée** (commits de cette session sur
-  `arena/01a052ed-mybestbooking`). Le hash exact du HEAD courant est **à
-  mettre à jour en fin de session** : un commit de doc ne peut pas contenir
-  son propre hash, et R7 le tolère explicitement (motif « à mettre à jour en
-  fin de session »). Le workflow `.github/workflows/ci.yml` (T-113) reste
-  hors suivi git de ces push car le jeton GitHub App n'a pas la permission
+- **HEAD Git** : **`f676a88`** — audit n°30 implémenté (T-160→T-166) et
+  validé sur `arena/01a052ed-mybestbooking` (base `52911fa` = docs audit
+  n°30). Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi
+  git de ces push car le jeton GitHub App n'a pas la permission
   `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
 - **Dernière activité (2026-08-30)** : **audit fonctionnel profond n°30
