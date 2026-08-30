@@ -8,27 +8,26 @@
   `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
 - **PR ouverte** : historique (PR #2) — session T-153 en cours sur
   `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
-- **HEAD Git** : **T-154e (P3 9-14 audit n°26) livré/validé** sur
-  `arena/01a052ed-mybestbooking` (base `b2ba0b0` = T-154d ; après `c339f2b` =
-  rapport audit n°26). Le hash exact du HEAD courant est **à mettre à jour en
-  fin de session** : un commit de doc ne peut pas contenir son propre hash, et
-  R7 le tolère explicitement (motif « à mettre à jour en fin de session »). Le
-  workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces push
-  car le jeton GitHub App n'a pas la permission `workflows`.
+- **HEAD Git** : **T-155 (audit n°27) livré/validé** sur
+  `arena/01a052ed-mybestbooking` (base `546f09d` = docs audit n°26). Le hash
+  exact du HEAD courant est **à mettre à jour en fin de session** : un
+  commit de doc ne peut pas contenir son propre hash, et R7 le tolère
+  explicitement (motif « à mettre à jour en fin de session »). Le workflow
+  `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces push car le
+  jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière activité (2026-08-30)** : **audit n°26 100 % implémenté
-  (T-154a→e)** — P3 9-14 livrés : montants localisés/avec devise
-  (rate-plans, calendrier, alertes, promotion-form), XAF/XOF zéro-décimal
-  Stripe (`toMinorUnits` sur intents/refunds, `formatMoney` 0 décimale),
-  bascule dark mode dans le header mobile dashboard, calendrier
-  « Appliquer à la plage » + libellé vides=défauts, amenities source unique
-  (28 valeurs) recherche/formulaires/fiche, help center corrigé.
-  🔨 tsc 0 · lint 0 erreur · 🧪 vitest **372/372** (52 fichiers, +4 i18n) ·
-  ▶️ calendrier « 148,33 € → 148,33 € » ; recherche 28 options amenity,
-  kitchen/sea_view/breakfast → 1 ; toggle sombre rendu · smoke **94/94**.
-  Précédent (même jour) : T-154a→d P1+P2 validés (recherche prix/bornes,
-  cashback converti, annulation réelle + favoris + alertes, récap TVA/
-  BestRewards + toasts) — vitest 368/368, smoke 94/94.
+- **Dernière activité (2026-08-30)** : **audit n°27 — T-155 livré/validé**
+  — remédiation des 9 KO du runner unifié : **P2** code promo inconnu →
+  **400** (`PromoCodeNotFoundError` dans `src/app/api/bookings/route.ts`) ;
+  **P3** `/recherche?amenity=` matche aussi `rooms.amenities`
+  (`tv`/`minibar` → 8 propriétés, avant 0) ; resynchronisation des garde-fous
+  (simulate/paranoid `/reservation` publique T-109, deep 2fa
+  password+code/upload key+size, xtreme mails par `To:`, smoke nettoyage
+  réentrant, `_run`/`sh()` anti-timeout + retry).
+  🔨 tsc 0 · 🧪 vitest **372/372** · ▶️ `run_all_sims.py` **5/5 · 396 OK ·
+  3 WARN · 0 KO** (smoke 94 · surface 68 · deep 80 · xtreme 83 · paranoid 71).
+  Précédent (même jour) : audit n°26 100 % implémenté (T-154a→e) — vitest
+  372/372, smoke 94/94.
 - **Dernière tâche implémentée précédente** : **T-153 (S, implémenté et validé)**
   — implémentation des 7 findings de l'audit n°25 (rapport
   `audit_fonctionnel_profond25_2026-08-30.md`) : **A** wallet EUR appliqué

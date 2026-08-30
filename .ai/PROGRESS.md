@@ -7,6 +7,32 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 47 — 2026-08-30 : T-155 (audit n°27) — 9 KO du runner unifié → 2 fixes produit + harnais resynchronisé
+
+- **Contexte** : `run_all_sims.py` (smoke + surface + deep + xtreme +
+  paranoid) révélait 9 KO. Classification : **2 bugs produit réels**, 7
+  contrats intentionnels/artefacts, plus 2 fragilités du harnais.
+- **P2 réel — code promo inconnu → 409** : `src/app/api/bookings/route.ts`
+  — nouvelle `PromoCodeNotFoundError` + catch dédié → **400** (les conflits
+  d'état restent 409). ▶️ `curl POST /api/bookings promoCode=NOPE277` → 400.
+- **P3 réel — filtre amenities chambres** : `src/app/(main)/recherche/page.tsx`
+  — `?amenity=` matche `properties.amenities` **OU** `rooms.amenities`
+  (`OR EXISTS`) ; avant : `tv`/`minibar` → 0 propriété. ▶️ après : **8**
+  pour chacun ; `zzz` → 0 ; `pool` (amenity propriété) inchangé.
+- **Contrats resynchronisés** : `simulate.py` (/reservation → section
+  publique) ; `paranoid_sim.py` (GET /reservation anonyme → 200 attendu,
+  register dupliqué 400/409 accepté, `sensitive_paths` sans /reservation,
+  wrapper `sh()` anti-timeout 30-60 s) ; `deep_sim.py` (setup 2FA avec
+  `password`, disable avec `password`+`code`, upload key+size url privée) ;
+  `xtreme_sim.py` (mails par en-tête `To:` — noms `console_<hash24>`) ;
+  `smoke.sh` (nettoyage réentrant bookings `Smoke Test` + alertes) ;
+  `run_all_sims.py` (`_run()` + `db_query()` 3 essais).
+- 🔨 `npx tsc --noEmit` : 0 erreur.
+- 🧪 vitest : **372/372** (52 fichiers) — aucune régression.
+- ▶️ `run_all_sims.py` final : **smoke 94 · surface 68 · deep 80 · xtreme
+  83 (3 WARN par design) · paranoid 71 — 396 OK · 3 WARN · 0 KO · 5/5 PASS**.
+- Rapport : `REPORTS/audit_fonctionnel_profond27_2026-08-30.md`.
+
 ## Session 46 — 2026-08-30 : T-154e (P3 9-14 audit n°26) — polish devises/UX — audit n°26 100 % livré
 
 - **P3-9 montants sans devise** : `rate-plans-section` a une prop

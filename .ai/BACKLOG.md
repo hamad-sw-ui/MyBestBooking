@@ -285,3 +285,19 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - ℹ️ **Confirmé (produit)** : la promotion est **admin-only** (page ET API,
   403 pour un host). C'est cohérent avec la sidebar admin ; le smoke a été
   aligné (host → 307 sur `/dashboard/promotions*`).
+
+### Audit 27 (2026-08-30) — `REPORTS/audit_fonctionnel_profond27_2026-08-30.md`
+
+- ✅ ~~**T-155 (P2)** — `POST /api/bookings` : code promo inconnu → **409**~~
+  **LIVRÉ** 2026-08-30 : `PromoCodeNotFoundError` → **400** (le 409 reste
+  réservé aux conflits d'état : expiré, épuisé, règles, wallet). Vérifié
+  `curl promoCode=NOPE277` → 400.
+- ✅ ~~**T-155 (P3)** — recherche `?amenity=` muet pour `tv`/`minibar`~~
+  **LIVRÉ** 2026-08-30 : le filtre matche `properties.amenities` **OU**
+  `rooms.amenities` (`OR EXISTS`) — 8 propriétés chacun (avant 0),
+  `zzz` → 0, `pool` inchangé.
+- ✅ **T-155 (harnais)** — resynchronisation des garde-fous sur les
+  contrats réels (guest mode `/reservation`, 2FA `password`, upload privé,
+  mails par `To:`, register 400/409) + robustesse (nettoyage réentrant
+  smoke, timeouts/retry runner). Runner unifié : **396 OK · 3 WARN ·
+  0 KO** · tsc 0 · vitest 372/372.

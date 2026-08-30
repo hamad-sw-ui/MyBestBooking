@@ -1,59 +1,62 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-154e (audit n°26, P3 9-14) — TERMINÉ ; T-154a→d livrés avec
+**ID** : T-155 (audit n°27) — TERMINÉ (CORRIGÉ, VALIDÉ)
 
-**Niveau de proportionnalité** : S à L (changements ponctuels additifs)
+**Niveau de proportionnalité** : S à L (2 fixes produit additifs +
+resynchronisation du harnais de tests)
 
-**Titre** : Implémentation des 14 findings de l'audit n°26 (T-154a→e) —
-recherche (P1 1+2), cashback (P1-3), annulation/favoris/alertes (P2 5-7),
-récap TVA/BestRewards + toasts (P2 4+8), P3 9-14 (devises, XAF
-zéro-décimal, dark mode, calendrier, amenities, help center).
+**Titre** : Remédiation des 9 KO révélés par `run_all_sims.py` — 2 findings
+produit réels (code promo inconnu → 400 ; filtre `?amenity=` sur les
+chambres) + 7 contrats intentionnels/artefacts documentés + robustesse
+des scripts de garde-fou.
 
-**Statut** : **CORRIGÉ (VALIDÉ)** — T-154a→e commités · 🔨 tsc 0 ·
-lint 0 erreur · 🧪 vitest **372/372** (52 fichiers) · ▶️ recherche
-`minPrice=107` → 4 ; cashback USD → 9,26 € ; fiche strict → règle réelle ;
-favoris DELETE/retrait ; alerte USD-only → 92,59 € ; API properties →
-taxRate 0.1 + bestrewards 15 ; calendrier « 148,33 € → 148,33 € » ;
-recherche 28 options amenity ; toggle sombre dashboard mobile · ✔️ smoke
-**94/94** (voir TRACEABILITY, sessions 45-46). Prochaine étape : à la
-demande (nouvel audit, nouvelle fonctionnalité…).
+**Statut** : **CORRIGÉ (VALIDÉ)** — ▶️ `run_all_sims.py` **5/5 · 396 OK ·
+3 WARN · 0 KO** (smoke 94 · surface 68 · deep 80 · xtreme 83 · paranoid 71)
+· 🔨 `tsc --noEmit` **0 erreur** · 🧪 vitest **372/372** (52 fichiers) ·
+curl : promo inconnue → **400** ; `?amenity=tv|minibar` → **8** propriétés
+(avant 0) ; `?amenity=zzz` → 0.
 
-Rapport : `REPORTS/audit_fonctionnel_profond26_2026-08-30.md` (source).
+Rapport : `REPORTS/audit_fonctionnel_profond27_2026-08-30.md` (source).
 
-## Synthèse des findings (14)
+## Synthèse des findings (9 KO → 2 bugs réels, 7 écartés, + 2 robustesse)
 
-**P1 (3)**
-1. Recherche : le prix « à partir de » n'est **jamais affiché**
-   (« Prix indisponible » × 8) — sous-requêtes corrélées en SELECT rendues
-   **non qualifiées** par Drizzle (`r2.property_id = "id"` → NULL) ; la même
-   expression en WHERE/ORDER BY est correcte (tri/filtre max OK).
-2. Recherche : filtre **prix min sémantiquement faux** (`∃ chambre ≥ min` au
-   lieu du min de la propriété) — `min=107` → 8/8, `max=91` → 3.
-3. Cashback BestRewards : le caller `PUT /api/bookings/[id]`
-   (`status:"completed"`, bouton UI « Terminer le séjour ») n'a **pas** le 4ᵉ
-   argument `currency` ajouté par T-153 C (seul le cron l'a).
+**🔴 Bugs produit corrigés**
+1. **P2 — `POST /api/bookings`** : code promo inconnu → **409** au lieu de
+   400 (`BookingRuleError` unique). Fix : `PromoCodeNotFoundError` → catch
+   400 ; les conflits d'état (expiré, épuisé, règles, wallet) restent 409.
+2. **P3 — `/recherche?amenity=`** : `tv`/`minibar` sont des amenities de
+   **chambres** (`rooms.amenities`), jamais portées par
+   `properties.amenities` → 0 résultat. Fix : `OR EXISTS (SELECT 1 FROM
+   rooms ra WHERE ra.property_id = properties.id AND ra.amenities @> …)`.
 
-**P2 (5)** : récap réservation (TVA `0.1` dur vs `billing.taxRate` éditable ;
-réduction BestRewards 15 % jamais affichée : aperçu 261,07 € / facturé
-221,91 €) ; « Annulation gratuite » en dur vs politique réelle ; favoris
-add-only (`wishlists[0]`, aucun retrait unitaire — `DELETE ?propertyId`
-jamais appelé) ; alerte prix morte si aucune chambre active dans la devise
-de l'alerte ; `useToast` monté jamais utilisé.
+**⚪ Écartés (contrats intentionnels, sims obsolètes)**
+3. `GET /reservation` anonyme → 200 : guest mode T-109 (simulate.py →
+   section publique ; paranoid_sim vérifie 200).
+4. deep 2fa `secret 0 chars` : le setup exige le mot de passe (T-120 D4).
+5. deep 2fa disable 400 : exige `password` **+** `code` (sim n'envoyait
+   que `code`) — l'UI envoie les deux.
+6. deep upload `url=None` : pièces privées par design (`.data/`, aucun S3).
+7. xtreme mails introuvables : nommage `console_<hash24>` sans email —
+   recherche par en-tête `To:`.
+8. paranoid register dupliqué 409 : 400/409 acceptés (unicité OK).
+9. paranoid proxy : liste des routes sensibles correcte.
 
-**P3 (6)** : montants sans devise (`rate-plans-section`, `price-alerts-section`),
-promo « € » durs, **XAF zéro-décimal Stripe → ×100**
-(`payment-intents.ts`/`payment-events.ts`), dark mode partiel + toggle absent
-dashboard mobile, calendrier valeurs par défaut non persistées, amenities
-3 listes (5/12/12 vs 27 en base), help center (phrasing Stripe).
+**🔧 Harnais**
+- `paranoid_sim.py` : `sh()` tolérant `TimeoutExpired` (cold compile login
+  >10 s après restart Next) + timeouts 30-60 s.
+- `run_all_sims.py` : `_run()` + `db_query()` 3 essais (PG occupé au stop
+  de Next).
+- `smoke.sh` : nettoyage réentrant (DELETE bookings `Smoke Test` + alertes
+  sentinelles) — smoke 94/94 rejouable.
+- deep en run solo → 429 : rate-limit mémoire documenté (le runner
+  redémarre Next entre chaque simulation).
 
 ## Contraintes (inchangées)
-- AUDIT SEUL tant que l'utilisateur ne valide pas l'implémentation.
-- Solutions sans régression : additifs (pas de migration, pas de changement
-  de contrat API public, cas EUR inchangés).
-- Écarts invalidés documentés dans le rapport (users/me 405, perf 35,6 s =
-  cold start, RBAC 307, ids amenities).
+- Additif : aucune migration de schéma, aucun changement de contrat API
+  public, cas EUR numériquement identiques.
+- Écarts invalidés documentés dans le rapport (guest mode, upload privé,
+  rame-rate-limit mémoire).
 
-## Étape suivante (sur validation)
-1. P1 recherche (findings 1+2, un seul chantier + tests) ; 2. P1 cashback
-   (ligne + tests) ; 3. P2 5-7 (petits chantiers) ; 4. P2 4+8 ; 5. P3 au fil
-   de l'eau. Détails fichier/fichier dans le rapport.
+## Étape suivante
+À la demande (nouvel audit, nouvelle fonctionnalité…). Toutes les
+simulations du runner unifié sont vertes.
