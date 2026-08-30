@@ -1,6 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
+// T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 interface Day {
   date: string;
@@ -33,6 +35,7 @@ export function AvailabilityCalendar({
   initialTo,
   initialDays,
 }: Props) {
+  const { addToast } = useToast();
   const [from, setFrom] = useState(initialFrom);
   const [to, setTo] = useState(initialTo);
   const [days, setDays] = useState<Record<string, Day>>(() => {
@@ -122,8 +125,10 @@ export function AvailabilityCalendar({
         if (!res.ok) throw new Error(data.error ?? "Erreur");
       }
       setSaved(true);
+      addToast("success", "Calendrier enregistré");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
+      addToast("error", e instanceof Error ? e.message : "Impossible d'enregistrer le calendrier");
     } finally {
       setLoading(false);
     }

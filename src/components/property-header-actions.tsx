@@ -3,11 +3,14 @@
 import { useState } from "react";
 import { Heart, Loader2, Share2 } from "lucide-react";
 import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
+// T-154d (audit n°26, P2-8) : confirmation favori via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 /** Actions réelles de fiche : favori API (ajout + retrait, T-154c/P2-6)
  * et partage Web Share/clipboard. */
 export function PropertyHeaderActions({ propertyId, propertyName }: { propertyId: string; propertyName: string }) {
   const favorite = useWishlistToggle(propertyId);
+  const { addToast } = useToast();
   const [message, setMessage] = useState<string | null>(null);
 
   async function toggleFavorite() {
@@ -19,7 +22,9 @@ export function PropertyHeaderActions({ propertyId, propertyName }: { propertyId
       window.location.href = "/connexion?next=" + encodeURIComponent(window.location.pathname);
       return;
     }
-    setMessage(wasSaved ? "Retiré de vos favoris" : "Ajouté à vos favoris");
+    const text = wasSaved ? "Retiré de vos favoris" : "Ajouté à vos favoris";
+    setMessage(text);
+    addToast(wasSaved ? "info" : "success", text);
   }
 
   async function share() {

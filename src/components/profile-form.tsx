@@ -6,6 +6,8 @@ import { Upload } from "lucide-react";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT } from "@/lib/ui-strings";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
+// T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 interface Props {
   initial: {
@@ -26,6 +28,7 @@ interface Props {
  * PATCH /api/users/me
  */
 export function ProfileForm({ initial }: Props) {
+  const { addToast } = useToast();
   const router = useRouter();
   const { language } = useDisplayPreferences();
   const t = makeT(language);
@@ -68,9 +71,11 @@ export function ProfileForm({ initial }: Props) {
       if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
       setForm((f) => ({ ...f, avatarUrl: data.url ?? "" }));
       setSaved(true);
+      addToast("success", "Photo de profil mise à jour");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Échec de l'upload");
+      addToast("error", e instanceof Error ? e.message : "Échec de l'upload");
     } finally {
       setAvatarUploading(false);
     }
@@ -102,9 +107,11 @@ export function ProfileForm({ initial }: Props) {
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Erreur");
       setSaved(true);
+      addToast("success", "Profil enregistré");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
+      addToast("error", e instanceof Error ? e.message : "Erreur lors de l'enregistrement");
     } finally {
       setLoading(false);
     }

@@ -7,6 +7,8 @@ import { ArrowLeft, Star } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea, Select } from "@/components/ui/input";
+// T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 /**
  * <ReviewForm /> (T-125, P4)
@@ -16,6 +18,7 @@ import { Textarea, Select } from "@/components/ui/input";
  */
 export function ReviewForm({ bookingId, requireModeration }: { bookingId: string; requireModeration: boolean }) {
   const router = useRouter();
+  const { addToast } = useToast();
   const [rating, setRating] = useState(8);
   const [travelerType, setTravelerType] = useState("leisure");
   const [positiveComment, setPositiveComment] = useState("");
@@ -63,10 +66,12 @@ export function ReviewForm({ bookingId, requireModeration }: { bookingId: string
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Impossible d'envoyer votre avis");
+      addToast("success", requireModeration ? "Avis envoyé — en attente de modération" : "Merci, votre avis est publié");
       router.push("/mes-reservations");
       router.refresh();
     } catch (submissionError) {
       setError(submissionError instanceof Error ? submissionError.message : "Erreur lors de l'envoi");
+      addToast("error", submissionError instanceof Error ? submissionError.message : "Erreur lors de l'envoi");
       setLoading(false);
     }
   }

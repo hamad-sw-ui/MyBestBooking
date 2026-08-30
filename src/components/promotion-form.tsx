@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+// T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 /**
  * Formulaire création d'un code promo (T-016).
@@ -9,6 +11,7 @@ import { useRouter } from "next/navigation";
  */
 export function PromotionForm() {
   const router = useRouter();
+  const { addToast } = useToast();
   // Lazy initializer pour éviter Date.now() à chaque render (rule react-hooks/purity).
   const [form, setForm] = useState(() => ({
     code: "",
@@ -64,10 +67,12 @@ export function PromotionForm() {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? "Erreur");
+      addToast("success", `Code ${form.code.toUpperCase()} créé`);
       router.push("/dashboard/promotions");
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
+      addToast("error", e instanceof Error ? e.message : "Impossible de créer la promotion");
     } finally {
       setLoading(false);
     }

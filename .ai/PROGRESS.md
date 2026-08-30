@@ -43,8 +43,22 @@
     100 $US, 60 736,76 XAF ; test 5 cas ; alerte plus jamais silencieusement
     morte.
 - 🧪 vitest **365/365** (51 fichiers) · lint 0 erreur · smoke **94/94**.
-- **Étape suivante** : T-154d (P2-4 récap réservation taxes/BestRewards,
-  P2-8 toasts).
+- **T-154d (P2-4 + P2-8)** :
+  - **P2-4** : `GET /api/properties/[id]` expose en lecture seule `taxRate`
+    (settings billing) et `bestrewardsDiscountPercent` (niveau user courant +
+    isBestrewards, mêmes règles que POST /api/bookings) ; l'aperçu
+    `/reservation` calcule la TVA avec le taux réel (fini `0.1` en dur) et
+    affiche la ligne « 💎 BestRewards (15 %) −… » (avant : 261,07 € affiché
+    pour 221,91 € facturés) ; test route 3 cas (anon → null, niveau 2 → 15,
+    contrat inchangé) ; ▶️ curl : customer → 15, anon → null.
+  - **P2-8** : `useToast` enfin branché (9 composants mutation) —
+    `promo-code-input`, `price-alert-button`, favoris (cartes + fiche),
+    `review-form`, `profile-form`, `promotion-form`, `rate-plans-section`,
+    `availability-calendar` ; erreurs inline conservées pour la validation
+    champ par champ.
+- 🔨 vitest **368/368** (52 fichiers) · lint 0 erreur · smoke **94/94**.
+- **Étape suivante** : P3 (9-14) au fil de l'eau — montants sans devise,
+  XAF zéro-décimal, dark mode, calendrier, amenities, help center.
 
 ## Session 44 — 2026-08-30 : audit fonctionnel n°26 (à l'exécution) — 14 findings, rapport seul
 

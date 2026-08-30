@@ -4,6 +4,8 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Bell, BellRing, Loader2 } from "lucide-react";
+// T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 interface Props {
   propertyId: string;
@@ -21,6 +23,7 @@ interface Props {
  * définir un prix max, POST /api/price-alerts. Feedback in-place.
  */
 export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 100, checkIn, checkOut, numAdults, numChildren }: Props) {
+  const { addToast } = useToast();
   const [open, setOpen] = useState(false);
   const contextual = Boolean(checkIn && checkOut && Number.isInteger(numAdults) && Number.isInteger(numChildren));
   const [maxPrice, setMaxPrice] = useState(String(defaultMax));
@@ -50,6 +53,7 @@ export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 10
       const j = await r.json();
       if (!r.ok) throw new Error(j.error ?? "Erreur");
       setStatus("saved");
+      addToast("success", `Alerte créée ✓ (max ${n} ${currency})`);
       setTimeout(() => {
         setOpen(false);
         setStatus("idle");
@@ -57,6 +61,7 @@ export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 10
     } catch (e) {
       setStatus("error");
       setError(e instanceof Error ? e.message : "Erreur");
+      addToast("error", e instanceof Error ? e.message : "Impossible de créer l'alerte");
     } finally {
       setBusy(false);
     }

@@ -34,6 +34,10 @@ interface PropertyData {
   // T-154c (audit n°26, P2-5) : politique d'annulation réelle du bien
   // (retournée par GET /api/properties/[id]) pour le libellé exact.
   cancellationPolicy: string | null;
+  // T-154d (audit n°26, P2-4) : taux de TVA configuré + réduction
+  // BestRewards réelle pour le user courant (read-only, additif API).
+  taxRate?: number | null;
+  bestrewardsDiscountPercent?: number | null;
   totalReviews: number | null;
   checkInFrom: string | null;
   checkOutUntil: string | null;
@@ -141,9 +145,18 @@ function ReservationPageInner() {
   const selectedRatePlan = ratePlans.find((plan) => plan.id === formData.ratePlanId) ?? null;
   const ratePlanDiscount = selectedRatePlan ? baseSubtotal * (parseFloat(selectedRatePlan.discountPercentage || "0") / 100) : 0;
   const subtotal = Math.max(0, baseSubtotal - ratePlanDiscount);
-  const taxes = subtotal * 0.1;
+  // T-154d (audit n°26, P2-4) : TVA réelle (settings billing.taxRate, défaut
+  // historique 0.1) — avant : 0.1 en dur, divergence dès qu'un admin ajuste.
+  const taxes = subtotal * (property?.taxRate ?? 0.1);
   const totalBeforePromo = subtotal + taxes;
-  const total = promo ? promo.finalTotal : totalBeforePromo;
+  const totalAfterPromo = promo ? promo.finalTotal : totalBeforePromo;
+  // Même règle que POST /api/bookings : la remise BestRewards s'applique
+  // APRÈS la promo, sur le total (arrondi au centime).
+  const bestrewardsPercent = property?.bestrewardsDiscountPercent ?? 0;
+  const bestrewardsAmount = bestrewardsPercent > 0
+    ? Math.round(totalAfterPromo * (bestrewardsPercent / 100) * 100) / 100
+    : 0;
+  const total = Math.max(0, totalAfterPromo - bestrewardsAmount);
   // T-152 (B) : devise réelle de la chambre pour TOUS les montants affichés
   // (le débit PSP utilise room.currency — voir POST /api/bookings).
   const roomCurrency = room?.currency ?? "EUR";
@@ -807,6 +820,16 @@ function ReservationPageInner() {
                       <div className="my-3">
                         <PromoCodeInput amount={totalBeforePromo} currency={roomCurrency} onApplied={setPromo} />
                       </div>
+                      {/* T-154d (audit n°26, P2-4) : réduction BestRewards réelle
+                          du user (GET /api/properties/[id] — read-only). Avant :
+                          le récap n'en parlait pas, le serveur l'appliquait
+                          quand même (261,07 affiché pour 221,91 facturés). */}
+                      {bestrewardsAmount > 0 && (
+                        <div className="flex justify-between text-sm mb-2 text-emerald-700">
+                          <span>💎 BestRewards ({bestrewardsPercent} %)</span>
+                          <span>−{formatPrice(bestrewardsAmount, roomCurrency)}</span>
+                        </div>
+                      )}
                       {/* T-030 : wallet BestRewards utilisable au checkout */}
                       {isAuthed && walletBalance > 0 && (
                         <label className="flex items-start gap-2 my-3 p-2 rounded-lg bg-amber-50 border border-amber-200 cursor-pointer">

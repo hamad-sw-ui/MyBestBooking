@@ -12,6 +12,8 @@ import { convertAmount, formatMoney } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
 import { uiStrings } from "@/lib/ui-strings";
+// T-154d (audit n°26, P2-8) : confirmation favori via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 interface PropertyCardProps {
   property: PublicPropertyCard;
@@ -25,6 +27,7 @@ interface PropertyCardProps {
 
 export function PropertyCardClient({ property, showFavorite = true, searchQuery, removeFavoriteFrom }: PropertyCardProps) {
   const router = useRouter();
+  const { addToast } = useToast();
   const favorite = useWishlistToggle(property.id);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
@@ -54,10 +57,13 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
     event.preventDefault();
     event.stopPropagation();
     if (favorite.busy) return;
+    const wasSaved = favorite.saved;
     const outcome = await favorite.toggle();
     if (outcome === "unauthenticated") {
       window.location.href = "/connexion?next=%2Frecherche";
+      return;
     }
+    addToast(wasSaved ? "info" : "success", wasSaved ? "Retiré de vos favoris" : "Ajouté à vos favoris");
   }
 
   async function removeFromFavorites(event: React.MouseEvent<HTMLButtonElement>) {
@@ -72,9 +78,11 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
         { method: "DELETE" },
       );
       if (!res.ok) throw new Error("Impossible de retirer le favori");
+      addToast("info", "Retiré de vos favoris");
       router.refresh();
     } catch (e) {
       setRemoveError(e instanceof Error ? e.message : "Erreur");
+      addToast("error", e instanceof Error ? e.message : "Impossible de retirer le favori");
     } finally {
       setRemoving(false);
     }

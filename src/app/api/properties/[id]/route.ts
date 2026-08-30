@@ -6,6 +6,10 @@ import { isUuid, frenchZodMessage } from "@/lib/http";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { toPublicProperty } from "@/lib/public-property";
+// T-154d (audit n°26, P2-4) : taux de TVA et réduction BestRewards réels
+// (settings, niveau du user courant) exposés en lecture seule à l'aperçu de
+// réservation — plus de TVA 0.1 en dur ni de remise invisible côté client.
+import { getSetting } from "@/lib/settings";
 
 const updatePropertySchema = z.object({
   name: z.string().min(3).optional(),
@@ -90,8 +94,38 @@ export async function GET(
       .from(users)
       .where(eq(users.id, property.hostId));
 
+    // T-154d (audit n°26, P2-4) : champs read-only ajoutés pour que l'aperçu
+    // de réservation affiche la TVA configurée et la remise BestRewards
+    // réelle (mêmes règles que POST /api/bookings). Additif : rien d'existant
+    // n'est modifié ; anon/invité → bestrewardsDiscountPercent null.
+    const [billing, bestrewardsSettings] = await Promise.all([
+      getSetting("billing"),
+      getSetting("bestrewards"),
+    ]);
+    let bestrewardsDiscountPercent: number | null = null;
+    if (user) {
+      const [viewer] = await db
+        .select({ level: users.bestrewardsLevel })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
+      const level = viewer?.level ?? 1;
+      let pct = level >= 3
+        ? bestrewardsSettings.discounts[2]
+        : level >= 2
+          ? bestrewardsSettings.discounts[1]
+          : bestrewardsSettings.discounts[0];
+      if (property.isBestrewards && level >= 2) pct = Math.min(30, pct + 2);
+      bestrewardsDiscountPercent = pct > 0 ? pct : null;
+    }
+    const baseProperty = canSeePrivate ? property : toPublicProperty(property);
+
     return NextResponse.json({
-      property: canSeePrivate ? property : toPublicProperty(property),
+      property: {
+        ...baseProperty,
+        taxRate: billing.taxRate ?? 0.1,
+        bestrewardsDiscountPercent,
+      },
       rooms: propertyRooms,
       ratePlans: propertyRatePlans,
       reviews: propertyReviews,

@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { Tag, Check, X } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+// T-154d (audit n°26, P2-8) : confirmation/échec globaux via le ToastProvider
+// (monté dans layout mais jamais utilisé).
+import { useToast } from "@/components/ui/toast";
 
 interface Applied {
   code: string;
@@ -24,6 +27,7 @@ interface Props {
  * GET /api/promotions/apply?code=&amount=&currency= (T-016, T-153).
  */
 export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
+  const { addToast } = useToast();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -45,10 +49,12 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
       };
       setApplied(a);
       onApplied?.(a);
+      addToast("success", `Code ${a.code} appliqué : −${formatPrice(a.discount, a.currency)}`);
     } catch (e) {
       setApplied(null);
       onApplied?.(null);
       setError(e instanceof Error ? e.message : "Erreur");
+      addToast("error", e instanceof Error ? e.message : "Impossible d'appliquer le code");
     } finally {
       setLoading(false);
     }

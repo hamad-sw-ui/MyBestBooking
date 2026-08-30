@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+// T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
+import { useToast } from "@/components/ui/toast";
 
 interface RatePlan {
   id: string;
@@ -45,6 +47,7 @@ function formFor(plan: RatePlan): RatePlanForm {
 
 /** Plans éditables sans modifier les snapshots des réservations historiques. */
 export function RatePlansSection({ roomId, basePrice, initialRatePlans }: { roomId: string; basePrice: string; initialRatePlans: RatePlan[] }) {
+  const { addToast } = useToast();
   const [plans, setPlans] = useState(initialRatePlans);
   const [form, setForm] = useState<RatePlanForm>(EMPTY_FORM);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,7 +70,8 @@ export function RatePlansSection({ roomId, basePrice, initialRatePlans }: { room
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.error ?? "Impossible de modifier le plan");
       setPlans((current) => current.map((plan) => plan.id === id ? body.ratePlan : plan));
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); }
+      addToast("success", isActive ? "Plan réactivé" : "Plan archivé");
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); addToast("error", reason instanceof Error ? reason.message : "Erreur"); }
     finally { setBusy(false); }
   }
 
@@ -93,7 +97,8 @@ export function RatePlansSection({ roomId, basePrice, initialRatePlans }: { room
         ? current.map((plan) => plan.id === editingId ? body.ratePlan : plan)
         : [...current, body.ratePlan]);
       resetForm();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); }
+      addToast("success", editingId ? "Plan tarifaire modifié" : "Plan tarifaire créé");
+    } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); addToast("error", reason instanceof Error ? reason.message : "Erreur"); }
     finally { setBusy(false); }
   }
 

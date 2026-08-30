@@ -16,14 +16,14 @@
   `.github/workflows/ci.yml` (T-113) reste hors suivi
   git de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière activité (2026-08-30)** : **T-154a (L, implémenté et validé)**
-  — P1 1+2 de l'audit n°26 : recherche — suppression des sous-requêtes
-  corrélées en projection (cause « Prix indisponible » × 8) et bornes min/max
-  appliquées au MIN EUR des chambres éligibles (plus de `∃ chambre ≥ min`).
-  🔨 tsc 0 · lint 0 erreur · 🧪 vitest 352/352 (48 fichiers) · ▶️ `minPrice=107`
-  → 4 propriétés (118,67/148,33 €), `maxPrice=91` → 3, tri prix cohérent,
-  0 « Prix indisponible » · smoke 94/94. Suite : T-154b (P1-3 cashback),
-  T-154c (P2 5-7), T-154d (P2 4+8), P3 au fil de l'eau.
+- **Dernière activité (2026-08-30)** : **T-154a→d (audit n°26, P1+P2)
+  livrés et validés** : recherche (prix affiché, bornes min EUR), cashback
+  converti (`PUT completed`), annulation réelle + favoris toggle/retrait +
+  alertes multi-devises, aperçu réservation (TVA settings + BestRewards
+  15 %) et toasts branchés (9 composants). 🔨 tsc 0 · lint 0 erreur ·
+  🧪 vitest **368/368** (52 fichiers) · ▶️ search 107→4 ; cashback 9,26 € ;
+  strict affiché ; favori retiré/restauré ; alerte 92,59 € ; properties
+  → taxRate 0.1/15 · smoke 94/94. En cours : P3 9-14 (polish).
 - **Dernière tâche implémentée précédente** : **T-153 (S, implémenté et validé)**
   — implémentation des 7 findings de l'audit n°25 (rapport
   `audit_fonctionnel_profond25_2026-08-30.md`) : **A** wallet EUR appliqué

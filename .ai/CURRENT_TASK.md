@@ -1,17 +1,19 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-154d (audit n°26, P2-4+P2-8) — récap réservation (TVA/BestRewards
-réels) + toasts
+**ID** : P3 9-14 (audit n°26) — findings UX/polish au fil de l'eau
 
-**Niveau de proportionnalité** : M (2 chantiers UI, additif)
+**Niveau de proportionnalité** : S à L (changements ponctuels additifs)
 
-**Titre** : Implémentation des findings de l'audit n°26, lot 4/4 — l'aperçu
-de réservation doit refléter la TVA configurée et la réduction BestRewards,
-et les erreurs/confirmations doivent passer par le ToastProvider monté.
+**Titre** : Implémentation des findings P3 de l'audit n°26 : montants sans
+devise (rate-plans, alertes, promo « € » durs), XAF zéro-décimal (helper
+`toMinorUnits` + `formatMoney`), dark mode partiel, calendrier, amenities
+(3 listes), help center.
 
-**Statut** : EN COURS — T-154a/b/c **LIVRÉS (VALIDÉS)** (recherche, cashback,
-annulation/favoris/alertes) : tsc 0 · lint 0 · vitest 365/365 · smoke 94/94
-(voir TRACEABILITY, session 45).
+**Statut** : P1+P2 (T-154a→d) **LIVRÉS (VALIDÉS)** — tsc 0 · lint 0 ·
+vitest **368/368** (52 fichiers) · smoke 94/94 · ▶️ recherche `minPrice=107`
+→ 4 ; cashback USD → 9,26 € ; fiche strict → règle réelle ; favoris
+DELETE/retrait ; alerte USD-only → 92,59 € ; API properties → taxRate +
+bestrewards 15 (voir TRACEABILITY, session 45).
 
 Rapport : `REPORTS/audit_fonctionnel_profond26_2026-08-30.md` (source).
 
