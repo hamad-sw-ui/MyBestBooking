@@ -1,6 +1,6 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : Audit n°26 — TERMINÉ / en attente de nouvelle instruction
+**ID** : T-154e (audit n°26, P3 9-14) — TERMINÉ ; T-154a→d livrés avec
 
 **Niveau de proportionnalité** : S à L (changements ponctuels additifs)
 
@@ -9,7 +9,7 @@ recherche (P1 1+2), cashback (P1-3), annulation/favoris/alertes (P2 5-7),
 récap TVA/BestRewards + toasts (P2 4+8), P3 9-14 (devises, XAF
 zéro-décimal, dark mode, calendrier, amenities, help center).
 
-**Statut** : **100 % LIVRÉ (VALIDÉ)** — T-154a→e commités · 🔨 tsc 0 ·
+**Statut** : **CORRIGÉ (VALIDÉ)** — T-154a→e commités · 🔨 tsc 0 ·
 lint 0 erreur · 🧪 vitest **372/372** (52 fichiers) · ▶️ recherche
 `minPrice=107` → 4 ; cashback USD → 9,26 € ; fiche strict → règle réelle ;
 favoris DELETE/retrait ; alerte USD-only → 92,59 € ; API properties →
