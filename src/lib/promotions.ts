@@ -2,7 +2,13 @@
  * Utilitaires purs pour appliquer un code promo à un total.
  * Testable sans DB. Utilisé par GET /api/promotions/apply et
  * POST /api/bookings. (T-016)
+ *
+ * T-153 (audit n°25, B) : la valeur et les seuils d'une promo sont libellés
+ * en EUR (convention admin) ; `normalizePromoForCurrency` les convertit vers
+ * la devise de la chambre avant application, pour ne jamais appliquer un
+ * montant EUR 1:1 à un total USD/GBP.
  */
+import { convertAmount, isDisplayCurrency } from "@/lib/i18n";
 
 export interface PromotionLike {
   code: string;
@@ -65,5 +71,37 @@ export function applyPromoToTotal(
   return {
     discount,
     finalTotal: Math.round((total - discount) * 100) / 100,
+  };
+}
+
+/**
+ * T-153 (audit n°25, B) — Copie de la promo dont les montants LIBELLÉS EN
+ * EUR (`value` si `fixed_amount`, `minBookingAmount`, `maxDiscount`) sont
+ * convertis dans la devise de la chambre (`currency`).
+ *
+ * - `percentage` : inchangé (une remise en % est indépendante de la devise) ;
+ * - devise inconnue/absente → copie inchangée (comportement historique,
+ *   aucune conversion approximative) ;
+ * - résultat : `applyPromoToTotal(normalizePromoForCurrency(promo, c),
+ *   total)` retourne un discount directement dans la devise de la chambre.
+ */
+export function normalizePromoForCurrency(
+  p: PromotionLike,
+  currency: string,
+): PromotionLike {
+  const cur = (currency || "EUR").toUpperCase();
+  if (!isDisplayCurrency(cur) || cur === "EUR") return { ...p };
+  const toCur = (value: string | null | undefined): string | null => {
+    if (value == null) return null;
+    const n = parseFloat(value);
+    if (!Number.isFinite(n)) return value;
+    return convertAmount(n, "EUR", cur).toFixed(2);
+  };
+  return {
+    ...p,
+    // Le montant fixe est en EUR ; un pourcentage reste un pourcentage.
+    value: p.type === "fixed_amount" ? toCur(p.value) ?? p.value : p.value,
+    minBookingAmount: toCur(p.minBookingAmount) ?? p.minBookingAmount,
+    maxDiscount: toCur(p.maxDiscount) ?? p.maxDiscount,
   };
 }

@@ -6,6 +6,7 @@ import { PromoCodeInput } from "@/components/promo-code-input";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT, isUiLocale } from "@/lib/ui-strings";
 import { formatPrice } from "@/lib/utils";
+import { applyWalletToTotal } from "@/lib/wallet-currency";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -140,6 +141,14 @@ function ReservationPageInner() {
   // T-152 (B) : devise réelle de la chambre pour TOUS les montants affichés
   // (le débit PSP utilise room.currency — voir POST /api/bookings).
   const roomCurrency = room?.currency ?? "EUR";
+  // T-153 (A) : aperçu exact du débit wallet (libellé EUR) appliqué à un
+  // total en devise chambre — mêmes règles que POST /api/bookings.
+  const walletApplied =
+    useWalletCredits && walletBalance > 0
+      ? applyWalletToTotal(walletBalance, total, roomCurrency)
+      : { walletUsed: 0, walletUsedEur: 0, totalAfter: total };
+  const walletDisplay =
+    "error" in walletApplied ? { walletUsed: 0, walletUsedEur: 0, totalAfter: total } : walletApplied;
 
   // T-152 (A) : reprise de paiement — charge la réservation, pré-remplit la
   // sélection, puis relance `POST /api/bookings/:id/payment` (déjà existant).
@@ -790,7 +799,7 @@ function ReservationPageInner() {
                         </div>
                       )}
                       <div className="my-3">
-                        <PromoCodeInput amount={totalBeforePromo} onApplied={setPromo} />
+                        <PromoCodeInput amount={totalBeforePromo} currency={roomCurrency} onApplied={setPromo} />
                       </div>
                       {/* T-030 : wallet BestRewards utilisable au checkout */}
                       {isAuthed && walletBalance > 0 && (
@@ -806,7 +815,7 @@ function ReservationPageInner() {
                               💰 {t("reservation.walletAvailable")} ({formatPrice(walletBalance, "EUR")} {t("reservation.walletAvail")})
                             </p>
                             <p className="text-amber-700">
-                              Sera appliqué en réduction sur le total, plafonné au montant restant.
+                              Sera appliqué en réduction sur le total, plafonné au montant restant. Le solde du wallet est libellé en euros.
                             </p>
                           </div>
                         </label>
@@ -814,14 +823,14 @@ function ReservationPageInner() {
                       {promo && useWalletCredits && walletBalance > 0 && (
                         <div className="flex justify-between text-sm mb-2 text-amber-800">
                           <span>Wallet</span>
-                          <span>−{formatPrice(Math.min(walletBalance, total), "EUR")}</span>
+                          <span>−{formatPrice(walletDisplay.walletUsed, roomCurrency)}</span>
                         </div>
                       )}
                       <hr className="my-3" />
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span className="text-[#1B3A6B]">
-                          {formatPrice(Math.max(0, useWalletCredits ? total - Math.min(walletBalance, total) : total), roomCurrency)}
+                          {formatPrice(walletDisplay.totalAfter, roomCurrency)}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">

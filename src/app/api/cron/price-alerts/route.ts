@@ -49,11 +49,14 @@ async function completeEligibleBookings(today: string): Promise<number> {
       if (!booking || booking.status !== "confirmed" || booking.paymentStatus !== "paid" || booking.loyaltyAwardedAt) return false;
       const [user] = await tx.select().from(users).where(eq(users.id, booking.userId)).for("update");
       if (!user) return false;
+      // T-153 (audit n°25, C) : le wallet est libellé EUR — le cashback est
+      // calculé sur le total CONVERTI en EUR (jamais 1:1 depuis la devise de
+      // la chambre). `cashbackAmount` stocke le montant EUR crédité.
       const loyalty = calculateLoyaltyAward({
         bookingsCount: user.bestrewardsBookingsCount,
         level: user.bestrewardsLevel,
         walletBalance: user.walletBalance,
-      }, Number(booking.total), settings.thresholds);
+      }, Number(booking.total), settings.thresholds, booking.currency ?? "EUR");
       // T-125 (P2) : le wallet du filleul cumule cashback BestRewards +
       // éventuel bonus de parrainage (une seule fois, garde
       // referralRewardedAt). Le parrain est crédité dans la même transaction.

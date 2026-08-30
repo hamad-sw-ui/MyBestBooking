@@ -17,6 +17,8 @@ import { RATES_FROM_EUR, priceBoundToStorage } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { SearchPriceFilter } from "@/components/search-price-filter";
+import { getCurrentUser } from "@/lib/auth";
+import { formatPrice } from "@/lib/utils";
 
 interface SearchPageProps {
   searchParams: Promise<{
@@ -36,6 +38,9 @@ interface SearchPageProps {
     amenity?: string;
     sort?: string;
     page?: string;
+    /** T-153 (audit n°25, F) : arrivée depuis « Utiliser mon solde »
+     *  (/mon-compte) — affiche un bandeau rappelant le wallet. */
+    wallet?: string;
   }>;
 }
 
@@ -169,6 +174,13 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
   const t = makeT(await getServerLocale());
+  // T-153 (F) : bandeau « pensez à utiliser vos crédits » — lecture seule du
+  // solde EUR du wallet (aucun changement de contrat API, aucun filtre).
+  let walletAmount: number | null = null;
+  if (params.wallet === "1") {
+    const user = await getCurrentUser();
+    if (user) walletAmount = Number(user.walletBalance ?? "0");
+  }
   const search = await searchProperties(params);
   const { results, total, page: currentPage, totalPages } = search;
   const pageQuery = new URLSearchParams();
@@ -195,6 +207,15 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   return (
     <div className="bg-gray-50 min-h-screen">
+      {/* T-153 (F) : bandeau wallet affiché uniquement à l'arrivée depuis
+          « Utiliser mon solde » (/mon-compte → /recherche?wallet=1). */}
+      {walletAmount !== null && (
+        <div className="bg-amber-50 border-b border-amber-200">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-sm text-amber-900">
+            💰 {t("search.walletBanner").replace("{amount}", formatPrice(walletAmount, "EUR"))}
+          </div>
+        </div>
+      )}
       {/* Search Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT } from "@/lib/ui-strings";
+import { formatPrice } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { TwoFactorSection } from "@/components/two-factor-section";
@@ -261,11 +262,14 @@ export default function MyAccountPage() {
                       <div>
                         <p className="text-sm text-gray-500">Solde disponible</p>
                         <p className="text-3xl font-bold text-[#1B3A6B]">
-                          €{parseFloat(user.walletBalance || "0").toFixed(2)}
+                          {formatPrice(parseFloat(user.walletBalance || "0"), "EUR")}
                         </p>
                       </div>
+                      {/* T-153 (audit n°25, F) : flèche le scénario d'utilisation
+                          du solde — la recherche affiche un bandeau rappelant
+                          de cocher « Utiliser mes crédits » au paiement. */}
                       <Link
-                        href="/recherche"
+                        href="/recherche?wallet=1"
                         className="inline-flex items-center px-4 py-2 rounded-lg border border-[#1B3A6B] text-[#1B3A6B] font-medium hover:bg-[#1B3A6B] hover:text-white transition"
                       >
                         Utiliser mon solde

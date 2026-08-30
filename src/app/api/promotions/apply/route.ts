@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { promotions } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
+import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency } from "@/lib/promotions";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
 
@@ -33,6 +33,11 @@ export async function GET(request: NextRequest) {
 
   const code = request.nextUrl.searchParams.get("code")?.trim().toUpperCase();
   const amountRaw = request.nextUrl.searchParams.get("amount");
+  // T-153 (audit n°25, B) : devise du total (celle de la chambre). Défaut
+  // EUR = comportement historique ; les montants de la promo sont libellés
+  // en EUR et convertis avant application.
+  const currencyRaw = request.nextUrl.searchParams.get("currency");
+  const currency = (currencyRaw || "EUR").trim().toUpperCase();
   if (!code) return NextResponse.json({ ok: false, error: "Code manquant" }, { status: 400 });
   const amount = amountRaw ? parseFloat(amountRaw) : NaN;
   if (!Number.isFinite(amount) || amount <= 0) {
@@ -53,7 +58,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: false, error: check }, { status: 400 });
   }
 
-  const result = applyPromoToTotal(promo, amount);
+  const result = applyPromoToTotal(normalizePromoForCurrency(promo, currency), amount);
   if ("error" in result) {
     return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
   }
@@ -68,5 +73,8 @@ export async function GET(request: NextRequest) {
     },
     discount: result.discount,
     finalTotal: result.finalTotal,
+    // T-153 (B) : champ additif — devise dans laquelle discount/finalTotal
+    // sont exprimés (défaut EUR, comportement historique conservé).
+    currency,
   });
 }

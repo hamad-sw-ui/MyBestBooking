@@ -10,6 +10,7 @@ import { ArrowLeft, Save, Eye, Plus, Trash2, Star, Upload, RefreshCw } from "luc
 import Link from "next/link";
 import { PropertySubmitButton } from "@/components/property-submit-button";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
+import { formatPrice } from "@/lib/utils";
 
 interface Property {
   id: string;
@@ -41,6 +42,8 @@ interface Room {
   roomType: string;
   maxOccupancy: number;
   basePrice: string;
+  // T-153 (audit n°25, E) : devise réelle de la chambre (affichage).
+  currency?: string;
   quantity: number;
   isActive: boolean;
 }
@@ -543,7 +546,7 @@ export default function EditPropertyPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <p className="font-bold">€{parseFloat(room.basePrice).toFixed(0)}/nuit</p>
+                      <p className="font-bold">{formatPrice(parseFloat(room.basePrice), room.currency ?? "EUR")}/nuit</p>
                       <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
                         <Button variant="ghost" size="sm">
                           Calendrier

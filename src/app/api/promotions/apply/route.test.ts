@@ -49,6 +49,17 @@ dbTest("GET /api/promotions/apply (T-019, §13.5)", () => {
         .returning({ id: schema.promotions.id });
       testIds.push(r.id);
     }
+    // T-153 (B) : promo à montant fixe libellé EUR (convention admin).
+    const [fixed] = await db
+      .insert(schema.promotions)
+      .values({
+        code: "TEST-FIXED-EUR", name: "TEST-FIXED-EUR", type: "fixed_amount",
+        value: "20.00", minBookingAmount: "0",
+        validFrom: past, validUntil: future,
+        isActive: true,
+      })
+      .returning({ id: schema.promotions.id });
+    testIds.push(fixed.id);
   });
 
   afterAll(async () => {
@@ -102,5 +113,40 @@ dbTest("GET /api/promotions/apply (T-019, §13.5)", () => {
   it("code manquant → 400", async () => {
     const res = await call("http://x/api/promotions/apply?amount=100");
     expect(res.status).toBe(400);
+  });
+
+  // ── T-153 (audit n°25, B) — champ `currency` additif ─────────────
+  it("T-153 : sans currency → historique identique + currency renvoyé EUR", async () => {
+    const res = await call("http://x/api/promotions/apply?code=TEST-ACTIVE&amount=200");
+    expect(res.status).toBe(200);
+    const b = await res.json();
+    expect(b.discount).toBe(40);
+    expect(b.finalTotal).toBe(160);
+    expect(b.currency).toBe("EUR");
+  });
+
+  it("T-153 : currency=EUR explicite → identique (non-régression)", async () => {
+    const res = await call("http://x/api/promotions/apply?code=TEST-ACTIVE&amount=200&currency=EUR");
+    const b = await res.json();
+    expect(b.discount).toBe(40);
+    expect(b.finalTotal).toBe(160);
+    expect(b.currency).toBe("EUR");
+  });
+
+  it("T-153 : percentage inchangé en USD (devise du résultat renvoyée)", async () => {
+    const res = await call("http://x/api/promotions/apply?code=TEST-ACTIVE&amount=200&currency=USD");
+    const b = await res.json();
+    expect(b.discount).toBe(40); // 20 % indépendant de la devise
+    expect(b.finalTotal).toBe(160);
+    expect(b.currency).toBe("USD");
+  });
+
+  it("T-153 : fixed_amount 20 € converti pour un total USD (20 € → 21,60 $)", async () => {
+    const res = await call("http://x/api/promotions/apply?code=TEST-FIXED-EUR&amount=200&currency=USD");
+    const b = await res.json();
+    expect(b.ok).toBe(true);
+    expect(b.discount).toBe(21.6);
+    expect(b.finalTotal).toBe(178.4);
+    expect(b.currency).toBe("USD");
   });
 });

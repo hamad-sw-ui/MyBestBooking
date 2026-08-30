@@ -6,26 +6,35 @@
 - **Branche actuelle** : `arena/01a052ed-mybestbooking`
 - **HEAD de base** : `99b4c7f` (T-151 — T-149 sur la branche sœur
   `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
-- **PR ouverte** : historique (PR #2) — session T-152 en cours sur
+- **PR ouverte** : historique (PR #2) — session T-153 en cours sur
   `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
-- **HEAD Git** : T-152 sur `arena/01a052ed-mybestbooking`
-  (base `99b4c7f` = T-151). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
+- **HEAD Git** : T-153 sur `arena/01a052ed-mybestbooking`
+  (base `135544c` = audit n°25). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
   : un commit de doc ne peut pas contenir son propre hash, et R7 le tolère
   explicitement (motif « à mettre à jour en fin de session »). Le workflow
   `.github/workflows/ci.yml` (T-113) reste hors suivi
   git de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière activité (2026-08-30)** : **audit fonctionnel n°25** —
-  `REPORTS/audit_fonctionnel_profond25_2026-08-30.md` (rapport seul, aucun
-  code modifié) : 132 pages × 4 rôles + 60 routes API crawlees ; 7 findings
-  — A wallet EUR appliqué 1:1 à un total USD (preuve runtime
-  `MBB-2026-9HYHNJ`), B promos `fixed_amount` sans devise, C cashback
-  BestRewards sans conversion, D `notFound()` → HTTP 200 (5 URLs testées),
-  E `€` durs restants (4 fichiers), F fléchage wallet, G UX avis. Données
-  de test nettoyées (chambre USD, booking, wishlist, conversation, alerte,
-  outbox supprimés ; wallet 25,00 et langue fr restaurés). En attente
-  d'arbitrage avant implémentation.
-- **Dernière tâche validée** : **T-152 (2026-08-30)** — implémentation des
+- **Dernière activité (2026-08-30)** : **T-153 (S, implémenté et validé)**
+  — implémentation des 7 findings de l'audit n°25 (rapport
+  `audit_fonctionnel_profond25_2026-08-30.md`) : **A** wallet EUR appliqué
+  à un total devise chambre (`applyWalletToTotal`, `wallet_credits_used`
+  stocké/débité en EUR, jamais 1:1) ; **B** promos EUR normalisées +
+  `GET /api/promotions/apply?currency=` additif ; **C** cashback cron
+  calculé sur le total converti en EUR ; **D** limite `notFound()` → HTTP
+  200 documentée dans `KNOWN_LIMITATIONS.md` ; **E** `€` durs restants →
+  `formatPrice(…, devise)` (dashboard rooms, mon-compte,
+  bestrewards-status, promo-code-input) ; **F** `/recherche?wallet=1` +
+  bandeau solde réel ; **G** badge « Avis bientôt disponible ». Preuves :
+  tsc 0 · lint 0 erreur · **vitest 340/340 (+23)** · smoke **94/94** ·
+  build OK · ai:check 19/1/0 · runtime A/B/C/F/G prouvé (booking USD
+  137,67 $, `walletCreditsUsed` 25,00 €, wallet 25,00→0,00 ; promo API USD
+  21,60 vs 20,00 historique ; cron 200 $ → cashback 9,26 € ; bandeau
+  wallet ; badge avis). Détails :
+  `REPORTS/validation_T-153_2026-08-30.md`. Sans migration DB, sans retrait
+  de contrat public, cas EUR identiques. Données de preuve nettoyées
+  (DB = baseline).
+- **Dernière tâche validée précédente** : **T-152 (2026-08-30)** — implémentation des
   findings de l'audit n°24 (A→E + G) : A réservation `pending` actionnable
   (« Payer maintenant » + reprise auto du paiement, annulation étendue) ; B
   devise réelle `room.currency` dans le tunnel (plus de `€` dur) ; C totaux

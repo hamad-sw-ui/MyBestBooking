@@ -5,7 +5,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { generateBookingReference } from "@/lib/utils";
 import { eq, and, or, desc, lt, gt, gte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
-import { applyPromoToTotal, isPromoUsable } from "@/lib/promotions";
+import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency } from "@/lib/promotions";
+import { applyWalletToTotal } from "@/lib/wallet-currency";
 import { getSetting } from "@/lib/settings";
 import {
   assertNotMaintenance,
@@ -244,7 +245,13 @@ export async function POST(request: NextRequest) {
           if (!promo) throw new BookingRuleError("Code promo : Code promo inconnu");
           const usable = isPromoUsable(promo);
           if (usable !== true) throw new BookingRuleError(`Code promo : ${usable}`);
-          const result = applyPromoToTotal(promo, total);
+          // T-153 (audit n°25, B) : les montants de promo sont libellés en
+          // EUR ; on les convertit vers la devise de la chambre avant
+          // application (1:1 interdit). Sur EUR : identité stricte.
+          const result = applyPromoToTotal(
+            normalizePromoForCurrency(promo, room.currency || "EUR"),
+            total,
+          );
           if ("error" in result) throw new BookingRuleError(`Code promo : ${result.error}`);
           discount = result.discount;
           total = result.finalTotal;
@@ -264,12 +271,20 @@ export async function POST(request: NextRequest) {
           total = Math.max(0, total - benefit);
         }
 
+        // T-153 (audit n°25, A) : le wallet est libellé EUR, le total est
+        // dans la devise de la chambre. `applyWalletToTotal` convertit la
+        // déduction (taux figés) et retourne le débit réel en EUR
+        // (`walletUsedEur`) pour un stockage/restitution exacts.
         let walletUsed = 0;
+        let walletUsedEur = 0;
         if (data.useWalletCredits && lockedUser) {
           const wallet = Number(lockedUser.walletBalance ?? "0");
           if (wallet > 0) {
-            walletUsed = Math.min(wallet, total);
-            total = Math.max(0, total - walletUsed);
+            const app = applyWalletToTotal(wallet, total, room.currency || "EUR");
+            if ("error" in app) throw new BookingRuleError(`Wallet : ${app.error}`);
+            walletUsed = app.walletUsed;
+            walletUsedEur = app.walletUsedEur;
+            total = app.totalAfter;
             discount += walletUsed;
           }
         }
@@ -327,7 +342,9 @@ export async function POST(request: NextRequest) {
             paymentIntentId: null,
             paymentExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
             promotionId: appliedPromoId,
-            walletCreditsUsed: walletUsed.toFixed(2),
+            // T-153 (A) : montant réellement débité du wallet, en EUR
+            // (restitué à l'annulation dans la même devise).
+            walletCreditsUsed: walletUsedEur.toFixed(2),
             ratePlanId: selectedRatePlan?.id ?? null,
             ratePlanName: selectedRatePlan?.name ?? null,
             ratePlanSnapshot: selectedRatePlan ? {
@@ -346,10 +363,10 @@ export async function POST(request: NextRequest) {
           })
           .returning();
 
-        if (walletUsed > 0) {
+        if (walletUsedEur > 0) {
           await tx
             .update(users)
-            .set({ walletBalance: Math.max(0, Number(lockedUser.walletBalance ?? "0") - walletUsed).toFixed(2) })
+            .set({ walletBalance: Math.max(0, Number(lockedUser.walletBalance ?? "0") - walletUsedEur).toFixed(2) })
             .where(eq(users.id, lockedUser.id));
         }
         if (appliedPromoId) {

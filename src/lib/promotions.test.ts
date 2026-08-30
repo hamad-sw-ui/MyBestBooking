@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { applyPromoToTotal, isPromoUsable, PromotionLike } from "./promotions";
+import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency, PromotionLike } from "./promotions";
 
 function make(overrides: Partial<PromotionLike> = {}): PromotionLike {
   const inOneYear = new Date();
@@ -65,5 +65,52 @@ describe("applyPromoToTotal (T-016, §13.5)", () => {
     const r = applyPromoToTotal(make({ type: "percentage", value: "7.5" }), 123.45);
     // 7.5 % = 9.25875 → arrondi 9.26 → total 114.19
     expect(r).toEqual({ discount: 9.26, finalTotal: 114.19 });
+  });
+});
+
+describe("normalizePromoForCurrency (T-153, B — montants EUR → devise chambre)", () => {
+  const fixed = {
+    type: "fixed_amount",
+    value: "20.00",
+    minBookingAmount: "100.00",
+    maxDiscount: "30.00",
+  } as const;
+
+  it("EUR : copie inchangée (identité, non-régression)", () => {
+    const base = make(fixed);
+    const n = normalizePromoForCurrency(base, "EUR");
+    expect(n).toEqual(base);
+    expect(n).not.toBe(base); // copie, jamais mutation
+  });
+
+  it("USD : value/min/max convertis au taux 1 EUR = 1,08 USD", () => {
+    const n = normalizePromoForCurrency(make(fixed), "USD");
+    expect(n.value).toBe("21.60");
+    expect(n.minBookingAmount).toBe("108.00");
+    expect(n.maxDiscount).toBe("32.40");
+  });
+
+  it("percentage : la valeur reste un pourcentage (non convertie)", () => {
+    const n = normalizePromoForCurrency(make({ type: "percentage", value: "10", minBookingAmount: "100", maxDiscount: "30" }), "USD");
+    expect(n.value).toBe("10");
+    expect(n.minBookingAmount).toBe("108.00");
+    expect(n.maxDiscount).toBe("32.40");
+  });
+
+  it("application bout-en-bout : fixed 20 € sur un total 200 $ = −21,60 $", () => {
+    const r = applyPromoToTotal(normalizePromoForCurrency(make(fixed), "USD"), 200);
+    expect(r).toEqual({ discount: 21.6, finalTotal: 178.4 });
+  });
+
+  it("seuils nuls restent nuls (pas de conversion de null)", () => {
+    const n = normalizePromoForCurrency(make({ type: "fixed_amount", value: "20.00", minBookingAmount: null, maxDiscount: null }), "USD");
+    expect(n.minBookingAmount).toBeNull();
+    expect(n.maxDiscount).toBeNull();
+  });
+
+  it("devise inconnue → copie inchangée (comportement historique)", () => {
+    const base = make(fixed);
+    const n = normalizePromoForCurrency(base, "XYZ");
+    expect(n).toEqual(base);
   });
 });

@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
-import { Calendar, MapPin, Star } from "lucide-react";
+import { Calendar, MapPin, Star, Clock } from "lucide-react";
 import Link from "next/link";
 import { BookingRowActions } from "@/components/booking-row-actions";
 import { getServerLocale } from "@/lib/server-locale";
@@ -221,6 +221,16 @@ export default async function MyBookingsPage() {
                           {booking.status === "cancelled" && (
                             <div className="mt-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-900">
                               {t("bookings.fee")} : {formatPrice(booking.cancellationFee ?? "0", booking.currency)} · {t("bookings.refund")} : {formatPrice(booking.refundAmount ?? "0", booking.currency)} ({booking.refundStatus === "refunded" ? t("bookings.refundDone") : booking.refundStatus === "pending" ? t("bookings.refundPending") : t("bookings.refundNone")})
+                            </div>
+                          )}
+                          {/* T-153 (audit n°25, G) : séjour passé mais non
+                              terminé (checkOut < aujourd'hui, status
+                              confirmed) — l'utilisateur sait pourquoi le CTA
+                              d'avis n'est pas encore affiché. */}
+                          {booking.status === "confirmed" && new Date(booking.checkOut) < today && (
+                            <div className="mt-3 text-sm rounded-lg bg-blue-50 border border-blue-200 p-3 text-blue-900">
+                              <Clock className="w-4 h-4 inline mr-1" />
+                              {t("bookings.reviewSoon")}
                             </div>
                           )}
                           {booking.status === "completed" && (

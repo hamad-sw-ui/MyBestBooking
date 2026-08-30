@@ -374,3 +374,217 @@ dbTest("GET /api/bookings — champs avis additifs (T-152, finding E)", () => {
     expect(row!.review?.id ?? null).toBeNull();
   });
 });
+
+dbTest("POST /api/bookings — wallet EUR × total USD + promo (T-153, findings A/B)", () => {
+  let POST: typeof import("./route").POST;
+  let db: typeof import("@/db").db;
+  let schema: typeof import("@/db/schema");
+  let getCurrentUser: ReturnType<typeof vi.fn>;
+  let userId = "";
+  let propId = "";
+  let roomId = "";
+  let promoId = "";
+  let promoCode = "";
+  const bookingIds: string[] = [];
+
+  beforeAll(async () => {
+    const routeMod = await import("./route");
+    POST = routeMod.POST;
+    const dbMod = await import("@/db");
+    db = dbMod.db;
+    schema = await import("@/db/schema");
+    const authMod = await import("@/lib/auth");
+    getCurrentUser = authMod.getCurrentUser as unknown as ReturnType<typeof vi.fn>;
+
+    const { eq } = await import("drizzle-orm");
+    const [host] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, "host@mybestbooking.com"))
+      .limit(1);
+    if (!host) throw new Error("Seed non appliqué (host introuvable)");
+
+    // Utilisateur dédié avec un solde wallet EUR (25,00 €) — on ne touche
+    // jamais au customer du seed.
+    const [u] = await db
+      .insert(schema.users)
+      .values({
+        email: `wallet-t153-${Date.now()}@test.local`,
+        firstName: "Wallet",
+        lastName: "Test",
+        role: "customer",
+        walletBalance: "25.00",
+        bestrewardsLevel: 1,
+        bestrewardsBookingsCount: 0,
+        language: "fr",
+      })
+      .returning();
+    userId = u.id;
+    getCurrentUser.mockResolvedValue({ id: userId, role: "customer" } as never);
+
+    const { generateSlug } = await import("@/lib/utils");
+    const [prop] = await db
+      .insert(schema.properties)
+      .values({
+        hostId: host.id,
+        name: "T-153 USD Test Property",
+        slug: generateSlug(`t153-usd-${Date.now()}`),
+        type: "hotel",
+        city: "TestCity",
+        country: "US",
+        status: "active",
+        isBestrewards: false,
+      })
+      .returning();
+    propId = prop.id;
+    const [room] = await db
+      .insert(schema.rooms)
+      .values({
+        propertyId: prop.id,
+        name: "T-153 USD Test Room",
+        roomType: "double",
+        maxOccupancy: 2,
+        maxAdults: 2,
+        basePrice: "100.00",
+        currency: "USD",
+        quantity: 5,
+        isActive: true,
+      })
+      .returning();
+    roomId = room.id;
+
+    const [promo] = await db
+      .insert(schema.promotions)
+      .values({
+        code: `T153USD${Date.now().toString(36).toUpperCase()}`,
+        name: "T-153 fixed USD test",
+        type: "fixed_amount",
+        value: "20.00", // EUR (convention admin)
+        minBookingAmount: "0.00",
+        maxDiscount: null,
+        validFrom: new Date("2020-01-01"),
+        validUntil: new Date("2099-01-01"),
+        maxUses: 100,
+        currentUses: 0,
+        isActive: true,
+      })
+      .returning();
+    promoId = promo.id;
+    promoCode = promo.code;
+  });
+
+  afterAll(async () => {
+    const { eq, inArray } = await import("drizzle-orm");
+    if (bookingIds.length) await db.delete(schema.bookings).where(inArray(schema.bookings.id, bookingIds));
+    if (promoId) await db.delete(schema.promotions).where(eq(schema.promotions.id, promoId));
+    if (roomId) await db.delete(schema.rooms).where(eq(schema.rooms.id, roomId));
+    if (propId) await db.delete(schema.properties).where(eq(schema.properties.id, propId));
+    if (userId) await db.delete(schema.users).where(eq(schema.users.id, userId));
+  });
+
+  it("convertisse la promo et le wallet (EUR) pour un total USD, et débite le wallet en EUR", async () => {
+    const { getSetting } = await import("@/lib/settings");
+    const billing = await getSetting("billing");
+    const bestr = await getSetting("bestrewards");
+
+    // Même pipeline de calcul que POST /api/bookings (chambre USD 100 $/nuit,
+    // 2 nuits, taxe 10 %, promo fixed 20 €, remise BestRewards niveau 1).
+    const baseSubtotal = 200;
+    const subtotal = baseSubtotal;
+    const taxes = Math.round(subtotal * billing.taxRate * 100) / 100;
+    let total = Math.round((subtotal + taxes) * 100) / 100;
+    const promoDiscountUsd = 21.6; // 20 € × 1,08 (taux figé i18n)
+    total = Math.round((total - promoDiscountUsd) * 100) / 100;
+    const bestRewardsDiscount = Math.round(total * (bestr.discounts[0] / 100) * 100) / 100;
+    total = Math.round((total - bestRewardsDiscount) * 100) / 100;
+    const walletUsedUsd = 27; // 25 € × 1,08 = 27,00 $
+    const finalTotal = Math.round(Math.max(0, total - walletUsedUsd) * 100) / 100;
+    const expectedDiscount = Math.round(
+      (promoDiscountUsd + bestRewardsDiscount + walletUsedUsd) * 100,
+    ) / 100;
+
+    const res = await POST(new Request("http://localhost/api/bookings", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        propertyId: propId,
+        roomId,
+        checkIn: "2031-03-01",
+        checkOut: "2031-03-03",
+        numAdults: 2,
+        numChildren: 0,
+        guestFirstName: "Wallet",
+        guestLastName: "Test",
+        guestEmail: `wallet-t153-${Date.now()}@test.local`,
+        guestCountry: "US",
+        promoCode,
+        useWalletCredits: true,
+      }),
+    }) as never);
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as {
+      booking: {
+        id: string;
+        currency: string;
+        total: string;
+        discount: string;
+        walletCreditsUsed: string;
+        promotionId: string | null;
+      };
+    };
+    bookingIds.push(body.booking.id);
+
+    // Cœur du finding A : `walletCreditsUsed` est le débit EUR réel (25,00 €),
+    // pas 25,00 « USD » ; le total est bien déduit de 27,00 $ ≈ 25 €.
+    expect(body.booking.currency).toBe("USD");
+    expect(Number(body.booking.walletCreditsUsed)).toBeCloseTo(25, 2);
+    expect(Number(body.booking.total)).toBeCloseTo(finalTotal, 2);
+    expect(Number(body.booking.discount)).toBeCloseTo(expectedDiscount, 2);
+    expect(body.booking.promotionId).toBe(promoId);
+
+    // Wallet débité en EUR : 25,00 − 25,00 = 0,00 (jamais 25 − 27).
+    const { eq } = await import("drizzle-orm");
+    const [after] = await db
+      .select({ walletBalance: schema.users.walletBalance })
+      .from(schema.users)
+      .where(eq(schema.users.id, userId));
+    expect(Number(after!.walletBalance)).toBeCloseTo(0, 2);
+  });
+
+  it("sans wallet ni promo : un total USD n'est pas modifié (contre-preuve 1:1 interdit)", async () => {
+    const { getSetting } = await import("@/lib/settings");
+    const billing = await getSetting("billing");
+    const bestr = await getSetting("bestrewards");
+    const taxes = Math.round(200 * billing.taxRate * 100) / 100;
+    let total = Math.round((200 + taxes) * 100) / 100;
+    const benefit = Math.round(total * (bestr.discounts[0] / 100) * 100) / 100;
+    const expected = Math.round((total - benefit) * 100) / 100;
+
+    const res = await POST(new Request("http://localhost/api/bookings", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        propertyId: propId,
+        roomId,
+        checkIn: "2031-03-10",
+        checkOut: "2031-03-12",
+        numAdults: 2,
+        numChildren: 0,
+        guestFirstName: "Wallet",
+        guestLastName: "Test",
+        guestEmail: `wallet-t153-b-${Date.now()}@test.local`,
+        guestCountry: "US",
+      }),
+    }) as never);
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as { booking: { id: string; total: string; discount: string } };
+    bookingIds.push(body.booking.id);
+    // 2 nuits × 100 $ + 10 % de taxes = 220 $ − remise BestRewards niveau 1.
+    // Le solde wallet (25 €) n'est PAS soustrait sans `useWalletCredits`
+    // — contre-preuve qu'aucun débit 1:1 (25 $) n'est fait en silence.
+    expect(Number(body.booking.total)).toBeCloseTo(expected, 2);
+    expect(Number(body.booking.discount)).toBeCloseTo(benefit, 2);
+  });
+});

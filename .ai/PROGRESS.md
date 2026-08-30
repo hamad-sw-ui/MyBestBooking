@@ -64,6 +64,56 @@ monétaire) puis implémentation avec tests + smoke + build + ai:check
 
 ---
 
+## Session 43 — 2026-08-30 : T-153 implémentation des findings de l'audit n°25 (A→G)
+
+**T-153 (implémenté et validé).** Mise en œuvre des **7 findings** du rapport
+`REPORTS/audit_fonctionnel_profond25_2026-08-30.md` (niveau **S**, rapports
+impact/conception/opportunités écrits avant code) — sans retrait de contrat
+public, sans migration DB, cas EUR numériquement identiques.
+
+- 🔨 **A** — `src/lib/wallet-currency.ts` (nouveau) : `applyWalletToTotal`
+  (wallet EUR → total devise chambre, taux figés `RATES_FROM_EUR`, jamais
+  1:1, devise inconnue → erreur) branché sur `POST /api/bookings`
+  (`wallet_credits_used` = débit **EUR** réel, restituable tel quel) et sur
+  l'aperçu client (`reservation/page.tsx`).
+- 🔨 **B** — `normalizePromoForCurrency` (promos EUR → devise chambre ;
+  pourcentage inchangé) + `GET /api/promotions/apply?currency=…` (défaut
+  EUR, champ **additif** `currency` en réponse).
+- 🔨 **C** — `calculateLoyaltyAward(…, currency?)` (total converti EUR avant
+  cashback 5 %) branché sur `cron/price-alerts` → `cashback_amount` EUR.
+- 🔨 **D** — limite `notFound()` → HTTP 200 documentée dans
+  `KNOWN_LIMITATIONS.md` (noindex déjà émis par le not-found Next ; aucune
+  modif de routage).
+- 🔨 **E** — `€` durs restants → `formatPrice(…, devise)` :
+  `dashboard/properties/[id]` (devise chambre) · `mon-compte` et
+  `bestrewards-status` (wallet EUR) · `promo-code-input` (devise API).
+- 🔨 **F** — « Utiliser mon solde » → `/recherche?wallet=1` + bandeau RSC
+  localisé avec le **solde réel** (`getCurrentUser`) ; clé
+  `search.walletBanner` FR/EN.
+- 🔨 **G** — badge « Avis bientôt disponible » (confirmed + checkOut passé)
+  dans la section Passées + clé `bookings.reviewSoon` FR/EN.
+- 🧪 **+23 tests** (8 wallet-currency · 6 normalizePromo · 3 loyalty devise ·
+  4 apply `currency` additif · 2 intégration bookings USD wallet+promo).
+  🔨 tsc 0 · lint 0 erreur (3 warnings `no-img` préexistants) · 🧪 vitest
+  **340/340** (47 fichiers, +12 skip intégration) · ▶️ smoke **94/94** ·
+  build OK · ai:check 19/1/0.
+- ▶️ Preuves runtime : A+B booking USD 137,67 $ / `walletCreditsUsed`
+  **25,00** (EUR) / wallet 25,00 → 0,00 / promo LASTMINUTE 20 € → 21,60 $ ;
+  B API `?currency=USD` → 21,60 (sans paramètre → 20,00 inchangé) ; C cron
+  200,00 $ payé → cashback **9,26 €** (pas 10,00) ; F bandeau
+  « Vous avez 0,00 € de crédits BestRewards… » ; G « Avis bientôt
+  disponible — les avis sont ouverts après votre départ. ».
+- 🔍 Nettoyage vérifié par SQL : bookings de preuve supprimés, chambre USD
+  supprimée, `current_uses` LASTMINUTE restauré, wallet customer 25,00,
+  user cashback restauré (0,00/3/20). État DB = baseline.
+- ❓ Non exécutable ici : E2E Playwright (CDN Chromium bloqué) → CI-only.
+
+**Prochaine étape :** opportunités T-153 (vérification des autres `€` durs
+restants, taux FX temps réel) ou poursuite des tâches de production (clés
+Stripe/Resend réelles).
+
+---
+
 ## Session 42 — 2026-08-30 : T-152 implémentation des findings de l'audit n°24 (A→E + G)
 
 **T-152 (implémenté et validé).** Mise en œuvre des 5 findings + 1

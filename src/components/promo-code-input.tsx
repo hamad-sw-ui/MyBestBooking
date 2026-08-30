@@ -2,23 +2,28 @@
 
 import { useState } from "react";
 import { Tag, Check, X } from "lucide-react";
+import { formatPrice } from "@/lib/utils";
 
 interface Applied {
   code: string;
   discount: number;
   finalTotal: number;
+  /** T-153 (audit n°25, B) : devise du discount renvoyée par l'API. */
+  currency: string;
 }
 
 interface Props {
   amount: number;
+  /** Devise du total (celle de la chambre). Défaut EUR = historique. */
+  currency?: string;
   onApplied?: (a: Applied | null) => void;
 }
 
 /**
  * Champ code promo — simule l'application via
- * GET /api/promotions/apply?code=&amount= (T-016).
+ * GET /api/promotions/apply?code=&amount=&currency= (T-016, T-153).
  */
-export function PromoCodeInput({ amount, onApplied }: Props) {
+export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,7 +33,7 @@ export function PromoCodeInput({ amount, onApplied }: Props) {
     setError(null);
     setLoading(true);
     try {
-      const url = `/api/promotions/apply?code=${encodeURIComponent(code)}&amount=${amount}`;
+      const url = `/api/promotions/apply?code=${encodeURIComponent(code)}&amount=${amount}&currency=${encodeURIComponent(currency)}`;
       const res = await fetch(url);
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) throw new Error(data.error ?? "Code invalide");
@@ -36,6 +41,7 @@ export function PromoCodeInput({ amount, onApplied }: Props) {
         code: data.promotion.code,
         discount: data.discount,
         finalTotal: data.finalTotal,
+        currency: data.currency ?? "EUR",
       };
       setApplied(a);
       onApplied?.(a);
@@ -60,7 +66,7 @@ export function PromoCodeInput({ amount, onApplied }: Props) {
       <div className="flex items-center justify-between gap-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
         <div className="flex items-center gap-2 text-green-800">
           <Check className="w-4 h-4" />
-          Code <strong>{applied.code}</strong> appliqué : −{applied.discount.toFixed(2)} €
+          Code <strong>{applied.code}</strong> appliqué : −{formatPrice(applied.discount, applied.currency)}
         </div>
         <button
           type="button"

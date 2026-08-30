@@ -1,61 +1,55 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-152
+**ID** : T-153
 
 **Niveau de proportionnalité** : S
 
-**Titre** : Implémentation des findings de l'audit fonctionnel n°24
-(A→E + G) — sans régression.
+**Titre** : Implémentation des findings de l'audit fonctionnel n°25
+(A→G) — véracité monétaire (wallet/promo/cashback × devises) + cohérence UI.
 
-**Statut** : CORRIGÉ (VALIDÉ) — 2026-08-30
+**Statut** : LIVRÉ (VALIDÉ) — 2026-08-30
 
 Rapports (exigés §14/§15.1 pour un niveau S, avant tout code) :
-- `REPORTS/analyse_impact_T-152_2026-08-30.md`
-- `REPORTS/analyse_conception_T-152_2026-08-30.md`
-- `REPORTS/opportunites_T-152_2026-08-30.md`
-- `REPORTS/validation_T-152_2026-08-30.md`
+- `REPORTS/analyse_impact_T-153_2026-08-30.md`
+- `REPORTS/analyse_conception_T-153_2026-08-30.md`
+- `REPORTS/opportunites_T-153_2026-08-30.md`
+- `REPORTS/validation_T-153_2026-08-30.md` (rapport final, preuves complètes)
 
-Source : `REPORTS/audit_fonctionnel_profond24_2026-08-30.md` (T-151).
-
-## Validation (résumé)
-🔨 tsc **0 erreur** · lint **0 erreur** (14 warnings préexistants, liste de
-fichiers identique à la baseline vérifiée par stash) · build **OK**
-(Next.js 16.2.6) · 🧪 vitest **329/329** (47 fichiers, **+13** tests) ·
-▶️ smoke **94/94** · 🔨 ai:check **19 OK · 1 warn · 0 fail** (warn STATE
-résolu par ce commit) · ▶️ preuves runtime A/B/C/D/E (détails dans
-`REPORTS/validation_T-152_2026-08-30.md` §2.2). Playwright E2E : CI-only
-(CDN Chromium bloqué ici).
+Source : `REPORTS/audit_fonctionnel_profond25_2026-08-30.md` (T-152).
 
 ## Périmètre retenu (décision)
-- **A** 🟠 : `pending` → bouton « Payer maintenant »
-  (`/reservation?booking={id}`) + Annuler autorisé ; reprise auto du
-  `resumePayment()` existant à l'ouverture de la page.
-- **B** 🟠 : devises réelles dans `/reservation` (`room.currency`,
-  `formatPrice` partout) — plus de « € » codé en dur.
-- **C** 🟠 : totaux analytics/billing **par devise** (helper
-  `currency-summary`, jamais d'addition affichée de devises mélangées).
-- **D** 🟠 : sélecteur FR/EN dans le header (PATCH users/me si connecté,
-  localStorage si anonyme) + `<html lang>` dynamique + `lang` script.
-- **E** 🟠 : état avis — `review` additif sur `GET /api/bookings`, badge dans
-  `/mes-reservations`, écran d'état dans `/avis/[id]`.
-- **G** ⚪ : smoke auto-suffisant (wishlist créée par le smoke si absente).
-- Hors périmètre (proposés, à arbitrer) : migration i18n des 93 composants
-  restants, moteur multi-devises transactionnel, arabe — voir
-  `REPORTS/opportunites_T-152_2026-08-30.md`.
+- **A** 🟠 : wallet BestRewards (EUR) appliqué à un total non-EUR —
+  conversion via `convertAmount` avant débit ; `walletCreditsUsed` stocké en
+  EUR (restitution cohérente) ; garde explicite si devise inconnue.
+- **B** 🟠 : promos `fixed_amount`/seuils (EUR) convertis vers la devise de
+  la chambre (`normalizePromoForCurrency`) ; `GET /api/promotions/apply`
+  accepte `currency` (défaut EUR) et renvoie `currency` (additif).
+- **C** 🟡 : cashback BestRewards calculé sur le total **en EUR** avant
+  crédit au wallet (cron) ; paramètre `currency` optionnel sur
+  `calculateLoyaltyAward` (défaut EUR → appels existants identiques).
+- **D** 🟡 : documenter la limite `notFound()` → 200 (noindex déjà émis par
+  le not-found Next) dans `KNOWN_LIMITATIONS.md` — aucun changement de
+  routage (aucune régression possible).
+- **E** 🟡 : `€` durs restants → `formatPrice(…, devise)` :
+  `dashboard/properties/[id]`, `mon-compte`, `bestrewards-status`,
+  `promo-code-input` (+ `currency` de l'API).
+- **F** ⚪ : « Utiliser mon solde » → `/recherche?wallet=1` + bandeau
+  explicatif localisé.
+- **G** ⚪ : badge « Avis bientôt disponible » pour séjour passé non
+  `completed`.
 
 ## Contraintes de non-régression
-- AUCUNE modification de schéma, AUCUNE migration, AUCUNE signature d'API
-  retirée (champs additifs uniquement) ; contrats 200/400/409/503 inchangés.
-- Défauts conservés : langue `fr`, devise EUR (cas réel du seed → rendus
-  identiques), CTA avis (avant dépôt).
+- AUCUNE migration DB, AUCUNE colonne ajoutée ; conventions : wallet = EUR,
+  promotions = EUR, bookings.currency = devise chambre.
+- `applyPromoToTotal` et `calculateLoyaltyAward` (3 args) **inchangés** ;
+  `GET /api/promotions/apply` sans `currency` → comportement historique
+  (champ `currency` additif).
+- Cas EUR : conversions ×1 → montants/rendus **identiques**.
 
----
-
-## ℹ️ Audit fonctionnel n°25 (après T-152)
-
-🔍 Rapport produit : `REPORTS/audit_fonctionnel_profond25_2026-08-30.md`
-(7 findings A→G, **aucune modification de code**). Les plus intéressants :
-**A** wallet EUR appliqué 1:1 à un total USD (preuve runtime
-`MBB-2026-9HYHNJ`), **B** promos `fixed_amount` sans devise, **C** cashback
-BestRewards crédité sans conversion. En attente de l'arbitrage utilisateur
-avant implémentation (A+B recommandés en priorité — véracité monétaire).
+## Preuves (détails dans `REPORTS/validation_T-153_2026-08-30.md`)
+- tsc 0 · lint 0 erreur (3 warnings préexistants) · **vitest 340/340**
+  (47 fichiers, +23) · smoke **94/94** · build OK · ai:check 19/1/0.
+- Runtime : booking USD 137,67 $ / `walletCreditsUsed` 25,00 € / wallet
+  débité 25,00 → 0,00 ; promo API USD 21,60 (historique 20,00 inchangé) ;
+  cron cashback 200 $ → 9,26 € ; bandeau `?wallet=1` ; badge « Avis bientôt
+  disponible ». Données de preuve nettoyées (DB = baseline).

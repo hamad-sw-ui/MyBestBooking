@@ -95,6 +95,16 @@ l'outbox). Restent assumées :
   (BUG-002).
 - **Rate-limit en mémoire** : présent sur les routes critiques, mais non
   distribué entre plusieurs instances. Voir la limite produit ci-dessus.
+- **Pages 404 dynamiques : statut HTTP 200 avec `noindex`.** (T-153, audit
+  n°25, finding D.) Quand une route dynamique (`(main)/[slug]`,
+  `reservation`, etc.) appelle `notFound()` après avoir commencé à streamer
+  (RSC), Next.js **ne peut pas modifier le statut HTTP** déjà envoyé : la
+  réponse reste 200, mais `src/app/not-found.tsx` est rendu par Next avec la
+  balise `<meta name="robots" content="noindex">` — les moteurs ne
+  l'indexent donc pas. C'est la limite du modèle streaming App Router ;
+  la corriger nécessiterait un pré-rendu non-streamé de ces pages (travail
+  de routage/performance hors périmètre V1) — voir BACKLOG. Aucun contrat
+  API n'est affecté (les API renvoient de vraies 404).
 
 ## Framework
 

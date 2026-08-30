@@ -107,6 +107,9 @@ const FR = {
   "search.startSearch": "Commencez votre recherche pour trouver des hébergements.",
   "search.backHome": "Retour à l'accueil",
   "search.pagination": "Pagination des résultats",
+  // T-153 (audit n°25, F) : bandeau affiché quand on arrive via
+  // « Utiliser mon solde » (/mon-compte → /recherche?wallet=1).
+  "search.walletBanner": "Vous avez {amount} de crédits BestRewards. Pensez à cocher « Utiliser mes crédits » au paiement pour les déduire de votre séjour.",
   // Actions communes
   "action.save": "Enregistrer",
   "action.saved": "Modifications enregistrées",
@@ -203,6 +206,9 @@ const FR = {
   "bookings.reviewPending": "En attente de modération",
   "bookings.reviewSubmitted": "Avis soumis",
   "bookings.alreadyReviewed": "Vous avez déjà publié un avis pour cette réservation.",
+  // T-153 (audit n°25, G) : badge explicatif sur les séjours passés dont
+  // l'avis n'est pas encore ouvert.
+  "bookings.reviewSoon": "Avis bientôt disponible — les avis sont ouverts après votre départ.",
   "bookings.yourRating": "Votre note",
   "bookings.reviewBack": "Retour à mes réservations",
   "bookings.viewAccommodation": "Voir l'hébergement",
@@ -381,6 +387,7 @@ const EN: Record<UiStringKey, string> = {
   "search.startSearch": "Start your search to find accommodation.",
   "search.backHome": "Back to home",
   "search.pagination": "Results pagination",
+  "search.walletBanner": "You have {amount} in BestRewards credits. Remember to tick \"Use my credits\" at checkout to deduct them from your stay.",
   "action.save": "Save",
   "action.saved": "Changes saved",
   "action.cancel": "Cancel",
@@ -473,6 +480,7 @@ const EN: Record<UiStringKey, string> = {
   "bookings.reviewPending": "Pending moderation",
   "bookings.reviewSubmitted": "Review submitted",
   "bookings.alreadyReviewed": "You have already published a review for this booking.",
+  "bookings.reviewSoon": "Review coming soon — reviews open after your stay.",
   "bookings.yourRating": "Your rating",
   "bookings.reviewBack": "Back to my bookings",
   "bookings.viewAccommodation": "View accommodation",
