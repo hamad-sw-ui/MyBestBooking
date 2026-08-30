@@ -137,6 +137,20 @@ considéré comme non valide (audit §22) et repasse en `INSPECTION`.
 
 ---
 
+### 2026-08-30 — Audit n°30 (analyse à l'exécution, rapport seul)
+
+| ID | Objet | Niv | Statut | Preuves rejouables | Réf. |
+|---|---|---|---|---|---|
+| T-160 | Favoris : 123 wishlists artefacts + N+1 + compteur | P2 | AUDIT (à arbitrer) | ▶️ `GET /api/wishlists` (customer) → 123 listes (`rate-test-*`, doublons, ~120 vides) · page 0,7 s · code `getWishlists()` N+1 | `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md` F1 |
+| T-161 | Alerte prix dates passées (201) jamais expirée | P2 | AUDIT (à arbitrer) | ▶️ `POST /api/price-alerts` checkIn 2020-01-10 → 201 ; cron sans expiration | idem F2 |
+| T-162 | i18n public vague 2 (5 pages FR avec cookie en) | P2 | AUDIT (à arbitrer) | ▶️ `curl -H "Cookie: mybb:ui-language=en"` → titres « Politique de confidentialité », « Mentions légales », « BestRewards — programme fidélité », « Informations de réservation manquantes », « Liste partagée » | idem F3 |
+| T-163 | Partage invalide → UI 404 / HTTP 200 | P3 | AUDIT (à arbitrer) | ▶️ `/wishlists/share/__t__` → 200 + not-found UI ; API → 404 | idem F4 |
+| T-164 | Sélecteur devise label FR SSR | P3 | AUDIT (à arbitrer) | ▶️ `/recherche?city=Paris` (cookie en) → `aria-label="Devise d'affichage"` | idem F5 |
+| T-165 | E-mails liens relatifs sans APP_URL | P3 | AUDIT (à arbitrer) | 🔨 code : `NEXT_PUBLIC_APP_URL ?? ""` ×3 | idem F6 |
+| T-166 | Hygiène runs (votes/favoris) | P3 | AUDIT (à arbitrer) | ▶️ 1er POST helpful sur avis seed → 409 (vote préexistant, nettoyé) | idem F7 |
+
+---
+
 ## Rappel §22
 
 L'audit peut être demandé à tout moment. La responsabilité de fournir une

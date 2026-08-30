@@ -1,59 +1,52 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-159 (clôture du cycle audit n°29 — T-156, T-157, T-158, T-159 implémentés et validés)
+**ID** : T-160 (audit n°30 — analyse à l'exécution, rapport seul)
 
-**Niveau de proportionnalité** : L (implémentation additive : aucun contrat API public
-modifié, aucune migration de schéma, cas EUR numériquement identiques)
+**Niveau de proportionnalité** : S (analyse seule, aucun code ; 7 findings :
+2 P2, 5 P3 — solutions proposées, implémentation à arbitrer)
 
-**Titre** : Audit n°29 — analyse profonde à l'exécution + implémentation sans
-régression : annulation par acteur (host/admin = remboursement intégral),
-identité compte en mode connecté, i18n fiche propriété + devise publique,
-hygiène sims purge, PATCH settings merge, cohérence 400/409.
+**Titre** : Audit n°30 à l'exécution — « Mes favoris » pollué (123 listes
+d'artefacts + N+1), alertes prix acceptées pour des dates passées (jamais
+expirées), i18n public vague 2 (5 pages FR malgré langue EN), 404 de partage
+en HTTP 200, label devise FR au SSR, liens e-mail relatifs si APP_URL
+manquante, hygiène des runs (votes/favoris).
 
-**Statut** : **CORRIGÉ (VALIDÉ)**. Preuves : crawl **40 pages × 4 rôles + 30
-APIs × 4 rôles = 0 erreur** ; probes runtime `.data/a29/probes.mjs` **30/30
-(0 échec)** ; 🔨 `tsc --noEmit` **0 erreur** ; 🧪 `vitest run` **57 fichiers ·
-390/390 tests** (+16 nouveaux) ; ▶️ `run_all_sims.py` **5/5 · 396 assertions ·
-0 KO (3 WARN statiques justifiés)** · ▶️ `ai:check` vert.
+**Statut** : **EN COURS (rapport d'audit rendu)** — T-159 (audit n°29) est
+CORRIGÉ (VALIDÉ). Preuves : `.data/a30/audit.mjs` (sessions réelles
+customer/host/admin, mutations nettoyées) + vérifications HTTP avec cookie
+`mybb:ui-language=en` (5 pages publiques) + inspection code (N+1, route
+price-alerts, templates e-mail) + état DB (123 wishlists/votes laissés).
 
-Rapport : `.ai/REPORTS/audit_fonctionnel_profond29_2026-08-30.md` (source).
+Rapport : `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md`.
 
-## Synthèse des findings corrigés
+## Synthèse des findings (code T-160 → T-166)
 
-- **🔴 T-156 (P1)** — Annulation par acteur : `CancellationActor`
-  (`customer|host|admin|system`) ; hôte/admin → fee 0 + remboursement
-  intégral + raison forcée serveur (« Annulée par l'hébergeur/…l'administrateur »)
-  ; mail plateforme `bookingCancelledByOperator` (fr/en) ; quote annulation
-  GET autorisé hôte du bien + admin (champs additifs `actor`/`fullRefund`) ;
-  UI hôte dédiée sans raison client ; voyageur = grille historique inchangée.
-  ▶️ probes 200/fee 0.00/refund=total · 🧪 `booking-cancellation-actor.test.ts`
-  + `cancellation/route.test.ts`.
-- **🟠 T-157 (P2)** — Identité connectée : `bookingGuestIdentity()` (fonction
-  pure) — le serveur ignore les champs invité du payload pour un compte
-  connecté (email normalisé, défauts phone null/country FR) ; guest mode
-  inchangé. UI étape 2 lecture seule + encart « Réservé au nom de votre
-  compte ». 🧪 `booking-identity.test.ts` (3 cas) ; mocks auth complets
-  dans `bookings/route.test.ts` (le mock partiel provoquait un 500).
-- **🟠 T-158 (P2)** — i18n vague 1 fiche propriété : boutons (Réserver,
-  favori, partage, alerte prix, avis utile), formulaire d'avis complet,
-  bannière confiance, breadcrumb, badge, tooltips, **métadonnées** (title/
-  description via cookie `mybb:ui-language` + `getServerLocale`) ;
-  **help-center bilingue** (8 articles fr/en + métadonnées, probe `/aide`
-  EN 200) ; **garde-fou CI** `npm run i18n:check` (warn-only) ; sélecteur
-  de devise publique EUR/USD/GBP/XAF (priorité compte > localStorage >
-  plateforme, `displayCurrency` serveur inchangé). 🧪 `ui-currency.test.ts` ;
-  0 libellé FR résiduel détecté sur la fiche.
-- **🟢 T-159 (P3)** — Hygiène/robustesse : `scripts/purge-sim-data.mjs`
-  (dry-run, 0 artefact restant) ; PATCH settings merge additif + erreurs
-  Zod sans `issues` ; `dates/capacity/min_stay/bad_price` → **400**,
-  `unavailable` → **409** ; tests corrigés (property BR/non-BR explicite,
-  mocks auth).
+- 🟠 **T-160 (P2)** — Favoris : 123 wishlists d'artefacts (`rate-test-*`,
+  « Public share test » ×2, « Voyage été 2027 » ×2, ~120 vides) + N+1
+  (124 requêtes page) + compteur non dédupliqué. → purge étendue + refactor
+  jointure/count + cleanup runner.
+- 🟠 **T-161 (P2)** — `POST /api/price-alerts` accepte des dates passées
+  (201 prouvé) ; cron n'expire jamais. → validation `checkIn >= today` +
+  désactivation cron (`active=false`).
+- 🟠 **T-162 (P2)** — i18n vague 2 : `/confidentialite`, `/mentions-legales`,
+  `/bestrewards`, `/reservation`, `/wishlists/share/[token]` restent FR
+  avec langue EN (titres « Politique de confidentialité… », « Liste
+  partagée »). → pattern validé `getServerLocale()` + `makeT` +
+  `generateMetadata`.
+- 🟢 **T-163 (P3)** — token de partage invalide → UI 404 mais **HTTP 200**
+  (streaming ; API renvoie 404). → `notFound()` dans `generateMetadata`.
+- 🟢 **T-164 (P3)** — sélecteur devise : label SSR « Devise d'affichage »
+  même en EN (hook initialise `language:null`). → prop `initialLanguage`.
+- 🟢 **T-165 (P3)** — e-mails : `NEXT_PUBLIC_APP_URL ?? ""` → liens relatifs
+  sans config. → helper `appBaseUrl()` + repli documenté.
+- 🟢 **T-166 (P3)** — hygiène : votes/wishlists/alertes des runs non
+  nettoyées (preuve : 1er vote « utile » → 409 vote préexistant). →
+  `cleanup_db` runner étendu.
 
-## Validation (résumé)
+## Vérifié fonctionnel (aucun problème)
 
-- 🔨 tsc 0 · 🧪 vitest 390/390 (57 fichiers) · ▶️ sims 396/0 · ▶️ probes 30/30 ·
-  ✅ ai:check.
-
-Rapports liés : `.ai/REPORTS/audit_fonctionnel_profond28_2026-08-30.md`
-(findings sources) ; `.ai/REPORTS/audit_fonctionnel_profond29_2026-08-30.md`
-(ce cycle).
+- Messagerie E2E (conversation/envoi/400 vide/unread/lecture) ;
+  avis utile 2e vote 409 ; alerte future 201+DELETE ; API partage token
+  inconnu 404 ; gardes dashboard (host 307 admin-only, admin 200) ;
+  footer/nav localisés EN ; `/aide` EN ; sélecteur devise rendu ; filtres
+  prix 200.

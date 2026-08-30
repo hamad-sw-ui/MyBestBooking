@@ -367,3 +367,15 @@
   ce jour) ; branche `arena/01a052ed-mybestbooking`.
 - HEAD Git : à mettre à jour en fin de session (motif toléré R7 ;
   commit de clôture audit n°29 poussé : `39bf3b3`).
+
+## Session 2026-08-30 — audit fonctionnel profond n°30 (rapport rendu)
+
+- Tâches T-160→T-166 **AUDIT (rapport seul, à arbitrer)** — voir
+  `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md` et
+  `.ai/TRACEABILITY.md` (preuves runtime rejouables).
+- Preuves : ▶️ `.data/a30/audit.mjs` (sessions réelles, mutations
+  nettoyées) + curl cookie `en` (5 pages publiques) + état DB
+  (123 wishlists, vote préexistant) + inspection code (N+1, APP_URL, cron).
+- Compteur : `sessions_since_last_product_audit: 0`.
+- HEAD Git : à mettre à jour en fin de session (motif toléré R7 ; audit
+  n°30 rapport seul, aucun commit src attendu pour l'instant).

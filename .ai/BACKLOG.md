@@ -338,3 +338,22 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
   validation corrigés (property BR/non-BR, mocks auth complets).
 - Preuves : 🔨 tsc 0 · 🧪 vitest **57 fichiers / 390 tests** · ▶️ sims
   **5/5 · 396 OK · 0 KO** · ▶️ probes **30/30** · ✅ ai:check.
+
+### Audit 30 (2026-08-30) — `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md` (rapport seul, à arbitrer)
+
+- 🟠 **T-160 (P2)** — Favoris : 123 wishlists d'artefacts de sims sur le
+  compte seed + N+1 (124 requêtes) + compteur non dédupliqué. → purge
+  étendue + refactor (jointure/count + Set) + cleanup runner.
+- 🟠 **T-161 (P2)** — Alertes prix : dates passées acceptées (201) et jamais
+  expirées. → validation `checkIn >= today` (400) + désactivation cron.
+- 🟠 **T-162 (P2)** — i18n vague 2 : 5 pages publiques encore FR avec langue
+  EN (confidentialité, mentions légales, bestrewards, réservation, partage
+  favoris). → pattern `getServerLocale`/`makeT` + métadonnées.
+- 🟢 **T-163 (P3)** — Token de partage invalide → UI 404 mais HTTP 200.
+  → `notFound()` dans `generateMetadata`.
+- 🟢 **T-164 (P3)** — Sélecteur devise : label FR au SSR même en EN.
+  → prop `initialLanguage` SSR.
+- 🟢 **T-165 (P3)** — E-mails : liens relatifs si `NEXT_PUBLIC_APP_URL`
+  manque. → helper `appBaseUrl()` + repli.
+- 🟢 **T-166 (P3)** — Hygiène : votes/wishlists/alertes des runs non
+  nettoyées. → `cleanup_db` runner étendu.

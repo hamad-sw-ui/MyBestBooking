@@ -3496,3 +3496,23 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   `maintenance-gate`/`unread-messages-badge` silencieux par design) · ▶️
   probes `.data/a29/probes.mjs` **30/30** · ▶️ crawl n°29 **0 erreur**
   (40 pages × 4 rôles + 30 APIs × 4 rôles) · ✅ `ai:check`.
+
+## Session 2026-08-30 — Audit fonctionnel profond n°30 (rapport seul)
+
+- **Analyse à l'exécution** (`.data/a30/audit.mjs` + curl cookie `en` + état DB) :
+  7 findings (2 P2, 5 P3) — voir `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md` :
+  - **T-160 (P2)** : 123 wishlists d'artefacts de sims sur le compte seed +
+    N+1 (124 requêtes) sur `Mes favoris` + compteur non dédupliqué ;
+  - **T-161 (P2)** : alertes prix aux dates passées acceptées (201) et jamais
+    expirées par le cron ;
+  - **T-162 (P2)** : 5 pages publiques encore FR avec langue EN
+    (confidentialité, mentions légales, bestrewards, réservation, partage favoris) ;
+  - **T-163 (P3)** : token de partage invalide → UI 404 mais HTTP 200 (streaming) ;
+  - **T-164 (P3)** : sélecteur devise — label FR au SSR même en EN (flash) ;
+  - **T-165 (P3)** : e-mails avec liens relatifs si `NEXT_PUBLIC_APP_URL` manque ;
+  - **T-166 (P3)** : hygiène — votes/wishlists/alertes des runs non nettoyées.
+- **Vérifié sans problème** : messagerie E2E, avis utile 2e vote 409, gardes
+  dashboard (host 307 admin-only), footer/nav localisés, `/aide` EN, sélecteur
+  devise rendu, filtres prix 200, API partage → 404 pour token inconnu.
+- Aucun fichier `src/` modifié (analyse seule) ; artefacts d'audit purgés
+  (wishlists de test non touchées — traitement à l'implémentation T-160).
