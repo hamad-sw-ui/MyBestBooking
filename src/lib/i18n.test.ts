@@ -8,6 +8,8 @@ import {
   isDisplayCurrency,
   normalizeDisplayCurrency,
   DISPLAY_CURRENCIES,
+  isZeroDecimalCurrency,
+  toMinorUnits,
 } from "./i18n";
 
 describe("pickLocalized (T-029)", () => {
@@ -141,5 +143,38 @@ describe("validation devise d'affichage (T-135)", () => {
     expect(normalizeDisplayCurrency(null)).toBe("XAF");
     expect(normalizeDisplayCurrency(undefined)).toBe("XAF");
     expect(normalizeDisplayCurrency("ZZZ", "EUR")).toBe("EUR");
+  });
+});
+
+describe("devises zéro-décimales (T-154e / audit n°26, P3-10)", () => {
+  it("isZeroDecimalCurrency reconnaît la liste Stripe (XAF, JPY, KRW…)", () => {
+    expect(isZeroDecimalCurrency("XAF")).toBe(true);
+    expect(isZeroDecimalCurrency("xof")).toBe(true);
+    expect(isZeroDecimalCurrency("JPY")).toBe(true);
+    expect(isZeroDecimalCurrency("KRW")).toBe(true);
+    expect(isZeroDecimalCurrency("VND")).toBe(true);
+  });
+
+  it("EUR/USD/GBP/MAD ne sont PAS zéro-décimales", () => {
+    for (const c of ["EUR", "USD", "GBP", "MAD"]) {
+      expect(isZeroDecimalCurrency(c)).toBe(false);
+    }
+    expect(isZeroDecimalCurrency(null)).toBe(false);
+  });
+
+  it("toMinorUnits : ×100 pour les devises normales, ×1 pour XAF", () => {
+    expect(toMinorUnits(100, "EUR")).toBe(10000);
+    expect(toMinorUnits(100, "USD")).toBe(10000);
+    expect(toMinorUnits(100, "MAD")).toBe(10000);
+    expect(toMinorUnits(100000, "XAF")).toBe(100000);
+    expect(toMinorUnits(655.957, "XAF")).toBe(656);
+  });
+
+  it("formatMoney : XAF sans décimales, EUR inchangé", () => {
+    const xaf = formatMoney(50000, "XAF");
+    expect(xaf).toMatch(/50[\s\u00a0\u202f]?000/); // pas de « ,00 »
+    expect(xaf).not.toMatch(/,00|\u00a000/);
+    expect(xaf).toContain("FCFA");
+    expect(formatMoney(118.67, "EUR")).toMatch(/118[\s\u00a0\u202f]?[.,]67/);
   });
 });

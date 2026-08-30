@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
+import { formatPrice } from "@/lib/utils";
 
 interface RatePlan {
   id: string;
@@ -46,7 +47,7 @@ function formFor(plan: RatePlan): RatePlanForm {
 }
 
 /** Plans éditables sans modifier les snapshots des réservations historiques. */
-export function RatePlansSection({ roomId, basePrice, initialRatePlans }: { roomId: string; basePrice: string; initialRatePlans: RatePlan[] }) {
+export function RatePlansSection({ roomId, basePrice, initialRatePlans, currency = "EUR" }: { roomId: string; basePrice: string; initialRatePlans: RatePlan[]; /** T-154e/P3-9 : devise de la chambre pour l'aperçu (plus de montant nu). */ currency?: string | null }) {
   const { addToast } = useToast();
   const [plans, setPlans] = useState(initialRatePlans);
   const [form, setForm] = useState<RatePlanForm>(EMPTY_FORM);
@@ -55,6 +56,8 @@ export function RatePlansSection({ roomId, basePrice, initialRatePlans }: { room
   const [error, setError] = useState<string | null>(null);
 
   const base = Number(basePrice);
+  /** Devise résolue (jamais null) pour tous les formats. */
+  const ccy = currency ?? "EUR";
   const discount = Number(form.discountPercentage) || 0;
   const preview = Math.max(0, base * (1 - discount / 100));
 
@@ -117,7 +120,7 @@ export function RatePlansSection({ roomId, basePrice, initialRatePlans }: { room
           <label className="text-sm">Jours d&apos;annulation gratuite<input type="number" min="0" max="365" value={form.cancellationFreeDays} onChange={(event) => setForm({ ...form, cancellationFreeDays: event.target.value })} className="mt-1 w-full border rounded px-3 py-2" /></label>
           <label className="inline-flex items-center gap-2 self-end text-sm"><input type="checkbox" checked={form.includesBreakfast} onChange={(event) => setForm({ ...form, includesBreakfast: event.target.checked })} /> Petit-déjeuner inclus</label>
         </div>
-        <p className="mt-3 rounded bg-blue-50 p-3 text-sm text-blue-900">Aperçu sur le prix de base actuel : {Number.isFinite(base) ? `${base.toFixed(2)} → ${preview.toFixed(2)} par nuit avant taxes, promos et wallet.` : "prix de base indisponible."}</p>
+        <p className="mt-3 rounded bg-blue-50 p-3 text-sm text-blue-900">Aperçu sur le prix de base actuel : {Number.isFinite(base) ? `${formatPrice(base, ccy)} → ${formatPrice(preview, ccy)} par nuit avant taxes, promos et wallet.` : "prix de base indisponible."}</p>
         <div className="mt-4 flex flex-wrap items-center gap-3"><Button size="sm" onClick={save} disabled={busy || !form.name.trim()}>{busy ? "Enregistrement…" : editingId ? "Enregistrer les modifications" : "Ajouter le plan"}</Button>{editingId && <Button size="sm" variant="ghost" onClick={resetForm} disabled={busy}>Annuler</Button>}{error && <span role="alert" className="text-sm text-red-600">{error}</span>}</div>
       </div>
     </section>

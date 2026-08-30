@@ -19,6 +19,10 @@ import { makeT } from "@/lib/ui-strings";
 import { SearchPriceFilter } from "@/components/search-price-filter";
 import { getCurrentUser } from "@/lib/auth";
 import { formatPrice } from "@/lib/utils";
+// T-154e (audit n°26, P3-13) : tous les équipements portés par des biens
+// sont filtrables (avant : 5 options codées en dur, kitchen/sea_view/…
+// inaccessibles via l'UI alors que le filtre ?amenity= les gère).
+import { AMENITIES, amenityLabel } from "@/lib/amenities";
 
 interface SearchPageProps {
   searchParams: Promise<{
@@ -208,7 +212,8 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   // T-153 (F) : bandeau « pensez à utiliser vos crédits » — lecture seule du
   // solde EUR du wallet (aucun changement de contrat API, aucun filtre).
   let walletAmount: number | null = null;
@@ -307,7 +312,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <div className="w-[150px]">
               <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.amenity")}</label>
               <select name="amenity" defaultValue={params.amenity ?? ""} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="">{t("search.amenity.all")}</option><option value="wifi">WiFi</option><option value="parking">Parking</option><option value="pool">{t("amenity.pool")}</option><option value="spa">Spa</option><option value="restaurant">{t("amenity.restaurant")}</option>
+                <option value="">{t("search.amenity.all")}</option>
+                {AMENITIES.map((a) => (
+                  <option key={a.id} value={a.id}>{amenityLabel(a.id, locale === "en" ? "en" : "fr")}</option>
+                ))}
               </select>
             </div>
             <div className="w-[150px]">

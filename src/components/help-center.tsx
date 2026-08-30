@@ -6,7 +6,7 @@ import { BookOpen, Mail, Search } from "lucide-react";
 const articles = [
   { id: "cancel", category: "Réservations", title: "Annuler une réservation", body: "Ouvrez Mes réservations, choisissez une réservation confirmée puis Annuler. Les frais et le remboursement dépendent de la politique snapshotée dans votre réservation." },
   { id: "dates", category: "Réservations", title: "Modifier mes dates", body: "La modification directe n’est pas encore proposée. Annulez selon votre politique puis créez une nouvelle réservation, ou contactez l’hébergeur depuis votre conversation." },
-  { id: "payment", category: "Paiement", title: "Paiement et confirmation", body: "Une réservation Stripe est confirmée seulement après réponse du prestataire. En mode démonstration, aucun débit réel n’est effectué." },
+  { id: "payment", category: "Paiement", title: "Paiement et confirmation", body: "Votre réservation est confirmée immédiatement après validation du paiement. En production avec un prestataire (Stripe), la confirmation suit le statut du paiement ; en mode démonstration, aucun débit réel n’est effectué." },
   { id: "refund", category: "Paiement", title: "Remboursement", body: "Après annulation, le montant et le statut de remboursement sont visibles dans Mes réservations. Les délais dépendent du moyen de paiement." },
   { id: "review", category: "Avis", title: "Laisser un avis", body: "Un avis est disponible après la fin effective du séjour. Vous pouvez aussi marquer les avis d’autres voyageurs comme utiles." },
   { id: "rewards", category: "BestRewards", title: "BestRewards et cashback", body: "Les niveaux progressent après les séjours terminés. Les réductions et le cashback Ambassador sont calculés selon les règles actives." },

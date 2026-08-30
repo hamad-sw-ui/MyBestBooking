@@ -3,6 +3,9 @@ import { db } from "@/db";
 import { bookings } from "@/db/schema";
 import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
 import { getPaymentProvider } from "@/lib/payment";
+// T-154e (audit n°26, P3-10) : montants PSP en unités mineures — XAF/XOF
+// etc. sont zéro-décimales (×1), jamais ×100.
+import { toMinorUnits } from "@/lib/i18n";
 
 export type PaymentIntentSetup = {
   booking: typeof bookings.$inferSelect;
@@ -43,7 +46,7 @@ export async function createPaymentIntentForBooking(bookingId: string): Promise<
 
   const provider = await getPaymentProvider();
   const intent = await provider.create({
-    amount: Math.round(Number(candidate.total) * 100),
+    amount: toMinorUnits(Number(candidate.total), candidate.currency ?? "EUR"),
     currency: (candidate.currency || "EUR").toUpperCase(),
     bookingReference: candidate.bookingReference,
     guestEmail: candidate.guestEmail,

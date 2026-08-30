@@ -8,6 +8,9 @@ import { Input, Textarea, Select } from "@/components/ui/input";
 import { ArrowLeft, Upload, RefreshCw } from "lucide-react";
 import Link from "next/link";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
+// T-154e (audit n°26, P3-13) : liste d'équipements harmonisée avec la
+// recherche (28 valeurs, source unique au lieu de 12 locales).
+import { AMENITIES } from "@/lib/amenities";
 
 const PROPERTY_TYPES = [
   { value: "hotel", label: "Hôtel" },
@@ -28,21 +31,6 @@ const CANCELLATION_POLICIES = [
   { value: "moderate", label: "Modérée (5 jours avant)" },
   { value: "strict", label: "Stricte (14 jours avant)" },
   { value: "non_refundable", label: "Non remboursable" },
-];
-
-const AMENITIES = [
-  { id: "wifi", label: "WiFi gratuit" },
-  { id: "parking", label: "Parking" },
-  { id: "pool", label: "Piscine" },
-  { id: "spa", label: "Spa" },
-  { id: "restaurant", label: "Restaurant" },
-  { id: "bar", label: "Bar" },
-  { id: "gym", label: "Salle de sport" },
-  { id: "air_conditioning", label: "Climatisation" },
-  { id: "room_service", label: "Room service" },
-  { id: "concierge", label: "Conciergerie" },
-  { id: "beach_access", label: "Accès plage" },
-  { id: "garden", label: "Jardin" },
 ];
 
 export default function NewPropertyPage() {

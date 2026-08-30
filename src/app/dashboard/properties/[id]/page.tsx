@@ -11,6 +11,8 @@ import Link from "next/link";
 import { PropertySubmitButton } from "@/components/property-submit-button";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
 import { formatPrice } from "@/lib/utils";
+// T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
+import { AMENITIES } from "@/lib/amenities";
 
 interface Property {
   id: string;
@@ -59,21 +61,6 @@ const PROPERTY_TYPES = [
   { value: "guesthouse", label: "Maison d'hôtes" },
   { value: "riad", label: "Riad" },
   { value: "camping", label: "Camping" },
-];
-
-const AMENITIES = [
-  { id: "wifi", label: "WiFi gratuit" },
-  { id: "parking", label: "Parking" },
-  { id: "pool", label: "Piscine" },
-  { id: "spa", label: "Spa" },
-  { id: "restaurant", label: "Restaurant" },
-  { id: "bar", label: "Bar" },
-  { id: "gym", label: "Salle de sport" },
-  { id: "air_conditioning", label: "Climatisation" },
-  { id: "room_service", label: "Room service" },
-  { id: "concierge", label: "Conciergerie" },
-  { id: "beach_access", label: "Accès plage" },
-  { id: "garden", label: "Jardin" },
 ];
 
 export default function EditPropertyPage() {

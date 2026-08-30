@@ -8,6 +8,7 @@ import { isUuid } from "@/lib/http";
 import { AvailabilityCalendar } from "@/components/availability-calendar";
 import { RatePlansSection } from "@/components/rate-plans-section";
 import { RoomEditSection } from "@/components/room-edit-section";
+import { formatPrice } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -65,14 +66,16 @@ export default async function RoomCalendarPage({
         </h1>
         <p className="text-sm text-gray-500 mt-1">
           {row.property?.name} — capacité : {row.room.quantity} unité
-          {(row.room.quantity ?? 1) > 1 ? "s" : ""} — prix de base : {row.room.basePrice}
+          {(row.room.quantity ?? 1) > 1 ? "s" : ""} — prix de base : {formatPrice(row.room.basePrice, row.room.currency ?? "EUR")}
         </p>
       </div>
 
       <AvailabilityCalendar
         roomId={id}
         quantity={row.room.quantity ?? 1}
-        basePrice={row.room.basePrice}
+        // T-154e (audit n°26, P3-9) : prix de base affiché formaté (devise),
+        // plus de « 148.33 » nu.
+        basePrice={formatPrice(Number(row.room.basePrice), row.room.currency ?? "EUR")}
         initialFrom={from}
         initialTo={to}
         initialDays={days.map((d) => ({
@@ -96,6 +99,7 @@ export default async function RoomCalendarPage({
       <RatePlansSection
         roomId={id}
         basePrice={row.room.basePrice}
+        currency={row.room.currency ?? "EUR"}
         initialRatePlans={plans.map((plan) => ({
           id: plan.id,
           name: plan.name,

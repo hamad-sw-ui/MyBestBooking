@@ -95,7 +95,31 @@ export function priceBoundToStorage(value: number, displayCurrency?: string | nu
 }
 
 /**
- * Format monétaire localisé (Intl.NumberFormat).
+ * T-154e (audit n°26, P3-10) — devises zéro-décimales (Stripe : le montant
+ * est exprimé en unités majeures, pas en centimes). Liste officielle Stripe
+ * (BIF, CLP, DJF, GNF, JPY, KMF, KRW, MGA, PYG, RWF, VND, VUV, XAF, XOF,
+ * XPF). Avant : `amount * 100` inconditionnel → un Pipeline XAF 100 000
+ * aurait été débité 10 000 000 XAF (×100).
+ */
+export const ZERO_DECIMAL_CURRENCIES = new Set([
+  "BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF",
+  "VND", "VUV", "XAF", "XOF", "XPF",
+]);
+
+export function isZeroDecimalCurrency(currency: string | null | undefined): boolean {
+  return ZERO_DECIMAL_CURRENCIES.has((currency ?? "").toUpperCase());
+}
+
+/** Montant en unités mineures pour le PSP (×100 sauf zéro-décimal ×1). */
+export function toMinorUnits(amount: number, currency: string): number {
+  return isZeroDecimalCurrency(currency)
+    ? Math.round(amount)
+    : Math.round(amount * 100);
+}
+
+/**
+ * Format monétaire localisé (Intl.NumberFormat). Devises zéro-décimales :
+ * 0 décimale (Intl natif) au lieu de 2 forcées — « 50.00 XAF » → « 50 XAF ».
  */
 export function formatMoney(
   amount: number,
@@ -106,9 +130,9 @@ export function formatMoney(
     return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency.toUpperCase(),
-      maximumFractionDigits: 2,
+      maximumFractionDigits: isZeroDecimalCurrency(currency) ? 0 : 2,
     }).format(amount);
   } catch {
-    return `${amount.toFixed(2)} ${currency}`;
+    return `${amount.toFixed(isZeroDecimalCurrency(currency) ? 0 : 2)} ${currency}`;
   }
 }

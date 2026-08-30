@@ -119,7 +119,7 @@ export function PromotionForm() {
             className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
           >
             <option value="percentage">Pourcentage (%)</option>
-            <option value="fixed_amount">Montant fixe (€)</option>
+            <option value="fixed_amount">Montant fixe (EUR)</option>
           </select>
         </div>
         <div>
@@ -139,7 +139,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-min" className="block text-sm font-medium text-gray-700 mb-1">
-            Montant minimum (€)
+            Montant minimum (EUR — devise de facturation)
           </label>
           <input
             id="promo-min"
@@ -153,7 +153,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-maxd" className="block text-sm font-medium text-gray-700 mb-1">
-            Remise max (optionnel, €)
+            Remise max (optionnel, EUR)
           </label>
           <input
             id="promo-maxd"
@@ -206,6 +206,14 @@ export function PromotionForm() {
           />
         </div>
       </div>
+      {/* T-154e (audit n°26, P3-9) : devise de facturation explicite (les
+          montants fixes/seuils sont libellés EUR et convertis au taux
+          plateforme vers la devise de la chambre — T-153 B). */}
+      <p className="text-xs text-gray-500 -mt-2">
+        Les montants fixes et seuils sont libellés en EUR (devise de
+        facturation) ; ils sont convertis au taux plateforme vers la devise de
+        la chambre au moment de l&apos;application.
+      </p>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"

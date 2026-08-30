@@ -7,6 +7,41 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 46 — 2026-08-30 : T-154e (P3 9-14 audit n°26) — polish devises/UX — audit n°26 100 % livré
+
+- **P3-9 montants sans devise** : `rate-plans-section` a une prop
+  `currency` + aperçu `formatPrice` (« 148,33 € → 148,33 € par nuit ») ;
+  calendrier chambre affiche le prix de base formaté (défaut dans les
+  libellés) ; `price-alerts-section` → `formatMoney` ; `promotion-form` :
+  « EUR » explicite + note de conversion au taux plateforme (T-153 B).
+- **P3-10 XAF/XOF zéro-décimal** : `src/lib/i18n.ts` —
+  `ZERO_DECIMAL_CURRENCIES` (15 devises officielles Stripe),
+  `isZeroDecimalCurrency`, `toMinorUnits` (×100 sauf zéro-décimal ×1),
+  `formatMoney` 0 décimale ; `payment-intents.ts` (create) et
+  `payment-events.ts` (refund) utilisent `toMinorUnits` — un séjour XAF
+  n'est plus débité ×100. Tests +4 (`i18n.test.ts`).
+- **P3-11 dark mode** : `DarkModeToggle` accepte `className` et est monté
+  dans le header mobile du dashboard (avant : header public uniquement).
+- **P3-12 calendrier** : libellé « vides = valeurs par défaut de la
+  chambre » + panneau « Appliquer à la plage » (stock/prix/séjour
+  min/stop-sell sur tous les jours, même PUT, additif).
+- **P3-13 amenities** : source unique `src/lib/amenities.ts` (28 valeurs
+  id + libellés fr/en, `amenityLabel`) consommée par `properties/new`,
+  `properties/[id]`, `/recherche` (select 28 options, contrat `?amenity=`
+  inchangé) et la fiche publique — fini 5/12/12 listes divergentes.
+- **P3-14 help center** : article « Paiement et confirmation » corrigé
+  (confirmation immédiate après paiement ; Stripe = statut du paiement).
+- 🔨 `npx tsc --noEmit` : 0 erreur · lint 0 erreur (14 warnings
+  préexistants).
+- 🧪 vitest : **372/372** (52 fichiers, +4 i18n) — une exécution
+  intermédiaire a montré 12 tests DB « skipped » transitoires (Postgres
+  brièvement occupé après le smoke) ; relancée : **52/52 · 372/372**.
+- ▶️ Runtime : calendrier chambre → « Prix override (défaut 148,33 €) » +
+  « 148,33 € → 148,33 € par nuit » ; `/recherche` → 28 options amenity,
+  `?amenity=kitchen|sea_view|breakfast` → 1 résultat chacun ; header
+  mobile dashboard → bouton « Activer le mode sombre » rendu.
+- ✔️ smoke **94/94** · ✔️ **Audit n°26 100 % implémenté (T-154a→e)**.
+
 ## Session 45 — 2026-08-30 : T-154a (P1 1+2 recherche) — prix affiché + bornes sur le MIN EUR
 
 - 🔨 Refactor `src/app/(main)/recherche/page.tsx` : suppression des

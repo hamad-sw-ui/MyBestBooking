@@ -41,6 +41,8 @@ import { LocalizedDescription } from "@/components/localized-description";
 import { ContactHostButton } from "@/components/contact-host-button";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+// T-154e (audit n°26, P3-13) : libellés harmonisés avec la source unique.
+import { amenityLabel } from "@/lib/amenities";
 // T-154c (audit n°26, P2-5) : politique d'annulation réelle (au lieu du
 // badge « voir le tarif » qui ne disait rien).
 import { cancellationPolicyLabel } from "@/lib/cancellation-label";
@@ -103,26 +105,12 @@ const AMENITY_ICONS: Record<string, React.ReactNode> = {
   air_conditioning: <Wind className="w-4 h-4" />,
 };
 
-const AMENITY_LABELS: Record<string, string> = {
-  wifi: "WiFi gratuit",
-  parking: "Parking",
-  restaurant: "Restaurant",
-  pool: "Piscine",
-  gym: "Salle de sport",
-  air_conditioning: "Climatisation",
-  spa: "Spa",
-  bar: "Bar",
-  room_service: "Room service",
-  concierge: "Conciergerie",
-  beach_access: "Accès plage",
-  garden: "Jardin",
-};
-
 export default async function PropertyPage({ params, searchParams }: PropertyPageProps) {
   const { slug } = await params;
   const query = await searchParams;
   const viewer = await getCurrentUser();
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   const data = await getProperty(slug, viewer?.id, viewer?.role === "admin");
 
   if (!data) {
@@ -308,7 +296,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                     {amenities.map((amenity) => (
                       <div key={amenity} className="flex items-center gap-2 text-gray-700">
                         {AMENITY_ICONS[amenity] || <Check className="w-4 h-4" />}
-                        <span>{AMENITY_LABELS[amenity] || amenity}</span>
+                        <span>{amenityLabel(amenity, locale === "en" ? "en" : "fr")}</span>
                       </div>
                     ))}
                   </div>

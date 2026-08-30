@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Bell, X as XIcon, Loader2 } from "lucide-react";
+// T-154e (audit n°26, P3-9/10) : montants localisés, 0 décimale pour XAF/…
+import { formatMoney } from "@/lib/i18n";
 
 interface Alert {
   id: string;
@@ -113,7 +115,7 @@ export function PriceAlertsSection({ properties }: Props) {
                       {p ? `${p.name} — ${p.city}` : a.propertyId.slice(0, 8) + "…"}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Alerte si le prix descend sous {parseFloat(a.maxPrice).toFixed(2)} {a.currency}
+                      Alerte si le prix descend sous {formatMoney(Number(a.maxPrice), a.currency ?? "EUR")}
                     </p>
                   </div>
                   <Button

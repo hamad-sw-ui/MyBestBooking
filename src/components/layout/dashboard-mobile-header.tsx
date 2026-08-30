@@ -11,6 +11,7 @@ import {
 import { useState } from "react";
 import type { User } from "@/db/schema";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
+import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT } from "@/lib/ui-strings";
 
@@ -59,12 +60,17 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
           <span className="font-bold text-white">MyBest</span>
           <span className="font-bold text-[#FF5A5F]">Booking</span>
         </Link>
-        <button
-          onClick={() => setOpen(!open)}
-          className="p-2 rounded-lg text-white hover:bg-white/10"
-        >
-          {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
+        <div className="flex items-center gap-1">
+          {/* T-154e (audit n°26, P3-11) : bascule dark mode accessible depuis
+              le header mobile du dashboard (avant : uniquement header public). */}
+          <DarkModeToggle className="p-2 rounded-lg text-white hover:bg-white/10 transition" />
+          <button
+            onClick={() => setOpen(!open)}
+            className="p-2 rounded-lg text-white hover:bg-white/10"
+          >
+            {open ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
+        </div>
       </div>
 
       {/* Drawer */}

@@ -47,6 +47,13 @@ export function AvailabilityCalendar({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [visiblePage, setVisiblePage] = useState(0);
+  // T-154e (audit n°26, P3-12) : application en masse sur la plage affichée.
+  const [batch, setBatch] = useState({
+    availableCount: quantity,
+    price: "",
+    stopSell: false,
+    minStay: 1,
+  });
 
   const dateList = useMemo(() => {
     const list: string[] = [];
@@ -96,6 +103,25 @@ export function AvailabilityCalendar({
     }
   }
 
+  /** Applique la valeur de masse à tous les jours de la plage (T-154e P3-12). */
+  function applyBatch() {
+    setDays((prev) => {
+      const next = { ...prev };
+      for (const date of dateList) {
+        next[date] = {
+          date,
+          availableCount: Math.max(0, Math.min(quantity, Number(batch.availableCount) || 0)),
+          price: batch.price !== "" ? batch.price : null,
+          stopSell: batch.stopSell,
+          minStay: Math.max(1, Math.min(30, Number(batch.minStay) || 1)),
+        };
+      }
+      return next;
+    });
+    setSaved(false);
+    addToast("info", `Valeurs appliquées aux ${dateList.length} jours de la plage`);
+  }
+
   async function save() {
     setError(null);
     setLoading(true);
@@ -136,6 +162,15 @@ export function AvailabilityCalendar({
 
   return (
     <div className="space-y-4">
+      {/* T-154e (audit n°26, P3-12) : clarifie que les cases vides signifient
+          « valeurs par défaut de la chambre » (rien n'est écrit en base). */}
+      <p className="text-xs text-gray-500">
+        Les jours sans valeur (—) utilisent les valeurs par défaut de la
+        chambre : stock {quantity}, prix {basePrice}, séjour min 1. Seuls les
+        jours modifiés sont enregistrés ; utilisez « Appliquer à la plage »
+        pour matérialiser des valeurs sur toute la période.
+      </p>
+
       <div className="flex items-end gap-3 flex-wrap">
         <div>
           <label htmlFor="cal-from" className="block text-xs text-gray-500 mb-1">Du</label>
@@ -150,6 +185,55 @@ export function AvailabilityCalendar({
         </button>
         <div className="text-xs text-gray-500">
           {dateList.length} jour{dateList.length > 1 ? "s" : ""} — vue {currentPage + 1}/{pageCount}, 90 max par batch.
+        </div>
+      </div>
+
+      {/* T-154e (audit n°26, P3-12) : application en masse (additif, même PUT). */}
+      <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-3">
+        <p className="text-xs font-medium text-gray-600 mb-2">Appliquer à la plage ({dateList.length} jours)</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label htmlFor="batch-stock" className="block text-xs text-gray-500 mb-1">Stock (max {quantity})</label>
+            <input
+              id="batch-stock" type="number" min={0} max={quantity}
+              value={batch.availableCount}
+              onChange={(e) => setBatch((b) => ({ ...b, availableCount: parseInt(e.target.value, 10) || 0 }))}
+              className="w-20 px-2 py-1 border border-gray-200 rounded"
+            />
+          </div>
+          <div>
+            <label htmlFor="batch-price" className="block text-xs text-gray-500 mb-1">Prix override (défaut {basePrice})</label>
+            <input
+              id="batch-price" type="number" step="0.01" min={0}
+              value={batch.price}
+              onChange={(e) => setBatch((b) => ({ ...b, price: e.target.value }))}
+              placeholder="—"
+              className="w-28 px-2 py-1 border border-gray-200 rounded"
+            />
+          </div>
+          <div>
+            <label htmlFor="batch-minstay" className="block text-xs text-gray-500 mb-1">Séjour min</label>
+            <input
+              id="batch-minstay" type="number" min={1} max={30}
+              value={batch.minStay}
+              onChange={(e) => setBatch((b) => ({ ...b, minStay: parseInt(e.target.value, 10) || 1 }))}
+              className="w-16 px-2 py-1 border border-gray-200 rounded"
+            />
+          </div>
+          <label className="flex items-center gap-2 text-xs text-gray-600 pb-2">
+            <input
+              type="checkbox"
+              checked={batch.stopSell}
+              onChange={(e) => setBatch((b) => ({ ...b, stopSell: e.target.checked }))}
+            />
+            Stop-sell
+          </label>
+          <button
+            type="button" onClick={applyBatch} disabled={loading}
+            className="px-3 py-1.5 text-xs border border-[#1B3A6B] text-[#1B3A6B] rounded-lg hover:bg-[#1B3A6B] hover:text-white disabled:opacity-50"
+          >
+            Appliquer à la plage
+          </button>
         </div>
       </div>
 

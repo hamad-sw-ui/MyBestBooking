@@ -5,6 +5,8 @@ import type { WebhookEvent } from "@/lib/payment";
 import { getPaymentProvider } from "@/lib/payment";
 import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
 import { releaseBookingBenefits } from "@/lib/booking-benefits";
+// T-154e (audit n°26, P3-10) : remboursements en unités mineures (zéro-décimal).
+import { toMinorUnits } from "@/lib/i18n";
 
 export async function recordPaymentEvent(event: WebhookEvent): Promise<void> {
   await db.insert(paymentEventInbox).values({
@@ -40,14 +42,14 @@ export async function refundLateCapturedPayment(bookingId: string): Promise<bool
       refundStatus: "pending",
       updatedAt: new Date(),
     }).where(eq(bookings.id, booking.id));
-    return { id: booking.id, paymentIntentId: booking.paymentIntentId, amount };
+    return { id: booking.id, paymentIntentId: booking.paymentIntentId, amount, currency: booking.currency ?? "EUR" };
   });
   if (!candidate) return false;
 
   try {
     const refund = await (await getPaymentProvider()).refund(
       candidate.paymentIntentId,
-      Math.round(candidate.amount * 100),
+      toMinorUnits(candidate.amount, candidate.currency),
       `booking-refund:${candidate.id}`,
     );
     // Ne jamais écraser une confirmation webhook de remboursement arrivée
