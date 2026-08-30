@@ -9,10 +9,10 @@
 - **PR ouverte** : historique (PR #2) — session T-150 en cours sur
   `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
 - **HEAD Git** : T-150 sur `arena/01a052ed-mybestbooking`
-  (base `2d8c885` = T-149). Le hash exact du HEAD courant est **à mettre à
-  jour en fin de session** : un commit de doc ne peut pas contenir son propre
-  hash, et R7 le tolère explicitement (motif « à mettre à jour en fin de
-  session »). Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi
+  (base `2d8c885` = T-149). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
+  : un commit de doc ne peut pas contenir son propre hash, et R7 le tolère
+  explicitement (motif « à mettre à jour en fin de session »). Le workflow
+  `.github/workflows/ci.yml` (T-113) reste hors suivi
   git de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
 - **Dernière tâche validée** : **T-150 (2026-08-30)** — e-mails hôtes ↔
