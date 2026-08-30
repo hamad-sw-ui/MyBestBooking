@@ -5,6 +5,7 @@ import { priceAlerts, properties, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { and, eq, desc } from "drizzle-orm";
+import { isStayPast } from "@/lib/price-alert-rules";
 
 const schema = z.object({
   propertyId: z.string().uuid(),
@@ -51,6 +52,16 @@ export async function POST(request: NextRequest) {
       .limit(1);
     if (!targetProperty) {
       return NextResponse.json({ error: "Hébergement introuvable" }, { status: 404 });
+    }
+    // T-161 (audit n°30) : une alerte « séjour » ne peut pas porter une
+    // arrivée passée (elle ne pourrait jamais se réaliser → fake
+    // notifications ou quote inutile à chaque cron).
+    const today = new Date().toISOString().slice(0, 10);
+    if (data.checkIn && isStayPast(data.checkIn, today)) {
+      return NextResponse.json(
+        { error: "La date d'arrivée de l'alerte ne peut pas être dans le passé" },
+        { status: 400 },
+      );
     }
     const [existing] = await db.select().from(priceAlerts).where(and(eq(priceAlerts.userId, user.id), eq(priceAlerts.propertyId, data.propertyId))).limit(1);
     const date = (value: string | Date | null | undefined) => value ? (typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10)) : null;

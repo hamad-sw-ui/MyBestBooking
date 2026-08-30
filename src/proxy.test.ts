@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, vi } from "vitest";
 import { NextRequest } from "next/server";
 import { SignJWT } from "jose";
 
@@ -161,5 +161,35 @@ describe("garde pages d'auth pour visiteurs connectés (T-135)", () => {
     expect(matcher).not.toContain("reinitialiser");
     expect(matcher).not.toContain("activer-compte");
     expect(matcher).not.toContain("mot-de-passe-oublie");
+  });
+});
+
+describe("partage wishlist — 404 réel avant streaming (T-163)", () => {
+  it("token inconnu (API 404) → réponse 404 HTML immédiate", async () => {
+    const { proxy } = await import("./proxy");
+    const fetchMock = vi.fn().mockResolvedValue(new Response("{\"error\":\"Introuvable\"}", { status: 404 }));
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const res = await proxy(makeRequest("/wishlists/share/__t__"));
+      expect(status(res)).toBe(404);
+      expect(res.headers.get("content-type")).toMatch(/text\/html/);
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("token connu (API 200) → NextResponse.next() (page RSC conservée)", async () => {
+    const { proxy } = await import("./proxy");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ name: "Voyage", itemCount: 0, items: [] }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      const res = await proxy(makeRequest("/wishlists/share/token-ok"));
+      expect(status(res)).not.toBe(404);
+      expect(res.headers.get("location")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

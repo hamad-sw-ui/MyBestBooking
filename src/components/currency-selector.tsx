@@ -18,10 +18,23 @@ import {
  * `useDisplayPreferences` (priorité compte > localStorage > plateforme)
  * propage la devise aux libellés ET au champ caché `displayCurrency`
  * (conversion serveur des bornes inchangée — contrat T-133).
+ *
+ * T-164 (audit n°30) — langage SSR : `initialLanguage` (résolu par
+ * `getServerLocale()` côté serveur) évite le label « Devise d'affichage »
+ * rendu en français pour un visiteur EN avant hydratation. Le hook reste
+ * l'autorité après hydratation (compte > localStorage > plateforme).
  */
-export function CurrencySelector({ compact = false }: { compact?: boolean }) {
+export function CurrencySelector({
+  compact = false,
+  initialLanguage = null,
+}: {
+  compact?: boolean;
+  initialLanguage?: string | null;
+}) {
   const { currency, language } = useDisplayPreferences();
   const [error, setError] = useState<string | null>(null);
+  // Langue affichée : hook (résolu) sinon langue SSR fournie.
+  const effectiveLanguage = language ?? initialLanguage;
   const current = (currency ?? "XAF").toUpperCase();
 
   async function change(next: string) {
@@ -39,7 +52,7 @@ export function CurrencySelector({ compact = false }: { compact?: boolean }) {
     window.location.reload();
   }
 
-  const label = language === "en" ? "Display currency" : "Devise d'affichage";
+  const label = effectiveLanguage === "en" ? "Display currency" : "Devise d'affichage";
 
   return (
     <label className={compact ? "inline-flex items-center gap-1 text-xs text-gray-500" : "block text-xs font-medium text-gray-500 mb-1"}>

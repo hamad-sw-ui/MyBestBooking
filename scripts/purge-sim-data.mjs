@@ -55,8 +55,35 @@ async function main() {
   );
   const bookingIds = simBookings.map((b) => b.id);
 
+  // T-160 (audit n°30) : les runs créent aussi des listes de favoris
+  // (rate-test-<ts>, « Public share test », « Voyage été 2027 », « Mes
+  // favoris » multiples issues du widget) et des votes/alertes de test.
+  const simWishlists = await counts(
+    `SELECT w.id, w.name FROM wishlists w
+       LEFT JOIN users u ON u.id = w.user_id
+     WHERE u.email ILIKE '%@t.local' OR u.email ILIKE '%@test.local'
+        OR u.email ILIKE '%@anonymized.local'
+        OR w.name ~ '^rate-test-[0-9]+'
+        OR w.name IN ('Public share test','Voyage été 2027')
+        OR (w.name = 'Mes favoris' AND NOT EXISTS (SELECT 1 FROM wishlist_items wi WHERE wi.wishlist_id = w.id))`,
+  );
+  const wishlistIds = simWishlists.map((w) => w.id);
+  const simVotes = await counts(
+    `SELECT rv.id FROM review_votes rv JOIN users u ON u.id = rv.user_id
+     WHERE u.email ILIKE '%@t.local' OR u.email ILIKE '%@test.local' OR u.email ILIKE '%@anonymized.local'`,
+  );
+  const voteIds = simVotes.map((v) => v.id);
+  const simAlerts = await counts(
+    `SELECT pa.id FROM price_alerts pa JOIN users u ON u.id = pa.user_id
+     WHERE u.email ILIKE '%@t.local' OR u.email ILIKE '%@test.local' OR u.email ILIKE '%@anonymized.local'`,
+  );
+  const alertIds = simAlerts.map((a) => a.id);
+
   console.log(`  users de test        : ${simUsers.length}`);
   console.log(`  réservations de test : ${simBookings.length}`);
+  console.log(`  wishlists de test    : ${simWishlists.length}`);
+  console.log(`  votes de test        : ${voteIds.length}`);
+  console.log(`  alertes de test      : ${alertIds.length}`);
   if (bookingIds.length) {
     console.log("  exemples:", simBookings.slice(0, 5).map((b) => b.booking_reference).join(", "));
   }
@@ -71,12 +98,12 @@ async function main() {
   await c.query(`DELETE FROM conversations WHERE booking_id = ANY($1::uuid[]) OR user_id = ANY($2::uuid[])`, [bookingIds.length ? bookingIds : [null], simIds.length ? simIds : [null]]);
   await c.query(`DELETE FROM sessions WHERE user_id = ANY($1::uuid[])`, [simIds.length ? simIds : [null]]);
   await c.query(`DELETE FROM verification_tokens WHERE user_id = ANY($1::uuid[])`, [simIds.length ? simIds : [null]]);
-  await c.query(`DELETE FROM review_votes WHERE review_id IN (SELECT id FROM reviews WHERE user_id = ANY($1::uuid[]))`, [simIds.length ? simIds : [null]]);
+  await c.query(`DELETE FROM review_votes WHERE id = ANY($1::uuid[]) OR review_id IN (SELECT id FROM reviews WHERE user_id = ANY($2::uuid[]))`, [voteIds.length ? voteIds : [null], simIds.length ? simIds : [null]]);
   await c.query(`DELETE FROM reviews WHERE user_id = ANY($1::uuid[])`, [simIds.length ? simIds : [null]]);
-  await c.query(`DELETE FROM price_alerts WHERE user_id = ANY($1::uuid[])`, [simIds.length ? simIds : [null]]);
+  await c.query(`DELETE FROM price_alerts WHERE id = ANY($1::uuid[]) OR user_id = ANY($2::uuid[])`, [alertIds.length ? alertIds : [null], simIds.length ? simIds : [null]]);
   await c.query(`DELETE FROM bookings WHERE id = ANY($1::uuid[]) OR user_id = ANY($2::uuid[])`, [bookingIds.length ? bookingIds : [null], simIds.length ? simIds : [null]]);
-  await c.query(`DELETE FROM wishlist_items WHERE wishlist_id IN (SELECT id FROM wishlists WHERE user_id = ANY($1::uuid[]))`, [simIds.length ? simIds : [null]]);
-  await c.query(`DELETE FROM wishlists WHERE user_id = ANY($1::uuid[])`, [simIds.length ? simIds : [null]]);
+  await c.query(`DELETE FROM wishlist_items WHERE wishlist_id = ANY($1::uuid[])`, [wishlistIds.length ? wishlistIds : [null]]);
+  await c.query(`DELETE FROM wishlists WHERE id = ANY($1::uuid[]) OR user_id = ANY($2::uuid[])`, [wishlistIds.length ? wishlistIds : [null], simIds.length ? simIds : [null]]);
   await c.query(`DELETE FROM users WHERE id = ANY($1::uuid[])`, [simIds.length ? simIds : [null]]);
 
   const left = await counts(
@@ -85,7 +112,7 @@ async function main() {
              WHERE u.email ILIKE '%@t.local' OR b.guest_first_name = ANY($1)) AS bookings`,
     [GUEST_NAMES],
   );
-  console.log(`\n✅ Purge appliquée — restants : users=${left[0].users} bookings=${left[0].bookings}`);
+  console.log(`\n✅ Purge appliquée — restants : users=${left[0].users} bookings=${left[0].bookings} wishlists=${wishlistIds.length} (supprimées)`);
   await c.end();
 }
 

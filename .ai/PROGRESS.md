@@ -7,6 +7,52 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 49 — 2026-08-30 : audit n°30 implémenté (T-160→T-166, sans régression)
+
+- **Demande** : « conformément aux règles du framework `.ai/`, mettez en
+  place l'implémentation de vos remarques [audit n°30], sans régression ».
+- **T-160** — purge : `purge-sim-data.mjs` + `cleanup_db` (`run_all_sims.py`)
+  suppriment wishlists d'artefacts (`rate-test-*`, « Public share test »,
+  « Voyage été 2027 », « Mes favoris » vides), `review_votes` (directs +
+  via avis des users test), `price_alerts` ; appliqué sur l'état réel de
+  l'audit → **122 wishlists supprimées, 1 légitime conservée**.
+  Refactor `mes-favoris/page.tsx` : **1 requête** (`wishlist_items ⋈
+  properties`, `eq`/`inArray`) + `aggregateWishlistItems` + compteur
+  dédupliqué (`uniqueProperties`), rendu identique.
+- **T-161** — `price-alert-rules.ts` : `isStayPast`/`isStayExpired` ;
+  POST → **400** si `checkIn` passé (avant 201) ; cron
+  `expirePastStayAlerts` (`active=false`, jamais supprimé,
+  `pastAlertsExpired` renvoyé).
+- **T-162** — i18n vague 2 : `confidentialite`, `mentions-legales`,
+  `bestrewards`, `reservation` (wrapper RSC `generateMetadata` +
+  `reservation-form.tsx` client), `wishlists/share/[token]` — titres,
+  libellés, pluriels fr/en (`ui-strings.ts` +~60 clés) ; `check-i18n.mjs`
+  : inventaire 430 segments / 63 fichiers (avant 460/66 — réduit).
+- **T-163** — 🔨 écart détecté au test : `notFound()` dans
+  `generateMetadata` renvoie **200** sur Next 16.2.6 (dev ET build prod ;
+  docs Streaming + issue #82041). Solution réelle : validation token au
+  **proxy** (fetch API publique avant rendu) → invalide **404 HTML**
+  localisé/noindex, valide → page RSC 200. Preuves : curl dev+prod
+  404/200, `proxy.test.ts` +2 tests.
+- **T-164** — `CurrencySelector initialLanguage` (SSR `getServerLocale`
+  via `recherche/page.tsx`) → `aria-label="Display currency"` en EN.
+- **T-165** — `src/lib/app-url.ts` (`appBaseUrl()`, repli
+  `https://mybestbooking.com`, warn unique hors test) branché dans
+  `templates.ts` ×2 + URL du cron.
+- **T-166** — hygiène des runs : votes/alertes/wishlists nettoyées
+  (`purge-sim-data.mjs` + `cleanup_db`).
+- **Preuves** : 🔨 `tsc` 0 err · 🔨 `next build` 0 err (proxy inclus) ·
+  🧪 vitest **60/60 fichiers · 403 tests · 0 échec · 0 skip** (réf. n°29 :
+  57/390) · ▶️ `run_all_sims.py` **5/5 · 396 OK · 3 WARN · 0 KO** ·
+  ▶️ probes `.data/a30/regression.mjs` **18/18** (400 dates passées,
+  404 partage, titres EN, aria-label EN, purge ≤20 listes) · ▶️ prod
+  `next start` : partage invalide **404** / valide **200 + titre EN** ·
+  ✅ `ai:check` 19 OK · 1 warn (R7, motif toléré) · 0 fail.
+- **Problème rencontré (résolu)** : contrôle statique `deep_sim.py`
+  exigeait `use client` dans `page.tsx` — adapté au bundle
+  page RSC + sibling client (intention conservée).
+- **Étape suivante** : clôture session (STATE au HEAD final + push).
+
 ## Session 48 — 2026-08-30 : audit fonctionnel profond n°28 (à l'exécution) — 7 findings, rapport seul
 
 - **Méthode** : crawl **40 pages × 4 rôles** (160 vérifs, 0 marqueur

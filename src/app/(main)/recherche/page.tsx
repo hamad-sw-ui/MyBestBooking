@@ -335,7 +335,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <option value="rating">{t("search.sort.rating")}</option><option value="price_asc">{t("search.sort.priceAsc")}</option><option value="price_desc">{t("search.sort.priceDesc")}</option>
               </select>
             </div>
-            <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} />
+            <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} initialLanguage={locale} />
             <Button type="submit" size="md">
               <Search className="w-4 h-4 mr-2" />
               {t("search.button")}

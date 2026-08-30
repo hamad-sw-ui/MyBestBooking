@@ -59,6 +59,14 @@ def cleanup_db():
     db_query("DELETE FROM bookings WHERE guest_first_name IN ('Racer','ParaFix','RaceFix','Trans','Calc','Wallet','Anonymous','Blocked','Deep','Sim','BlockTest','FreeTest','Combo','Simulation','Delete','Verify','Reset','Gdpr','Suspend','Cookie','Emoji','Long','Xss') OR guest_first_name LIKE 'Race%' OR guest_first_name LIKE 'Trans%' OR guest_first_name LIKE 'Chevauchement%' OR guest_first_name LIKE 'Rate%' OR guest_first_name LIKE 'Wallet%'")
     # Effacer les users test créés (email @t.local ou @test.local, sauf seed)
     db_query("DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@t.local' OR email LIKE '%@test.local' OR email LIKE '%@anonymized.local')")
+    # T-160/T-166 (audit n°30) : les runs laissent aussi des votes d'avis,
+    # des listes de favoris et des alertes prix — sinon ils s'accumulent
+    # (123 wishlists mesurées, 1er vote « utile » → 409 « déjà voté »).
+    db_query("DELETE FROM review_votes WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@t.local' OR email LIKE '%@test.local' OR email LIKE '%@anonymized.local')")
+    db_query("DELETE FROM review_votes WHERE review_id IN (SELECT id FROM reviews WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@t.local' OR email LIKE '%@test.local' OR email LIKE '%@anonymized.local'))")
+    db_query("DELETE FROM price_alerts WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@t.local' OR email LIKE '%@test.local' OR email LIKE '%@anonymized.local')")
+    db_query("DELETE FROM wishlist_items WHERE wishlist_id IN (SELECT id FROM wishlists WHERE name ~ '^rate-test-[0-9]+' OR name IN ('Public share test','Voyage été 2027') OR (name='Mes favoris' AND id NOT IN (SELECT DISTINCT wishlist_id FROM wishlist_items)))")
+    db_query("DELETE FROM wishlists WHERE name ~ '^rate-test-[0-9]+' OR name IN ('Public share test','Voyage été 2027') OR (name='Mes favoris' AND id NOT IN (SELECT DISTINCT wishlist_id FROM wishlist_items))")
     # Attention aux FK bookings → on ne supprime pas les users, on les laisse comme historique
     ok("cleanup DB")
 

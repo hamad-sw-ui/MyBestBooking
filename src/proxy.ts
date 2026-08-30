@@ -71,6 +71,53 @@ const ADMIN_ONLY_SEGMENTS = [
   "promotions",
 ];
 
+/**
+ * T-163 (audit n°30) — vrai HTTP 404 pour les tokens de partage invalides.
+ *
+ * Le pattern documenté « notFound() dans generateMetadata » ne produit
+ * PAS un 404 sur Next 16.2.6 : dès qu'une page dynamique valide son token
+ * par un `await` (fetch/DB), le streaming a déjà commencé et le statut est
+ * figé à 200 (docs « Streaming — The HTTP contract » + issue vercel/next.js
+ * #82041). La seule couche qui peut encore changer le statut AVANT le
+ * rendu est le proxy (edge) : on interroge l'API publique du partage et,
+ * si elle répond 404, on renvoie un 404 HTML immédiat. Les tokens VALIDES
+ * passent (NextResponse.next()) et la page RSC (localisée) s'exécute ;
+ * elle conserve son notFound() en défense en profondeur (erreur API,
+ * token vide). Aucun changement de contrat API.
+ */
+const SHARE_PREFIX = "/wishlists/share/";
+
+async function shareNotFoundResponse(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname } = request.nextUrl;
+  if (!pathname.startsWith(SHARE_PREFIX)) return null;
+  const token = pathname.slice(SHARE_PREFIX.length).split("/")[0];
+  if (!token) return null;
+  // Interroge l'API publique du partage (même origin, aucun cookie requis).
+  // En cas d'erreur réseau/5xx on laisse la page RSC gérer (défense en
+  // profondeur) plutôt que de renvoyer un faux 404.
+  let status = 0;
+  try {
+    const apiUrl = request.nextUrl.clone();
+    apiUrl.pathname = `/api/wishlists/shared/${encodeURIComponent(token)}`;
+    apiUrl.search = "";
+    const res = await fetch(apiUrl, { method: "GET", cache: "no-store" });
+    status = res.status;
+  } catch {
+    return null;
+  }
+  if (status !== 404) return null;
+  const en = request.cookies.get("mybb:ui-language")?.value === "en";
+  const title = en ? "Page not found" : "Page introuvable";
+  const body = en
+    ? "This shared list does not exist or is no longer available."
+    : "Cette liste partagée n'existe pas ou n'est plus disponible.";
+  const html = `<!doctype html><html lang="${en ? "en" : "fr"}"><head><meta charset="utf-8"/><meta name="robots" content="noindex"/><title>${title} | MyBestBooking</title><style>body{font-family:system-ui,sans-serif;margin:0;background:#f9fafb;display:flex;min-height:100vh;align-items:center;justify-content:center}main{max-width:28rem;width:100%;background:#fff;border-radius:1rem;box-shadow:0 1px 3px rgba(0,0,0,.1);padding:2rem;text-align:center}p{color:#6b7280;font-size:.9rem}h1{color:#111827;font-size:1.5rem;margin:.5rem 0}a{display:inline-block;margin:0 .25rem;padding:.6rem 1.2rem;border-radius:.5rem;text-decoration:none;font-size:.9rem}.a{background:#ff5a5f;color:#fff}.b{border:1px solid #d1d5db;color:#374151}</style></head><body><main><p>Erreur 404</p><h1>${title}</h1><p>${body}</p><p><a class="a" href="/">${en ? "Home" : "Accueil"}</a><a class="b" href="/recherche">${en ? "Search" : "Rechercher"}</a></p></main></body></html>`;
+  return new NextResponse(html, {
+    status: 404,
+    headers: { "content-type": "text/html; charset=utf-8", "x-robots-tag": "noindex" },
+  });
+}
+
 /** Renvoie la destination d'une redirection hors du dashboard, ou null. */
 function dashboardDeniedDestination(
   pathname: string,
@@ -126,6 +173,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // T-163 : partage de favoris — PUBLIC (aucune session requise). 404 réel
+  // avant streaming si token inconnu, sinon la page RSC s'exécute.
+  if (pathname.startsWith(SHARE_PREFIX)) {
+    return (await shareNotFoundResponse(request)) ?? NextResponse.next();
+  }
+
   // Non authentifié (ou JWT absent/invalide) → connexion sur les routes
   // protégées par le matcher.
   if (!session) {
@@ -161,5 +214,7 @@ export const config = {
     // /reservation reste public pour permettre l'achat invité. Les règles
     // d'authentification et de propriété sont vérifiées dans les handlers API.
     "/dashboard/:path*",
+    // T-163 : partage public — validation du token au proxy pour un vrai 404.
+    "/wishlists/share/:path*",
   ],
 };

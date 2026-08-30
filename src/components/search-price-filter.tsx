@@ -16,9 +16,13 @@ import { CurrencySelector } from "@/components/currency-selector";
 export function SearchPriceFilter({
   minPrice,
   maxPrice,
+  initialLanguage = null,
 }: {
   minPrice?: string;
   maxPrice?: string;
+  // T-164 : langue SSR (getServerLocale) → le sélecteur de devise rend son
+  // libellé dans la bonne langue dès le premier HTML (pas de flash FR).
+  initialLanguage?: string | null;
 }) {
   const { currency, language } = useDisplayPreferences();
   const t = makeT(language);
@@ -33,7 +37,7 @@ export function SearchPriceFilter({
       {/* T-158 : sélecteur de devise d'affichage — le champ caché ci-dessus
           porte la valeur soumise ; la conversion serveur est inchangée. */}
       <div className="w-[130px]">
-        <CurrencySelector />
+        <CurrencySelector initialLanguage={initialLanguage} />
       </div>
       <div className="w-[120px]">
         <label className="block text-xs font-medium text-gray-500 mb-1">Prix min. ({suffix})</label>

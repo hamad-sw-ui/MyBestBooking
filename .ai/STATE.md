@@ -8,25 +8,29 @@
   `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
 - **PR ouverte** : historique (PR #2) — session T-153 en cours sur
   `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
-- **HEAD Git** : **T-155 (audit n°27) livré/validé** sur
-  `arena/01a052ed-mybestbooking` (base `546f09d` = docs audit n°26). Le
-  hash exact du HEAD courant est **à mettre à jour en fin de session** :
-  un commit de doc ne peut pas contenir son propre hash, et R7 le tolère
-  explicitement (motif « à mettre à jour en fin de session »). Le workflow
-  `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces push car le
-  jeton GitHub App n'a pas la permission `workflows`.
+- **HEAD Git** : base `52911fa` = docs de l'audit n°30 ; **implémentation
+  T-160→T-166 validée** (commits de cette session sur
+  `arena/01a052ed-mybestbooking`). Le hash exact du HEAD courant est **à
+  mettre à jour en fin de session** : un commit de doc ne peut pas contenir
+  son propre hash, et R7 le tolère explicitement (motif « à mettre à jour en
+  fin de session »). Le workflow `.github/workflows/ci.yml` (T-113) reste
+  hors suivi git de ces push car le jeton GitHub App n'a pas la permission
+  `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière activité (2026-08-30)** : **audit fonctionnel profond n°28
-  (rapport seul, aucun code modifié)** — 7 findings : **P1** annulation
-  par l'hôte (frais de politique facturés au voyageur — 277,38 € prouvé —
-  + bouton hôte « Annuler » inopérant, quote 403) ; **P2** identité
-  voyageur modifiable en mode connecté (confirmation envoyée à l'email
-  saisi), i18n public partiel (fiche propriété EN/FR mixte, 52 composants
-  client sans `makeT`), devise anonyme FCFA sans sélecteur ; **P3** hygiène
-  sims, PATCH settings partiel 400 + `issues`, cohérence 409/400.
-  Preuves : crawl 160 vérifs pages + 120 APIs (0 erreur), ~20 probes
-  runtime, baseline `run_all_sims.py` **396 OK · 3 WARN · 0 KO**.
-  Rapport : `REPORTS/audit_fonctionnel_profond28_2026-08-30.md`.
+- **Dernière activité (2026-08-30)** : **audit fonctionnel profond n°30
+  implémenté (T-160→T-166, sans régression)** — T-160 purge 122 wishlists
+  d'artefacts + refactor 1 requête/compteur dédupliqué · T-161 alertes
+  dates passées **400** + expiration cron `active=false` · T-162 les 5
+  pages publiques localisées (métadonnées+libellés+pluriels fr/en) ·
+  T-163 partage invalide **404 réel** (proxy — écart documenté :
+  `notFound()` dans `generateMetadata` reste 200 avec streaming Next
+  16.2.6) · T-164 sélecteur devise `initialLanguage` SSR ·
+  T-165 `appBaseUrl()` (e-mails jamais relatifs) · T-166 hygiène runs.
+  Preuves : 🔨 tsc 0 · build prod 0 err · 🧪 vitest **60 fichiers/403
+  tests · 0 échec · 0 skip** · ▶️ `run_all_sims.py` **5/5 · 396 OK ·
+  3 WARN · 0 KO** · ▶️ probes `.data/a30/regression.mjs` **18/18** ·
+  ✅ ai:check 19 OK · 1 warn R7 (motif toléré) · 0 fail.
+  Rapport : `REPORTS/audit_fonctionnel_profond30_2026-08-30.md`.
   Précédent (même jour) : audit n°27 — T-155 livré/validé
   — remédiation des 9 KO du runner unifié : **P2** code promo inconnu →
   **400** (`PromoCodeNotFoundError` dans `src/app/api/bookings/route.ts`) ;

@@ -11,6 +11,9 @@
 import { getSetting, DEFAULTS } from "@/lib/settings";
 import { renderTemplate, escapeHtml } from "./render";
 import { toMailLocale, mailStrings, type MailLocale } from "./strings";
+// T-165 (audit n°30) : URL de base unique — jamais de lien relatif dans
+// un e-mail (repli absolu documenté si NEXT_PUBLIC_APP_URL manque).
+import { appBaseUrl } from "@/lib/app-url";
 
 export function stripHtml(html: string): string {
   return html
@@ -212,7 +215,7 @@ export const templates = {
     const vars = { hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut };
     const subject = renderTemplate(s.hostCancelSubject, vars);
     const bodyRendered = renderTemplate(bodyToHtml(s.hostCancelBody), vars);
-    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const dashboardUrl = appBaseUrl();
     const html = layout(`
       ${bodyRendered}
       <table style="width:100%;margin:24px 0;border-collapse:collapse;">
@@ -349,7 +352,7 @@ export const templates = {
     const tpl = (await getSetting("emailTemplates")).bookingHostNotification;
     const subject = renderTemplate(tpl.subject, vars);
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
-    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const dashboardUrl = appBaseUrl();
     const html = layout(`
       ${bodyRendered}
       <table style="width:100%;margin:24px 0;border-collapse:collapse;">

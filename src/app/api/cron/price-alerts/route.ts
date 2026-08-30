@@ -3,7 +3,8 @@ import { db } from "@/db";
 import { bookings, priceAlerts, promotions, properties, uploadObjects, users } from "@/db/schema";
 import { and, eq, isNull, lt, lte, sql } from "drizzle-orm";
 import { deliverPendingEmails, enqueueEmail } from "@/lib/email-outbox";
-import { shouldNotifyPriceAlert } from "@/lib/price-alert-rules";
+import { shouldNotifyPriceAlert, isStayExpired } from "@/lib/price-alert-rules";
+import { appBaseUrl } from "@/lib/app-url";
 import { quotePriceAlert } from "@/lib/price-alert-quote";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { getSetting } from "@/lib/settings";
@@ -135,6 +136,20 @@ async function expirePendingBookings(): Promise<number> {
   return expired;
 }
 
+/** T-161 (audit n°30) — désactive les alertes « séjour » dont le départ est
+ *  déjà passé (elles ne peuvent plus jamais se réaliser ; re-quotées
+ *  inutilement à chaque run sinon). Conservateur : active=false, jamais de
+ *  suppression — l'historique et le seuil sont conservés. Exporté pour le
+ *  test d'intégration (additif). */
+export async function expirePastStayAlerts(today: string): Promise<number> {
+  const updated = await db
+    .update(priceAlerts)
+    .set({ active: false })
+    .where(and(eq(priceAlerts.active, true), lt(priceAlerts.checkOut, today)))
+    .returning({ id: priceAlerts.id });
+  return updated.length;
+}
+
 async function cleanupOrphanUploads(): Promise<number> {
   const cutoff = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const orphaned = await db.select({ key: uploadObjects.key }).from(uploadObjects).where(and(isNull(uploadObjects.attachedAt), lt(uploadObjects.createdAt, cutoff))).limit(100);
@@ -153,7 +168,8 @@ export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
 
   try {
-    const completedBookings = await completeEligibleBookings(new Date().toISOString().slice(0, 10));
+    const today = new Date().toISOString().slice(0, 10);
+    const completedBookings = await completeEligibleBookings(today);
     // T-149 : e-mails de cycle de vie (rappels J-3/J-1 et demande d'avis),
     // idempotents via des eventKeys déterministes.
     const bookingRemindersSent = await sendBookingReminders();
@@ -166,6 +182,8 @@ export async function GET(request: NextRequest) {
     const processedPaymentEvents = await processPendingPaymentEvents();
     const latePaymentRefunds = await reconcileLateCapturedPaymentRefunds();
     const orphanUploadsRemoved = await cleanupOrphanUploads();
+    // T-161 : avant de quoter, on retire du périmètre les alertes expirées.
+    const pastAlertsExpired = await expirePastStayAlerts(today);
     const alerts = await db
       .select({ alert: priceAlerts, user: users, property: properties })
       .from(priceAlerts)
@@ -206,7 +224,7 @@ export async function GET(request: NextRequest) {
         currency,
         maxPrice: Number(entry.alert.maxPrice).toFixed(2),
         offerLabel,
-        url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/hebergement/${entry.property.slug}`,
+        url: `${appBaseUrl()}/hebergement/${entry.property.slug}`,
         language: entry.user.language ?? null,
       });
       await enqueueEmail({
@@ -222,7 +240,7 @@ export async function GET(request: NextRequest) {
     }
 
     const alertEmailDelivery = await deliverPendingEmails();
-    return NextResponse.json({ ok: true, scanned: alerts.length, notified, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
+    return NextResponse.json({ ok: true, scanned: alerts.length, notified, pastAlertsExpired, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
   } catch (error) {
     console.error("[cron price-alerts]", error);
     return NextResponse.json({ error: "Échec du traitement des alertes prix" }, { status: 500 });

@@ -77,6 +77,19 @@ def find_page(route):
             return c
     return None
 
+# T-162/T-163 (audit n°30) : certaines pages publiques ont été scindées
+# en wrapper RSC (page.tsx : generateMetadata/notFound) + composant
+# client sibling (ex. `reservation-form.tsx`). Le contrôle statique lit
+# alors les DEUX fichiers pour vérifier que l'UI client est bien branchée
+# et le tag devient "client (sibling)" — l'intention du check (composants
+# clés présents) est conservée, seule la localisation du code a bougé.
+def read_page_bundle(page):
+    content = read_page(page)
+    sibling = os.path.join(os.path.dirname(page), "reservation-form.tsx")
+    if os.path.exists(sibling):
+        content += "\n" + read_page(sibling)
+    return content
+
 results = []
 def record(section, name, verdict, detail=""):
     icon = "✅" if verdict == "OK" else ("⚠️ " if verdict == "WARN" else "❌")
@@ -152,9 +165,11 @@ for route, expected, label in CLIENT_PAGES:
         record(S, f"{route} ({label})", "KO", "page.tsx introuvable")
         continue
     client = is_client_page(page)
-    content = read_page(page)
+    content = read_page_bundle(page)  # T-162 : wrapper RSC + sibling client
+    sibling = os.path.join(os.path.dirname(page), "reservation-form.tsx")
+    client_bundle = client or (os.path.exists(sibling) and is_client_page(sibling))
     ok, missing = contains_all(content, expected)
-    tag = "client" if client else "server"
+    tag = "client (sibling)" if client_bundle and not client else ("client" if client_bundle else "server")
     if ok:
         record(S, f"{route} ({tag}, {label}) — composants branchés",
                "OK", f"{[e[:25] for e in expected]}")

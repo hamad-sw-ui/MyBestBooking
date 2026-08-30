@@ -11,10 +11,17 @@ import { WishlistActions } from "@/components/wishlist-actions";
 import { CreateWishlistButton } from "@/components/create-wishlist-button";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { aggregateWishlistItems, uniqueProperties } from "@/lib/wishlist-utils";
 import { PriceAlertsSection } from "@/components/price-alerts-section";
 import { Heart, Bell } from "lucide-react";
 import Link from "next/link";
 
+/**
+ * T-160 (audit n°30) — « Mes favoris » : 2 requêtes au lieu de 1 + N
+ * (une par liste → 124 requêtes avec 123 listes d'artefacts), avec le
+ * compteur d'items réel par liste ET les propriétés uniques de l'utilisateur
+ * (un bien présent dans plusieurs listes n'est plus compté 2×).
+ */
 async function getWishlists(userId: string) {
   const userWishlists = await db
     .select()
@@ -22,26 +29,30 @@ async function getWishlists(userId: string) {
     .where(eq(wishlists.userId, userId))
     .orderBy(desc(wishlists.createdAt));
 
-  const wishlistsWithItems = await Promise.all(
-    userWishlists.map(async (wishlist) => {
-      const items = await db
-        .select({
-          item: wishlistItems,
-          property: properties,
-        })
+  const ids = userWishlists.map((w) => w.id);
+  const itemsRows = ids.length
+    ? await db
+        .select({ wishlistId: wishlistItems.wishlistId, property: properties })
         .from(wishlistItems)
         .leftJoin(properties, eq(wishlistItems.propertyId, properties.id))
-        .where(eq(wishlistItems.wishlistId, wishlist.id));
+        .where(
+          ids.length === 1
+            ? eq(wishlistItems.wishlistId, ids[0]!)
+            : (await import("drizzle-orm")).inArray(wishlistItems.wishlistId, ids),
+        )
+        .orderBy(desc(wishlistItems.addedAt))
+    : [];
 
-      return {
-        ...wishlist,
-        items: items.map(i => i.property).filter(Boolean),
-        itemCount: items.length,
-      };
-    })
+  const byId = aggregateWishlistItems(
+    ids,
+    itemsRows.map((r) => ({ wishlistId: r.wishlistId, property: r.property })),
   );
 
-  return wishlistsWithItems;
+  return userWishlists.map((wishlist) => ({
+    ...wishlist,
+    items: byId.get(wishlist.id)?.items ?? [],
+    itemCount: byId.get(wishlist.id)?.itemCount ?? 0,
+  }));
 }
 
 export default async function FavoritesPage() {
@@ -54,8 +65,9 @@ export default async function FavoritesPage() {
 
   const userWishlists = await getWishlists(user.id);
 
-  // Get all favorite properties across all wishlists
-  const allFavoriteProperties = userWishlists.flatMap(w => w.items);
+  // Get all favorite properties across all wishlists (T-160 : dédupliqué,
+  // un bien présent dans plusieurs listes n'est compté qu'une fois).
+  const allFavoriteProperties = uniqueProperties(userWishlists.flatMap(w => w.items));
 
   return (
     <div className="bg-gray-50 min-h-screen py-8">

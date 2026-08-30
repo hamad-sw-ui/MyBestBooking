@@ -3,54 +3,79 @@ import { getCurrentUser } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
-export const metadata: Metadata = {
-  title: "BestRewards — programme fidélité",
-  description: "Cumulez des séjours terminés et débloquez des réductions BestRewards et le cashback Ambassador.",
-};
 import { Badge } from "@/components/ui/badge";
 import { Award, Star, Percent, Wallet } from "lucide-react";
 import Link from "next/link";
 import { BestRewardsStatus } from "@/components/bestrewards-status";
+// T-162 (audit n°30) : page public localisée (métadonnées + contenu).
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("bestrewards.meta.title"),
+    description: t("bestrewards.meta.description"),
+  };
+}
 
 export default async function BestRewardsPage() {
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   const user = await getCurrentUser();
   const settings = await getSetting("bestrewards");
   const [level2Threshold, level3Threshold] = settings.thresholds;
   const [level1Discount, level2Discount, level3Discount] = settings.discounts;
 
+  const fmt = (template: string, vars: Record<string, string | number>) =>
+    Object.entries(vars).reduce((acc, [k, v]) => acc.replaceAll(`{${k}}`, String(v)), template);
+
   const levels = [
     {
       level: 1,
-      name: "Explorer",
+      name: t("bestrewards.level1Name"),
       color: "from-blue-500 to-blue-600",
-      requirement: "Dès l'inscription",
+      requirement: t("bestrewards.requirement1"),
       benefits: [
-        { icon: Percent, text: `Réduction de ${level1Discount}% sur les hébergements BestRewards` },
-        { icon: Star, text: "Suivi de votre niveau dans Mon compte" },
+        { icon: Percent, text: fmt(t("bestrewards.benefit1"), { pct: level1Discount }) },
+        { icon: Star, text: t("bestrewards.benefit2") },
       ],
     },
     {
       level: 2,
-      name: "Voyageur",
+      name: t("bestrewards.level2Name"),
       color: "from-purple-500 to-purple-600",
-      requirement: `${level2Threshold} séjours terminés`,
+      requirement: fmt(t("bestrewards.requirementN"), { n: level2Threshold }),
       benefits: [
-        { icon: Percent, text: `Réduction de ${level2Discount}% niveau Voyageur sur BestRewards` },
-        { icon: Star, text: "Tous les avantages Explorer" },
+        { icon: Percent, text: fmt(t("bestrewards.benefitN"), { pct: level2Discount, level: t("bestrewards.level2Name") }) },
+        { icon: Star, text: t("bestrewards.benefit2Level2") },
       ],
     },
     {
       level: 3,
-      name: "Ambassador",
+      name: t("bestrewards.level3Name"),
       color: "from-[#F5A623] to-yellow-500",
-      requirement: `${level3Threshold} séjours terminés`,
+      requirement: fmt(t("bestrewards.requirementN"), { n: level3Threshold }),
       benefits: [
-        { icon: Percent, text: `Réduction de ${level3Discount}% niveau Ambassador sur BestRewards` },
-        { icon: Wallet, text: "Cashback 5% en wallet après séjour" },
-        { icon: Star, text: "Tous les avantages Voyageur" },
+        { icon: Percent, text: fmt(t("bestrewards.benefitN"), { pct: level3Discount, level: t("bestrewards.level3Name") }) },
+        { icon: Wallet, text: t("bestrewards.benefitCashback") },
+        { icon: Star, text: t("bestrewards.benefit2Level3") },
       ],
     },
+  ];
+
+  const steps = [
+    { step: 1, title: t("bestrewards.how1Title"), desc: t("bestrewards.how1Desc") },
+    { step: 2, title: t("bestrewards.how2Title"), desc: t("bestrewards.how2Desc") },
+    { step: 3, title: t("bestrewards.how3Title"), desc: t("bestrewards.how3Desc") },
+  ];
+
+  const faqs = [
+    { q: t("bestrewards.faq1Q"), a: t("bestrewards.faq1A") },
+    { q: t("bestrewards.faq2Q"), a: fmt(t("bestrewards.faq2A"), { n2: level2Threshold, n3: level3Threshold }) },
+    { q: t("bestrewards.faq3Q"), a: t("bestrewards.faq3A") },
+    { q: t("bestrewards.faq4Q"), a: t("bestrewards.faq4A") },
+    { q: t("bestrewards.faq5Q"), a: t("bestrewards.faq5A") },
   ];
 
   return (
@@ -64,20 +89,17 @@ export default async function BestRewardsPage() {
               BestRewards
             </h1>
           </div>
-          <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8">
-            Les vrais avantages, dès votre 1ère réservation.<br />
-            Rejoignez le programme de fidélité MyBestBooking.
-          </p>
+          <p className="text-xl text-white/80 max-w-2xl mx-auto mb-8" dangerouslySetInnerHTML={{ __html: t("bestrewards.hero") }} />
           {!user && (
             <Link href="/inscription">
               <Button size="lg" variant="secondary" className="text-lg px-8">
-                Rejoindre gratuitement
+                {t("bestrewards.join")}
               </Button>
             </Link>
           )}
           {user && (
             <div className="inline-flex items-center gap-3 bg-white/10 px-6 py-3 rounded-full">
-              <span className="text-white/70">Votre niveau :</span>
+              <span className="text-white/70">{t("bestrewards.yourLevel")}</span>
               <Badge variant="bestrewards" className="text-base px-4 py-1">
                 💎 Level {user.bestrewardsLevel} — {levels[(user.bestrewardsLevel || 1) - 1].name}
               </Badge>
@@ -97,14 +119,10 @@ export default async function BestRewardsPage() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            Comment ça marche ?
+            {t("bestrewards.how")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {[
-              { step: 1, title: "Inscrivez-vous", desc: "C'est gratuit et instantané. Vous êtes immédiatement Level 1 Explorer." },
-              { step: 2, title: "Réservez", desc: "Chaque réservation confirmée compte. Plus vous voyagez, plus vous montez en niveau." },
-              { step: 3, title: "Profitez", desc: "Utilisez vos réductions BestRewards et, au niveau Ambassador, votre cashback wallet." },
-            ].map((item) => (
+            {steps.map((item) => (
               <div key={item.step} className="text-center">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#1B3A6B] text-white flex items-center justify-center text-2xl font-bold">
                   {item.step}
@@ -121,7 +139,7 @@ export default async function BestRewardsPage() {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            Les 3 niveaux BestRewards
+            {t("bestrewards.levelsTitle")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {levels.map((level) => (
@@ -137,7 +155,7 @@ export default async function BestRewardsPage() {
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-white/70">Level {level.level}</span>
                     {user?.bestrewardsLevel === level.level && (
-                      <Badge className="bg-white text-[#1B3A6B]">Votre niveau</Badge>
+                      <Badge className="bg-white text-[#1B3A6B]">{t("bestrewards.yourLevelBadge")}</Badge>
                     )}
                   </div>
                   <h3 className="text-2xl font-bold">{level.name}</h3>
@@ -165,31 +183,10 @@ export default async function BestRewardsPage() {
       <section className="py-16 bg-white">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            Questions fréquentes
+            {t("bestrewards.faqTitle")}
           </h2>
           <div className="space-y-6">
-            {[
-              {
-                q: "Comment rejoindre BestRewards ?",
-                a: "C'est automatique ! Dès votre inscription sur MyBestBooking, vous êtes Level 1 Explorer et bénéficiez immédiatement de la réduction configurée sur les hébergements BestRewards.",
-              },
-              {
-                q: "Comment monter de niveau ?",
-                a: `Chaque séjour terminé compte. Après ${level2Threshold} séjours, vous passez Level 2 Voyageur. Après ${level3Threshold} séjours, vous atteignez Level 3 Ambassador.`,
-              },
-              {
-                q: "Les réductions sont-elles cumulables ?",
-                a: "Les réductions BestRewards s'appliquent automatiquement sur les hébergements éligibles (badge 💎). Elles peuvent se cumuler avec certaines promotions selon les partenaires.",
-              },
-              {
-                q: "Comment fonctionne le cashback Ambassador ?",
-                a: "Au Level 3, vous gagnez 5% de cashback sur chaque réservation, crédité directement sur votre wallet MyBestBooking. Ce solde est utilisable sur vos prochaines réservations.",
-              },
-              {
-                q: "Mon niveau peut-il expirer ?",
-                a: "Votre niveau progresse après chaque séjour terminé. Les règles de durée de validité ne sont pas encore proposées ; votre niveau n'expire donc pas automatiquement.",
-              },
-            ].map((faq, i) => (
+            {faqs.map((faq, i) => (
               <div key={i} className="border border-gray-200 rounded-lg p-6">
                 <h3 className="font-semibold text-gray-900 mb-2">{faq.q}</h3>
                 <p className="text-gray-600">{faq.a}</p>
@@ -204,14 +201,14 @@ export default async function BestRewardsPage() {
         <section className="py-16 bg-gradient-to-r from-[#F5A623] to-[#f7b84a]">
           <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-4" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Prêt à profiter des avantages ?
+              {t("bestrewards.ctaTitle")}
             </h2>
             <p className="text-white/90 mb-8">
-              Rejoignez des milliers de voyageurs qui économisent avec BestRewards
+              {t("bestrewards.ctaDesc")}
             </p>
             <Link href="/inscription">
               <Button size="lg" className="bg-white text-[#F5A623] hover:bg-gray-100 text-lg px-8">
-                Créer mon compte gratuit
+                {t("bestrewards.ctaButton")}
               </Button>
             </Link>
           </div>

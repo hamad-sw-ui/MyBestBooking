@@ -1,97 +1,186 @@
 import type { Metadata } from "next";
+// T-162 (audit n°30) : page localisée — un visiteur en langue EN ne doit
+// plus voir le contenu FR (titre du navigateur + libellés visibles).
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
-export const metadata: Metadata = {
-  title: "Politique de confidentialité",
-  description: "Politique de traitement des données personnelles et de cookies de MyBestBooking (RGPD).",
-  robots: { index: true, follow: true },
-};
+const CONTENT = {
+  fr: {
+    title: "Politique de confidentialité",
+    collected: "Données collectées",
+    collectedIntro: "MyBestBooking collecte les données nécessaires au fonctionnement du service :",
+    collectedItems: [
+      ["Compte", "email, nom, prénom, mot de passe (haché bcrypt coût 12)."],
+      ["Profil optionnel", "téléphone, pays, langue, devise, fuseau horaire."],
+      ["Réservations", "dates, hébergement, montant, mode de paiement (jamais le numéro complet de carte)."],
+      ["Traçabilité", "IP au moment du login (pour la sécurité), dernière connexion."],
+      ["Communication", "messages échangés avec les hôtes."],
+    ],
+    cookies: "Cookies",
+    cookiesIntro: "MyBestBooking utilise uniquement des cookies techniques indispensables au fonctionnement du service (session utilisateur, préférence de thème clair/sombre). Aucun cookie tiers publicitaire ou de traçage.",
+    cookiesItems: [
+      ["session", "cookie HttpOnly, SameSite=Lax, expiration 30 jours (durée session, paramétrable dans le panneau d'administration)."],
+      ["theme", "préférence clair/sombre, stockée dans localStorage."],
+    ],
+    rights: "Vos droits (RGPD)",
+    rightsIntro: "Vous disposez, sur toutes vos données personnelles :",
+    rightsItems: [
+      ["Accès", "depuis Mon compte."],
+      ["Rectification", "édition directe du profil dans Mon compte."],
+      ["Suppression", "bouton « Supprimer mon compte » dans l'onglet Sécurité (soft-delete, anonymisation en base pour conservation des factures et avis conformément aux obligations légales)."],
+      ["Portabilité", "sur demande à support@mybestbooking.com."],
+      ["Opposition", "désabonnement possible depuis l'onglet Notifications."],
+    ],
+    security: "Sécurité",
+    securityItems: [
+      "Mots de passe hachés (bcrypt coût 12).",
+      "Authentification à deux facteurs (TOTP) disponible.",
+      "Rate-limiting sur toutes les routes d'authentification et de mutation.",
+      "CSP stricte, headers de sécurité (HSTS, X-Frame-Options, Referrer-Policy).",
+      "Rotation des secrets documentée (voir .ai/SECURITY.md côté équipe).",
+    ],
+    processors: "Sous-traitants",
+    processorsIntro: "Pour fournir le service, MyBestBooking peut faire appel aux prestataires suivants (activation par variables d'environnement) :",
+    processorsItems: [
+      "Hébergement infra (Vercel / AWS / OVH selon déploiement)",
+      "Paiement (Stripe)",
+      "Email transactionnel (Resend)",
+      "Stockage d'images (S3-compatible)",
+    ],
+    processorsOutro: "Chaque prestataire respecte le RGPD. Aucune donnée n'est transférée à des tiers à des fins commerciales.",
+    dpo: "Contact délégué à la protection des données",
+    seeAlso: "Voir aussi les Mentions légales.",
+    updated: "Dernière mise à jour :",
+  },
+  en: {
+    title: "Privacy policy",
+    collected: "Data we collect",
+    collectedIntro: "MyBestBooking collects the data needed to run the service:",
+    collectedItems: [
+      ["Account", "email, first name, last name, password (hashed, bcrypt cost 12)."],
+      ["Optional profile", "phone, country, language, currency, timezone."],
+      ["Bookings", "dates, accommodation, amount, payment method (never the full card number)."],
+      ["Traceability", "IP at login (for security), last connection."],
+      ["Communication", "messages exchanged with hosts."],
+    ],
+    cookies: "Cookies",
+    cookiesIntro: "MyBestBooking uses only technical cookies required for the service to work (user session, light/dark theme preference). No third-party advertising or tracking cookies.",
+    cookiesItems: [
+      ["session", "HttpOnly cookie, SameSite=Lax, 30-day expiry (session duration, configurable in the admin panel)."],
+      ["theme", "light/dark preference stored in localStorage."],
+    ],
+    rights: "Your rights (GDPR)",
+    rightsIntro: "On all your personal data, you have:",
+    rightsItems: [
+      ["Access", "from My account."],
+      ["Rectification", "direct profile editing in My account."],
+      ["Deletion", "the “Delete my account” button in the Security tab (soft delete, anonymisation in the database to keep invoices and reviews as required by law)."],
+      ["Portability", "on request to support@mybestbooking.com."],
+      ["Opposition", "unsubscribe from the Notifications tab."],
+    ],
+    security: "Security",
+    securityItems: [
+      "Passwords hashed (bcrypt cost 12).",
+      "Two-factor authentication (TOTP) available.",
+      "Rate limiting on every authentication and mutation route.",
+      "Strict CSP, security headers (HSTS, X-Frame-Options, Referrer-Policy).",
+      "Secret rotation documented (see .ai/SECURITY.md for the team).",
+    ],
+    processors: "Sub-processors",
+    processorsIntro: "To provide the service, MyBestBooking may use the following providers (enabled through environment variables):",
+    processorsItems: [
+      "Infrastructure hosting (Vercel / AWS / OVH depending on deployment)",
+      "Payment (Stripe)",
+      "Transactional email (Resend)",
+      "Image storage (S3-compatible)",
+    ],
+    processorsOutro: "Each provider complies with the GDPR. No data is transferred to third parties for commercial purposes.",
+    dpo: "Data protection officer contact",
+    seeAlso: "See also our Legal notice.",
+    updated: "Last updated:",
+  },
+} as const;
+
+export async function generateMetadata(): Promise<Metadata> {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("privacy.meta.title"),
+    description: t("privacy.meta.description"),
+    robots: { index: true, follow: true },
+  };
+}
 
 /**
- * /confidentialite (T-031)
- * Page RGPD / cookies unique. Contenu de base V1.
+ * /confidentialite (T-031) — page RGPD/cookies unique, contenue bilingue
+ * (T-162 : la langue est celle du compte/cookie, français par défaut).
  */
-export default function ConfidentialitePage() {
+export default async function ConfidentialitePage() {
+  const locale = await getServerLocale();
+  const c = CONTENT[locale === "en" ? "en" : "fr"];
+  const t = makeT(locale);
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <h1
         className="text-3xl font-bold text-gray-900 mb-8"
         style={{ fontFamily: "'Poppins', sans-serif" }}
       >
-        Politique de confidentialité
+        {c.title}
       </h1>
 
       <section className="prose prose-slate max-w-none space-y-8">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">Données collectées</h2>
-          <p className="text-gray-700">
-            MyBestBooking collecte les données nécessaires au fonctionnement du service :
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">{c.collected}</h2>
+          <p className="text-gray-700">{c.collectedIntro}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-700">
-            <li><strong>Compte</strong> : email, nom, prénom, mot de passe (haché bcrypt coût 12).</li>
-            <li><strong>Profil optionnel</strong> : téléphone, pays, langue, devise, fuseau horaire.</li>
-            <li><strong>Réservations</strong> : dates, hébergement, montant, mode de paiement (jamais le numéro complet de carte).</li>
-            <li><strong>Traçabilité</strong> : IP au moment du login (pour la sécurité), dernière connexion.</li>
-            <li><strong>Communication</strong> : messages échangés avec les hôtes.</li>
+            {c.collectedItems.map(([label, value]) => (
+              <li key={label}><strong>{label}</strong> : {value}</li>
+            ))}
           </ul>
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">Cookies</h2>
-          <p className="text-gray-700">
-            MyBestBooking utilise <strong>uniquement</strong> des cookies techniques
-            indispensables au fonctionnement du service (session utilisateur,
-            préférence de thème clair/sombre). Aucun cookie tiers publicitaire ou
-            de traçage.
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">{c.cookies}</h2>
+          <p className="text-gray-700">{c.cookiesIntro}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-700 mt-3">
-            <li><code className="text-xs bg-gray-100 px-1">session</code> — cookie HttpOnly, SameSite=Lax, expiration 30 jours (durée session, paramétrable dans le panneau d&apos;administration).</li>
-            <li><code className="text-xs bg-gray-100 px-1">theme</code> — préférence clair/sombre, stockée dans <code className="text-xs bg-gray-100 px-1">localStorage</code>.</li>
+            {c.cookiesItems.map(([name, value]) => (
+              <li key={name}><code className="text-xs bg-gray-100 px-1">{name}</code> — {value}</li>
+            ))}
           </ul>
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">Vos droits (RGPD)</h2>
-          <p className="text-gray-700">Vous disposez, sur toutes vos données personnelles :</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">{c.rights}</h2>
+          <p className="text-gray-700">{c.rightsIntro}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-700">
-            <li><strong>Accès</strong> — depuis <a href="/mon-compte" className="text-[#1B3A6B] underline">Mon compte</a>.</li>
-            <li><strong>Rectification</strong> — édition directe du profil dans Mon compte.</li>
-            <li><strong>Suppression</strong> — bouton « Supprimer mon compte » dans l&apos;onglet Sécurité (soft-delete, anonymisation en base pour conservation des factures et avis conformément aux obligations légales).</li>
-            <li><strong>Portabilité</strong> — sur demande à <a href="mailto:support@mybestbooking.com" className="text-[#1B3A6B] underline">support@mybestbooking.com</a>.</li>
-            <li><strong>Opposition</strong> — désabonnement possible depuis l&apos;onglet Notifications.</li>
+            {c.rightsItems.map(([label, value]) => (
+              <li key={label}><strong>{label}</strong> — {value}</li>
+            ))}
           </ul>
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">Sécurité</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">{c.security}</h2>
           <ul className="list-disc pl-6 space-y-1 text-gray-700">
-            <li>Mots de passe hachés (bcrypt coût 12).</li>
-            <li>Authentification à deux facteurs (TOTP) disponible.</li>
-            <li>Rate-limiting sur toutes les routes d&apos;authentification et de mutation.</li>
-            <li>CSP stricte, headers de sécurité (HSTS, X-Frame-Options, Referrer-Policy).</li>
-            <li>Rotation des secrets documentée (voir <code className="text-xs bg-gray-100 px-1">.ai/SECURITY.md</code> côté équipe).</li>
+            {c.securityItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">Sous-traitants</h2>
-          <p className="text-gray-700">
-            Pour fournir le service, MyBestBooking peut faire appel aux
-            prestataires suivants (activation par variables d&apos;environnement) :
-          </p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">{c.processors}</h2>
+          <p className="text-gray-700">{c.processorsIntro}</p>
           <ul className="list-disc pl-6 space-y-1 text-gray-700">
-            <li>Hébergement infra (Vercel / AWS / OVH selon déploiement)</li>
-            <li>Paiement (Stripe)</li>
-            <li>Email transactionnel (Resend)</li>
-            <li>Stockage d&apos;images (S3-compatible)</li>
+            {c.processorsItems.map((item) => (
+              <li key={item}>{item}</li>
+            ))}
           </ul>
-          <p className="text-gray-700 mt-3">
-            Chaque prestataire respecte le RGPD. Aucune donnée n&apos;est
-            transférée à des tiers à des fins commerciales.
-          </p>
+          <p className="text-gray-700 mt-3">{c.processorsOutro}</p>
         </div>
 
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-3">Contact délégué à la protection des données</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-3">{c.dpo}</h2>
           <p className="text-gray-700">
             <a href="mailto:privacy@mybestbooking.com" className="text-[#1B3A6B] underline">
               privacy@mybestbooking.com
@@ -101,11 +190,13 @@ export default function ConfidentialitePage() {
 
         <div className="border-t border-gray-200 pt-6">
           <p className="text-sm text-gray-500">
-            Voir aussi les{" "}
-            <a href="/mentions-legales" className="text-[#1B3A6B] underline">Mentions légales</a>.
+            {c.seeAlso}{" "}
+            <a href="/mentions-legales" className="text-[#1B3A6B] underline">
+              {t("legal.meta.title")}
+            </a>.
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            Dernière mise à jour : {new Date().toLocaleDateString("fr-FR")}
+            {c.updated} {new Date().toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR")}
           </p>
         </div>
       </section>

@@ -149,6 +149,18 @@ considéré comme non valide (audit §22) et repasse en `INSPECTION`.
 | T-165 | E-mails liens relatifs sans APP_URL | P3 | AUDIT (à arbitrer) | 🔨 code : `NEXT_PUBLIC_APP_URL ?? ""` ×3 | idem F6 |
 | T-166 | Hygiène runs (votes/favoris) | P3 | AUDIT (à arbitrer) | ▶️ 1er POST helpful sur avis seed → 409 (vote préexistant, nettoyé) | idem F7 |
 
+### 2026-08-30 — Audit n°30 — implémentation (T-160→T-166, sans régression)
+
+| ID | Objet | Niv | Statut | Preuves rejouables | Commit | Réf. |
+|---|---|---|---|---|---|---|
+| T-160 | Favoris : purge 122 wishlists d'artefacts (état réel de l'audit, 1 légitime conservée) + refactor `getWishlists()` 1 requête (`wishlist_items ⋈ properties`, `eq`/`inArray`) + `aggregateWishlistItems`/`uniqueProperties` (compteur dédupliqué, rendu identique) | P2 | CORRIGÉ (VALIDÉ) | 🔨 tsc 0 · 🧪 `wishlist-utils.test.ts` (3 tests) · ▶️ `node scripts/purge-sim-data.mjs --apply` → 122 supprimées / 1 restante · ▶️ probe `GET /api/wishlists` → 2 listes, 0 `rate-test-*` | HEAD+ | `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md` F1 |
+| T-161 | Alerte prix : `checkIn` passé → **400** (avant 201) ; cron `expirePastStayAlerts` → `active=false` + `pastAlertsExpired` | P2 | CORRIGÉ (VALIDÉ) | 🧪 `price-alert-rules.test.ts` (4) + `api/price-alerts/route.test.ts` (3 intégration : 400 passé/201 futur/expiration cron) · ▶️ probe : dates 2020 → **400** « La date d'arrivée de l'alerte ne peut pas être dans le passé » ; futures → 201 + DELETE 200 | HEAD+ | idem F2 |
+| T-162 | i18n vague 2 : les 5 pages publiques localisées (métadonnées + libellés + pluriels, `ui-strings.ts` +~60 clés fr/en) | P2 | CORRIGÉ (VALIDÉ) | ▶️ probe cookie `mybb:ui-language=en` : `/confidentialite` « Privacy policy », `/mentions-legales` « Legal notice », `/bestrewards` « loyalty program », `/reservation` « Complete my booking », partage « Shared list » (tous 200, 0 accent titre) · 🔨 tsc 0 · `check-i18n` 430 segments/63 fichiers (réf. 460/66) | HEAD+ | idem F3 |
+| T-163 | Partage invalide → **HTTP 404 réel** (avant 200) — écart de solution documenté : `notFound()` dans `generateMetadata` reste 200 sur Next 16.2.6 (streaming, constaté dev+prod ; docs Streaming + issue vercel/next.js #82041) → validation token au **proxy** (fetch API publique avant rendu ; 404 HTML localisé/noindex ; valide → page RSC) | P3 | CORRIGÉ (VALIDÉ) | 🔨 tsc 0 · 🔨 build prod 0 err · 🧪 `proxy.test.ts` 17/17 (+2 : API 404 → réponse 404 HTML ; API 200 → next) · ▶️ dev ET `next start` : `/wishlists/share/__t__` → **404** ; token valide → **200 + titre EN** | HEAD+ | idem F4 |
+| T-164 | Sélecteur devise : prop `initialLanguage` SSR (`getServerLocale` → `SearchPriceFilter` → `CurrencySelector`) | P3 | CORRIGÉ (VALIDÉ) | ▶️ `/recherche?city=Paris` (cookie en) → `aria-label="Display currency"` dans le HTML SSR (0 « Devise d'affichage ») · 🔨 tsc 0 | HEAD+ | idem F5 |
+| T-165 | `appBaseUrl()` unique (`NEXT_PUBLIC_APP_URL` nettoyé sinon `https://mybestbooking.com`, warn unique hors test) branché dans `templates.ts` ×2 + URL du cron | P3 | CORRIGÉ (VALIDÉ) | 🧪 `app-url.test.ts` (3 : variable, repli, slash) · 🔨 grep `NEXT_PUBLIC_APP_URL ?? ""` = 0 dans les e-mails | HEAD+ | idem F6 |
+| T-166 | Hygiène runs : `purge-sim-data.mjs` + `cleanup_db` (votes directs + via avis users test, `price_alerts`, wishlist_items/wishlists artefacts — critères stricts) | P3 | CORRIGÉ (VALIDÉ) | ▶️ `purge-sim-data.mjs --apply` → votes=0/alertes=0/wishlists=122 ; `run_all_sims.py` ×2 → 0 accumulation (probes ≤20 listes) | HEAD+ | idem F7 |
+
 ---
 
 ## Rappel §22
