@@ -9,6 +9,27 @@
 
 ---
 
+## Session 38 — 2026-08-30 : 23e audit fonctionnel (T-148) — RAS, aucun correctif
+
+Audit n°23 à l'exécution (3 rôles + anonyme, DEV). Rapport :
+`REPORTS/audit_fonctionnel_profond23_2026-08-30.md`.
+
+**Conclusion : aucune anomalie bloquante, aucun code modifié.** Scénarios
+vérifiés sains : gestion chambres hôte (création/prix négatif/désactivation/
+garde propriétaire), réponses aux avis (hôte uniquement, vote anti-doublon),
+préférences (langue/devise validées), garde-fous réservation (capacité 409,
+dates, anonyme 401), **sécurité** (auto-promotion de rôle ignorée, routes
+admin 403/307, statut/commission propriétés réservés admin), suspension
+utilisateurs (login bloqué, auto-suspension 400), favoris (doublon 400, FK
+404), recherche avancée (filtres), éligibilité avis (notFound), pages
+dashboard toutes 200, paramètres admin (403 client, clé invalide 404). Pas de
+centre de notifications générique (conception messages/alertes/e-mails, aucun
+lien mort).
+
+🧪 `tsc` 0 · `vitest` **288/288** · ▶️ `smoke` **94/94** · `build` ✓
+(**60 pages**) · `ai:check` **19 OK / 1 warn**. Données de test nettoyées
+(état de seed, 8 utilisateurs actifs).
+
 ## Session 37 — 2026-08-30 : 22e audit fonctionnel (T-147) — messages FR sur routes 2FA
 
 Audit n°22 à l'exécution (3 rôles + anonyme, DEV 3000 puis **PROD 3009** avec

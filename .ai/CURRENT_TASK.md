@@ -1,60 +1,51 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** T-147 — 22e audit fonctionnel profond : analyse à l'exécution
-(pages, boutons, scénarios profonds) des éléments inachevés/mal pensés, avec
-explication du problème et solution sans régression. Détail :
-`REPORTS/audit_fonctionnel_profond22_2026-08-30.md`.
+**Tâche :** T-148 — 23e audit fonctionnel profond : analyse à l'exécution
+(pages, boutons, scénarios) des éléments inachevés/mal pensés, avec explication
+et solution sans régression. Détail :
+`REPORTS/audit_fonctionnel_profond23_2026-08-30.md`.
 
-**Méthode :** DEV (3000) puis **PROD `next start` (3009)** avec `CRON_SECRET`
-défini ; 3 rôles + anonyme. Environnement restauré (re-clone). Données de test
-nettoyées (utilisateurs de test **anonymisés** comme le fait l'admin,
-réservations 2028, surcharges calendaires, alerte, conversation orpheline
-supprimées ; wallet client démo remis à 25,00 €).
+**Méthode :** DEV (3000), 3 rôles + anonyme. Environnement restauré (re-clone →
+reset `ccfdea7`). Données de test nettoyées (chambre, wishlist, utilisateur
+jetable anonymisé, réponse d'avis, vote utile, téléphone → état de seed,
+8 utilisateurs actifs).
 
-## Défaut corrigé (1 seul, additif — aucun flux touché)
-
-- 🔨 **Messages d'erreur Zod en anglais sur les routes 2FA** :
-  `api/auth/2fa/{setup,verify,disable}/route.ts` renvoyaient
-  `error.issues[0]?.message` brut → « Invalid input: expected string… »
-  lorsqu'un champ requis manquait/avait le mauvais type. Corrigé en utilisant
-  `frenchZodMessage(error)` (déjà dans `src/lib/http.ts`, utilisé T-140 sur les
-  routes admin) : les messages métier FR personnalisés sont conservés, les
-  messages Zod par défaut sont traduits (« Valeur invalide ou manquante »).
-  Après correctif, les 3 routes répondent en français ; le flux 2FA complet
-  (setup → verify → login totpCode → disable) reste fonctionnel.
+**Conclusion : aucune anomalie bloquante, aucun correctif de code nécessaire.**
+Tous les scénarios testés sont corrects (validations + garde-fous d'autorisation).
 
 ## Scénarios profonds vérifiés SAINS
 
-Surbooking (qty 2 : 2 OK, 3ᵉ refusée ; nuits adjacentes OK, chevauchement
-refusé) · propriété suspendue non réservable · wallet débité/plafonné ·
-codes promo (valide/inconnu/montant invalide) · 2FA bout en bout ·
-parrainage (filleul +5 €, parrain +10 € une fois, cron idempotent) ·
-**sécurité cron/seed** (prod : seed exige SEED_TOKEN sinon 404 ; cron exige
-Bearer CRON_SECRET sinon 401 ; en dev l'auth est volontairement ouverte) ·
-annulation (devis, remboursement total, double → 409, IDOR → 403) ·
-disponibilité calendaire hôte (availableCount 0 bloque, non-propriétaire 403)
-· messagerie (message stocké, compteurs, vide → 400, tiers → 403) · alertes
-de prix (création/idempotence/mise à jour/seuil négatif refusé) · page d'aide.
+- Chambres hôte : création 201, prix négatif 400, client 403, désactivation →
+  non réservable, garde propriétaire/admin.
+- Avis : réponse hôte sur sa propriété 200 / client 403 / vide 400 ; vote
+  « utile » anonyme 401, re-vote 409.
+- Préférences : langue `ar` 400, devise inconnue 400, prénom vide/tél long 400.
+- Réservation : capacité dépassée 409, départ<arrivée 400, passé 400,
+  anonyme 401.
+- **Sécurité** : auto-promotion `role:admin` ignorée (rôle reste customer) ;
+  client/hôte sur routes admin 403 ; pages dashboard non autorisées → 307.
+- Propriétés : hôte édite 200 mais statut/commission → 403 (admin only) ;
+  client 403.
+- Utilisateurs admin : suspension → login 401, réactivation OK, **auto-suspension 400**, non-admin 403.
+- Favoris : ajout 201, doublon 400, propriété inexistante 404.
+- Recherche : filtres équipements/capacité/type corrects, type invalide → 0 résultat.
+- Dépôt d'avis : page `notFound()` si non propriétaire ou séjour non terminé.
+- Pages : toutes les pages principales + dashboard hôte/admin répondent 200 ;
+  paramètres admin (GET admin 200/client 403, PATCH clé invalide 404).
+- Notifications : pas de centre générique (conception via messages/alertes/
+  e-mails) ; aucun lien mort.
 
-## Remarques non bloquantes (aucune action sans décision)
+**ID** : T-148. **Niveau** : L. **Statut** : **AUDIT TERMINÉ — RAS (VALIDÉ)** — 2026-08-30.
 
-- Cron ouvert en dev **volontairement** (`NODE_ENV`), sécurisé en prod →
-  penser à définir `CRON_SECRET` en production.
-- `vercel.json` planifie le cron sans en-tête d'auth (idempotent, effet
-  limité) ; à aligner si `CRON_SECRET` activé.
-- En prod sans clés Stripe, l'étape de reprise de paiement du cron lève une
-  erreur (dette Stripe déjà connue/différée T-145) et fait répondre 500 pour
-  tout le cron ; suggestion future : isoler chaque étape dans un try/catch.
+## Sortie (validé — T-148)
 
-**ID** : T-147. **Niveau** : L. **Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-30.
-
-## Sortie (validé — T-147)
-
-- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **288/288 (42 fichiers)**.
-- ▶️ `smoke` **94/94** · `build` ✓ (**60 pages**) · `ai:check` **19 OK · 1 warn**.
-- Rapport : `.ai/REPORTS/audit_fonctionnel_profond22_2026-08-30.md`.
+- Aucun code modifié. 🧪 `tsc` 0 · `vitest` **288/288** · ▶️ `smoke` **94/94** ·
+  `build` ✓ (**60 pages**) · `ai:check` **19 OK · 1 warn**.
+- Rapport : `.ai/REPORTS/audit_fonctionnel_profond23_2026-08-30.md`.
 
 ---
+
+## Avant : T-147 — 22e audit fonctionnel profond (messages FR routes 2FA)
 
 ## Avant : T-146 — 21e audit fonctionnel profond (récapitulatif rate plan)
 
