@@ -16,6 +16,10 @@ const registerSchema = z.object({
   firstName: z.string().min(2, "Le prénom doit contenir au moins 2 caractères"),
   lastName: z.string().min(2, "Le nom doit contenir au moins 2 caractères"),
   role: z.enum(["customer", "host"]).optional().default("customer"),
+  // T-151 : la langue choisie à l'inscription est persistée dès le départ,
+  // pour que l'e-mail de vérification soit localisé pour le destinataire
+  // (fr / en ; ar retombe sur fr comme le reste de l'interface).
+  language: z.enum(["fr", "en", "ar"]).optional().default("fr"),
   // T-125 (P2) : code de parrainage optionnel (lien ?ref= ou saisie).
   // Un code absent/invalide ne bloque jamais l'inscription.
   referralCode: z.string().max(32).optional(),
@@ -68,6 +72,7 @@ export async function POST(request: NextRequest) {
         firstName: data.firstName,
         lastName: data.lastName,
         role: data.role,
+        language: data.language,
         // T-008 (BUG-008) : par défaut, l'email n'est PAS vérifié.
         // L'utilisateur peut se connecter mais un flux de vérification
         // (envoi de mail avec lien signé) reste à implémenter — voir
@@ -108,6 +113,7 @@ export async function POST(request: NextRequest) {
         firstName: newUser.firstName,
         lastName: newUser.lastName,
         role: newUser.role,
+        language: newUser.language,
       },
     });
   } catch (error) {

@@ -231,6 +231,24 @@ describe("templates (T-013 + T-025)", () => {
     expect(t.text).not.toContain("Activer mon accès");
   });
 
+  it("T-151 : emailVerification — habillage anglais quand la langue du destinataire est en", async () => {
+    const t = await templates.emailVerification({
+      firstName: "John", url: "https://x/verify?token=abc", language: "en",
+    });
+    expect(t.html).toContain("Verify my email");
+    expect(t.html).toContain("Book better. Travel further.");
+    expect(t.html).toContain('lang="en"');
+    expect(t.html).not.toContain("Vérifier mon email");
+  });
+
+  it("T-151 : emailVerification — habillage français par défaut", async () => {
+    const t = await templates.emailVerification({
+      firstName: "Jean", url: "https://x/verify?token=abc",
+    });
+    expect(t.html).toContain("Vérifier mon email");
+    expect(t.html).toContain("Réservez mieux. Voyagez plus.");
+  });
+
   it("T-150 : newMessage (fr par défaut) — sujet/corps localisés + CTA vers la conversation", async () => {
     const t = await templates.newMessage({
       firstName: "Marie", senderName: "Jean", url: "http://localhost:3000/messages/conv-1",

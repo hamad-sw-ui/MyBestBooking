@@ -160,7 +160,7 @@ modification de code.
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Service email abstrait (interface `Mailer`) | ✅ | `src/lib/mail/` : ConsoleMailer (dev) + ResendMailer (prod via RESEND_API_KEY), avec `eventKey` outbox transmis comme clé d’idempotence et message id fournisseur tracé. | T-013, T-107 |
-| Email vérification à l'inscription | ✅ | Envoyé dans `POST /api/auth/register` (best-effort) | T-013 |
+| Email vérification à l'inscription | ✅ | Envoyé dans `POST /api/auth/register` (best-effort) ; **T-151** : `language` accepté à l'inscription (défaut fr) → habillage localisé pour le destinataire | T-013, T-151 |
 | Email reset password | ✅ | `POST /api/auth/forgot-password` + templates.passwordReset | T-013 |
 | Email confirmation booking (voyageur) | ✅ | Envoyé dans `POST /api/bookings` | T-013 |
 | Email notification nouvelle réservation (hôte) | ✅ | Envoyé dans `POST /api/bookings` | T-013 |
@@ -266,7 +266,7 @@ modification de code.
 | `loading.tsx` par route | ✅ | Spinner root + sr-only | T-017 |
 | Dark mode | ✅ | Classe `.dark` sur `<html>` + palette CSS globale + `<DarkModeToggle>` client avec persistance localStorage + script inline anti-FOUC (T-029) | T-029 |
 | `next/font` (Inter + Poppins) | 🚧 | **Sandbox-limited** : CDN Google indispo au build. Fallback `<link>` fonctionnel. Ré-activable en 1 commit quand CI a l'accès CDN | 🎯 CI |
-| Mode invité revendicable | ✅ | Profil créé après validation booking, claim hashé par email, mot de passe + session puis réservations; pas de stub sur une demande invalide. | T-029, T-109 |
+| Mode invité revendicable | ✅ | Profil créé après validation booking, claim hashé par email, mot de passe + session puis réservations; pas de stub sur une demande invalide. **T-151** : la langue de l'invité est persistée au checkout → e-mail de réclamation localisé (fr/en) | T-029, T-109, T-151 |
 
 ---
 

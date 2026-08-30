@@ -33,6 +33,9 @@ const bookingSchema = z
     guestEmail: z.string().email(),
     guestPhone: z.string().optional(),
     guestCountry: z.string().length(2).optional(),
+    // T-151 : langue du visiteur (checkout invité) → persistée sur le
+    // profil invité pour localiser l'e-mail de réclamation de compte.
+    language: z.enum(["fr", "en", "ar"]).optional(),
     tripPurpose: z.enum(["leisure", "business"]).optional(),
     specialRequests: z.string().optional(),
     estimatedArrival: z.string().optional(),
@@ -275,6 +278,7 @@ export async function POST(request: NextRequest) {
             role: "customer",
             emailVerified: false,
             passwordHash: null,
+            language: data.language ?? "fr",
           }).returning();
           lockedUser = createdGuest;
         }

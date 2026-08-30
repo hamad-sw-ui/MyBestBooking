@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
+import { makeT, isUiLocale } from "@/lib/ui-strings";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -197,6 +197,9 @@ function ReservationPageInner() {
           ratePlanId: formData.ratePlanId || undefined,
           useWalletCredits: useWalletCredits || undefined,
           isGuestBooking: guestMode || undefined,
+          // T-151 : langue de l'invité → l'e-mail de réclamation de compte
+          // est localisé pour lui (le profil invité la persiste).
+          ...(language && isUiLocale(language) ? { language } : {}),
         }),
       });
 

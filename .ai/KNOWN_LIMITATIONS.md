@@ -60,11 +60,13 @@ selon le rôle du destinataire), sujet/corps plateforme localisés fr/en,
 e-mail d'annulation à l'hôte (`bookingHostCancellation`, localisé fr/en via
 l'outbox). Restent assumées :
 
-- **E-mail de vérification à l'inscription en français par défaut.** Le
-  schéma `POST /api/auth/register` n'accepte pas `language` : l'e-mail de
-  vérification part avant que la préférence puisse être enregistrée (elle
-  arrive via `PATCH /api/users/me`). Préexistant, hors périmètre messaging —
-  traitable dans une future tâche.
+- **Vérification à l'inscription localisée (T-151, résolu).** `language`
+  est accepté/persisté à l'inscription et au checkout invité → l'e-mail de
+  vérification et la réclamation de compte sont localisés fr/en pour le
+  destinataire (défaut fr). Reste : **aucun sélecteur de langue UI** (la
+  langue n'est modifiable que dans le profil) et **couverture i18n partielle**
+  (20/113 composants traduits, `lang="fr"` figé) — voir
+  `REPORTS/audit_fonctionnel_profond24_2026-08-30.md` finding D.
 - **Corps éditables admin non traduits.** Les blocs `emailTemplates`
   personnalisés par l'admin gardent la langue de rédaction admin (compromis
   T-025) ; la localisation fr/en s'applique aux contenus plateforme

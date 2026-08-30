@@ -9,6 +9,55 @@
 
 ---
 
+## Session 41 — 2026-08-30 : T-151 e-mail de vérification localisé + audit fonctionnel n°24
+
+**T-151 (implémenté).** Réponse « oui » à la limite T-150 : l'e-mail de
+vérification à l'inscription est désormais localisé pour le destinataire.
+
+- 🔨 `POST /api/auth/register` : champ `language` (fr/en/ar, défaut fr)
+  persisté sur `users.language` + renvoyé ; formulaires d'inscription et de
+  réservation envoient la langue d'interface résolue
+  (`useDisplayPreferences`).
+- 🔨 Cause racine étendue : le **checkout invité** créait un profil
+  `language=fr` par défaut → l'e-mail de **réclamation de compte** était
+  aussi toujours en français. `POST /api/bookings` accepte désormais
+  `language` et le persiste sur le profil invité.
+- 🧪 +4 tests (2 unitaires `emailVerification` EN/FR ; 2 intégration DB
+  register : persistance `en` + e-mail EN en outbox, `language` invalide →
+  400). **tsc 0 · lint 0 erreur · vitest 316/316 · smoke 94/94 · build OK.**
+- ▶️ Preuve runtime : guest `language=en` → profil invité `en`, e-mail
+  « Access your booking MBB-… » / « Activate my access », `lang="en"` —
+  aucune version FR. Nettoyage : 8 users, 32 réservations seed, outbox 0,
+  wishlist seed **restaurée** (supprimée par erreur lors d'un nettoyage
+  précédent — le smoke s'appuie dessus).
+
+**Audit fonctionnel n°24 (à l'exécution, rapport seul).**
+🔍 41 pages (anonyme/customer/host/admin) + 61 routes API crawlees : RBAC
+conforme, aucune page en erreur, aucun TODO/dead-UI. Le rapport
+`REPORTS/audit_fonctionnel_profond24_2026-08-30.md` documente **5 findings**
+avec preuves + solutions **sans régression** :
+- **A (P1)** réservation `pending` sans action (payer/annuler) — l'API
+  `POST /api/bookings/[id]/payment` et `cancelBooking(pending)` existent
+  déjà, seule l'UI manque ;
+- **B (P1)** devise « € » codée en dur dans `/reservation` alors que
+  `rooms.currency` peut être USD/GBP (faux montant affiché vs débité) ;
+- **C (P2)** analytics/billing : totaux `formatPrice(somme)` sans devise ;
+- **D (P2)** i18n partiel : 20/113 composants traduits, `<html lang="fr">`
+  figé, **aucun sélecteur de langue** (anonyme/Anglophone bloqué) ;
+- **E (P2)** avis : CTA « Laisser mon avis » toujours visible après dépôt +
+  page avis sans état → 400 « déjà laissé » subi.
+- F/G : commentaire obsolète register (corrigé avec T-151) ; dépendance
+  wishlist du smoke (observation).
+
+*Aucune modification de code pour A→E* : les solutions sont prêtes dans le
+rapport (additives) et seront implémentées sur décision.
+
+**Prochaine étape :** choix des findings à implémenter (A et B recommandés
+en priorité — argent/véracité) ; sinon poursuite des tâches de production
+(clés Stripe/Resend réelles).
+
+---
+
 ## Session 40 — 2026-08-30 : T-150 e-mails hôtes ↔ clients (audit → implémentation)
 
 Suite à l'audit `REPORTS/audit_emails_hotes_clients_2026-08-30.md`

@@ -8,9 +8,15 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Mail, Lock, User, Eye, EyeOff, Building2, Gift } from "lucide-react";
 import { safeNextPath } from "@/lib/safe-next";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { isUiLocale } from "@/lib/ui-strings";
 
 export default function RegisterPage() {
   const router = useRouter();
+  // T-151 : la langue d'interface courante (préférence plateforme ou
+  // utilisateur) est envoyée à l'inscription → l'e-mail de vérification
+  // est localisé pour le destinataire dès le premier e-mail reçu.
+  const { language } = useDisplayPreferences();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -50,6 +56,9 @@ export default function RegisterPage() {
         body: JSON.stringify({
           ...formData,
           role: isHost ? "host" : "customer",
+          // T-151 : langue d'interface résolue (fr/en). Le serveur valide
+          // et persiste ; un défaut fr est appliqué si elle est absente.
+          ...(language && isUiLocale(language) ? { language } : {}),
           // T-125 (P2) : code de parrainage optionnel (ignoré côté serveur
           // s'il est vide ou inconnu — jamais bloquant).
           ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
