@@ -106,6 +106,9 @@ public_pages = [
     ("/mot-de-passe-oublie","Le visiteur a oublié son mot de passe. Il saisit son email."),
     ("/verifier-email",     "Le visiteur clique un lien de vérification email reçu."),
     ("/maintenance",        "La page de maintenance (affichée quand le mode maintenance est actif)."),
+    # T-155 (audit n°27) : /reservation est PUBLIC depuis T-109 (checkout
+    # invité — le formulaire passe en guest mode au lieu de bloquer).
+    ("/reservation",        "Le visiteur finalise une réservation : guest mode (email invité) quand non connecté."),
 ]
 for url, story in public_pages:
     code, body, _ = curl(BASE + url)
@@ -122,7 +125,7 @@ protected_pages = [
     ("/mes-reservations",        "Le visiteur essaie d'accéder à ses réservations."),
     ("/mes-favoris",             "Le visiteur essaie d'ouvrir ses favoris."),
     ("/messages",                "Le visiteur essaie d'ouvrir sa messagerie."),
-    ("/reservation",             "Le visiteur essaie de finaliser une réservation sans compte."),
+    # /reservation retirée : publique (guest mode, T-109 — voir section A).
     ("/dashboard",               "Un curieux tape /dashboard dans la barre d'URL."),
     ("/dashboard/bookings",      "Idem sur les réservations dashboard."),
     ("/dashboard/properties",    "Idem sur les propriétés dashboard."),

@@ -20,16 +20,34 @@ def log(msg): print(f"\n\033[1;36m═══ {msg} ═══\033[0m", flush=True)
 def ok(msg):  print(f"  \033[32m✅ {msg}\033[0m", flush=True)
 def ko(msg):  print(f"  \033[31m❌ {msg}\033[0m", flush=True)
 
-def db_query(sql):
-    r = subprocess.run(["node","-e", f"""
+def _run(args, timeout=15):
+    """subprocess.run tolérant : TimeoutExpired → stdout vide (pas de crash).
+
+    T-155 (audit n°27) : après un run, PostgreSQL peut être momentanément
+    occupé (pool de connexions Next en fermeture) — on retry au lieu de
+    faire planter le runner.
+    """
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return type("R", (), {"stdout": "", "stderr": "", "returncode": -1})()
+
+def db_query(sql, tries=3):
+    for attempt in range(tries):
+        r = _run(["node","-e", f"""
 const {{Client}} = require('pg');
 const c = new Client({{connectionString:'postgresql://postgres:postgres@127.0.0.1:55432/app_db'}});
 c.connect().then(async () => {{
   try {{ await c.query(`{sql}`); console.log('ok'); }}
   catch (e) {{ console.log('err:'+e.message); }}
   await c.end();
-}});"""], capture_output=True, text=True, cwd=REPO, timeout=15)
-    return r.stdout.strip()
+}});"""], timeout=20)
+        out = r.stdout.strip()
+        if out == "ok":
+            return "ok"
+        if attempt < tries - 1:
+            time.sleep(2)
+    return ""
 
 def cleanup_db():
     """Reset DB state pour rendre chaque simulation reproductible."""
@@ -48,8 +66,8 @@ def restart_next():
     """Restart Next.js pour vider les rate-limits mémoire."""
     # Ping health
     def health():
-        r = subprocess.run(["curl","-s","-o","/dev/null","-w","%{http_code}","--max-time","3",
-                            BASE + "/api/health"], capture_output=True, text=True, timeout=5)
+        r = _run(["curl","-s","-o","/dev/null","-w","%{http_code}","--max-time","3",
+                  BASE + "/api/health"], timeout=6)
         return r.stdout.strip() == "200"
 
     # Kill existant

@@ -80,20 +80,23 @@ def curl_headers(url, jar=None):
     return p.stdout
 
 def latest_mail_for(email):
-    """Retourne le dernier fichier mail pour cet email.
-    Le mailer remplace uniquement les '.' du domaine par '_'.
-    Ex : reset123@test.local → reset123@test_local
+    """Retourne le dernier fichier mail envoyé à cet email.
+    Depuis T-109, les fichiers de .data/mails/ sont nommés d'après la CLÉ
+    D'IDEMPOTENCE (console_<sha256>) quand l'outbox est active : l'adresse
+    n'est plus dans le nom. On cherche donc par CONTENU (en-tête `To:`).
     """
     if not os.path.exists(MAIL_DIR): return None
-    # Prendre le local part et le domaine, remplacer les '.' du domaine
-    if "@" in email:
-        local, domain = email.split("@", 1)
-        safe = f"{local}@{domain.replace('.', '_')}"
-    else:
-        safe = email.replace(".", "_")
-    files = sorted(glob.glob(f"{MAIL_DIR}/*{safe}*.txt"),
-                   key=os.path.getmtime, reverse=True)
-    return files[0] if files else None
+    hits = []
+    for f in glob.glob(f"{MAIL_DIR}/*.txt"):
+        try:
+            with open(f, encoding="utf-8", errors="replace") as fh:
+                head = fh.read(4096)
+        except OSError:
+            continue
+        if re.search(rf"^To:\s*{re.escape(email)}\s*$", head, re.M):
+            hits.append(f)
+    hits.sort(key=os.path.getmtime, reverse=True)
+    return hits[0] if hits else None
 
 results = []
 def record(section, name, verdict, detail=""):
@@ -442,12 +445,9 @@ if ruid:
            "OK" if code == 200 else "KO", f"body={body[:150]}")
 
     time.sleep(0.5)
+    # Le plus récent = celui du forgot (éventuellement après le register)
     mail_file = latest_mail_for(reset_email)
-    # Prendre le plus récent (celui du forgot, pas du register)
-    local, domain = reset_email.split("@", 1)
-    safe = f"{local}@{domain.replace('.', '_')}"
-    all_mails = sorted(glob.glob(f"{MAIL_DIR}/*{safe}*.txt"),
-                       key=os.path.getmtime, reverse=True)
+    all_mails = [mail_file] if mail_file else []
     if all_mails:
         with open(all_mails[0]) as f: mail_body = f.read()
         # Chercher token reset : soit /reinitialiser?token= soit /api/auth/reset-password
@@ -777,9 +777,15 @@ for f in sorted(glob.glob(f"{REPO}/src/components/**/*.tsx", recursive=True)):
     does_fetch = bool(re.search(r"fetch\(|useTransition|Server Action|use server", content))
     if not does_fetch:
         continue
-    has_loading = bool(re.search(r"[Ll]oading|isPending|isSubmitting|pending|useTransition|Chargement|En cours|setLoading", content))
-    has_error   = bool(re.search(r"setError|catch\s*\(|throw|\.catch\(|[Ee]rror\s*[:=<]", content))
-    has_feedback = bool(re.search(r"toast|alert|Toast|success|Success|setStatus|setMessage|showMessage|router\.refresh", content))
+    # T-155 (audit n°27) : patterns élargis aux conventions réelles du
+    # codebase — `busy`/`aria-busy`, `catch {` (sans parenthèse),
+    # `state === "…"` des machines d'état, `router.push/replace`
+    # (feedback = navigation), `role="status"`. Les composants
+    # volontairement silencieux (badge, maintenance-gate) restent à 1
+    # lacune → non critiques (fail-open documenté).
+    has_loading = bool(re.search(r"[Ll]oading|isPending|isSubmitting|pending|useTransition|Chargement|En cours|setLoading|aria-busy|busy|sending|state\s*===\s*\"loading\"", content))
+    has_error   = bool(re.search(r"setError|catch\s*\{|catch\s*\(|throw|\.catch\(|[Ee]rror\s*[:=<]|state\s*===\s*\"error\"", content))
+    has_feedback = bool(re.search(r"toast|alert|Toast|success|Success|setStatus|setMessage|showMessage|router\.(refresh|push|replace)|state\s*===\s*\"(done|ready|error|anon)\"|role=\"status\"|aria-live", content))
     issues = []
     if not has_loading: issues.append("loading")
     if not has_error: issues.append("error")

@@ -52,6 +52,9 @@ const bookingSchema = z
   });
 
 class BookingRuleError extends Error {}
+/** T-155 (audit n°27, P2) : code promo inconnu = entrée invalide → 400
+ *  (les conflits d'état — expiré, épuisé, règles dispo, wallet — restent 409). */
+class PromoCodeNotFoundError extends Error {}
 
 export async function GET(request: NextRequest) {
   try {
@@ -242,7 +245,7 @@ export async function POST(request: NextRequest) {
             .from(promotions)
             .where(eq(promotions.code, data.promoCode.toUpperCase()))
             .limit(1);
-          if (!promo) throw new BookingRuleError("Code promo : Code promo inconnu");
+          if (!promo) throw new PromoCodeNotFoundError("Code promo : Code promo inconnu");
           const usable = isPromoUsable(promo);
           if (usable !== true) throw new BookingRuleError(`Code promo : ${usable}`);
           // T-153 (audit n°25, B) : les montants de promo sont libellés en
@@ -378,6 +381,10 @@ export async function POST(request: NextRequest) {
         return inserted;
       });
     } catch (error) {
+      if (error instanceof PromoCodeNotFoundError) {
+        // T-155 (audit n°27) : 400 — entrée invalide (code inexistant).
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
       if (error instanceof BookingRuleError) {
         return NextResponse.json({ error: error.message }, { status: 409 });
       }

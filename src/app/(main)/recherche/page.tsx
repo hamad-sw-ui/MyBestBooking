@@ -142,7 +142,18 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
   }
   if (params.country) conditions.push(eq(properties.country, params.country));
   if (params.type) conditions.push(eq(properties.type, params.type));
-  if (params.amenity) conditions.push(sql`${properties.amenities} @> ${JSON.stringify([params.amenity])}::jsonb`);
+  // T-155 (audit n°27, P3) : certains équipements sont portés par les
+  // CHAMBRES (tv, minibar…) et jamais par la propriété — le filtre
+  // `?amenity=` (exposé par le formulaire depuis T-154e) ne trouvait donc
+  // rien. On matche la propriété OU une de ses chambres (même contrat).
+  if (params.amenity) conditions.push(sql`(
+    ${properties.amenities} @> ${JSON.stringify([params.amenity])}::jsonb
+    OR EXISTS (
+      SELECT 1 FROM rooms ra
+      WHERE ra.property_id = ${properties.id}
+        AND ra.amenities @> ${JSON.stringify([params.amenity])}::jsonb
+    )
+  )`);
 
   // Une property est éligible seulement si une room l'est sur la totalité des
   // filtres (hors prix) ; les bornes de prix s'appliquent ensuite au MIN

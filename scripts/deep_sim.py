@@ -192,15 +192,21 @@ for route, jar, patterns in SERVER_CONTENT:
 # ═══════════════════════════════════════════════════════════════
 S = "4. Flux 2FA COMPLET (setup → verify → disable) — champ 'code'"
 
-code, body = curl(BASE + "/api/auth/2fa/setup", "POST", jar="cust", data="{}")
+# T-155 (audit n°27) : le setup exige le mot de passe (T-120 D4) — le
+# payload `{}` renvoyait 400 « Mot de passe requis » (sim obsolète).
+code, body = curl(BASE + "/api/auth/2fa/setup", "POST", jar="cust",
+                  data='{"password":"Customer123!"}')
 try:
     setup = json.loads(body)
     secret = setup.get("secret", "")
     otpauth = setup.get("otpauthUrl", "") or setup.get("otpauth", "")
     qr = setup.get("qrCodeUrl", "") or setup.get("qrCode", "")
 except: secret = otpauth = qr = ""
-ok = code == 200 and len(secret) >= 16 and otpauth
-record(S, f"POST 2fa/setup → secret {len(secret)} chars + otpauth + qr",
+# T-155 (audit n°27) : choix produit — saisie MANUELLE du secret, aucun
+# otpauth/QR renvoyé par l'API (aucun service QR tiers appelé, voir
+# two-factor-section.tsx). Le contrat vérifié : secret >= 16 chars.
+ok = code == 200 and len(secret) >= 16
+record(S, f"POST 2fa/setup → secret {len(secret)} chars (saisie manuelle, pas d'otpauth/QR — design)",
        "OK" if ok else "KO",
        f"secret={secret[:10]}… otpauth={otpauth[:60]} qr_url={'oui' if qr else 'non'}")
 
@@ -235,8 +241,10 @@ if secret:
          f"const s=require('speakeasy');console.log(s.totp({{secret:'{secret}',encoding:'base32'}}))"],
         capture_output=True, text=True, cwd=REPO, timeout=5)
     totp2 = p2.stdout.strip()
+    # T-155 (audit n°27) : la désactivation exige aussi le mot de passe
+    # courant (T-120 D4) — le sim n'envoyait que `code` → 400 Zod.
     code, body = curl(BASE + "/api/auth/2fa/disable", "POST", jar="cust",
-                      data=f'{{"code":"{totp2}"}}')
+                      data=f'{{"password":"Customer123!","code":"{totp2}"}}')
     record(S, f"POST 2fa/disable {{code:'{totp2}'}} → 200 désactivation",
            "OK" if code == 200 else "KO", f"code={code} body={body[:200]}")
 
@@ -264,8 +272,13 @@ try:
     up = json.loads(body)
     up_url = up.get("url", ""); up_key = up.get("key", ""); up_size = up.get("size", 0)
 except: up_url = up_key = ""; up_size = 0
-ok = code in (200, 201) and up_url and up_size == len(png_bytes)
-record(S, f"POST /api/uploads (PNG {len(png_bytes)}o) → url + key + size correct",
+# T-155 (audit n°27) : /api/uploads = pièces jointes de messagerie PRIVÉES —
+# en stockage local, `url` est NULL par design (la pièce est servie via
+# GET /api/messages/attachments/[id], auth requise) ; les images publiques
+# ont dédié /api/properties/upload (url renseignée). Contrat vérifié ici :
+# key + size + DELETE par owner.
+ok = code in (200, 201) and up_key and up_size == len(png_bytes)
+record(S, f"POST /api/uploads (PNG {len(png_bytes)}o) → key + size correct (url: privé/null en local)",
        "OK" if ok else "KO",
        f"code={code} url={up_url} key={up_key} size={up_size}")
 
@@ -274,6 +287,9 @@ if up_url:
     c, _ = curl(target, follow=False)
     record(S, f"GET {up_url} → 200 fichier accessible",
            "OK" if c == 200 else "KO", f"code={c}")
+else:
+    record(S, "GET url → non applicable (upload privé sans URL publique — design)",
+           "OK", "vérifié via DELETE/ownership ci-dessous")
 
 # Bad mime
 json_path = f"{JAR}/bad.json"

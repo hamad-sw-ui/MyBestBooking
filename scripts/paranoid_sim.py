@@ -114,14 +114,24 @@ def curl(url, method="GET", jar=None, data=None, headers=None,
     body = re.sub(r"\n__CODE__.*", "", out, flags=re.S)
     return code, body
 
+def sh(args, timeout=15, **kw):
+    """subprocess.run tolérant : TimeoutExpired → stdout vide (pas de crash).
+
+    T-155 (audit n°27) : après un redémarrage Next, la première requête
+    compile la route (Turbopack) et peut dépasser le timeout de 10 s.
+    """
+    try:
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout, **kw)
+    except subprocess.TimeoutExpired:
+        return type("R", (), {"stdout": "", "stderr": "", "returncode": -1})()
+
 def curl_headers(url, jar=None):
-    args = ["curl", "-s", "-D", "-", "-o", "/dev/null", "--max-time", "10",
+    args = ["curl", "-s", "-D", "-", "-o", "/dev/null", "--max-time", "30",
             "-H", f"X-Forwarded-For: {_next_ip()}"]
     if jar and os.path.exists(f"{JAR}/{jar}.jar"):
         args += ["-b", f"{JAR}/{jar}.jar"]
     args.append(url)
-    p = subprocess.run(args, capture_output=True, text=True, timeout=15)
-    return p.stdout
+    return sh(args, timeout=35).stdout
 
 def raw_login(email, pwd, jar_name):
     args = ["curl","-s","-o","/dev/null","-w","%{http_code}",
@@ -130,12 +140,11 @@ def raw_login(email, pwd, jar_name):
         "-X","POST","-H","Content-Type: application/json",
         "-d", f'{{"email":"{email}","password":"{pwd}"}}',
         BASE + "/api/auth/login"]
-    r = subprocess.run(args, capture_output=True, text=True, timeout=15)
-    return int(r.stdout.strip() or "0")
+    return int(sh(args, timeout=60).stdout.strip() or "0")
 
 # DB helper via node
 def db_query(sql):
-    r = subprocess.run(["node","-e", f"""
+    r = sh(["node","-e", f"""
 const {{Client}} = require('pg');
 const c = new Client({{connectionString:'postgresql://postgres:postgres@127.0.0.1:55432/app_db'}});
 c.connect().then(async () => {{
@@ -147,7 +156,7 @@ c.connect().then(async () => {{
   }}
   await c.end();
 }});
-"""], capture_output=True, text=True, cwd=REPO, timeout=15)
+"""], cwd=REPO, timeout=20)
     try:
         return json.loads(r.stdout.strip() or "[]")
     except Exception:
@@ -244,11 +253,11 @@ curl(BASE + "/api/auth/register", "POST",
      data=json.dumps({"email": jwt_email, "password": "JwtTest123!",
                       "firstName": "Jwt", "lastName": "Test"}))
 # Login live pour capturer le Set-Cookie
-hdrs = subprocess.run(["curl","-s","-D","-","-o","/dev/null",
+hdrs = sh(["curl","-s","-D","-","-o","/dev/null",
     "-H", f"X-Forwarded-For: {_next_ip()}",
     "-X","POST","-H","Content-Type: application/json",
     "-d",f'{{"email":"{jwt_email}","password":"JwtTest123!"}}',
-    BASE + "/api/auth/login"], capture_output=True, text=True, timeout=10).stdout
+    BASE + "/api/auth/login"], timeout=60).stdout
 m = re.search(r"^Set-Cookie:\s*session=([A-Za-z0-9._-]+)", hdrs, re.M | re.I)
 if m:
     jwt = m.group(1)
@@ -315,11 +324,11 @@ if m:
 
         # Vérifier jti unique : login 2 fois (même user dédié), comparer jtis
         time.sleep(1)
-        hdrs2 = subprocess.run(["curl","-s","-D","-","-o","/dev/null",
+        hdrs2 = sh(["curl","-s","-D","-","-o","/dev/null",
             "-H", f"X-Forwarded-For: {_next_ip()}",
             "-X","POST","-H","Content-Type: application/json",
             "-d",f'{{"email":"{jwt_email}","password":"JwtTest123!"}}',
-            BASE + "/api/auth/login"], capture_output=True, text=True, timeout=10).stdout
+            BASE + "/api/auth/login"], timeout=60).stdout
         m2 = re.search(r"^Set-Cookie:\s*session=([A-Za-z0-9._-]+)", hdrs2, re.M | re.I)
         if m2:
             try:
@@ -348,8 +357,10 @@ record(S, f"Register avec MiXeD case → {code}",
 code, body = curl(BASE + "/api/auth/register", "POST",
     data=json.dumps({"email": mixed_email.lower(), "password": "TestUnique456!",
                      "firstName": "Lower", "lastName": "Case"}))
-record(S, f"Register même email en lowercase → 400 (unicité case-insensitive)",
-       "OK" if code == 400 else "KO (VULN duplicate account possible)",
+# T-155 (audit n°27) : le refus est 400 (entrée) ou 409 (unicité violée) —
+# les deux empêchent le doublon ; seul un code 200 serait une VULN.
+record(S, f"Register même email en lowercase → refusé (400/409, unicité case-insensitive)",
+       "OK" if code in (400, 409) else "KO (VULN duplicate account possible)",
        f"code={code} body={body[:180]}")
 
 # Unicité slug property : chercher les slugs existants
@@ -736,10 +747,14 @@ matchers = re.findall(r'"(/[a-z][^"]*)"', proxy_src)
 record(S, f"Proxy matcher : {matchers}",
        "OK" if len(matchers) >= 5 else "WARN", "")
 
-# Routes qui devraient être protégées (contiennent user data)
+# Routes qui devraient être protégées (contiennent user data).
+# /reservation est EXCLUE depuis T-109 : checkout invité = page publique
+# en guest mode (voir aussi surface/paranoid — GET anonyme → 200 vérifié
+# ci-dessous). Les accès sensibles de la réservation restent gardés
+# serveur (POST /api/bookings exige un compte ou un email invité valide).
 sensitive_paths = [
     "/mon-compte", "/mes-reservations", "/mes-favoris",
-    "/messages", "/reservation", "/dashboard",
+    "/messages", "/dashboard",
 ]
 missing_from_proxy = []
 for p in sensitive_paths:
@@ -753,12 +768,21 @@ record(S, f"Toutes les routes sensibles couvertes par proxy",
 
 # Test réel : chacune non-connecté → 307
 for p in sensitive_paths:
-    r = subprocess.run(["curl","-s","-o","/dev/null","-w","%{http_code}",
+    r = sh(["curl","-s","-o","/dev/null","-w","%{http_code}",
         "-H", f"X-Forwarded-For: {_next_ip()}",
-        BASE + p], capture_output=True, text=True, timeout=10)
+        BASE + p], timeout=30)
     code = int(r.stdout.strip() or "0")
     record(S, f"GET {p} anonyme → {code}",
            "OK" if code in (307, 302, 308) else "KO", "attendu redirect")
+
+# /reservation (T-155, audit n°27) : page PUBLIQUE depuis T-109 — le
+# checkout invité passe en guest mode ; elle ne doit PAS rediriger.
+r = sh(["curl","-s","-o","/dev/null","-w","%{http_code}",
+    "-H", f"X-Forwarded-For: {_next_ip()}",
+    BASE + "/reservation"], timeout=30)
+code = int(r.stdout.strip() or "0")
+record(S, f"GET /reservation anonyme → {code} (guest mode T-109)",
+       "OK" if code == 200 else "KO", "attendu 200 — checkout invité")
 
 # ═══════════════════════════════════════════════════════════════
 S = "12. Concurrence : helpful vote parallèles"
@@ -972,9 +996,9 @@ S = "19. .env.local et secrets protégés"
 
 # GET /.env.local → 404
 for path in ["/.env", "/.env.local", "/.git/config", "/node_modules/package.json", "/package.json"]:
-    r = subprocess.run(["curl","-s","-o","/dev/null","-w","%{http_code}",
+    r = sh(["curl","-s","-o","/dev/null","-w","%{http_code}",
         "-H", f"X-Forwarded-For: {_next_ip()}",
-        BASE + path], capture_output=True, text=True, timeout=5)
+        BASE + path], timeout=30)
     code = int(r.stdout.strip() or "0")
     record(S, f"GET {path} → {code} (jamais servi)",
            "OK" if code == 404 else "KO (fuite fichier système)",
@@ -1146,11 +1170,11 @@ if u and isinstance(u, list) and u:
 # ═══════════════════════════════════════════════════════════════
 S = "25. Cookie session — attributs sécurité complets"
 
-hdrs = subprocess.run(["curl","-s","-D","-","-o","/dev/null",
+hdrs = sh(["curl","-s","-D","-","-o","/dev/null",
     "-H", f"X-Forwarded-For: {_next_ip()}",
     "-X","POST","-H","Content-Type: application/json",
     "-d",'{"email":"host@mybestbooking.com","password":"Host123!"}',
-    BASE + "/api/auth/login"], capture_output=True, text=True, timeout=10).stdout
+    BASE + "/api/auth/login"], timeout=60).stdout
 sc = re.search(r"^set-cookie:\s*session=.+$", hdrs, re.M | re.I)
 if sc:
     val = sc.group(0)

@@ -1,6 +1,6 @@
 # 🎬 Simulation utilisateur exhaustive — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-21 13:38
+**Généré le** : 2026-08-30 20:05
 **Base URL testée** : `http://127.0.0.1:3000` (Next.js 16 dev, PostgreSQL embarqué :55432)
 **Comptes utilisés** :
 
@@ -35,11 +35,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, zéro frais cachés. Destination Arrivée Départ Rechercher Prix garantis Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout 💎 BestRewards Villa Azure Côte d'Azur ★★★★★ Nice , FR 8.9 3 avis Villa Dès € 89 /nuit Voir les chambres → Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres →  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Offres affichées, avis vérifiés et frais présentés avant confirmation. Destination Arrivée Départ Voyageurs 1 voyageur 2 voyageurs 3 voyageurs 4 voyageurs 5 voyageurs 6 voyageurs 7 voyageurs 8 voyageurs Rechercher Prix vérifiés au paiement Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout Villa Azure Côte d'Azur ★★★★★ Nice , FR 9.0 3 avis  …
 
 ---
 
@@ -54,11 +54,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/recherche
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Recherche d&#x27;hébergements | mybestbooking`
+**Titre / type de réponse** : `Recherche d&#x27;hébergements | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Rechercher Tous les hébergements 8 résultat s trouvé s Filtres 💎 BestRewards Villa Azure Côte d'Azur ★★★★★ Nice , FR 8.9 3 avis Villa Dès € 89 /nuit Voir les chambres → Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres → B&B Toscana ★★★ Florence , IT 8.7 2 avis B&B Dès € 89 /nuit Voir les chambres → Appartement Montmartre ★★★ Paris , …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Mai …
 
 ---
 
@@ -73,11 +73,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/aide
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Aide et FAQ | mybestbooking`
+**Titre / type de réponse** : `Aide et FAQ | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Comment pouvons-nous vous aider ? Trouvez des réponses à vos questions ou contactez notre équipe Messagerie Écrivez-nous par email Écrire à l'équipe Téléphone +237 XXX XX XX XX Numéro à activer Email direct support@mybestbooking.com Ouvrir mon client mail Parcourir par catégorie Réservations Gérer, modifier ou annuler une réservation Comment annuler une réservation ? Modifier mes dates Ajouter un voyageur Paiements & Facturation Questions sur les paiements et remboursements  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Comment pouvons-nous vous aider ? Recherchez une réponse ou contactez notre équipe par email. Articles Annuler une réservation Modifier mes dates Paiement et confirmation Remboursement Laisser un avis BestRewards et cashback Sécurité et suppression du compte Gérer une chambre et ses tarifs Réservations Annuler une réservation Ouvrez Mes réservations, choisissez une réservation confirmée puis Annuler. Les frais et le remboursement dépendent de la politique snapshotée da …
 
 ---
 
@@ -92,11 +92,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/bestrewards
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `BestRewards — programme fidélité | mybestbooking`
+**Titre / type de réponse** : `BestRewards — programme fidélité | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programme de fidélité mybestbooking. Rejoindre gratuitement Comment ça marche ? 1 Inscrivez-vous C'est gratuit et instantané. Vous êtes immédiatement Level 1 Explorer. 2 Réservez Chaque réservation confirmée compte. Plus vous voyagez, plus vous montez en niveau. 3 Profitez Débloquez des réductions exclusives, petits-déjeuners offerts, et bien plus. Les 3 niveaux BestRewards Level 1 Explorer Dès l'inscr …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programme de fidélité MyBestBooking. Rejoindre gratuitement Chargement de votre statut… Comment ça marche ? 1 Inscrivez-vous C'est gratuit et instantané. Vous êtes immédiatement Level 1 Explorer. 2 Réservez Chaque réservation confirmée compte. Plus vous voyagez, plus vous montez en niveau. 3 Profitez Utilisez vos réductions BestRewards et, au niveau Ambassador, votre cashback wallet. Les 3 niveau …
 
 ---
 
@@ -111,11 +111,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/mentions-legales
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Mentions légales | mybestbooking`
+**Titre / type de réponse** : `Mentions légales | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Mentions légales Éditeur du site MyBestBooking — plateforme de réservation d'hébergements. Raison sociale : à compléter par l'éditeur en production. Contact : support@mybestbooking.com Hébergement Le site est hébergé sur une infrastructure cloud professionnelle (Vercel / Neon PostgreSQL ou équivalent). Détails à préciser en production. Conditions générales d'utilisation En utilisant MyBestBooking, vous acceptez de : Fournir des informations exactes lors de l'inscription. Ne  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Mentions légales Éditeur du site MyBestBooking — plateforme de réservation d'hébergements. Raison sociale : à compléter par l'éditeur en production. Contact : support@mybestbooking.com Hébergement Le site est hébergé sur une infrastructure cloud professionnelle (Vercel / Neon PostgreSQL ou équivalent). Détails à préciser en production. Conditions générales d'utilisation En utilisant MyBestBooking, vous acceptez de : Fournir des informations exactes lors de l'inscriptio …
 
 ---
 
@@ -130,11 +130,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/confidentialite
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Politique de confidentialité | mybestbooking`
+**Titre / type de réponse** : `Politique de confidentialité | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Politique de confidentialité Données collectées MyBestBooking collecte les données nécessaires au fonctionnement du service : Compte : email, nom, prénom, mot de passe (haché bcrypt coût 12). Profil optionnel : téléphone, pays, langue, devise, fuseau horaire. Réservations : dates, hébergement, montant, mode de paiement (jamais le numéro complet de carte). Traçabilité : IP au moment du login (pour la sécurité), dernière connexion. Communication : messages échangés avec les hô …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Politique de confidentialité Données collectées MyBestBooking collecte les données nécessaires au fonctionnement du service : Compte : email, nom, prénom, mot de passe (haché bcrypt coût 12). Profil optionnel : téléphone, pays, langue, devise, fuseau horaire. Réservations : dates, hébergement, montant, mode de paiement (jamais le numéro complet de carte). Traçabilité : IP au moment du login (pour la sécurité), dernière connexion. Communication : messages échangés avec  …
 
 ---
 
@@ -149,11 +149,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/connexion
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal ✦ mybest booking Connexion Bienvenue sur mybestbooking Email Mot de passe Se souvenir de moi Mot de passe oublié ? Se connecter Pas encore de compte ? Créer un compte Comptes de démonstration : Admin : admin@mybestbooking.com / Admin123! Hébergeur : host@mybestbooking.com / Host123! Client : customer@mybestbooking.com / Customer123! © 2025 mybestbooking.com — "Réservez mieux. Voyagez plus."
+> Aller au contenu principal ✦ MyBest Booking Connexion Bienvenue sur MyBestBooking Email Mot de passe Se souvenir de moi Mot de passe oublié ? Se connecter Pas encore de compte ? Créer un compte Comptes de démonstration : Admin : admin@mybestbooking.com / Admin123! Hébergeur : host@mybestbooking.com / Host123! Client : customer@mybestbooking.com / Customer123! © 2025 MyBestBooking — "Réservez mieux. Voyagez plus."
 
 ---
 
@@ -168,11 +168,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/inscription
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal ✦ mybest booking Créer un compte Rejoignez mybestbooking gratuitement Voyageur Hébergeur Prénom Nom Email Mot de passe En créant un compte, vous acceptez nos Mentions légales & CGU et notre Politique de confidentialité . Créer mon compte Déjà un compte ? Se connecter © 2025 mybestbooking.com — "Réservez mieux. Voyagez plus."
+> Aller au contenu principal ✦ MyBest Booking Créer un compte Rejoignez MyBestBooking gratuitement Voyageur Hébergeur Prénom Nom Email Mot de passe Confirmer le mot de passe Code de parrainage (facultatif) En créant un compte, vous acceptez nos Mentions légales & CGU et notre Politique de confidentialité . Créer mon compte Déjà un compte ? Se connecter © 2025 MyBestBooking — "Réservez mieux. Voyagez plus."
 
 ---
 
@@ -187,11 +187,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/mot-de-passe-oublie
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal ✦ mybest booking Mot de passe oublié Saisissez votre adresse email, nous vous enverrons un lien pour définir un nouveau mot de passe. Email Envoyer le lien Retour à la connexion © 2025 mybestbooking.com — "Réservez mieux. Voyagez plus."
+> Aller au contenu principal ✦ MyBest Booking Mot de passe oublié Saisissez votre adresse email, nous vous enverrons un lien pour définir un nouveau mot de passe. Email Envoyer le lien Retour à la connexion © 2025 MyBestBooking — "Réservez mieux. Voyagez plus."
 
 ---
 
@@ -206,11 +206,11 @@ curl -X GET (anonyme) http://127.0.0.1:3000/verifier-email
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking © 2025 mybestbooking.com — "Réservez mieux. Voyagez plus." Lien invalide Ce lien de vérification est expiré ou déjà utilisé. Créez un nouveau lien en vous inscrivant à nouveau ou contactez le support. Se connecter
+> Aller au contenu principal ✦ MyBest Booking Lien invalide Ce lien de vérification est expiré ou déjà utilisé. Connectez-vous puis demandez un nouveau lien depuis votre compte (Mon compte), ou contactez le support. Se connecter Mon compte © 2025 MyBestBooking — "Réservez mieux. Voyagez plus."
 
 ---
 
@@ -225,11 +225,30 @@ curl -X GET (anonyme) http://127.0.0.1:3000/maintenance
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Maintenance en cours — MyBestBooking | mybestbooking`
+**Titre / type de réponse** : `Maintenance en cours — MyBestBooking | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
 > Aller au contenu principal Chargement en cours…
+
+---
+
+### 12. `GET /reservation`
+
+**Scénario** : Le visiteur finalise une réservation : guest mode (email invité) quand non connecté.
+
+**Requête simulée** :
+```bash
+curl -X GET (anonyme) http://127.0.0.1:3000/reservation
+```
+
+**Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
+
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
+
+**Ce que voit l'utilisateur** (texte visible extrait) :
+
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Informations de réservation manquantes Rechercher un hébergement Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés
 
 ---
 
@@ -311,26 +330,7 @@ curl -X GET (anonyme) http://127.0.0.1:3000/messages
 
 ---
 
-### 5. `GET /reservation`
-
-**Scénario** : Le visiteur essaie de finaliser une réservation sans compte.
-
-**Requête simulée** :
-```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/reservation
-```
-
-**Résultat serveur** : HTTP `307` (attendu `307`) → ✅ **OK**
-
-**Titre / type de réponse** : `(redirection)`
-
-**Ce que voit l'utilisateur** (texte visible extrait) :
-
-> Redirect → http://127.0.0.1:3000/connexion?next=%2Freservation
-
----
-
-### 6. `GET /dashboard`
+### 5. `GET /dashboard`
 
 **Scénario** : Un curieux tape /dashboard dans la barre d'URL.
 
@@ -349,7 +349,7 @@ curl -X GET (anonyme) http://127.0.0.1:3000/dashboard
 
 ---
 
-### 7. `GET /dashboard/bookings`
+### 6. `GET /dashboard/bookings`
 
 **Scénario** : Idem sur les réservations dashboard.
 
@@ -368,7 +368,7 @@ curl -X GET (anonyme) http://127.0.0.1:3000/dashboard/bookings
 
 ---
 
-### 8. `GET /dashboard/properties`
+### 7. `GET /dashboard/properties`
 
 **Scénario** : Idem sur les propriétés dashboard.
 
@@ -400,11 +400,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Prix garantis, avis vérifiés, zéro frais cachés. Destination Arrivée Départ Rechercher Prix garantis Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout 💎 BestRewards Villa Azure Côte d'Azur ★★★★★ Nice , FR 8.9 3 avis Villa Dès € 89 /nuit Voir les chambres → Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres → B&B Toscana ★★★ Flor …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Offres affichées, avis vérifiés et frais présentés avant confirmation. Destination Arrivée Départ Voyageurs 1 voyageur 2 voyageurs 3 voyageurs 4 voyageurs 5 voyageurs 6 voyageurs 7 voyageurs 8 voyageurs Rechercher Prix vérifiés au paiement Avis vérifiés 0 frais cachés 🔥 Hébergements populaires Les mieux notés par nos voyageurs Voir tout Villa Azure Côte d'Azur ★★★★★ Nice , FR 9.0 3 avis Villa Dès 99,99 € /n …
 
 ---
 
@@ -419,11 +419,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mon-compte
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés
 
 ---
 
@@ -438,11 +438,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-reservations
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes réservations Retrouvez toutes vos réservations mybestbooking À venir ( 2 ) Confirmée Dar El Medina Tun …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Mes réservations Retrouvez toutes vos réservations MyBestBooking À venir ( 14 ) Confirmée Villa Azure Côte d'Azur Nice , FR Réf. MBB-2026-H5SWVU Arrivée 16 juil. 2048 Départ 19 juil. 2048 Chambre Chambre Standard Total 374,07 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu Annuler Confirmée Villa Azure Côte d'Azur Nice , FR Réf. MBB-2026-736C3O Arrivée 15 juil. 2048 Départ 18 juil. 2048 Chambre Chambre Standard Total 374,07 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu …
 
 ---
 
@@ -457,11 +457,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-favoris
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Mes favoris 1 hébergement sauvegardé Alertes prix Chargement… Vos alertes prix sont gérées ci-dessus. Ajou …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Mes favoris 7 hébergements sauvegardés Nouvelle liste Alertes prix Chargement… Vos alertes prix sont g …
 
 ---
 
@@ -476,11 +476,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/messages
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Messages Vos conversations avec les hébergeurs Aucun message Vos conversations avec les hébergeurs apparaî …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Messages Vos conversations avec les hébergeurs Rechercher dans les messages Aucun message Vos conversa …
 
 ---
 
@@ -495,11 +495,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/reservation
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Informations de réservation manquantes Rechercher un hébergement Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Informations de réservation manquantes Rechercher un hébergement Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés
 
 ---
 
@@ -514,11 +514,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/recherche
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Recherche d&#x27;hébergements | mybestbooking`
+**Titre / type de réponse** : `Recherche d&#x27;hébergements | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Rechercher Tous les hébergements 8 résultat s trouvé s Filtres 💎 BestRewards Villa Azure Côte d'Azur ★★★★★ Nice , FR 8.9 3 avis Villa Dès € 89 /nuit Voir les chambres → Dar El Medina ★★★ Tunis , TN 8.9 2 avis Maison d'hôtes Dès € 89 /nuit Voir les chambres → B&B Toscana ★★★ Florence , IT 8.7 2 avis B&B Dès € 89 /nuit Voir les chambres → Appartement Montmartre ★★★ Paris , FR 8.5 3 avis Appar …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Voyageurs Équipement Tous WiFi gratuit Parking Piscine Spa Restaurant Bar Salle de sport Climatisation Room service Conciergerie Accès plage Jardin Balcon Barbecue Plage Petit-déjeuner Vue sur la ville Vue sur la campagne Club enfants Cuisine Rooftop Vue sur la mer Terrasse Hammam traditionnel Machine à laver Sports nautiques TV Minibar Tri Mieux notés Prix croissant Prix décroissant  …
 
 ---
 
@@ -533,11 +533,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/aide
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Aide et FAQ | mybestbooking`
+**Titre / type de réponse** : `Aide et FAQ | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Comment pouvons-nous vous aider ? Trouvez des réponses à vos questions ou contactez notre équipe Messagerie Écrivez-nous par email Écrire à l'équipe Téléphone +237 XXX XX XX XX Numéro à activer Email direct support@mybestbooking.com Ouvrir mon client mail Parcourir par catégorie Réservations Gérer, modifier ou annuler une réservation Comment annuler une réservation ? Modifier mes dates Ajouter un voyageur Paiements & Facturation Questions sur les paiements et remboursements Modes de paiement ac …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Comment pouvons-nous vous aider ? Recherchez une réponse ou contactez notre équipe par email. Articles Annuler une réservation Modifier mes dates Paiement et confirmation Remboursement Laisser un avis BestRewards et cashback Sécurité et suppression du compte Gérer une chambre et ses tarifs Réservations Annuler une réservation Ouvrez Mes réservations, choisissez une réservation confirmée puis Annuler. Les frais et le remboursement dépendent de la politique snapshotée dans votre réservation …
 
 ---
 
@@ -552,11 +552,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/bestrewards
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `BestRewards — programme fidélité | mybestbooking`
+**Titre / type de réponse** : `BestRewards — programme fidélité | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programme de fidélité mybestbook …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programme de fidélité MyBestBooking. Votre niveau : 💎 Level 2 — Voyageur Chargement de votre statut… Comment ça marche ? 1 Inscrivez-vous C'est gratuit et instantané. Vous êtes immédiatement Level 1 Explorer. 2 Réservez Chaque réservation confirmée compte. Plus vous voyagez, plus vous montez en niveau. 3 Profitez Utilisez vos réductions BestRewards et, au niveau Ambassador, votre cashback wallet. Les 3 niveaux BestR …
 
 ---
 
@@ -573,11 +573,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/dashboard
 
 **Résultat serveur** : HTTP `200` (attendu `200 + body sans dashboard`) → ✅ **OK (guard actif — contenu non rendu)**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours…
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Offres affichées, avis vérifiés et frais présentés avant confirmation. Destination Arrivée Départ Voyageurs 1  …
 
 ---
 
@@ -592,11 +592,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/dashboard/properties
 
 **Résultat serveur** : HTTP `200` (attendu `200 + body sans dashboard`) → ✅ **OK (guard actif — contenu non rendu)**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours…
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Offres affichées, avis vérifiés et frais présentés avant confirmation. Destination Arrivée Départ Voyageurs 1  …
 
 ---
 
@@ -611,11 +611,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/dashboard/users
 
 **Résultat serveur** : HTTP `200` (attendu `200 + body sans dashboard`) → ✅ **OK (guard actif — contenu non rendu)**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours…
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Offres affichées, avis vérifiés et frais présentés avant confirmation. Destination Arrivée Départ Voyageurs 1  …
 
 ---
 
@@ -630,11 +630,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/dashboard/settings
 
 **Résultat serveur** : HTTP `200` (attendu `200 + body sans dashboard`) → ✅ **OK (guard actif — contenu non rendu)**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours…
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Offres affichées, avis vérifiés et frais présentés avant confirmation. Destination Arrivée Départ Voyageurs 1  …
 
 ---
 
@@ -649,11 +649,11 @@ curl -X GET cookie=cust http://127.0.0.1:3000/dashboard/audit
 
 **Résultat serveur** : HTTP `200` (attendu `200 + body sans dashboard`) → ✅ **OK (guard actif — contenu non rendu)**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours…
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Réservez mieux. Voyagez plus. Trouvez les meilleurs hébergements au meilleur prix. Offres affichées, avis vérifiés et frais présentés avant confirmation. Destination Arrivée Départ Voyageurs 1  …
 
 ---
 
@@ -670,11 +670,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur mybestbooking Hébergements 8 8 actifs Réservations 33 33 ce mois Revenus 21 653,84 € 21 653,84 € ce mois Avis 23 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-WGP2MR Marie Martin Dar El Medina Tunis 15 janv. 2027 → 18 janv. 2027 249,64 € Confirmée MBB-2026-VA8B4D Marie  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 15 8 actifs Réservations 49 49 ce mois Revenus 24 151,27 € 24 151,27 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-FZSWIF Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-SP0 …
 
 ---
 
@@ -689,11 +689,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/bookings
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Réservations Réservations de vos hébergements — filtres et recherche. Total 33 Confirmées 2 En attente 0 Revenus 21 654 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 33 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-WGP2MR Smoke Test customer@mybestbook …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Réservations Réservations de vos hébergements — filtres et recherche. Total 49 Confirmées 14 En attente 0 Revenus 26 648 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 49 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-FZSWIF Smoke Test customer@mybestboo …
 
 ---
 
@@ -708,11 +708,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/properties
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Hébergements Gérez vos hébergements — filtres et recherche. Ajouter un hébergement Total 8 Actifs 8 En attente 0 Brouillons 0 Rechercher (tapez « / ») Filtrer Tous les statuts Actif En attente Brouillon Suspendu Rejeté Tous types Appartement B&B Maison d'hôtes Hôtel Resort Riad Villa 8 hébergement s affiché s Hébergement Type Localisation Note Statut Actions B&B Toscana ★★★ B&B Flor …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Hébergements Gérez vos hébergements — filtres et recherche. Ajouter un hébergement Total 15 Actifs 8 En attente 0 Brouillons 7 Rechercher (tapez « / ») Filtrer Tous les statuts Actif En attente Brouillon Suspendu Rejeté Tous types Appartement B&B Maison d'hôtes Hôtel Resort Riad Villa 15 hébergement s affiché s Hébergement Type Localisation Note Statut Actions Deep Villa 1788120194  …
 
 ---
 
@@ -727,11 +727,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total 26 Actives 26 Unités 116 Prix moyen 179,83 € Rechercher (tapez « / ») Filtrer Toutes Actives Inactives Tous types Double Familiale Suite 26 chambre s affichée s Chambre Familiale Hôtel Le Magnifique Familiale 4 pers. 33.62 m² 212,00 € par nuit · 6 unité s Calendrier Suite Junior Hôtel Le Magnifique Suite 3 per …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total 34 Actives 34 Unités 123 Prix moyen 154,22 € Rechercher (tapez « / ») Filtrer Toutes Actives Inactives Tous types Double Familiale Suite 34 chambre s affichée s Suite Junior Hôtel Le Magnifique Suite 3 pers. 24.75 m² 252,00 € par nuit · 2 unité s Calendrier Chambre Supérieure Hôtel Le Magnifique Double 2 pers. …
 
 ---
 
@@ -746,11 +746,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms/new
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Nouvelle chambre Ajoutez une chambre à l'un de vos hébergements. Détails de la chambre Hébergement Hôtel Le Magnifique Riad Jardin Secret Villa Azure Côte d'Azur Appartement Montmartre Dar El Medina Resort Les Dunes Hôtel Barcelona Center B&B Toscana Nom de la chambre Description (optionnel) Type Simple Double Twin Suite Studio Familiale Dortoir Capacité (personnes) Superficie (m²)  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Nouvelle chambre Ajoutez une chambre à l'un de vos hébergements. Détails de la chambre Hébergement Hôtel Le Magnifique Riad Jardin Secret Villa Azure Côte d'Azur Appartement Montmartre Dar El Medina Resort Les Dunes Hôtel Barcelona Center Deep Villa 1788117491 Deep Villa 1788118324 Deep Villa 1788119343 Deep Villa 1788119449 Deep Villa 1788119548 Deep Villa 1788120035 Deep Villa 178 …
 
 ---
 
@@ -765,11 +765,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/reviews
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Avis Consultez les avis sur vos hébergements et répondez publiquement. Total avis 23 Moyenne 8.4 /10 En attente 0 Approuvés 23 Rechercher (tapez « / ») Filtrer Tous statuts En attente Approuvés Masqués Rejetés 23 avis affiché s S P Sophie Petit business · 21 août 2026 8.4 😊 Très bien Hébergement : B&B Toscana ( Florence ) 👍 Ce qui a plu : Chambre spacieuse et propre. Le petit-déjeun …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Avis Consultez les avis sur vos hébergements et répondez publiquement. Total avis 21 Moyenne 8.4 /10 En attente 0 Approuvés 21 Rechercher (tapez « / ») Filtrer Tous statuts En attente Approuvés Masqués Rejetés 21 avis affiché s L R Lucas Robert family · 30 août 2026 9.0 🌟 Excellent Hébergement : B&B Toscana ( Florence ) 👍 Ce qui a plu : Vue magnifique et service impeccable. Nous rev …
 
 ---
 
@@ -784,11 +784,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/messages
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Messages Communiquez avec vos voyageurs Rechercher (tapez « / ») Filtrer Toutes Non lues Lues Non lus 0 Total conversations 0 Temps de réponse < 2h 0 conversation affichée Aucune conversation Les messages de vos voyageurs apparaîtront ici (ou ajustez vos filtres). Temps de réponse Répondez rapidement à vos voyageurs ! Un temps de réponse inférieur à 2 heures améliore votre score de  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Messages Communiquez avec vos voyageurs Rechercher (tapez « / ») Filtrer Toutes Non lues Lues Non lus 0 Total conversations 0 Temps de réponse < 2h 0 conversation affichée Aucune conversation Les messages de vos voyageurs apparaîtront ici (ou ajustez vos filtres). Répondre aux voyageurs Ouvrez une conversation pour répondre. Aucun délai ni impact de visibilité n'est affiché tant qu' …
 
 ---
 
@@ -803,11 +803,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/promotions
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours…
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 15 8 actifs Réservations 49 49 ce mois Revenus 24 151,27 € 24 151,27 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-FZSWIF Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-SP0 …
 
 ---
 
@@ -822,11 +822,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/promotions/new
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours…
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 15 8 actifs Réservations 49 49 ce mois Revenus 24 151,27 € 24 151,27 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-FZSWIF Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-SP0 …
 
 ---
 
@@ -841,11 +841,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/analytics
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 21 653,84 € Revenus (30j) 100.0 % 33 Réservations (30j) 0.0 % 656,18 € Panier moyen 8.4/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 Hôtel Barcelona Center 5 réservations 4 150,68 € 2 Villa Azure Côte d'Azur 4 réservations 3 932,49 € 3 Hôtel Le Magnifique 6 réservations 3 609,49 € …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 151,27 € Revenus (30j) 100.0 % 43 Réservations (30j) 0.0 % 561,66 € Panier moyen 8.4/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 17 réservations 7 773,31 € 2 Riad Jardin Secret 4 réservations 4 150,69 € 3 Hôtel Barcelona Center 4 réservations 3  …
 
 ---
 
@@ -860,11 +860,11 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/billing
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ mybest booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 18 405,74 € 33 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 18 405,74 € 33 réservation s au total Factures Export CSV via API (v prochaine) août 2026 33 réservation s 18 405,74 € En attente Transactions récentes MBB-2026-WGP2MR Dar El Medina 21 août 2026 + 212,19 € Commission: 37,4 …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 20 528,53 € 43 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 20 528,53 € 43 réservation s au total Factures Export CSV Factures légales indisponibles Les factures et exports seront disponibles après intégration du moteur comptable. Transactions récentes MBB-2026-FZSWIF Villa Azure C …
 
 ---
 
@@ -881,11 +881,11 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/users
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Utilisateurs Gérez les utilisateurs de la plateforme — filtres, recherche, actions groupées Total 10 Clients 8 Hébergeurs 1 Admins 1 Rechercher (tapez « / ») Filtrer Tous les statuts Actifs Suspendus Email vérifié Email non vérifié Tous les rôles Client Hébergeur Admin 10 utilisateur s affiché s Utilisateur Email Rôle BestRewards Inscrit Dernière  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Utilisateurs Gérez les utilisateurs de la plateforme — filtres, recherche, actions groupées Total 87 Clients 85 Hébergeurs 1 Admins 1 Rechercher (tapez « / ») Filtrer Tous les statuts Actifs Suspendus Email vérifié Email non vérifié Tous les rôles Client Hébergeur Admin 87 utilisateur s affiché s Utilisateur Email Rôle BestRewards Inscrit Dernière …
 
 ---
 
@@ -900,11 +900,11 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/audit
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations, actions groupées). Rechercher (tapez « / ») Action Toutes actions Action groupée Avis modéré Entité Toutes entités promotions properties review reviews rooms users 8 entrée s affichée s Date Acteur Action Entité Détails 21 août 2026, 13:34 a@t.c …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations, actions groupées). Rechercher (tapez « / ») Action Toutes actions Action groupée Property rejetée Property validée Avis modéré Utilisateur suspendu Entité Toutes entités promotions properties property review reviews rooms user users 71 entrée s  …
 
 ---
 
@@ -919,11 +919,11 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/settings
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Paramètres Configuration runtime de la plateforme MyBestBooking. Les modifications prennent effet immédiatement (jusqu'à 60 s de cache par instance). Paramètres généraux Nom de la plateforme Email de support Email partenaires Langue par défaut 🇫🇷 Français 🇬🇧 English 🇸🇦 العربية Devise par défaut € EUR $ USD £ GBP FCFA XAF Enregistrer Fiscalité & co …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Paramètres Configuration runtime de la plateforme MyBestBooking. Les modifications prennent effet immédiatement (jusqu'à 60 s de cache par instance). Paramètres généraux Nom de la plateforme Email de support Email partenaires Langue par défaut 🇫🇷 Français 🇬🇧 English Devise par défaut € EUR $ USD £ GBP FCFA XAF Enregistrer Fiscalité & commissions T …
 
 ---
 
@@ -938,36 +938,17 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/analytics
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ mybest booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 21 653,84 € Revenus (30j) 100.0 % 33 Réservations (30j) 0.0 % 656,18 € Panier moyen 8.4/10 Note moyenne Revenus par jour Il y a 14j Aujourd'hui Top hébergements 1 Hôtel Barcelona Center 5 réservations 4 150,68 € 2 Villa Azure Côte d'Azur 4 réservations 3 932,49 € 3 Hôtel Le  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 151,27 € Revenus (30j) 100.0 % 43 Réservations (30j) 0.0 % 561,66 € Panier moyen 8.4/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 17 réservations 7 773,31 € 2 Riad Jardin Secret 4 réservations 4 150,69 € 3 Hôte …
 
 ---
 
 ## G. Page hébergement dynamique — /hebergement/[slug]
 
-### 1. `GET /hebergement/dar-el-medina`
-
-**Scénario** : Le visiteur consulte 'Dar El Medina'.
-
-**Requête simulée** :
-```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/dar-el-medina
-```
-
-**Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
-
-**Titre / type de réponse** : `Dar El Medina | mybestbooking`
-
-**Ce que voit l'utilisateur** (texte visible extrait) :
-
-> Aller au contenu principal Chargement en cours… Dar El Medina | mybestbooking ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Accueil / Hébergements / Tunis / Dar El Medina Maison d'hôtes ★★★ Dar El Medina Rue de la Kasbah, Tunis , TN 8.9 Superbe ( 2 avis) ✦ La Promesse mybestbooki …
-
----
-
-### 2. `GET /hebergement/villa-azure-cote-d-azur`
+### 1. `GET /hebergement/villa-azure-cote-d-azur`
 
 **Scénario** : Le visiteur consulte 'Villa Azure Côte d'Azur'.
 
@@ -978,51 +959,70 @@ curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/villa-azure-cote-d-azur
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `Villa Azure Côte d&#x27;Azur | mybestbooking`
+**Titre / type de réponse** : `Villa Azure Côte d&#x27;Azur | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… Villa Azure Côte d'Azur | mybestbooking ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Accueil / Hébergements / Nice / Villa Azure Côte d'Azur Villa ★★★★★ 💎 BestRewards Villa Azure Côte d'Azur Chemin des Collines, Nice , FR 8.9 Super …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Accueil / Hébergements / Nice / Villa Azure Côte d'Azur Villa ★★★★★ Villa Azure Côte d'Azur Chemin des Collines, Nice , FR 9.0 Exceptionnel ( 3 avis) ✦ Informations MyBestBooking Pri …
 
 ---
 
-### 3. `GET /hebergement/b-b-toscana`
+### 2. `GET /hebergement/resort-les-dunes`
 
-**Scénario** : Le visiteur consulte 'B&B Toscana'.
+**Scénario** : Le visiteur consulte 'Resort Les Dunes'.
 
 **Requête simulée** :
 ```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/b-b-toscana
+curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/resort-les-dunes
 ```
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `B&amp;B Toscana | mybestbooking`
+**Titre / type de réponse** : `Resort Les Dunes | MyBestBooking`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… B&B Toscana | mybestbooking ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous droits réservés Accueil / Hébergements / Florence / B&B Toscana B&B ★★★ B&B Toscana Via delle Colline, 42, Florence , IT 8.7 Superbe ( 2 avis) ✦ La Promesse mybestbooking Pri …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Accueil / Hébergements / Djerba / Resort Les Dunes Resort ★★★★★ 💎 BestRewards Resort Les Dunes Zone Touristique, Djerba , TN 8.9 Superbe ( 2 avis) ✦ Informations MyBestBooking Prix v …
+
+---
+
+### 3. `GET /hebergement/appartement-montmartre`
+
+**Scénario** : Le visiteur consulte 'Appartement Montmartre'.
+
+**Requête simulée** :
+```bash
+curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/appartement-montmartre
+```
+
+**Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
+
+**Titre / type de réponse** : `Appartement Montmartre | MyBestBooking`
+
+**Ce que voit l'utilisateur** (texte visible extrait) :
+
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Accueil / Hébergements / Paris / Appartement Montmartre Appartement ★★★ Appartement Montmartre 12 Rue Lepic, Paris , FR 8.8 Superbe ( 2 avis) ✦ Informations MyBestBooking Prix vérifi …
 
 ---
 
 ## H. Partage public d'une wishlist — /wishlists/share/[token]
 
-### 1. `GET /wishlists/share/d0c054e8-a68a-4a71-a0ee-48265497b8e8`
+### 1. `GET /wishlists/share/a34d74d9-5d2e-4ad0-a425-6924385ad4ef`
 
 **Scénario** : Le voyageur envoie le lien à un ami. L'ami (non connecté) ouvre la wishlist publique.
 
 **Requête simulée** :
 ```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/d0c054e8-a68a-4a71-a0ee-48265497b8e8
+curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/a34d74d9-5d2e-4ad0-a425-6924385ad4ef
 ```
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
 
-**Titre / type de réponse** : `mybestbooking — Réservez mieux. Voyagez plus.`
+**Titre / type de réponse** : `MyBestBooking — Réservez mieux. Voyagez plus.`
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ mybest booking Hébergements 💎 BestRewards Aide Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ mybest booking .com "Réservez mieux. Voyagez plus." Mentions légales Confidentialité © 2025 mybestbooking.com — Tous dr …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tou …
 
 ---
 
@@ -1119,13 +1119,13 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> ref=MBB-2026-GUREFH · status=confirmed · discount=44.06 € · total=249.64 €
+> ref=MBB-2026-8YWUAC · status=confirmed · discount=73.42 € · total=416.07 €
 
 ---
 
 ### 6. `POST /api/wishlists`
 
-**Scénario** : Le voyageur ajoute 'Dar El Medina' à sa wishlist publique.
+**Scénario** : Le voyageur ajoute 'Villa Azure Côte d'Azur' à sa wishlist publique.
 
 **Requête simulée** :
 ```bash
@@ -1138,13 +1138,13 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/wishlists
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"item":{"id":"37d825a3-4136-4c67-9a2d-a324a3fcbf14","wishlistId":"034f6dec-073f-4931-bded-ac9f6be24aaf","propertyId":"c8ca8d6b-80f1-44af-973b-6620e834af4b","addedAt":"2026-08-21T13:38:06.674Z","price
+> {"item":{"id":"dd69161a-5105-421d-83a4-2704f6e3d0e8","wishlistId":"86b66894-6dc2-4522-ad22-6c51c34fa0cc","propertyId":"4141ab8b-5f01-492f-9759-eca32dcda49b","addedAt":"2026-08-30T20:05:17.702Z","price
 
 ---
 
 ### 7. `POST /api/price-alerts`
 
-**Scénario** : Le voyageur active une alerte prix ≤ 100 € pour 'Dar El Medina'.
+**Scénario** : Le voyageur active une alerte prix ≤ 100 € pour 'Villa Azure Côte d'Azur'.
 
 **Requête simulée** :
 ```bash
@@ -1157,7 +1157,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/price-alerts
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"alert":{"id":"893cdc52-2c44-4517-9755-be346f32ace2","userId":"74fee4e6-5f89-49cf-8497-446fb77c2ab8","propertyId":"c8ca8d6b-80f1-44af-973b-6620e834af4b","maxPrice":"100.00","currency":"EUR","active":
+> {"alert":{"id":"ed69e784-1ea6-4e1f-9786-6bdce03a70c3","userId":"d6cec09e-88ad-4f5d-9d87-02895e72e6d7","propertyId":"4141ab8b-5f01-492f-9759-eca32dcda49b","maxPrice":"100.00","currency":"EUR","checkIn"
 
 ---
 
@@ -1176,13 +1176,13 @@ curl -X GET cookie=cust http://127.0.0.1:3000/api/users/me/referral
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> code="YH8YM9MS"
+> code="EKBCNGAB"
 
 ---
 
 ### 9. `POST /api/auth/register`
 
-**Scénario** : Un nouveau visiteur crée un compte sim1787319486@test.local.
+**Scénario** : Un nouveau visiteur crée un compte sim1788120317@test.local.
 
 **Requête simulée** :
 ```bash
@@ -1195,7 +1195,7 @@ curl -X POST (anonyme) http://127.0.0.1:3000/api/auth/register
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"message":"Inscription réussie","user":{"id":"f9474725-230f-4b3d-95f8-8a7b132e977c","email":"sim1787319486@test.local","firstName":"Sim","lastName":"User","role":"customer"}}
+> {"message":"Inscription réussie","user":{"id":"fc7b3bcd-4826-48c1-bb1b-d90f2b3927b6","email":"sim1788120317@test.local","firstName":"Sim","lastName":"User","role":"customer","language":"fr"}}
 
 ---
 
@@ -1252,7 +1252,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/api/admin/settings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> 7 entrées retournées
+> 8 entrées retournées
 
 ---
 
@@ -1309,7 +1309,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/auth/logout
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> <!DOCTYPE html><html lang="fr"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="/_next/static/chunks/src_app_globals_0p2ml
+> <!DOCTYPE html><html lang="fr" data-scroll-behavior="smooth"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><link rel="stylesheet" href="/_next/stati
 
 ---
 
@@ -1339,8 +1339,8 @@ curl -X GET (anonyme) http://127.0.0.1:3000/api/health
 
 | Section | PASS | KO |
 |---|---|---|
-| A. Pages publiques (visiteur non connecté) | 11 | 0 |
-| B. Pages protégées — utilisateur non connecté (redirection edge → /connexion) | 8 | 0 |
+| A. Pages publiques (visiteur non connecté) | 12 | 0 |
+| B. Pages protégées — utilisateur non connecté (redirection edge → /connexion) | 7 | 0 |
 | C. Voyageur authentifié (customer@mybestbooking.com) | 9 | 0 |
 | D. Guards de rôle — voyageur (customer) tente d'ouvrir le dashboard | 5 | 0 |
 | E. Hôte authentifié (host@mybestbooking.com) — dashboard host | 11 | 0 |

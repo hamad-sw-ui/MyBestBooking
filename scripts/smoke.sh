@@ -102,6 +102,37 @@ npm run db:push > "$JAR_DIR/db-push.log" 2>&1 || {
   exit 1
 }
 
+# ─────────────────────────────────────────────────────────────
+# Réentrance (audit n°27, T-155) : chaque run laisse sa réservation
+# « Smoke Test » sur les mêmes dates/chambre + une alerte prix. Sans
+# nettoyage, la disponibilité (quantity=6) finit saturée → 409 « plus
+# disponible » → le smoke casse après ~6 exécutions. On supprime les
+# artefacts du scénario avant de rejouer (le wishlist-item reste
+# idempotent : 400 « déjà dans la liste »).
+# NB : POST /api/bookings est limité à 10/h/utilisateur (store mémoire) ;
+# au-delà de ~10 runs dans la même heure, redémarrer Next pour vider le
+# compteur (documenté KNOWN_LIMITATIONS — rate-limit en mémoire).
+# ─────────────────────────────────────────────────────────────
+log "  ▶ nettoyage réentrant (runs Smoke précédents)"
+DB_URL=$(grep '^DATABASE_URL=' .env.local 2>/dev/null | head -1 | sed -E 's/^DATABASE_URL="?([^"]*)"?$/\1/')
+if [ -n "$DB_URL" ]; then
+  DB_URL="$DB_URL" node -e "
+    const { Client } = require('pg');
+    const c = new Client({ connectionString: process.env.DB_URL });
+    c.connect().then(async () => {
+      try {
+        await c.query(\"DELETE FROM bookings WHERE guest_first_name = 'Smoke' AND guest_last_name = 'Test'\");
+        await c.query(\"DELETE FROM price_alerts WHERE max_price = '50.00' AND check_in IS NULL AND check_out IS NULL\");
+        console.log('cleanup OK');
+      } catch (e) { console.error('cleanup KO: ' + e.message); }
+      await c.end();
+    }).catch((e) => { console.error('cleanup KO: ' + e.message); process.exitCode = 1; });
+  " > "$JAR_DIR/cleanup.log" 2>&1 || log "  ⚠️  nettoyage réentrant en échec (voir $JAR_DIR/cleanup.log)"
+  grep -q "cleanup OK" "$JAR_DIR/cleanup.log" && log "  ✅ nettoyage réentrant OK" || true
+else
+  log "  ⚠️  DATABASE_URL introuvable dans .env.local — nettoyage réentrant ignoré"
+fi
+
 if port_busy 3000; then
   log "  ↺ Next déjà sur :3000 → réutilisation"
 else
