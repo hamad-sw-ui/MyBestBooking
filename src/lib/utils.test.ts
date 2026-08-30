@@ -30,6 +30,14 @@ describe("formatPrice", () => {
   it("accepte une chaîne", () => {
     expect(formatPrice("49.99")).toMatch(/49,99/);
   });
+  it("T-152 (B) : la devise passée en argument est respectée (USD ≠ EUR)", () => {
+    const usd = formatPrice(100, "USD");
+    const eur = formatPrice(100, "EUR");
+    expect(usd).toMatch(/100/);
+    expect(usd).toMatch(/\$US/);
+    expect(eur).toMatch(/€/);
+    expect(usd).not.toBe(eur);
+  });
 });
 
 describe("formatDate / formatDateShort", () => {

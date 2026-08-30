@@ -2,14 +2,17 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX } from "lucide-react";
+import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, CreditCard } from "lucide-react";
 
 interface Props {
   bookingId: string;
   bookingReference: string;
   propertyId: string;
   status: string;
+  /** T-152 : état de paiement, permet d'offrir « Payer maintenant » aux pending. */
+  paymentStatus?: string | null;
   messageArea?: "traveler" | "dashboard";
   /**
    * T-130 : true quand l'utilisateur courant est l'hôte du bien (ou admin) en
@@ -33,6 +36,7 @@ export function BookingRowActions({
   bookingReference,
   propertyId,
   status,
+  paymentStatus = null,
   messageArea = "traveler",
   canManageStay = false,
 }: Props) {
@@ -161,7 +165,26 @@ export function BookingRowActions({
         <FileText className="w-4 h-4 mr-2" />
         Facture / Reçu
       </a>
-      {status === "confirmed" && (
+      {/* T-152 (audit n°24, A) : une réservation pending (paiement non
+          finalisé, intent expiré, checkout abandonné) doit rester actionnable.
+          L'API /api/bookings/[id]/payment et l'annulation pending existent
+          déjà ; on expose juste les actions. */}
+      {status === "pending" && paymentStatus === "pending" && (
+        <Link
+          href={`/reservation?booking=${bookingId}`}
+          className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#1B3A6B] text-white text-sm font-medium hover:bg-[#152d54] transition"
+        >
+          <CreditCard className="w-4 h-4 mr-2" />
+          Payer maintenant
+        </Link>
+      )}
+      {status === "pending" && paymentStatus !== "pending" && (
+        <span className="inline-flex items-center text-sm px-3 py-1.5 text-amber-700 bg-amber-50 rounded-lg">
+          <Loader2 className="w-4 h-4 mr-2" />
+          Paiement en cours de confirmation
+        </span>
+      )}
+      {(status === "confirmed" || status === "pending") && (
         <Button
           variant="ghost"
           size="sm"

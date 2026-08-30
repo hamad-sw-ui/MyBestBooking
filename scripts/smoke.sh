@@ -16,7 +16,7 @@
 #   - POST /api/bookings présent
 #   - guard body-check présent (DashboardSidebar|Chargement)
 #
-# @assertions: 84
+# @assertions: 94
 
 set -u
 umask 077
@@ -326,6 +326,24 @@ if [ -n "$PROP" ] && [ -n "$ROOM" ]; then
   ok "seed extract : PROP=$PROP ROOM=$ROOM SLUG=$SLUG"
 else
   ko "extraction PROP/ROOM depuis le seed a échoué"
+fi
+
+# T-152 (G) : le smoke ne dépend plus de la wishlist du seed — il en crée
+# une si absente (POST /api/wishlists sans propertyId = création, 201).
+if [ -z "$WL" ]; then
+  wl_create=$(curl -s -w "\n__HTTP__%{http_code}" -b "$JAR_DIR/customer.jar" \
+    -X POST "$BASE_URL/api/wishlists" -H "Content-Type: application/json" \
+    -d '{"name":"Smoke auto (T-152)","isPublic":false}')
+  wl_code=$(echo "$wl_create" | sed -n 's/.*__HTTP__//p')
+  wl_body=$(echo "$wl_create" | sed '$d')
+  if [ "$wl_code" = "201" ] || [ "$wl_code" = "200" ]; then
+    WL=$(echo "$wl_body" | python3 -c "import sys,json;print(json.load(sys.stdin).get('wishlist',{}).get('id',''))" 2>/dev/null || echo "")
+  fi
+  if [ -n "$WL" ]; then
+    ok "création auto de la wishlist smoke → $wl_code"
+  else
+    ko "création auto wishlist → $wl_code body=$wl_body"
+  fi
 fi
 
 # Page publique hébergement

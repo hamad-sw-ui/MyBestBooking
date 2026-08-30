@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, formatDate } from "@/lib/utils";
+import { sumByCurrency, formatCurrencyBreakdown } from "@/lib/currency-summary";
 import { 
   CreditCard, Download, FileText, Calendar,
   TrendingUp, Wallet, ArrowRight, CheckCircle
@@ -41,23 +42,22 @@ async function getBillingData(userId: string, isAdmin: boolean) {
       );
   const paidBookings = await paidBookingsQuery;
 
-  // This month
+  // This month — T-152 (audit n°24, C) : totaux PAR DEVISE. On n'affiche
+  // jamais une somme de devises mélangées ; les lignes de transactions
+  // utilisent déjà `booking.currency`.
   const thisMonthBookings = paidBookings.filter(b => new Date(b.createdAt) >= startOfMonth);
-  const thisMonthRevenue = thisMonthBookings.reduce((sum, b) => sum + parseFloat(b.total), 0);
-  const thisMonthCommission = thisMonthBookings.reduce((sum, b) => sum + parseFloat(b.commissionAmount), 0);
-  const thisMonthNet = thisMonthBookings.reduce((sum, b) => sum + parseFloat(b.netToHost), 0);
+  const sumNetByCurrency = (rows: typeof paidBookings) =>
+    sumByCurrency(rows.map(b => ({ currency: b.currency, amount: parseFloat(b.netToHost) })));
+  const thisMonthNetByCurrency = sumNetByCurrency(thisMonthBookings);
 
   // Last month
   const lastMonthBookings = paidBookings.filter(
     b => new Date(b.createdAt) >= startOfLastMonth && new Date(b.createdAt) <= endOfLastMonth
   );
-  const lastMonthRevenue = lastMonthBookings.reduce((sum, b) => sum + parseFloat(b.total), 0);
-  const lastMonthNet = lastMonthBookings.reduce((sum, b) => sum + parseFloat(b.netToHost), 0);
+  const lastMonthNetByCurrency = sumNetByCurrency(lastMonthBookings);
 
   // Total
-  const totalRevenue = paidBookings.reduce((sum, b) => sum + parseFloat(b.total), 0);
-  const totalCommission = paidBookings.reduce((sum, b) => sum + parseFloat(b.commissionAmount), 0);
-  const totalNet = paidBookings.reduce((sum, b) => sum + parseFloat(b.netToHost), 0);
+  const totalNetByCurrency = sumNetByCurrency(paidBookings);
 
   // Recent transactions (bookings)
   const recentTransactions = await db
@@ -96,20 +96,15 @@ async function getBillingData(userId: string, isAdmin: boolean) {
 
   return {
     thisMonth: {
-      revenue: thisMonthRevenue,
-      commission: thisMonthCommission,
-      net: thisMonthNet,
+      netByCurrency: thisMonthNetByCurrency,
       bookings: thisMonthBookings.length,
     },
     lastMonth: {
-      revenue: lastMonthRevenue,
-      net: lastMonthNet,
+      netByCurrency: lastMonthNetByCurrency,
       bookings: lastMonthBookings.length,
     },
     total: {
-      revenue: totalRevenue,
-      commission: totalCommission,
-      net: totalNet,
+      netByCurrency: totalNetByCurrency,
       bookings: paidBookings.length,
     },
     recentTransactions,
@@ -163,7 +158,7 @@ export default async function BillingPage() {
               <Badge className="bg-white/20 text-white">Ce mois</Badge>
             </div>
             <p className="text-white/70 text-sm">Revenus nets</p>
-            <p className="text-3xl font-bold mt-1">{formatPrice(billing.thisMonth.net)}</p>
+            <p className="text-3xl font-bold mt-1">{formatCurrencyBreakdown(billing.thisMonth.netByCurrency)}</p>
             <p className="text-white/60 text-sm mt-2">
               {billing.thisMonth.bookings} réservation{billing.thisMonth.bookings !== 1 ? "s" : ""}
             </p>
@@ -177,7 +172,7 @@ export default async function BillingPage() {
               <span className="text-sm text-gray-500">Mois dernier</span>
             </div>
             <p className="text-gray-500 text-sm">Revenus nets</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{formatPrice(billing.lastMonth.net)}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.lastMonth.netByCurrency)}</p>
             <p className="text-gray-500 text-sm mt-2">
               {billing.lastMonth.bookings} réservation{billing.lastMonth.bookings !== 1 ? "s" : ""}
             </p>
@@ -191,7 +186,7 @@ export default async function BillingPage() {
               <span className="text-sm text-gray-500">Total</span>
             </div>
             <p className="text-gray-500 text-sm">Revenus cumulés</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{formatPrice(billing.total.net)}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.total.netByCurrency)}</p>
             <p className="text-gray-500 text-sm mt-2">
               {billing.total.bookings} réservation{billing.total.bookings !== 1 ? "s" : ""} au total
             </p>
@@ -235,7 +230,7 @@ export default async function BillingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">{formatPrice(invoice.net)}</p>
+                      <p className="font-bold text-gray-900">{formatPrice(invoice.net, "EUR")}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {invoice.status === "paid" ? (
                           <Badge variant="success">

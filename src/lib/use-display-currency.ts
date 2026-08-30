@@ -22,6 +22,9 @@ import { isUiLocale } from "@/lib/ui-strings";
  * chargement de page, pas une par carte).
  */
 
+/** T-152 (D) : clé de persistance locale du sélecteur de langue (anonyme). */
+export const UI_LANGUAGE_STORAGE_KEY = "mybb:ui-language";
+
 export interface DisplayPreferences {
   /** Devise d'affichage (ex. "XAF"). Jamais null une fois prêt. */
   currency: string | null;
@@ -60,6 +63,7 @@ function load(): Promise<Resolved> {
       //    qu'une préférence aberrante (« ZZZ », « ar » — issue d'anciennes
       //    données ou d'un appel direct à l'API) ne casse pas l'affichage :
       //    devise inconnue → devise plateforme/XAF, langue non traduite → « fr ».
+      let userLanguage: string | null = null;
       try {
         const me = await fetch("/api/auth/me", { cache: "no-store" });
         if (me.ok) {
@@ -67,11 +71,24 @@ function load(): Promise<Resolved> {
           const u = data?.user;
           if (typeof u?.currency === "string" && u.currency) platformCurrency = u.currency.toUpperCase();
           if (typeof u?.language === "string" && u.language && isUiLocale(u.language)) {
-            platformLanguage = u.language;
+            userLanguage = u.language;
           }
         }
       } catch {
         // anonyme : on garde le défaut plateforme
+      }
+      // T-152 (D) : priorité compte connecté > localStorage (sélecteur
+      // header, anonyme) > défaut plateforme > fr. La préférence locale ne
+      // prend jamais le pas sur le profil du compte connecté.
+      if (userLanguage) {
+        platformLanguage = userLanguage;
+      } else {
+        try {
+          const stored = window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
+          if (stored && isUiLocale(stored)) platformLanguage = stored;
+        } catch {
+          // localStorage indisponible : défaut plateforme
+        }
       }
 
       return {

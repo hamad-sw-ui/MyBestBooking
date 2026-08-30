@@ -9,6 +9,8 @@ TOMO/FIXME/dead-UI. La revue portait sur les éléments **inachevés** ou
 **mal pensés**, avec pour chacun : problème → preuve → solution **sans
 régression**.
 **Rapport associé implémenté :** T-151 (`validation_T-151_2026-08-30.md`).
+**Findings A→E + G implémentés :** T-152
+(`validation_T-152_2026-08-30.md`).
 
 ---
 

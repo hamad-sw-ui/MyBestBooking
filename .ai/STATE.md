@@ -4,18 +4,31 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a052ed-mybestbooking`
-- **HEAD de base** : `ada5400` (T-150 — T-149 sur la branche sœur
+- **HEAD de base** : `99b4c7f` (T-151 — T-149 sur la branche sœur
   `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
-- **PR ouverte** : historique (PR #2) — session T-151 en cours sur
+- **PR ouverte** : historique (PR #2) — session T-152 en cours sur
   `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
-- **HEAD Git** : T-151 sur `arena/01a052ed-mybestbooking`
-  (base `ada5400` = T-150). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
+- **HEAD Git** : T-152 sur `arena/01a052ed-mybestbooking`
+  (base `99b4c7f` = T-151). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
   : un commit de doc ne peut pas contenir son propre hash, et R7 le tolère
   explicitement (motif « à mettre à jour en fin de session »). Le workflow
   `.github/workflows/ci.yml` (T-113) reste hors suivi
   git de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : **T-151 (2026-08-30)** — e-mail de
+- **Dernière tâche validée** : **T-152 (2026-08-30)** — implémentation des
+  findings de l'audit n°24 (A→E + G) : A réservation `pending` actionnable
+  (« Payer maintenant » + reprise auto du paiement, annulation étendue) ; B
+  devise réelle `room.currency` dans le tunnel (plus de `€` dur) ; C totaux
+  analytics/billing **par devise** (`currency-summary`, jamais de somme
+  inter-devises) ; D sélecteur FR/EN header + `<html lang>` dynamique
+  (priorité compte > localStorage > plateforme > fr) ; E état avis additif
+  sur `GET /api/bookings` + badge/écran « déjà publié » ; G smoke crée sa
+  wishlist. Preuves : tsc 0 · lint 0 erreur (14 warnings préexistants,
+  liste identique à la baseline) · **vitest 329/329 (+13)** · smoke
+  **94/94** · build OK · ai:check 19/1/0 · runtime A/B/C/D/E prouvé (détails
+  `REPORTS/validation_T-152_2026-08-30.md` ; pending→confirmed/paid,
+  187,00 $US, 1 121,79 €, `<html lang="en"`, « déjà publié » 9.0/10).
+  Précédent : **T-151** — e-mail de
   vérification localisé à l'inscription : `language` accepté/persisté à
   l'inscription **et** au checkout invité → e-mails vérification et
   réclamation de compte localisés fr/en pour le destinataire. Preuves :
@@ -23,7 +36,7 @@
   OK · runtime prouvé (guest `language=en` → « Access your booking… »).
   Rapport : `REPORTS/validation_T-151_2026-08-30.md`. Audit fonctionnel
   n°24 produit (5 findings + solutions, aucune modif de code pour A→E) :
-  `REPORTS/audit_fonctionnel_profond24_2026-08-30.md`.
+  `REPORTS/audit_fonctionnel_profond24_2026-08-30.md` (implémenté par T-152).
   Précédent : **T-150** — e-mails hôtes ↔ clients (CTA messagerie localisé,
   `newMessage` fr/en, annulation à l'hôte) ; tsc 0 · lint 0 erreur ·
   vitest 312/312 (+13) · smoke 94/94 · build OK · runtime prouvé.

@@ -4,6 +4,7 @@ import Script from "next/script";
 import { ToastProvider } from "@/components/ui/toast";
 import { MaintenanceGate } from "@/components/maintenance-gate";
 import { getCurrentUser } from "@/lib/auth";
+import { getServerLocale } from "@/lib/server-locale";
 import "./globals.css";
 
 // Les polices restent locales afin que le rendu initial ne dépende pas
@@ -56,8 +57,12 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   // passe à la garde cliente sous forme d'un simple booléen.
   const user = await getCurrentUser().catch(() => null);
   const isAdmin = user?.role === "admin";
+  // T-152 (audit n°24, D) : `lang` suit la langue résolue (compte connecté
+  // puis défaut plateforme puis « fr ») au lieu d'être figé sur « fr ».
+  const locale = await getServerLocale();
+  const hasAccount = Boolean(user);
   return (
-    <html lang="fr" data-scroll-behavior="smooth" suppressHydrationWarning>
+    <html lang={locale} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="bg-gray-50 min-h-screen font-sans">
         {/* T-128 : bascule l'affichage vers /maintenance sur plein-chargement. */}
         <MaintenanceGate isAdmin={isAdmin} />
@@ -72,6 +77,18 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               "try{var t=localStorage.getItem('theme');" +
               "var d=t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme: dark)').matches);" +
               "if(d)document.documentElement.classList.add('dark');}catch(e){}",
+          }}
+        />
+        {/* T-152 (D) : langue avant hydratation pour les visiteurs sans
+            compte (le serveur a déjà rendu lang=compte pour les connectés) */}
+        <Script
+          id="lang-init"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{
+            __html:
+              "try{var hasAccount=" + JSON.stringify(hasAccount) + ";" +
+              "if(!hasAccount){var s=localStorage.getItem('mybb:ui-language');" +
+              "if(s==='en'||s==='fr')document.documentElement.lang=s;}}catch(e){}",
           }}
         />
         <ToastProvider>{children}</ToastProvider>

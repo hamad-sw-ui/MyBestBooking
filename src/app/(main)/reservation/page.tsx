@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT, isUiLocale } from "@/lib/ui-strings";
+import { formatPrice } from "@/lib/utils";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -51,6 +52,9 @@ interface RoomData {
   basePrice: string;
   sizeSqm: string | null;
   amenities: string[];
+  // T-152 (B) : devise réelle de la chambre — l'API la renvoie depuis
+  // `rooms.currency` ; sans elle on afficherait « € » sur une chambre USD.
+  currency?: string;
 }
 
 function ReservationPageInner() {
@@ -59,12 +63,34 @@ function ReservationPageInner() {
   // Lecture temporaire des paramètres legacy propertyId/roomId afin que les
   // liens déjà générés ne cassent pas pendant la migration de convention.
   const reservationParams = readReservationParams(searchParams);
-  const propertyId = reservationParams?.propertyId ?? null;
-  const roomId = reservationParams?.roomId ?? null;
+  // T-152 (A) : reprise d'un paiement depuis /mes-reservations via
+  // ?booking=<id> (aucune nouvelle réservation : reprise propriétaire).
+  const bookingParam = searchParams.get("booking");
+  const [loaded, setLoaded] = useState<{ propertyId: string | null; roomId: string | null }>({
+    propertyId: reservationParams?.propertyId ?? null,
+    roomId: reservationParams?.roomId ?? null,
+  });
+  const propertyId = loaded.propertyId;
+  const roomId = loaded.roomId;
 
   const [step, setStep] = useState(1);
   const { language } = useDisplayPreferences();
   const t = makeT(language);
+  // Refs pour garder des valeurs récentes dans les effets sans les
+  // re-déclencher (pas de dépendance instable dans les deps). Mises à jour
+  // dans un effet (jamais pendant le rendu — règle react-hooks/refs).
+  const tRef = useRef(t);
+  const resumeLoadedRef = useRef(false);
+  const resumeStartedRef = useRef(false);
+  const resumedBookingRef = useRef<string | null>(null);
+  const resumePaymentRef = useRef<(bookingId: string) => Promise<void>>(async () => {});
+
+  useEffect(() => {
+    tRef.current = t;
+    // `resumePaymentFor` est déclarée plus bas mais hissée (function
+    // declaration) : la ref est prête avant l'exécution de tout effet.
+    resumePaymentRef.current = resumePaymentFor;
+  });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
@@ -111,6 +137,60 @@ function ReservationPageInner() {
   const taxes = subtotal * 0.1;
   const totalBeforePromo = subtotal + taxes;
   const total = promo ? promo.finalTotal : totalBeforePromo;
+  // T-152 (B) : devise réelle de la chambre pour TOUS les montants affichés
+  // (le débit PSP utilise room.currency — voir POST /api/bookings).
+  const roomCurrency = room?.currency ?? "EUR";
+
+  // T-152 (A) : reprise de paiement — charge la réservation, pré-remplit la
+  // sélection, puis relance `POST /api/bookings/:id/payment` (déjà existant).
+  useEffect(() => {
+    if (!bookingParam || resumeLoadedRef.current) return;
+    resumeLoadedRef.current = true;
+    (async () => {
+      try {
+        const response = await fetch(`/api/bookings/${bookingParam}`, { cache: "no-store" });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          setError(data?.error ?? tRef.current("reservation.resumeError"));
+          setLoading(false);
+          return;
+        }
+        const booking = data?.booking;
+        if (!booking) {
+          setError(tRef.current("reservation.resumeError"));
+          setLoading(false);
+          return;
+        }
+        // Garde : une résa déjà confirmée/annulée n'a pas à être reprise.
+        if (booking.status === "confirmed") {
+          setError(tRef.current("reservation.alreadyConfirmed"));
+          setLoading(false);
+          return;
+        }
+        if (booking.status !== "pending" || booking.paymentStatus !== "pending") {
+          setError(tRef.current("reservation.cannotResume"));
+          setLoading(false);
+          return;
+        }
+        setResumeBookingId(booking.id);
+        resumedBookingRef.current = booking.id;
+        setLoaded({ propertyId: booking.propertyId, roomId: booking.roomId });
+        setFormData((previous) => ({
+          ...previous,
+          checkIn: booking.checkIn,
+          checkOut: booking.checkOut,
+          numAdults: booking.numAdults,
+          numChildren: booking.numChildren ?? 0,
+          ratePlanId: booking.ratePlanId ?? previous.ratePlanId,
+        }));
+      } catch {
+        setError(tRef.current("reservation.resumeError"));
+        setLoading(false);
+      }
+    })();
+    // Dépendances volontairement limitées à `bookingParam` : toutes les
+    // valeurs récentes passent par des refs (tRef, resumedBookingRef).
+  }, [bookingParam]);
 
   useEffect(() => {
     if (!propertyId || !roomId) return;
@@ -143,6 +223,12 @@ function ReservationPageInner() {
           }
         }
         setLoading(false);
+        // T-152 (A) : une fois la fiche chargée, relance le paiement de la
+        // réservation reprise (une seule fois — resumeStartedRef).
+        if (resumedBookingRef.current && !resumeStartedRef.current) {
+          resumeStartedRef.current = true;
+          resumePaymentRef.current(resumedBookingRef.current);
+        }
       });
 
     // T-030 : pré-remplir si connecté, sinon proposer mode invité.
@@ -242,11 +328,12 @@ function ReservationPageInner() {
     setSubmitting(false);
   };
 
-  async function resumePayment() {
-    if (!resumeBookingId) return;
+  // T-152 (A) : reprise de paiement paramétrée (bouton manuel « Reprendre »
+  // et reprise automatique depuis /reservation?booking=<id>).
+  async function resumePaymentFor(bookingId: string) {
     setSubmitting(true); setError("");
     try {
-      const response = await fetch(`/api/bookings/${resumeBookingId}/payment`, { method: "POST", headers: { "content-type": "application/json" } });
+      const response = await fetch(`/api/bookings/${bookingId}/payment`, { method: "POST", headers: { "content-type": "application/json" } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? "Impossible de reprendre le paiement");
       if (data.payment?.requiresConfirmation && data.payment.clientSecret) {
@@ -260,6 +347,11 @@ function ReservationPageInner() {
       throw new Error("Le paiement reste en préparation. Réessayez dans quelques instants.");
     } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); }
     finally { setSubmitting(false); }
+  }
+
+  async function resumePayment() {
+    if (!resumeBookingId) return;
+    return resumePaymentFor(resumeBookingId);
   }
 
   async function waitForStripeConfirmation() {
@@ -292,10 +384,21 @@ function ReservationPageInner() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md w-full">
           <CardContent className="text-center py-12">
-            <p className="text-gray-500 mb-4">Informations de réservation manquantes</p>
-            <Link href="/recherche">
-              <Button>{t("footer.searchAccommodation")}</Button>
-            </Link>
+            {error ? (
+              <>
+                <p className="text-gray-700 mb-4">{error}</p>
+                <Link href="/mes-reservations">
+                  <Button variant="outline">{t("reservation.seeBookings")}</Button>
+                </Link>
+              </>
+            ) : (
+              <>
+                <p className="text-gray-500 mb-4">Informations de réservation manquantes</p>
+                <Link href="/recherche">
+                  <Button>{t("footer.searchAccommodation")}</Button>
+                </Link>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -551,7 +654,7 @@ function ReservationPageInner() {
                     </Button>
                     <Button onClick={handleSubmit} loading={submitting} size="lg" variant="secondary">
                       <Lock className="w-4 h-4 mr-2" />
-                      {t("reservation.continuePayment")} {total > 0 ? `€${total.toFixed(2)}` : ""}
+                      {t("reservation.continuePayment")} {total > 0 ? formatPrice(total, roomCurrency) : ""}
                     </Button>
                   </CardFooter>
                 )}
@@ -580,7 +683,7 @@ function ReservationPageInner() {
                     <div className="mt-4 space-y-1 text-sm text-gray-600">
                       <p>🏨 {property?.name}, {property?.city}</p>
                       <p>📅 {formData.checkIn} → {formData.checkOut}</p>
-                      <p>💰 {confirmation.paymentPending ? t("reservation.amountToConfirm") : t("reservation.totalPaid")} : €{parseFloat(confirmation.total).toFixed(2)} {t("reservation.allInclusive")}</p>
+                      <p>💰 {confirmation.paymentPending ? t("reservation.amountToConfirm") : t("reservation.totalPaid")} : {formatPrice(confirmation.total, roomCurrency)} {t("reservation.allInclusive")}</p>
                     </div>
                   </div>
 
@@ -661,29 +764,29 @@ function ReservationPageInner() {
                     <>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-600">
-                          {numNights} nuit{numNights > 1 ? "s" : ""} × €{pricePerNight.toFixed(2)}
+                          {numNights} nuit{numNights > 1 ? "s" : ""} × {formatPrice(pricePerNight, roomCurrency)}
                         </span>
                         {/* T-146 : on affiche ici le sous-total de BASE (nuits × tarif),
                             puis la remise du tarif choisi sur la ligne verte. Auparavant
                             on affichait `subtotal` (déjà remisé) : la remise était alors
                             comptée deux fois dans le détail, même si le Total final et le
                             calcul serveur restaient justes. */}
-                        <span>€{baseSubtotal.toFixed(2)}</span>
+                        <span>{formatPrice(baseSubtotal, roomCurrency)}</span>
                       </div>
                       {selectedRatePlan && (
                         <div className="flex justify-between text-sm mb-2 text-green-700">
                           <span>{selectedRatePlan.name}</span>
-                          <span>−€{ratePlanDiscount.toFixed(2)}</span>
+                          <span>−{formatPrice(ratePlanDiscount, roomCurrency)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-600">{t("reservation.taxesFees")}</span>
-                        <span>€{taxes.toFixed(2)}</span>
+                        <span>{formatPrice(taxes, roomCurrency)}</span>
                       </div>
                       {promo && (
                         <div className="flex justify-between text-sm mb-2 text-green-700">
                           <span>Code {promo.code}</span>
-                          <span>−€{promo.discount.toFixed(2)}</span>
+                          <span>−{formatPrice(promo.discount, roomCurrency)}</span>
                         </div>
                       )}
                       <div className="my-3">
@@ -700,7 +803,7 @@ function ReservationPageInner() {
                           />
                           <div className="text-xs">
                             <p className="font-medium text-amber-900">
-                              💰 {t("reservation.walletAvailable")} (€{walletBalance.toFixed(2)} {t("reservation.walletAvail")})
+                              💰 {t("reservation.walletAvailable")} ({formatPrice(walletBalance, "EUR")} {t("reservation.walletAvail")})
                             </p>
                             <p className="text-amber-700">
                               Sera appliqué en réduction sur le total, plafonné au montant restant.
@@ -711,14 +814,14 @@ function ReservationPageInner() {
                       {promo && useWalletCredits && walletBalance > 0 && (
                         <div className="flex justify-between text-sm mb-2 text-amber-800">
                           <span>Wallet</span>
-                          <span>−€{Math.min(walletBalance, total).toFixed(2)}</span>
+                          <span>−{formatPrice(Math.min(walletBalance, total), "EUR")}</span>
                         </div>
                       )}
                       <hr className="my-3" />
                       <div className="flex justify-between font-bold text-lg">
                         <span>Total</span>
                         <span className="text-[#1B3A6B]">
-                          €{Math.max(0, useWalletCredits ? total - Math.min(walletBalance, total) : total).toFixed(2)}
+                          {formatPrice(Math.max(0, useWalletCredits ? total - Math.min(walletBalance, total) : total), roomCurrency)}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">

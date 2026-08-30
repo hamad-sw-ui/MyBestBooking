@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { bookings, properties, promotions, ratePlans, rooms, roomAvailability, users } from "@/db/schema";
+import { bookings, properties, promotions, ratePlans, reviews, rooms, roomAvailability, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { generateBookingReference } from "@/lib/utils";
 import { eq, and, or, desc, lt, gt, gte, ne, sql } from "drizzle-orm";
@@ -88,11 +88,19 @@ export async function GET(request: NextRequest) {
         },
         room: { id: rooms.id, name: rooms.name, roomType: rooms.roomType },
         user: { id: users.id, firstName: users.firstName, lastName: users.lastName, email: users.email },
+        // T-152 (audit n°24, E) : état de l'avis pour la réservation (champ
+        // additif — null si aucun avis ; aucun contrat existant modifié).
+        review: {
+          id: reviews.id,
+          overallRating: reviews.overallRating,
+          status: reviews.status,
+        },
       })
       .from(bookings)
       .leftJoin(properties, eq(bookings.propertyId, properties.id))
       .leftJoin(rooms, eq(bookings.roomId, rooms.id))
       .leftJoin(users, eq(bookings.userId, users.id))
+      .leftJoin(reviews, eq(reviews.bookingId, bookings.id))
       .where(conditions.length ? and(...conditions) : undefined)
       .orderBy(desc(bookings.createdAt));
 

@@ -1,45 +1,50 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-151
+**ID** : T-152
 
-**Niveau de proportionnalité** : L
+**Niveau de proportionnalité** : S
 
-**Titre** : Localisation de l'e-mail de vérification à l'inscription (langue
-choisie à l'inscription + checkout invité).
+**Titre** : Implémentation des findings de l'audit fonctionnel n°24
+(A→E + G) — sans régression.
 
-**Statut** : CORRIGÉ (VALIDÉ)
+**Statut** : CORRIGÉ (VALIDÉ) — 2026-08-30
 
-Rapport : `REPORTS/validation_T-151_2026-08-30.md` (+ audit fonctionnel n°24
-`REPORTS/audit_fonctionnel_profond24_2026-08-30.md`).
+Rapports (exigés §14/§15.1 pour un niveau S, avant tout code) :
+- `REPORTS/analyse_impact_T-152_2026-08-30.md`
+- `REPORTS/analyse_conception_T-152_2026-08-30.md`
+- `REPORTS/opportunites_T-152_2026-08-30.md`
+- `REPORTS/validation_T-152_2026-08-30.md`
 
-## Résumé
-- 🔨 `POST /api/auth/register` accepte `language` (fr/en/ar, défaut fr),
-  le persiste sur `users.language` et le renvoie → l'**e-mail de
-  vérification** est localisé pour le destinataire dès l'inscription.
-- 🔨 Checkout **invité** : `POST /api/bookings` accepte `language` et le
-  persiste sur le profil invité → l'e-mail de **réclamation de compte** est
-  localisé (prouvé à l'exécution avec `language=en`).
-- 🔨 Formulaires (inscription, réservation) envoient la langue d'interface
-  résolue (`useDisplayPreferences`), sans casser les appels sans champ.
+Source : `REPORTS/audit_fonctionnel_profond24_2026-08-30.md` (T-151).
 
-## Validation
-🧪 **tsc 0 · lint 0 erreur (14 warnings préexistants, 0 sur fichiers
-modifiés) · vitest 316/316 (+4 : 2 unitaires mail, 2 intégration register) ·
-smoke 94/94 · build OK** · preuve runtime HTTP : guest `language=en` →
-profil `en`, e-mail « Access your booking … » / « Activate my access ».
-Données de test nettoyées (8 users, 32 réservations seed, outbox 0,
-wishlist seed restaurée).
+## Validation (résumé)
+🔨 tsc **0 erreur** · lint **0 erreur** (14 warnings préexistants, liste de
+fichiers identique à la baseline vérifiée par stash) · build **OK**
+(Next.js 16.2.6) · 🧪 vitest **329/329** (47 fichiers, **+13** tests) ·
+▶️ smoke **94/94** · 🔨 ai:check **19 OK · 1 warn · 0 fail** (warn STATE
+résolu par ce commit) · ▶️ preuves runtime A/B/C/D/E (détails dans
+`REPORTS/validation_T-152_2026-08-30.md` §2.2). Playwright E2E : CI-only
+(CDN Chromium bloqué ici).
 
-## Audit fonctionnel n°24 (à l'exécution)
-🔍 41 pages / 61 routes API crawlees (anonyme/client/hôte/admin) : RBAC et
-routes saines ; **5 findings** documentés avec solutions sans régression —
-A **pending** (payer/annuler inaccessibles, API déjà prête) · B devise « € »
-codée en dur dans /reservation · C totaux analytics/billing sans devise
-explicite · D i18n partiel (20/113 composants, `lang="fr"` figé, aucun
-sélecteur) · E avis « doublon » (CTA toujours visible après dépôt).
-**Aucune modification de code pour ces 5 findings** (rapport + solutions ;
-implémentation sur demande).
+## Périmètre retenu (décision)
+- **A** 🟠 : `pending` → bouton « Payer maintenant »
+  (`/reservation?booking={id}`) + Annuler autorisé ; reprise auto du
+  `resumePayment()` existant à l'ouverture de la page.
+- **B** 🟠 : devises réelles dans `/reservation` (`room.currency`,
+  `formatPrice` partout) — plus de « € » codé en dur.
+- **C** 🟠 : totaux analytics/billing **par devise** (helper
+  `currency-summary`, jamais d'addition affichée de devises mélangées).
+- **D** 🟠 : sélecteur FR/EN dans le header (PATCH users/me si connecté,
+  localStorage si anonyme) + `<html lang>` dynamique + `lang` script.
+- **E** 🟠 : état avis — `review` additif sur `GET /api/bookings`, badge dans
+  `/mes-reservations`, écran d'état dans `/avis/[id]`.
+- **G** ⚪ : smoke auto-suffisant (wishlist créée par le smoke si absente).
+- Hors périmètre (proposés, à arbitrer) : migration i18n des 93 composants
+  restants, moteur multi-devises transactionnel, arabe — voir
+  `REPORTS/opportunites_T-152_2026-08-30.md`.
 
-## Reste / limites
-Sélecteur de langue UI absent (voir finding D) ; sujets/corps admin des
-e-mails non traduits (compromis T-025, inchangé).
+## Contraintes de non-régression
+- AUCUNE modification de schéma, AUCUNE migration, AUCUNE signature d'API
+  retirée (champs additifs uniquement) ; contrats 200/400/409/503 inchangés.
+- Défauts conservés : langue `fr`, devise EUR (cas réel du seed → rendus
+  identiques), CTA avis (avant dépôt).

@@ -4,6 +4,12 @@ import { bookings, properties, reviews, rooms, users } from "@/db/schema";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import {
+  sumByCurrency,
+  topCurrency,
+  currenciesOf,
+  formatCurrencyBreakdown,
+} from "@/lib/currency-summary";
 import { 
   TrendingUp, TrendingDown, DollarSign, Calendar, 
   Users, Star, Building2, Eye, BarChart3 
@@ -45,14 +51,22 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     b => new Date(b.createdAt) >= sixtyDaysAgo && new Date(b.createdAt) < thirtyDaysAgo && b.status !== "cancelled"
   );
 
-  // Calculate metrics
-  const currentRevenue = currentPeriodBookings
-    .filter(b => b.paymentStatus === "paid")
-    .reduce((sum, b) => sum + parseFloat(b.total), 0);
-
-  const previousRevenue = previousPeriodBookings
-    .filter(b => b.paymentStatus === "paid")
-    .reduce((sum, b) => sum + parseFloat(b.total), 0);
+  // Calculate metrics — T-152 (audit n°24, C) : les totaux sont regroupés
+  // PAR DEVISE. On n'additionne jamais deux devises dans un montant affiché ;
+  // les pourcentages d'évolution restent calculés sur les flux (toutes
+  // devises mêlées = simple comparaison de flux, étiquetée comme telle).
+  const currentRevenueByCurrency = sumByCurrency(
+    currentPeriodBookings
+      .filter(b => b.paymentStatus === "paid")
+      .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })),
+  );
+  const previousRevenueByCurrency = sumByCurrency(
+    previousPeriodBookings
+      .filter(b => b.paymentStatus === "paid")
+      .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })),
+  );
+  const currentRevenue = Object.values(currentRevenueByCurrency).reduce((sum, v) => sum + v, 0);
+  const previousRevenue = Object.values(previousRevenueByCurrency).reduce((sum, v) => sum + v, 0);
 
   const revenueChange = previousRevenue > 0 
     ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
@@ -64,9 +78,15 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     ? ((currentBookingsCount - previousBookingsCount) / previousBookingsCount) * 100
     : 100;
 
-  // Average booking value
+  // Average booking value (par devise, pour ne jamais afficher un panier
+  // moyen calculé sur des devises mélangées).
   const currentPaidBookings = currentPeriodBookings.filter(b => b.paymentStatus === "paid");
   const previousPaidBookings = previousPeriodBookings.filter(b => b.paymentStatus === "paid");
+  const avgBookingValueByCurrency: Record<string, number> = {};
+  for (const [currency, revenue] of Object.entries(currentRevenueByCurrency)) {
+    const count = currentPaidBookings.filter(b => (b.currency || "EUR").toUpperCase() === currency).length;
+    avgBookingValueByCurrency[currency] = count > 0 ? revenue / count : 0;
+  }
   const avgBookingValue = currentPaidBookings.length > 0
     ? currentRevenue / currentPaidBookings.length
     : 0;
@@ -106,8 +126,12 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     ? allReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0) / allReviews.length
     : 0;
 
-  // Revenue by day (last 30 days)
-  const revenueByDay: { date: string; revenue: number }[] = [];
+  // Revenue by day (last 30 days) — T-152 (C) : une SEULE devise par série
+  // (la dominante de la période). Les autres devises ne sont pas mélangées
+  // dans les barres ; elles sont signalées à l'affichage.
+  const chartCurrency = topCurrency(currentRevenueByCurrency) ?? "EUR";
+  const otherCurrencies = currenciesOf(currentRevenueByCurrency).filter(c => c !== chartCurrency);
+  const revenueByDay: { date: string; revenue: number; currency: string }[] = [];
   for (let i = 29; i >= 0; i--) {
     const date = new Date(now);
     date.setDate(date.getDate() - i);
@@ -116,33 +140,38 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     const dayRevenue = currentPeriodBookings
       .filter(b => {
         const bDate = new Date(b.createdAt).toISOString().split('T')[0];
-        return bDate === dateStr && b.paymentStatus === "paid";
+        return bDate === dateStr && b.paymentStatus === "paid" &&
+          (b.currency || "EUR").toUpperCase() === chartCurrency;
       })
       .reduce((sum, b) => sum + parseFloat(b.total), 0);
     
-    revenueByDay.push({ date: dateStr, revenue: dayRevenue });
+    revenueByDay.push({ date: dateStr, revenue: dayRevenue, currency: chartCurrency });
   }
 
-  // Top properties
-  const propertyRevenue = new Map<string, { name: string; revenue: number; bookings: number }>();
+  // Top properties (répartition par devise, jamais additionnée à l'affichage)
+  const propertyRevenue = new Map<string, { name: string; revenueByCurrency: Record<string, number>; bookings: number }>();
   for (const booking of allBookings) {
     if (booking.status === "cancelled" || booking.paymentStatus !== "paid") continue;
     const prop = allProperties.find(p => p.id === booking.propertyId);
     if (!prop) continue;
     
-    const current = propertyRevenue.get(prop.id) || { name: prop.name, revenue: 0, bookings: 0 };
-    current.revenue += parseFloat(booking.total);
+    const current = propertyRevenue.get(prop.id) || { name: prop.name, revenueByCurrency: {}, bookings: 0 };
+    const currency = (booking.currency || "EUR").toUpperCase();
+    current.revenueByCurrency[currency] = (current.revenueByCurrency[currency] ?? 0) + parseFloat(booking.total);
     current.bookings += 1;
     propertyRevenue.set(prop.id, current);
   }
 
   const topProperties = Array.from(propertyRevenue.entries())
-    .sort((a, b) => b[1].revenue - a[1].revenue)
+    .sort((a, b) => (b[1].revenueByCurrency[chartCurrency] ?? 0) - (a[1].revenueByCurrency[chartCurrency] ?? 0))
     .slice(0, 5)
     .map(([id, data]) => ({ id, ...data }));
 
 
   return {
+    currentRevenueByCurrency,
+    previousRevenueByCurrency,
+    avgBookingValueByCurrency,
     currentRevenue,
     previousRevenue,
     revenueChange,
@@ -155,6 +184,8 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     avgRating,
     totalReviews: allReviews.length,
     revenueByDay,
+    chartCurrency,
+    otherCurrencies,
     topProperties,
     totalProperties: allProperties.length,
     totalBookings: allBookings.length,
@@ -188,7 +219,7 @@ export default async function AnalyticsPage() {
   const metrics = [
     {
       title: "Revenus (30j)",
-      value: formatPrice(analytics.currentRevenue),
+      value: formatCurrencyBreakdown(analytics.currentRevenueByCurrency),
       change: analytics.revenueChange,
       icon: DollarSign,
       color: "bg-green-500",
@@ -202,7 +233,7 @@ export default async function AnalyticsPage() {
     },
     {
       title: "Panier moyen",
-      value: formatPrice(analytics.avgBookingValue),
+      value: formatCurrencyBreakdown(analytics.avgBookingValueByCurrency),
       change: analytics.previousAvgBookingValue > 0 
         ? ((analytics.avgBookingValue - analytics.previousAvgBookingValue) / analytics.previousAvgBookingValue) * 100 
         : 0,
@@ -262,9 +293,15 @@ export default async function AnalyticsPage() {
         {/* Revenue Chart (simplified bar representation) */}
         <Card>
           <CardHeader>
-            <CardTitle>Revenus par jour</CardTitle>
+            <CardTitle>Revenus par jour ({analytics.chartCurrency})</CardTitle>
           </CardHeader>
           <CardContent>
+            {analytics.otherCurrencies.length > 0 && (
+              <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
+                Devises non mélangées : les réservations en {analytics.otherCurrencies.join(", ")} sont
+                comptabilisées à part (série affichée en {analytics.chartCurrency}).
+              </p>
+            )}
             <div className="h-48 flex items-end gap-1">
               {analytics.revenueByDay.slice(-14).map((day, i) => {
                 const maxRevenue = Math.max(...analytics.revenueByDay.map(d => d.revenue));
@@ -274,7 +311,7 @@ export default async function AnalyticsPage() {
                     key={i}
                     className="flex-1 bg-[#1B3A6B] rounded-t transition-all hover:bg-[#152d54]"
                     style={{ height: `${Math.max(height, 2)}%` }}
-                    title={`${new Date(day.date).toLocaleDateString('fr-FR')}: ${formatPrice(day.revenue)}`}
+                    title={`${new Date(day.date).toLocaleDateString('fr-FR')}: ${formatPrice(day.revenue, day.currency)}`}
                   />
                 );
               })}
@@ -305,7 +342,7 @@ export default async function AnalyticsPage() {
                       <p className="font-medium text-gray-900 truncate">{prop.name}</p>
                       <p className="text-sm text-gray-500">{prop.bookings} réservations</p>
                     </div>
-                    <p className="font-bold text-[#1B3A6B]">{formatPrice(prop.revenue)}</p>
+                    <p className="font-bold text-[#1B3A6B]">{formatCurrencyBreakdown(prop.revenueByCurrency)}</p>
                   </div>
                 ))}
               </div>

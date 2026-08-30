@@ -9,6 +9,56 @@
 
 ---
 
+## Session 42 — 2026-08-30 : T-152 implémentation des findings de l'audit n°24 (A→E + G)
+
+**T-152 (implémenté et validé).** Mise en œuvre des 5 findings + 1
+observation du rapport `REPORTS/audit_fonctionnel_profond24_2026-08-30.md`,
+sans retrait de contrat public ni modification de schéma.
+
+- 🔨 **A** — `pending` actionnable : « Payer maintenant » →
+  `/reservation?booking={id}` (reprise automatique de
+  `POST /api/bookings/[id]/payment`, gardes déjà-confirmée/non-reprenable,
+  un seul essai), badge « Paiement en cours de confirmation », annulation
+  étendue à `pending`. API inchangée (elle existait déjà).
+- 🔨 **B** — `RoomData.currency` + toutes les occurrences `€{…}` du tunnel
+  remplacées par `formatPrice(montant, roomCurrency)`.
+- 🔨 **C** — `src/lib/currency-summary.ts` (somme/ventilation **par
+  devise**, ignore NaN/Infinity, ordre stable, jamais de somme
+  inter-devises) branché sur analytics (série mono-devise dominante +
+  bandeau autres devises) et billing (nets par devise, facture EUR
+  explicite).
+- 🔨 **D** — `<LanguageSelector>` FR/EN (compte → PATCH `/api/users/me`,
+  anonyme → localStorage `mybb:ui-language` ; priorité compte > localStorage
+  > plateforme > fr), `<html lang={getServerLocale()}>` + script
+  `lang-init` avant hydratation.
+- 🔨 **E** — `GET /api/bookings` renvoie `review {id,overallRating,status}`
+  (leftJoin additif, `null` sans avis) ; badge d'état dans
+  `/mes-reservations`, écran « Vous avez déjà publié un avis » (note X/10)
+  dans `/avis/[id]`.
+- 🔨 **G** — smoke crée sa wishlist si absente (`POST /api/wishlists`) ;
+  header `@assertions` réconcilié 85 → **94**.
+- 🧪 **+13 tests** (3 intégration reprise paiement 200/409/403 sans appel
+  PSP sur non-propriétaire ; 2 GET `review` ; 7 `currency-summary` ;
+  1 `formatPrice` USD). **tsc 0 · lint 0 erreur (14 warnings préexistants,
+  liste identique à la baseline) · vitest 329/329 (47 fichiers) · smoke
+  94/94 · build OK · ai:check 19/1/0.**
+- ▶️ Preuves runtime : A pending→`confirmed`/`paid` (`pi_mock_c454…`) ; B
+  chambre USD → booking `USD` 187.00 + « 187,00 $US » ; C admin « Revenus
+  par jour (EUR) » + `1 121,79 €` / `953,52 €` ; D PATCH `language=en` →
+  `<html lang="en"` (anonyme → fr, options FR/EN) ; E « Vous avez déjà
+  publié un avis » + note 9.0/10.
+- 🔍 Nettoyage vérifié par SELECT directs : aucun booking de test
+  (`MBB-2026-CMDMD9/TO7X38/GA6L7A`), aucun `pi_mock%`, aucun avis orphelin,
+  `users.language=fr` restauré ; état users 8 · bookings 32 · reviews 23 ·
+  outbox 6 · wishlists 1 · wishlist_items 0 · price_alerts 0.
+- ❓ **Non exécutable ici** : E2E Playwright (CDN Chromium bloqué) → CI-only.
+
+**Prochaine étape :** opportunités T-152 (migration i18n des composants
+restants, `€` codés en dur hors tunnel) ou poursuite des tâches de
+production (clés Stripe/Resend réelles).
+
+---
+
 ## Session 41 — 2026-08-30 : T-151 e-mail de vérification localisé + audit fonctionnel n°24
 
 **T-151 (implémenté).** Réponse « oui » à la limite T-150 : l'e-mail de

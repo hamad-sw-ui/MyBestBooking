@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
-import { bookings, properties, rooms } from "@/db/schema";
+import { bookings, properties, rooms, reviews } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -30,10 +30,18 @@ async function getMyBookings(userId: string) {
         name: rooms.name,
         roomType: rooms.roomType,
       },
+      // T-152 (audit n°24, E) : état de l'avis pour ne plus proposer le CTA
+      // après dépôt (leftJoin additif, aucune colonne modifiée).
+      review: {
+        id: reviews.id,
+        overallRating: reviews.overallRating,
+        status: reviews.status,
+      },
     })
     .from(bookings)
     .leftJoin(properties, eq(bookings.propertyId, properties.id))
     .leftJoin(rooms, eq(bookings.roomId, rooms.id))
+    .leftJoin(reviews, eq(reviews.bookingId, bookings.id))
     .where(eq(bookings.userId, userId))
     .orderBy(desc(bookings.checkIn));
 }
@@ -161,6 +169,7 @@ export default async function MyBookingsPage() {
                               bookingReference={booking.bookingReference}
                               propertyId={property?.id ?? booking.propertyId}
                               status={booking.status}
+                              paymentStatus={booking.paymentStatus}
                             />
                           </div>
                         </div>
@@ -178,7 +187,7 @@ export default async function MyBookingsPage() {
                   Passées ({pastBookings.length})
                 </h2>
                 <div className="space-y-4">
-                  {pastBookings.map(({ booking, property, room }) => (
+                  {pastBookings.map(({ booking, property, room, review }) => (
                     <Card key={booking.id} className="overflow-hidden opacity-75 hover:opacity-100 transition-opacity">
                       <div className="flex flex-col md:flex-row">
                         {property?.mainImage && (
@@ -216,13 +225,29 @@ export default async function MyBookingsPage() {
                           )}
                           {booking.status === "completed" && (
                             <div className="mt-3">
-                              <Link
-                                href={`/mes-reservations/avis/${booking.id}`}
-                                className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F5A623] text-white text-sm font-medium hover:bg-[#e0951f] transition"
-                              >
-                                <Star className="w-4 h-4 mr-2" />
-                                {t("bookings.leaveReview")}
-                              </Link>
+                              {review?.id ? (
+                                // T-152 (E) : l'avis existe, on affiche son état
+                                // au lieu de proposer à nouveau le formulaire.
+                                <Link
+                                  href={`/mes-reservations/avis/${booking.id}`}
+                                  className="inline-flex items-center px-3 py-1.5 rounded-lg bg-green-50 text-green-800 text-sm font-medium hover:bg-green-100 transition"
+                                >
+                                  <Star className="w-4 h-4 mr-2" />
+                                  {review.status === "approved"
+                                    ? `✓ ${t("bookings.reviewPublished")} (${review.overallRating ?? "–"}/10)`
+                                    : review.status === "pending"
+                                      ? t("bookings.reviewPending")
+                                      : t("bookings.reviewSubmitted")}
+                                </Link>
+                              ) : (
+                                <Link
+                                  href={`/mes-reservations/avis/${booking.id}`}
+                                  className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#F5A623] text-white text-sm font-medium hover:bg-[#e0951f] transition"
+                                >
+                                  <Star className="w-4 h-4 mr-2" />
+                                  {t("bookings.leaveReview")}
+                                </Link>
+                              )}
                             </div>
                           )}
                         </div>

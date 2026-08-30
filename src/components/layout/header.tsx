@@ -8,6 +8,7 @@ import { useState } from "react";
 import type { User as UserType } from "@/db/schema";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
+import { LanguageSelector } from "@/components/language-selector";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT } from "@/lib/ui-strings";
 
@@ -68,6 +69,7 @@ export function Header({ user }: HeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-4">
+            <LanguageSelector user={user} />
             <DarkModeToggle />
             {user ? (
               <div className="relative">

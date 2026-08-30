@@ -42,11 +42,20 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **Uniquement le français.** Le modèle DB supporte `descriptionEn` et
-  `users.language`, mais aucun mécanisme d'i18n n'est en place côté UI.
-  Assumé tant que le marché cible est francophone.
-- **Une seule devise affichée** au niveau utilisateur (EUR par défaut),
-  bien que la table `bookings.currency` soit multi-devises.
+- **i18n UI partielle.** La stratégie « la langue suit `user.language` »
+  (T-132/T-149) couvre ~22/113 fichiers `.tsx` (`makeT`/`ui-strings`) ;
+  le reste est en français dur. **T-152** ajoute le sélecteur FR/EN dans le
+  header (compte → PATCH, anonyme → localStorage, priorité compte >
+  localStorage > plateforme > fr) et un `<html lang>` dynamique — mais le
+  sélecteur n'agit que sur la langue des composants déjà traduits. Migration
+  incrémentale tracée dans `REPORTS/opportunites_T-152_2026-08-30.md`.
+- **Devise multi : tunnel et totaux gérés, affichages secondaires non.** La
+  table `bookings.currency` est multi-devises : le tunnel de réservation
+  (T-152) et les totaux analytics/billing (T-152, `sumByCurrency` — jamais
+  de somme inter-devises affichée) utilisent la devise réelle. Restent en
+  `€` dur (hors périmètre audit B) : wallet dans `mon-compte` et
+  `bestrewards-status`, prix `/nuit` dans `dashboard/properties/[id]`,
+  montants promo (`promo-code-input`, `promotion-form`).
 - **Mode invité limité.** Le checkout accepte un email non enregistré et crée
   un profil sans mot de passe. Un email déjà associé à un compte doit être
   utilisé après connexion pour éviter le rattachement de données.
@@ -63,10 +72,11 @@ l'outbox). Restent assumées :
 - **Vérification à l'inscription localisée (T-151, résolu).** `language`
   est accepté/persisté à l'inscription et au checkout invité → l'e-mail de
   vérification et la réclamation de compte sont localisés fr/en pour le
-  destinataire (défaut fr). Reste : **aucun sélecteur de langue UI** (la
-  langue n'est modifiable que dans le profil) et **couverture i18n partielle**
-  (20/113 composants traduits, `lang="fr"` figé) — voir
-  `REPORTS/audit_fonctionnel_profond24_2026-08-30.md` finding D.
+  destinataire (défaut fr). **T-152** ajoute le sélecteur FR/EN du header
+  (compte + anonyme) et `<html lang>` dynamique. Reste : **couverture i18n
+  partielle** (~22/113 composants traduits ; le reste en français dur) —
+  voir `REPORTS/audit_fonctionnel_profond24_2026-08-30.md` finding D et
+  `REPORTS/opportunites_T-152_2026-08-30.md`.
 - **Corps éditables admin non traduits.** Les blocs `emailTemplates`
   personnalisés par l'admin gardent la langue de rédaction admin (compromis
   T-025) ; la localisation fr/en s'applique aux contenus plateforme

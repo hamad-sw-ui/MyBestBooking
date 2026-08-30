@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 
 /**
  * Test d'intégration POST /api/bookings — T-012 : disponibilité +
@@ -7,7 +7,18 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
  * Skip automatiquement si la DB n'est pas accessible (ex : sandbox
  * sans PostgreSQL). Ne modifie pas les données du seed hors des 3
  * bookings créés puis nettoyés.
+ *
+ * T-152 (audit n°24, E) : ajoute un test GET sur les champs `review`
+ * additifs (getCurrentUser mocké ; la persistance est réelle).
  */
+
+// T-152 : auth mockée pour tester GET /api/bookings (la route utilise
+// next/headers, indisponible en test node). Les tests POST existants
+// n'utilisent pas l'auth réelle (insertion DB directe) : aucun impact.
+vi.mock("@/lib/auth", async () => {
+  const actual = await vi.importActual<typeof import("@/lib/auth")>("@/lib/auth");
+  return { ...actual, getCurrentUser: vi.fn() };
+});
 
 // Vérifie disponibilité de la DB avant de charger tout le module
 let dbAvailable = false;
@@ -56,7 +67,7 @@ dbTest("POST /api/bookings — disponibilité (T-012, §13.5)", () => {
     testUserId = u.id;
 
     // Crée une property+room dédiées avec quantity=1 pour isoler le test
-    const { generateSlug } = await import("@/lib/utils");
+    const { generateSlug, generateBookingReference } = await import("@/lib/utils");
     const [host] = await db
       .select()
       .from(schema.users)
@@ -210,5 +221,156 @@ dbTest("POST /api/bookings — disponibilité (T-012, §13.5)", () => {
         ),
       );
     expect(overlaps.length).toBe(0);
+  });
+});
+
+dbTest("GET /api/bookings — champs avis additifs (T-152, finding E)", () => {
+  let GET: typeof import("./route").GET;
+  let db: typeof import("@/db").db;
+  let schema: typeof import("@/db/schema");
+  let getCurrentUser: ReturnType<typeof vi.fn>;
+  let userId = "";
+  let propId = "";
+  let roomId = "";
+  const bookingIds: string[] = [];
+  let reviewId = "";
+  let plainRef = "";
+  let reviewedRef = "";
+
+  beforeAll(async () => {
+    const routeMod = await import("./route");
+    GET = routeMod.GET;
+    const dbMod = await import("@/db");
+    db = dbMod.db;
+    schema = await import("@/db/schema");
+    const authMod = await import("@/lib/auth");
+    getCurrentUser = authMod.getCurrentUser as unknown as ReturnType<typeof vi.fn>;
+    getCurrentUser.mockResolvedValue({ id: userId, role: "customer" } as never);
+
+    const { eq } = await import("drizzle-orm");
+    const [customer] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, "customer@mybestbooking.com"))
+      .limit(1);
+    if (!customer) throw new Error("Seed non appliqué (customer introuvable)");
+    userId = customer.id;
+    getCurrentUser.mockResolvedValue({ id: userId, role: "customer" } as never);
+
+    const [host] = await db
+      .select()
+      .from(schema.users)
+      .where(eq(schema.users.email, "host@mybestbooking.com"))
+      .limit(1);
+    if (!host) throw new Error("Seed non appliqué (host introuvable)");
+
+    const { generateSlug, generateBookingReference } = await import("@/lib/utils");
+    const [prop] = await db
+      .insert(schema.properties)
+      .values({
+        hostId: host.id,
+        name: "T-152 Review Test Property",
+        slug: generateSlug(`t152-review-${Date.now()}`),
+        type: "hotel",
+        city: "TestCity",
+        country: "FR",
+        status: "active",
+      })
+      .returning();
+    propId = prop.id;
+    const [room] = await db
+      .insert(schema.rooms)
+      .values({
+        propertyId: prop.id,
+        name: "T-152 Review Test Room",
+        roomType: "double",
+        maxOccupancy: 2,
+        maxAdults: 2,
+        basePrice: "90.00",
+        quantity: 2,
+        isActive: true,
+        currency: "EUR",
+      })
+      .returning();
+    roomId = room.id;
+
+    async function createBooking(ref: string) {
+      const [b] = await db
+        .insert(schema.bookings)
+        .values({
+          bookingReference: ref,
+          userId: customer.id,
+          propertyId: prop.id,
+          roomId: room.id,
+          status: "completed",
+          checkIn: "2026-08-01",
+          checkOut: "2026-08-03",
+          numNights: 2,
+          numAdults: 2,
+          numChildren: 0,
+          guestFirstName: "Test",
+          guestLastName: "Review",
+          guestEmail: customer.email,
+          subtotal: "180.00",
+          taxes: "18.00",
+          discount: "0",
+          total: "198.00",
+          currency: "EUR",
+          paymentStatus: "paid",
+          commissionRate: "15.00",
+          commissionAmount: "29.70",
+          netToHost: "168.30",
+        })
+        .returning();
+      bookingIds.push(b.id);
+      return b;
+    }
+
+    const plain = await createBooking(generateBookingReference());
+    const reviewed = await createBooking(generateBookingReference());
+    const [review] = await db
+      .insert(schema.reviews)
+      .values({
+        bookingId: reviewed.id,
+        userId: customer.id,
+        propertyId: prop.id,
+        overallRating: "9.0",
+        status: "approved",
+      })
+      .returning();
+    reviewId = review.id;
+    plainRef = plain.bookingReference;
+    reviewedRef = reviewed.bookingReference;
+  });
+
+  afterAll(async () => {
+    const { eq, inArray } = await import("drizzle-orm");
+    if (reviewId) await db.delete(schema.reviews).where(eq(schema.reviews.id, reviewId));
+    if (bookingIds.length) await db.delete(schema.bookings).where(inArray(schema.bookings.id, bookingIds));
+    if (roomId) await db.delete(schema.rooms).where(eq(schema.rooms.id, roomId));
+    if (propId) await db.delete(schema.properties).where(eq(schema.properties.id, propId));
+  });
+
+  it("renvoie review {id, status, overallRating} pour une résa commentée", async () => {
+    const res = await GET(new Request("http://localhost/api/bookings") as never);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      bookings: Array<{ booking: { bookingReference: string }; review: { id: string; status: string; overallRating: string } | null }>;
+    };
+    const row = body.bookings.find((b) => b.booking.bookingReference === reviewedRef);
+    expect(row).toBeDefined();
+    expect(row!.review?.id).toBe(reviewId);
+    expect(row!.review?.status).toBe("approved");
+    expect(Number(row!.review?.overallRating)).toBe(9);
+  });
+
+  it("renvoie review null pour une résa sans avis (additif, aucun appelant cassé)", async () => {
+    const res = await GET(new Request("http://localhost/api/bookings") as never);
+    const body = (await res.json()) as {
+      bookings: Array<{ booking: { bookingReference: string }; review: { id: string } | null }>;
+    };
+    const row = body.bookings.find((b) => b.booking.bookingReference === plainRef);
+    expect(row).toBeDefined();
+    expect(row!.review?.id ?? null).toBeNull();
   });
 });
