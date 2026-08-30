@@ -7,6 +7,24 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 45 — 2026-08-30 : T-154a (P1 1+2 recherche) — prix affiché + bornes sur le MIN EUR
+
+- 🔨 Refactor `src/app/(main)/recherche/page.tsx` : suppression des
+  sous-requêtes corrélées en projection (`eligiblePrice`/`eligibleCurrency`,
+  cause P1-1) ; `eligibleRoomPredicate(room)` prend désormais une référence de
+  table (alias SQL ou table `rooms`) ; requête 1 = properties (EXISTS éligible
+  hors prix + bornes `minEligiblePriceEur >= min / <= max` + ORDER BY) ;
+  requête 2 = rooms éligibles (`inArray` + prédicat) → min normalisé EUR en JS
+  (`rateFor`), prix + devise d'origine conservés pour la carte (P1-2).
+- 🔨 `npx tsc --noEmit` : 0 erreur · lint 0 erreur (14 warnings préexistants).
+- 🧪 vitest : **352/352** (48 fichiers), aucune régression.
+- ▶️ Runtime (dev server, PG 55432) : `/recherche?minPrice=107` → **4**
+  propriétés (118,67/148,33 €, plus aucun 89 €) ; `maxPrice=91` → **3** ;
+  `minPrice=95&maxPrice=120` → 2 ; `sort=price_asc` = 89/89/89/100/118,67/
+  118,67/148,33/148,33 ; `sort=price_desc` inverse ; 0 « Prix indisponible ».
+- ✔️ smoke **94/94**.
+- **Étape suivante** : T-154b (P1-3 cashback « Terminer le séjour »).
+
 ## Session 44 — 2026-08-30 : audit fonctionnel n°26 (à l'exécution) — 14 findings, rapport seul
 
 - 🔍 **Audit fonctionnel profond n°26** : crawls réels (38 pages × 4 rôles =

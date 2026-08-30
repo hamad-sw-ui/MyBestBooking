@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
 import { bookings, properties, rooms } from "@/db/schema";
-import { asc, count, eq, and, ilike, or, desc, sql, type SQL } from "drizzle-orm";
+import { asc, count, eq, and, ilike, inArray, or, desc, sql, type SQL } from "drizzle-orm";
 
 export const metadata: Metadata = {
   title: "Recherche d'hébergements",
@@ -55,33 +55,31 @@ function validStay(params: Awaited<SearchPageProps["searchParams"]>): params is 
   );
 }
 
-/** Même prédicat pour EXISTS et prix affiché : une seule room doit satisfaire
- * tous les critères. L’alias est constant et ne provient jamais de l’URL. */
-function eligibleRoomPredicate(alias: "r" | "r2", params: Awaited<SearchPageProps["searchParams"]>): SQL {
-  const room = sql.raw(alias);
-  const clauses: SQL[] = [sql`${room}.is_active = true`];
-  const guests = Number(params.guests);
-  if (Number.isInteger(guests) && guests > 0) clauses.push(sql`${room}.max_occupancy >= ${guests}`);
+/** Taux de conversion EUR d'une devise de chambre (mêmes taux figés que
+ * l'affichage, source unique). Inconnue → 1 (comportement historique). */
+function rateFor(currency: string | null | undefined): number {
+  return RATES_FROM_EUR[(currency ?? "EUR").toUpperCase()] ?? 1;
+}
 
-  // T-133 (A1) : prix normalisé en EUR dans le SQL, avec les mêmes taux figés
-  // que l'affichage (RATES_FROM_EUR) — source unique, valeurs injectées depuis
-  // le code (jamais depuis l'URL). Une chambre en devise X = prix_X / taux_X.
+/** Prix de base normalisé en EUR (SQL) — mêmes taux figés que l'affichage. */
+function roomPriceEur(alias: "r" | "r2"): SQL {
+  const room = sql.raw(alias);
   // Les taux sont castés en numeric : sinon le driver infère le type depuis
   // le premier paramètre (EUR = 1, entier) et refuse « 1.08 » (22P02).
   const rateCases = Object.entries(RATES_FROM_EUR)
     .map(([c, rate]) => sql`WHEN ${c} THEN ${rate}::numeric`)
     .reduce((acc, part) => sql`${acc} ${part}`);
-  const priceEur = sql`(${room}.base_price::numeric / COALESCE((CASE ${room}.currency ${rateCases} ELSE 1::numeric END), 1))`;
+  return sql`(${room}.base_price::numeric / COALESCE((CASE ${room}.currency ${rateCases} ELSE 1::numeric END), 1))`;
+}
 
-  const minRaw = params.minPrice ? Number(params.minPrice) : null;
-  const maxRaw = params.maxPrice ? Number(params.maxPrice) : null;
-  // Bornes saisies dans la devise d'affichage (ex. FCFA) → converties en EUR.
-  const minPrice = minRaw !== null && Number.isFinite(minRaw) && minRaw >= 0
-    ? priceBoundToStorage(minRaw, params.displayCurrency) : null;
-  const maxPrice = maxRaw !== null && Number.isFinite(maxRaw) && maxRaw >= 0
-    ? priceBoundToStorage(maxRaw, params.displayCurrency) : null;
-  if (minPrice !== null) clauses.push(sql`${priceEur} >= ${minPrice}`);
-  if (maxPrice !== null) clauses.push(sql`${priceEur} <= ${maxPrice}`);
+/** Prédicat d'éligibilité d'une room (hors bornes de prix, appliquées au min).
+ * Une seule room doit satisfaire tous les critères. `room` est la référence
+ * de table : `sql.raw("r"/"r2")` dans les sous-requêtes (alias), ou la table
+ * `rooms` elle-même pour une requête principale. */
+function eligibleRoomPredicate(room: SQL | typeof rooms, params: Awaited<SearchPageProps["searchParams"]>): SQL {
+  const clauses: SQL[] = [sql`${room}.is_active = true`];
+  const guests = Number(params.guests);
+  if (Number.isInteger(guests) && guests > 0) clauses.push(sql`${room}.max_occupancy >= ${guests}`);
 
   if (validStay(params)) {
     clauses.push(sql`
@@ -108,6 +106,30 @@ function eligibleRoomPredicate(alias: "r" | "r2", params: Awaited<SearchPageProp
   return sql.join(clauses, sql` AND `);
 }
 
+/** Bornes de prix converties en EUR (saisie dans la devise d'affichage). */
+function priceBounds(params: Awaited<SearchPageProps["searchParams"]>): { min: number | null; max: number | null } {
+  const minRaw = params.minPrice ? Number(params.minPrice) : null;
+  const maxRaw = params.maxPrice ? Number(params.maxPrice) : null;
+  return {
+    min: minRaw !== null && Number.isFinite(minRaw) && minRaw >= 0
+      ? priceBoundToStorage(minRaw, params.displayCurrency) : null,
+    max: maxRaw !== null && Number.isFinite(maxRaw) && maxRaw >= 0
+      ? priceBoundToStorage(maxRaw, params.displayCurrency) : null,
+  };
+}
+
+/** Sous-requête « prix à partir de » (MIN normalisé EUR) — utilisée UNIQUEMENT
+ * en position WHERE/ORDER BY. Ne jamais la placer dans la projection SELECT :
+ * Drizzle y rend la référence à la table externe SANS qualificatif
+ * (`r2.property_id = "id"` → se lie à `r2.id` → NULL partout) alors que les
+ * contextes WHERE/ORDER BY la rendent correctement (`"properties"."id"`). */
+function minEligiblePriceEur(alias: "r2", params: Awaited<SearchPageProps["searchParams"]>): SQL {
+  const room = sql.raw(alias);
+  return sql`(SELECT MIN(${roomPriceEur(alias)}) FROM rooms ${room}
+    WHERE ${room}.property_id = ${properties.id}
+      AND ${eligibleRoomPredicate(room, params)})`;
+}
+
 async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>) {
   const conditions: SQL[] = [eq(properties.status, "active")];
 
@@ -118,56 +140,69 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
   if (params.type) conditions.push(eq(properties.type, params.type));
   if (params.amenity) conditions.push(sql`${properties.amenities} @> ${JSON.stringify([params.amenity])}::jsonb`);
 
-  // Une property est éligible seulement si une room unique l’est sur la totalité
-  // des filtres; cette même room participe au prix affiché ci-dessous.
-  const existsEligibleRoom = sql`EXISTS (
+  // Une property est éligible seulement si une room l'est sur la totalité des
+  // filtres (hors prix) ; les bornes de prix s'appliquent ensuite au MIN
+  // (« à partir de »), pas à une chambre quelconque (audit n°26, P1-2).
+  conditions.push(sql`EXISTS (
     SELECT 1 FROM rooms r
     WHERE r.property_id = ${properties.id}
-      AND ${eligibleRoomPredicate("r", params)}
-  )`;
-  conditions.push(existsEligibleRoom);
-
-  const eligiblePrice = sql<string | null>`(
-    SELECT r2.base_price FROM rooms r2
-    WHERE r2.property_id = ${properties.id}
-      AND ${eligibleRoomPredicate("r2", params)}
-    ORDER BY r2.base_price ASC, r2.id ASC
-    LIMIT 1
-  )`;
-  const eligibleCurrency = sql<string | null>`(
-    SELECT r2.currency FROM rooms r2
-    WHERE r2.property_id = ${properties.id}
-      AND ${eligibleRoomPredicate("r2", params)}
-    ORDER BY r2.base_price ASC, r2.id ASC
-    LIMIT 1
-  )`;
+      AND ${eligibleRoomPredicate(sql.raw("r"), params)}
+  )`);
+  const { min, max } = priceBounds(params);
+  const minPriceEur = minEligiblePriceEur("r2", params);
+  if (min !== null) conditions.push(sql`${minPriceEur} >= ${min}`);
+  if (max !== null) conditions.push(sql`${minPriceEur} <= ${max}`);
 
   const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
   const [{ total }] = await db.select({ total: count() }).from(properties).where(and(...conditions));
   const totalPages = Math.max(1, Math.ceil(total / 20));
   const page = Math.min(requestedPage, totalPages);
   const order = params.sort === "price_asc"
-    ? [sql`${eligiblePrice} ASC`, asc(properties.id)]
+    ? [sql`${minPriceEur} ASC`, asc(properties.id)]
     : params.sort === "price_desc"
-      ? [sql`${eligiblePrice} DESC`, asc(properties.id)]
+      ? [sql`${minPriceEur} DESC`, asc(properties.id)]
       : [desc(properties.averageRating), asc(properties.id)];
 
   const rows = await db
-    .select({ property: properties, minPrice: eligiblePrice, minCurrency: eligibleCurrency })
+    .select({ property: properties })
     .from(properties)
     .where(and(...conditions))
     .orderBy(...order)
     .limit(20)
     .offset((page - 1) * 20);
 
+  // Prix d'affichage : seconde requête au lieu de sous-requêtes corrélées en
+  // projection (voir minEligiblePriceEur). On récupère les rooms éligibles des
+  // résultats puis on calcule le min normalisé EUR en JS (valeur + devise
+  // d'origine conservées pour la carte).
+  const ids = rows.map((row) => row.property.id);
+  const eligibleRooms = ids.length === 0 ? [] : await db
+    .select()
+    .from(rooms)
+    .where(and(inArray(rooms.propertyId, ids), eligibleRoomPredicate(rooms, params)));
+
+  const cheapestByProperty = new Map<string, { price: number; currency: string; id: string; eur: number }>();
+  for (const room of eligibleRooms) {
+    const price = Number(room.basePrice);
+    if (!Number.isFinite(price)) continue;
+    const eur = price / rateFor(room.currency);
+    const current = cheapestByProperty.get(room.propertyId);
+    if (!current || eur < current.eur || (eur === current.eur && room.id < current.id)) {
+      cheapestByProperty.set(room.propertyId, { price, currency: room.currency ?? "EUR", id: room.id, eur });
+    }
+  }
+
   return {
     total,
     page,
     totalPages,
-    results: rows.map(({ property, minPrice, minCurrency }) => toPublicPropertyCard(property, {
-      minPrice: minPrice === null ? null : Number(minPrice),
-      minCurrency,
-    })),
+    results: rows.map(({ property }) => {
+      const best = cheapestByProperty.get(property.id);
+      return toPublicPropertyCard(property, {
+        minPrice: best?.price ?? null,
+        minCurrency: best?.currency ?? null,
+      });
+    }),
   };
 }
 

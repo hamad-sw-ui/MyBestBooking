@@ -1,14 +1,17 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : Audit n°26 (rapport livré) — implémentation **en attente de validation**
+**ID** : T-154b (audit n°26, P1-3) — cashback « Terminer le séjour » sans
+conversion de devise
 
-**Niveau de proportionnalité** : S (analyse seule, aucun code)
+**Niveau de proportionnalité** : L (1 ligne + tests route)
 
-**Titre** : Audit fonctionnel profond n°26 — scénarios et éléments
-inachevés/mal pensés à l'exécution (pages, boutons, fonctionnalités).
+**Titre** : Implémentation des findings de l'audit n°26, lot 2/4 — le caller
+`PUT /api/bookings/[id]` (`status:"completed"`) doit passer la devise de la
+réservation à `calculateLoyaltyAward` (T-153 C incomplet).
 
-**Statut** : RAPPORT LIVRÉ — 2026-08-30 (aucune implémentation, cycle
-audit n°25 : rapport puis implémentation sur demande)
+**Statut** : EN COURS — T-154a (P1 1+2, recherche) **LIVRÉ (VALIDÉ)** :
+tsc 0 · vitest 352/352 · smoke 94/94 · `minPrice=107` → 4, `maxPrice=91` → 3,
+0 « Prix indisponible » (voir TRACEABILITY, session 45).
 
 Rapport : `REPORTS/audit_fonctionnel_profond26_2026-08-30.md` (source).
 
