@@ -527,7 +527,7 @@ const TEMPLATE_LABELS: Record<keyof SettingValue<"emailTemplates">, { title: str
   },
   newMessage: {
     title: "Nouveau message reçu",
-    vars: "{firstName}, {senderName}",
+    vars: "{firstName}, {senderName}, {url}",
   },
 };
 

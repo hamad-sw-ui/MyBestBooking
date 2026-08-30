@@ -9,6 +9,48 @@
 
 ---
 
+## Session 40 — 2026-08-30 : T-150 e-mails hôtes ↔ clients (audit → implémentation)
+
+Suite à l'audit `REPORTS/audit_emails_hotes_clients_2026-08-30.md`
+(question utilisateur : « les messages par mail sont-ils bien gérés pour les
+hôtes et leurs clients ? ») : les 3 écarts identifiés sont **implémentés**,
+sans régression :
+
+- `newMessage` : **CTA localisé** vers la conversation selon le rôle du
+  destinataire (`/messages/{conv}` voyageur, `/dashboard/messages/{conv}`
+  hôte) ; **sujet + corps plateforme localisés fr/en** dans la langue du
+  destinataire ; la **surcharge admin** (`emailTemplates.newMessage`) reste
+  respectée (testé) et le CTA est toujours ajouté.
+- **Nouvel e-mail `bookingHostCancellation`** : contenu plateforme localisé
+  fr/en, l'hôte est notifié à l'annulation via l'outbox (`eventKey`
+  `booking-cancellation:{id}:host`, idempotent), best-effort ; l'e-mail
+  voyageur existant est inchangé.
+- Métadonnées admin (`{url}` documenté dans settings + panneau), tests
+  anti-XSS sur les nouvelles variables.
+
+🧪 **tsc 0 · lint 0 erreur (14 warnings préexistants, 0 sur fichiers modifiés)
+· vitest 312/312 (+13 : 10 unitaires + 3 intégration DB) · smoke 94/94 ·
+build OK** (re-validation complète sur env reconstitué : npm install,
+Postgres embarqué relancé, schéma push, seed 8 users/8 properties).
+
+▶️ Preuve runtime (dev :3000) : voyageur `language=en` + hôte seed, 2
+messages réels — voyageur reçoit « New message from Jean Dupont » (corps EN,
+CTA `/messages/{conv}`) ; hôte reçoit « Nouveau message de John Doe » (FR,
+CTA `/dashboard/messages/{conv}`). Annulation testée en intégration : 2
+e-mails (voyageur FR + hôte **EN** « Cancellation of your booking… »).
+Données de test **supprimées** (compte, sessions, tokens, conversation,
+messages, outbox) ; état seed propre (8 users, 32 réservations, outbox 0).
+
+**Limite honnête** : l'e-mail de vérification à l'inscription reste en FR
+par défaut (register n'accepte pas `language` — préexistant, hors périmètre
+messaging) ; corps éditables admin non traduits (compromis T-025).
+
+**Prochaine étape :** traitée si voulu — localiser l'e-mail de vérification
+à l'inscription (accepter `language` dans register) ; sinon reprendre les
+tâches de production (clés Stripe/Resend réelles).
+
+---
+
 ## Session 39 — 2026-08-30 : T-149 Stripe réel + e-mails plateforme stylés et localisés
 
 Levée de la dette T-145 (Stripe/Resend « différés »). 🔨 Audit : le **tunnel Stripe

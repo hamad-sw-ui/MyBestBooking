@@ -103,7 +103,7 @@ modification de code.
 | **Envoyer un message** | ✅ | Endpoint T-015 + `<MessageComposer>` + pages détail /messages/[id] et /dashboard/messages/[id] (T-016) | T-016 |
 | **Marquer comme lu** | ✅ | Reset unread quand `GET /api/messages` par le participant | T-015 |
 | Pièce jointe privée | ✅ | Upload privé hors `public/`, `attachmentKey` et téléchargement `/api/messages/attachments/[id]` vérifié participant ; URLs historiques ne sont plus exposées. | T-104 |
-| Notification email nouveau message | ✅ | Template `newMessage` + hook dans `POST /api/messages` (T-027) | T-027 |
+| Notification email nouveau message | ✅ | Template `newMessage` + hook dans `POST /api/messages` (T-027) ; **T-150** : sujet/corps/bouton localisés fr/en selon le destinataire + **CTA direct** vers la conversation (`/messages/{id}` voyageur, `/dashboard/messages/{id}` hôte) ; surcharge admin préservée | T-027, T-150 |
 
 ## Programme BestRewards (fidélité)
 
@@ -164,9 +164,9 @@ modification de code.
 | Email reset password | ✅ | `POST /api/auth/forgot-password` + templates.passwordReset | T-013 |
 | Email confirmation booking (voyageur) | ✅ | Envoyé dans `POST /api/bookings` | T-013 |
 | Email notification nouvelle réservation (hôte) | ✅ | Envoyé dans `POST /api/bookings` | T-013 |
-| Email annulation booking | ✅ | Template `bookingCancellation` + hook PUT /api/bookings/[id] (T-027) | T-027 |
-| Email nouveau message | ✅ | Template `newMessage` + hook POST /api/messages (T-027) | T-027 |
-| Templates HTML/text | ✅ | `src/lib/mail/templates.ts` : 4 templates (verification, reset, booking-confirm, host-notif) | T-013 |
+| Email annulation booking (voyageur) | ✅ | Template `bookingCancellation` + hook PUT /api/bookings/[id] (T-027) | T-027 |
+| Email annulation booking (hôte) | ✅ | **T-150** : `bookingHostCancellation` (contenu plateforme localisé fr/en selon la langue de l'hôte, tableau + motif + CTA dashboard) via l'outbox `eventKey booking-cancellation:{id}:host`, best-effort — déclenché par `notifyBookingCancellation` quel que soit l'auteur (client, hôte, admin) | T-150 |
+| Email nouveau message | ✅ | Template `newMessage` + hook POST /api/messages (T-027) ; **T-150** : localisation fr/en + CTA direct selon le rôle du destinataire | T-027, T-150 |
 | **Templates emails éditables via `app_settings`** | ✅ | Section `emailTemplates` (settings.ts) + `src/lib/mail/render.ts` avec escape XSS + section UI dans `<SettingsPanel>`. Subject + body éditables par template, placeholders `{name}` substitués côté serveur (T-025). 10 tests + 1 test XSS | T-025 |
 
 ## Uploads & stockage

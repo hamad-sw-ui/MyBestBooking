@@ -89,4 +89,39 @@ export async function notifyBookingCancellation(outcome: CancellationOutcome): P
   const eventKey = `booking-cancellation:${outcome.booking.id}`;
   await enqueueEmail({ eventKey, to: outcome.booking.guestEmail, ...mail });
   await deliverEmail(eventKey);
+
+  // T-150 : l'hôte est aussi notifié (langue de l'hôte), via l'outbox
+  // (eventKey déterministe). Best-effort : un échec ne casse jamais
+  // l'annulation déjà persistée ni l'e-mail du voyageur.
+  try {
+    const [property] = await db
+      .select({ hostId: properties.hostId })
+      .from(properties)
+      .where(eq(properties.id, outcome.booking.propertyId))
+      .limit(1);
+    if (property?.hostId) {
+      const [host] = await db
+        .select({ email: users.email, firstName: users.firstName, language: users.language })
+        .from(users)
+        .where(eq(users.id, property.hostId))
+        .limit(1);
+      if (host?.email) {
+        const hostMail = await templates.bookingHostCancellation({
+          hostFirstName: host.firstName,
+          bookingReference: outcome.booking.bookingReference,
+          propertyName: outcome.propertyName,
+          guestName: `${outcome.booking.guestFirstName} ${outcome.booking.guestLastName}`.trim(),
+          checkIn: String(outcome.booking.checkIn),
+          checkOut: String(outcome.booking.checkOut),
+          reason: outcome.booking.cancellationReason ?? "Annulation demandée",
+          language: host.language ?? null,
+        });
+        const hostKey = `booking-cancellation:${outcome.booking.id}:host`;
+        await enqueueEmail({ eventKey: hostKey, to: host.email, ...hostMail });
+        await deliverEmail(hostKey);
+      }
+    }
+  } catch (error) {
+    console.error("[booking-cancellation] host notification mail failed:", error);
+  }
 }

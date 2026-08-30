@@ -1,32 +1,37 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-149
+**ID** : T-150
 
 **Niveau de proportionnalité** : L
 
-**Titre** : Paiement Stripe en mode réel opérationnel de bout en bout + e-mail
-plateforme stylé pour chaque événement du cycle de vie, localisé dans la langue
-du destinataire.
+**Titre** : E-mails hôtes ↔ clients — CTA messagerie, localisation fr/en du
+nouveau message et notification d'annulation à l'hôte.
 
 **Statut** : CORRIGÉ (VALIDÉ)
 
-Rapport : `REPORTS/t-149_paiement_stripe_emails_2026-08-30.md`.
+Rapport : `REPORTS/validation_T-150_2026-08-30.md` (+ audit source
+`REPORTS/audit_emails_hotes_clients_2026-08-30.md`).
 
 ## Résumé
-- 🔨 Tunnel Stripe audité : déjà complet (abstraction mock/stripe sans SDK,
-  webhook HMAC vérifié, inbox idempotente, remboursements, clés chiffrées
-  AES-256-GCM via l'admin avec fallback env, test de connexion réel) → câblage
-  vérifié + doc de mise en route.
-- 🔨 E-mails : logo → MyBestBooking ; 3 templates manquants créés et câblés
-  (bienvenue après vérification, rappels J-3/J-1, demande d'avis post-séjour
-  via cron) ; alerte prix passée au gabarit de marque.
-- 🔨 Localisation fr/en de l'habillage des e-mails selon la langue du
-  destinataire (nouveau `src/lib/mail/strings.ts`).
+- 🔨 `newMessage` : CTA localisé vers la conversation (`/messages/…` pour le
+  voyageur, `/dashboard/messages/…` pour l'hôte) ; sujet + corps plateforme
+  localisés fr/en dans la langue du **destinataire** ; surcharge admin
+  préservée (comparaison aux DEFAULTS).
+- 🔨 Nouvel e-mail `bookingHostCancellation` (contenu plateforme localisé
+  fr/en) : l'hôte est notifié à l'annulation via l'outbox (`eventKey`
+  déterministe), best-effort, sans casser l'e-mail voyageur existant.
+- 🔨 Métadonnées admin (`{url}` documenté) + 13 nouveaux tests (10 unitaires
+  + 3 d'intégration DB).
 
 ## Validation
-🧪 tsc 0 · lint 0 erreur · vitest 299/299 (+11) · smoke 94/94 · build 60 pages ·
-ai:check OK. Données de test nettoyées (8 users, seed intact, outbox vide).
+🧪 **tsc 0 · lint 0 erreur (14 warnings préexistants, 0 sur fichiers modifiés)
+· vitest 312/312 (+13) · smoke 94/94 · build OK** · preuve runtime HTTP :
+voyageur `language=en` reçoit « New message from… » + CTA `/messages/…` ;
+hôte reçoit FR + CTA `/dashboard/messages/…` ; annulation → 2 e-mails
+(voyageur FR, hôte **EN**). Données de test nettoyées (8 users, 32
+réservations seed, outbox vide).
 
-## Reste en production
-Saisir les clés Stripe/Resend dans `/dashboard/settings` → Providers (exige
-`CREDENTIALS_ENCRYPTION_KEY`) + webhook Stripe → `/api/webhooks/stripe`.
+## Reste / limites
+L'e-mail de **vérification à l'inscription** reste en FR par défaut
+(register n'accepte pas `language` — préexistant, hors périmètre messaging) ;
+corps éditables admin non traduits (compromis T-025, inchangé).

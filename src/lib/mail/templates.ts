@@ -8,7 +8,7 @@
  * `src/lib/settings.ts` pour la liste par template.
  */
 
-import { getSetting } from "@/lib/settings";
+import { getSetting, DEFAULTS } from "@/lib/settings";
 import { renderTemplate, escapeHtml } from "./render";
 import { toMailLocale, mailStrings, type MailLocale } from "./strings";
 
@@ -162,6 +162,40 @@ export const templates = {
   },
 
   /**
+   * T-150 — Annulation notifiée à l'hôte (langue de l'hôte). Nouvel
+   * événement, jamais édité par l'admin → contenu entièrement géré par la
+   * plateforme et localisé fr/en (même approche que `priceAlert`).
+   */
+  bookingHostCancellation({
+    hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut, reason, language,
+  }: {
+    hostFirstName: string; bookingReference: string; propertyName: string;
+    guestName: string; checkIn: string; checkOut: string; reason?: string | null;
+    language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut };
+    const subject = renderTemplate(s.hostCancelSubject, vars);
+    const bodyRendered = renderTemplate(bodyToHtml(s.hostCancelBody), vars);
+    const dashboardUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+    const html = layout(`
+      ${bodyRendered}
+      <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblGuest}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+      </table>
+      ${reason ? `<p style="font-size:13px;color:#666;">${s.lblReason} : ${escapeHtml(reason)}</p>` : ""}
+      <p style="margin:24px 0;">${button(`${dashboardUrl}/dashboard/bookings`, s.hostCancelCta)}</p>
+      <p>${s.hostDashboardHint} <a href="${escapeHtml(dashboardUrl)}/dashboard/bookings">${s.dashboard}</a>.</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
    * Rappel avant l'arrivée. Le même template sert pour J-3 et J-1 :
    * `daysLabel` porte la mention (« dans 3 jours » / « demain »), déjà
    * formulée dans la langue du destinataire par l'appelant.
@@ -238,14 +272,34 @@ export const templates = {
     return { subject, html, text: stripHtml(html) };
   },
 
+  /**
+   * T-150 — Notification de nouveau message (voyageur ↔ hôte).
+   *
+   * Langue du destinataire : sujet + corps « plateforme » + bouton sont
+   * localisés fr/en. Si l'admin a personnalisé le bloc
+   * `emailTemplates.newMessage` (différent des DEFAULTS), sa rédaction est
+   * respectée telle quelle (compromis T-025 : contenu admin non traduit) ;
+   * le bouton vers la conversation reste ajouté par la plateforme.
+   */
   async newMessage({
-    firstName, senderName, language,
-  }: { firstName: string; senderName: string; language?: string | null }) {
+    firstName, senderName, url, language,
+  }: { firstName: string; senderName: string; url?: string; language?: string | null }) {
     const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { firstName, senderName, url: url ?? "" };
     const tpl = (await getSetting("emailTemplates")).newMessage;
-    const subject = renderTemplate(tpl.subject, { firstName, senderName });
-    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), { firstName, senderName });
-    const html = layout(bodyRendered, loc);
+    const custom = tpl.subject !== DEFAULTS.emailTemplates.newMessage.subject
+      || tpl.body !== DEFAULTS.emailTemplates.newMessage.body;
+    const subject = renderTemplate(custom ? tpl.subject : s.newMessageSubject, vars);
+    const bodySource = custom ? tpl.body : s.newMessageBody;
+    const bodyRendered = renderTemplate(bodyToHtml(bodySource), vars);
+    const cta = url
+      ? `<p style="margin:24px 0;">${button(url, s.replyToMessage)}</p>`
+      : "";
+    const html = layout(`
+      ${bodyRendered}
+      ${cta}
+    `, loc);
     return { subject, html, text: stripHtml(html) };
   },
 

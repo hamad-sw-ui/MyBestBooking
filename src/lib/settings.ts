@@ -161,6 +161,8 @@ export const securitySchema = z.object({
 //   bookingReminder (J-3 / J-1)        : firstName, bookingReference,
 //     propertyName, city, checkIn, checkOut, daysLabel, url
 //   reviewRequest                      : firstName, propertyName, bookingReference, url
+//   newMessage                         : firstName, senderName, url
+//   (le bouton "Répondre" est toujours ajouté par la plateforme — T-150)
 const templateBlockSchema = z.object({
   subject: z.string().min(1).max(200),
   body: z.string().min(1).max(5000),

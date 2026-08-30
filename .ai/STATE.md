@@ -3,17 +3,28 @@
 ## 📌 Identification
 
 - **Projet** : MyBestBooking
-- **Branche actuelle** : `arena/01a042cf-mybestbooking`
-- **HEAD de base** : `46b2ca8`
-- **PR ouverte** : #2 sur `arena/01a042cf-mybestbooking` (commit de code/garde-fous/tests validé).
-- **HEAD Git** : T-130 sur `arena/01a042cf-mybestbooking`
-  (base T-129 `4644bc8`). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
-  : un commit de doc ne peut pas contenir son propre hash,
-  et R7 le tolère explicitement (motif « à mettre à jour en fin de session »).
-  Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces
-  push car le jeton GitHub App n'a pas la permission `workflows`.
+- **Branche actuelle** : `arena/01a052ed-mybestbooking`
+- **HEAD de base** : `2d8c885` (T-149 — derniers commits T-149 sur la branche
+  sœur `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
+- **PR ouverte** : historique (PR #2) — session T-150 en cours sur
+  `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
+- **HEAD Git** : T-150 sur `arena/01a052ed-mybestbooking`
+  (base `2d8c885` = T-149). Le hash exact du HEAD courant est **à mettre à
+  jour en fin de session** : un commit de doc ne peut pas contenir son propre
+  hash, et R7 le tolère explicitement (motif « à mettre à jour en fin de
+  session »). Le workflow `.github/workflows/ci.yml` (T-113) reste hors suivi
+  git de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière tâche validée** : T-133 (implémentation des remarques audit n°12) —
+- **Dernière tâche validée** : **T-150 (2026-08-30)** — e-mails hôtes ↔
+  clients : CTA messagerie localisé (`newMessage` → `/messages/{id}` ou
+  `/dashboard/messages/{id}` selon le rôle du destinataire), sujet/corps
+  plateforme localisés fr/en, e-mail d'annulation à l'hôte
+  (`bookingHostCancellation`, fr/en via outbox). Preuves : tsc 0 · lint 0
+  erreur · **vitest 312/312 (+13)** · smoke **94/94** · build OK · runtime
+  HTTP prouvé (voyageur `en` → « New message from… » + CTA `/messages/…` ;
+  hôte → FR + CTA `/dashboard/messages/…`). Données de test nettoyées.
+  Rapport : `REPORTS/validation_T-150_2026-08-30.md`. Historique ancien
+  conservé ci-dessous (T-133, T-145…T-149) : **T-133** (implémentation des remarques audit n°12) —
   **A1** le filtre de prix de la recherche comparait en EUR alors que l'affichage
   est en XAF : normalisation du prix en EUR dans le SQL (`priceBoundToStorage`
   + `CASE currency` avec cast `::numeric`) et `SearchPriceFilter` (champ caché

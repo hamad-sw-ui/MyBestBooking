@@ -147,9 +147,16 @@ export async function POST(request: NextRequest) {
             .where(eq(users.id, recipientId))
             .limit(1);
           if (recipient?.email) {
+            // T-150 : bouton direct vers LA conversation, dans la bonne
+            // section selon le rôle du destinataire (hôte → dashboard).
+            const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+            const conversationUrl = ok.isGuest
+              ? `${appUrl}/dashboard/messages/${data.conversationId}`
+              : `${appUrl}/messages/${data.conversationId}`;
             const mail = await templates.newMessage({
               firstName: recipient.firstName ?? "",
               senderName,
+              url: conversationUrl,
               language: recipient.language ?? null,
             });
             const eventKey = `message:${msg.id}:${recipientId}`;

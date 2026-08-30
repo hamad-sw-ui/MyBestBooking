@@ -49,6 +49,13 @@ interface MailStrings {
   priceAlertOfferTrip: string;
   priceAlertOfferBase: string;
   reviewRequestRef: string;
+  newMessageSubject: string;
+  newMessageBody: string;
+  replyToMessage: string;
+  hostCancelSubject: string;
+  hostCancelBody: string;
+  hostCancelCta: string;
+  lblReason: string;
 }
 
 const FR: MailStrings = {
@@ -76,6 +83,19 @@ const FR: MailStrings = {
   priceAlertOfferTrip: "pour votre séjour (hors taxes et réductions personnelles)",
   priceAlertOfferBase: "à partir de (prix de base)",
   reviewRequestRef: "Réservation",
+  newMessageSubject: "Nouveau message de {senderName}",
+  newMessageBody:
+    "Bonjour {firstName},\n\n" +
+    "Vous avez reçu un nouveau message de {senderName} sur MyBestBooking. " +
+    "Répondez directement depuis votre messagerie.",
+  replyToMessage: "Répondre au message",
+  hostCancelSubject: "Annulation de votre réservation {bookingReference}",
+  hostCancelBody:
+    "Bonjour {hostFirstName},\n\n" +
+    "La réservation {bookingReference} pour {propertyName} a été annulée. " +
+    "Le voyageur {guestName} ne séjournera pas du {checkIn} au {checkOut}.",
+  hostCancelCta: "Voir mes réservations",
+  lblReason: "Motif",
 };
 
 const EN: MailStrings = {
@@ -103,6 +123,19 @@ const EN: MailStrings = {
   priceAlertOfferTrip: "for your stay (excluding taxes and personal discounts)",
   priceAlertOfferBase: "from (base price)",
   reviewRequestRef: "Booking",
+  newMessageSubject: "New message from {senderName}",
+  newMessageBody:
+    "Hi {firstName},\n\n" +
+    "You have received a new message from {senderName} on MyBestBooking. " +
+    "Reply directly from your inbox.",
+  replyToMessage: "Reply to the message",
+  hostCancelSubject: "Cancellation of your booking {bookingReference}",
+  hostCancelBody:
+    "Hello {hostFirstName},\n\n" +
+    "Booking {bookingReference} for {propertyName} has been cancelled. " +
+    "Guest {guestName} will not stay from {checkIn} to {checkOut}.",
+  hostCancelCta: "View my bookings",
+  lblReason: "Reason",
 };
 
 export function mailStrings(locale: MailLocale): MailStrings {

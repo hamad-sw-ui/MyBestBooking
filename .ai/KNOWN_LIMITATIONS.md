@@ -51,6 +51,26 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   un profil sans mot de passe. Un email déjà associé à un compte doit être
   utilisé après connexion pour éviter le rattachement de données.
 
+## E-mails (hôtes ↔ clients)
+
+Audit du 2026-08-30 (`REPORTS/audit_emails_hotes_clients_2026-08-30.md`)
+puis **implémentation T-150** (`REPORTS/validation_T-150_2026-08-30.md`) :
+les trois écarts sont **résolus** — CTA direct dans `newMessage` (section
+selon le rôle du destinataire), sujet/corps plateforme localisés fr/en,
+e-mail d'annulation à l'hôte (`bookingHostCancellation`, localisé fr/en via
+l'outbox). Restent assumées :
+
+- **E-mail de vérification à l'inscription en français par défaut.** Le
+  schéma `POST /api/auth/register` n'accepte pas `language` : l'e-mail de
+  vérification part avant que la préférence puisse être enregistrée (elle
+  arrive via `PATCH /api/users/me`). Préexistant, hors périmètre messaging —
+  traitable dans une future tâche.
+- **Corps éditables admin non traduits.** Les blocs `emailTemplates`
+  personnalisés par l'admin gardent la langue de rédaction admin (compromis
+  T-025) ; la localisation fr/en s'applique aux contenus plateforme
+  (habillage, `priceAlert`, `guestAccountClaim`, `bookingHostCancellation`,
+  `newMessage` par défaut) et au CTA.
+
 ## Technique
 
 - **Migrations Drizzle présentes**, mais `drizzle-kit push` reste le chemin

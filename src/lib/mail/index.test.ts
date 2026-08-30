@@ -2,21 +2,22 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 
 // T-025 : les templates lisent app_settings, mais les tests unitaires
 // doivent être déterministes → on mocke getSetting pour toujours
-// renvoyer les DEFAULTS.
+// renvoyer les DEFAULTS (mocké via vi.fn pour pouvoir simuler une
+// personnalisation admin ponctuelle — T-150).
+const settingsMock = vi.hoisted(() => ({ getSetting: vi.fn() }));
 vi.mock("@/lib/settings", async () => {
   const actual = await vi.importActual<typeof import("@/lib/settings")>("@/lib/settings");
-  return {
-    ...actual,
-    getSetting: async <K extends string>(key: K) => {
-      // @ts-expect-error accès dynamique DEFAULTS
-      return actual.DEFAULTS[key];
-    },
-  };
+  settingsMock.getSetting.mockImplementation(async (key: string) => {
+    // @ts-expect-error accès dynamique DEFAULTS
+    return actual.DEFAULTS[key];
+  });
+  return { ...actual, getSetting: settingsMock.getSetting };
 });
 import { readFileSync, existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ConsoleMailer, templates, stripHtml, _resetMailer, getMailer } from "./index";
+import { DEFAULTS } from "@/lib/settings";
 
 describe("ConsoleMailer (T-013, §13.5)", () => {
   let tmp: string;
@@ -228,6 +229,129 @@ describe("templates (T-013 + T-025)", () => {
     expect(t.subject).toContain("Access your booking");
     expect(t.text).toContain("Activate my access");
     expect(t.text).not.toContain("Activer mon accès");
+  });
+
+  it("T-150 : newMessage (fr par défaut) — sujet/corps localisés + CTA vers la conversation", async () => {
+    const t = await templates.newMessage({
+      firstName: "Marie", senderName: "Jean", url: "http://localhost:3000/messages/conv-1",
+    });
+    expect(t.subject).toBe("Nouveau message de Jean");
+    expect(t.html).toContain("Répondre au message");
+    expect(t.html).toContain('href="http://localhost:3000/messages/conv-1"');
+    expect(t.html).toContain("Réservez mieux. Voyagez plus.");
+    expect(t.text).toContain("Vous avez reçu un nouveau message de Jean");
+    expect(t.text).not.toContain("<");
+  });
+
+  it("T-150 : newMessage anglophone — sujet/corps/bouton en anglais (langue du destinataire)", async () => {
+    const t = await templates.newMessage({
+      firstName: "Marie", senderName: "Jean", url: "http://localhost:3000/messages/conv-1", language: "en",
+    });
+    expect(t.subject).toBe("New message from Jean");
+    expect(t.html).toContain("Reply to the message");
+    expect(t.html).toContain("You have received a new message from Jean");
+    expect(t.html).toContain("Book better. Travel further.");
+    expect(t.html).toContain('href="http://localhost:3000/messages/conv-1"');
+    expect(t.html).not.toContain("Répondez directement");
+  });
+
+  it("T-150 : newMessage sans url → aucun CTA (compatibilité appelants)", async () => {
+    const t = await templates.newMessage({ firstName: "Marie", senderName: "Jean" });
+    expect(t.subject).toBe("Nouveau message de Jean");
+    expect(t.html).not.toContain("Répondre au message");
+  });
+
+  it("T-150 : une personnalisation admin du bloc newMessage est respectée", async () => {
+    settingsMock.getSetting.mockResolvedValueOnce({
+      ...DEFAULTS.emailTemplates,
+      newMessage: { subject: "Perso {senderName}", body: "Perso {firstName} — {url}" },
+    });
+    const t = await templates.newMessage({
+      firstName: "Marie", senderName: "Jean", url: "http://localhost:3000/messages/x", language: "en",
+    });
+    expect(t.subject).toBe("Perso Jean");
+    expect(t.html).toContain("Perso Marie — http://localhost:3000/messages/x");
+    // Le bouton plateforme reste ajouté même en cas de personnalisation
+    // (localisé dans la langue du destinataire : ici en).
+    expect(t.html).toContain("Reply to the message");
+  });
+
+  it("T-150 : newMessage échappe l'expéditeur (anti-XSS)", async () => {
+    const t = await templates.newMessage({
+      firstName: "M", senderName: "<script>alert(1)</script>", url: "/messages/1", language: "en",
+    });
+    expect(t.subject).not.toContain("<script>");
+    expect(t.subject).toContain("&lt;script&gt;");
+    expect(t.html).not.toContain("<script>");
+  });
+
+  it("T-150 : bookingHostNotification — habillage anglais pour un hôte anglophone", async () => {
+    const t = await templates.bookingHostNotification({
+      hostFirstName: "Paul", bookingReference: "MBB-HOST", propertyName: "Villa X",
+      guestName: "Marie D.", checkIn: "2026-09-01", checkOut: "2026-09-05", language: "en",
+    });
+    // Habillage (en-têtes de tableau, mention dashboard, slogan) en anglais.
+    expect(t.html).toContain(">Guest<");
+    expect(t.html).toContain(">Check-in<");
+    expect(t.html).toContain(">Check-out<");
+    expect(t.html).toContain("/dashboard/bookings");
+    expect(t.html).toContain("Book better. Travel further.");
+    expect(t.text).toContain("Marie D.");
+    expect(t.text).not.toContain("<");
+  });
+
+  it("T-150 : bookingHostNotification — habillage français par défaut", async () => {
+    const t = await templates.bookingHostNotification({
+      hostFirstName: "Paul", bookingReference: "MBB-HOST", propertyName: "Villa X",
+      guestName: "Marie D.", checkIn: "2026-09-01", checkOut: "2026-09-05",
+    });
+    expect(t.html).toContain(">Voyageur<");
+    expect(t.html).toContain(">Arrivée<");
+    expect(t.html).toContain("Réservez mieux. Voyagez plus.");
+    expect(t.html).not.toContain(">Guest<");
+  });
+
+  it("T-150 : bookingHostCancellation — hôte anglophone reçoit l'annulation en anglais", () => {
+    const t = templates.bookingHostCancellation({
+      hostFirstName: "Paul", bookingReference: "MBB-CANCEL", propertyName: "Villa X",
+      guestName: "Marie D.", checkIn: "2026-09-01", checkOut: "2026-09-05",
+      reason: "No-show", language: "en",
+    });
+    expect(t.subject).toBe("Cancellation of your booking MBB-CANCEL");
+    expect(t.html).toContain("has been cancelled");
+    expect(t.html).toContain(">Guest<");
+    expect(t.html).toContain("Reason : No-show");
+    expect(t.html).toContain("View my bookings");
+    expect(t.html).toContain('/dashboard/bookings"');
+    expect(t.html).toContain("Book better. Travel further.");
+    expect(t.text).toContain("Marie D.");
+    expect(t.text).not.toContain("<");
+  });
+
+  it("T-150 : bookingHostCancellation — version française par défaut", () => {
+    const t = templates.bookingHostCancellation({
+      hostFirstName: "Paul", bookingReference: "MBB-CANCEL", propertyName: "Villa X",
+      guestName: "Marie D.", checkIn: "2026-09-01", checkOut: "2026-09-05",
+      reason: "Annulation demandée", language: "fr",
+    });
+    expect(t.subject).toBe("Annulation de votre réservation MBB-CANCEL");
+    expect(t.html).toContain("a été annulée");
+    expect(t.html).toContain(">Voyageur<");
+    expect(t.html).toContain("Motif : Annulation demandée");
+    expect(t.html).toContain("Voir mes réservations");
+    expect(t.html).toContain("Réservez mieux. Voyagez plus.");
+    expect(t.html).not.toContain(">Guest<");
+  });
+
+  it("T-150 : bookingHostCancellation échappe les variables (anti-XSS)", () => {
+    const t = templates.bookingHostCancellation({
+      hostFirstName: "Paul", bookingReference: "MBB-X", propertyName: "Villa",
+      guestName: "<img src=x onerror=alert(1)>", checkIn: "2026-09-01", checkOut: "2026-09-02",
+      reason: "<b>r</b>", language: "en",
+    });
+    expect(t.html).not.toContain("<img src=x onerror=alert(1)>");
+    expect(t.html).toContain("&lt;img");
+    expect(t.html).not.toContain("<b>r</b>");
   });
 });
 
