@@ -183,3 +183,17 @@ preuve équivalente à jour, pas prétendre que rien n'a changé.
 | T-157 | Identité du compte en mode connecté (payload invité ignoré par le serveur) ; UI lecture seule + encart ; guest mode inchangé | L | CORRIGÉ (VALIDÉ) | 🧪 `booking-identity.test.ts` (3 cas) · `bookings/route.test.ts` 8/8 (mocks auth complets — le mock partiel déclenchait un 500) · 🔨 tsc 0 | HEAD+ | idem F2 |
 | T-158 | i18n vague 1 fiche propriété (boutons, avis, alerte prix, métadonnées via cookie langue) + help-center bilingue (8 articles fr/en + métadonnées) + garde-fou CI `i18n:check` + sélecteur devise publique EUR/USD/GBP/XAF | L | CORRIGÉ (VALIDÉ) | 🧪 `ui-currency.test.ts` (EUR 1:1, options ⊆ convertibles) · grep libellés FR fiche = 0 · 🔨 tsc 0 · ▶️ crawl pages 40×4 = 0 erreur · ▶️ probe `/aide` : title FR sans cookie / **EN avec cookie** · ▶️ `npm run i18n:check` exit 0 (inventaire 460/66) · sims 5/5 | HEAD+ | idem F3/F4 |
 | T-159 | `purge-sim-data.mjs` (dry-run) · PATCH settings merge + erreurs sans `issues` · 400 (capacity/min_stay/dates/bad_price) vs 409 (unavailable) | L | CORRIGÉ (VALIDÉ) | ▶️ probes : PATCH partiel conservé supportEmail, Zod → `{error}` seul, capacité 5>2 → **400** · 🧪 `admin/settings/[key]/route.test.ts` (2 tests) · 🔨 tsc 0 | HEAD+ | idem F5–F7 |
+
+### 2026-08-31 — Test intégral complet (demande utilisateur, 0 erreur)
+
+| Objet | Statut | Preuves rejouables | Commit |
+|---|---|---|---|
+| Suite validation complète rejouée et 3 échecs réparés (smoke/surface/paranoid) | CORRIGÉ (VALIDÉ) | 🔨 `npx tsc --noEmit` 0 · 🔨 `npm run lint` 0 err/14 warn · ✅ `node scripts/check-ai.mjs` 19 OK/1 warn R7/0 fail · ✅ `node scripts/check-i18n.mjs` exit 0 · 🧪 `npx vitest run` 60 fichiers/403 tests/0 échec · ▶️ `python3 scripts/run_all_sims.py` **5/5 · 396 OK · 3 WARN · 0 KO** (smoke 94 · surface 68 · deep 80 · xtreme 83 · paranoid 71) · ▶️ `node .data/a30/regression.mjs` **18/18** · ✅ `npx next build` (Turbopack, TS, 60 pages statiques) | `0fb18fc` |
+
+Cause racine : le nettoyage réentrant des sims supprimait par
+`guest_first_name`, inopérant depuis T-157 (compte connecté réserve sous son
+identité) → accumulation de bookings → 409 smoke/surface ; paranoid : crash
+`json.loads` sur body vide + insert FK omettant les colonnes NOT NULL
+`commission_*`. Correctifs additifs dans les harness (`run_all_sims.py`,
+`smoke.sh`, `paranoid_sim.py`) — aucun contrat API ni migration ; préserve la
+réservation de démo du seed.

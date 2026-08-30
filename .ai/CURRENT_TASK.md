@@ -18,6 +18,13 @@ Rapport : `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md`.
 Détail/preuves : section « Audit n°30 — implémentation » de
 `.ai/TRACEABILITY.md`.
 
+**Activité en cours (2026-08-31)** : **test intégral complet** demandé par
+l'utilisateur — TOUTE la suite rejouée, 3 échecs (smoke, surface, paranoid)
+réparés et re-passés. Verdict final : tsc 0 · lint 0 err/14 warn ·
+ai:check 19/1/0 · vitest 60/403/0 · sims **5/5 (396 OK · 3 WARN · 0 KO)** ·
+probes n°30 **18/18** · build prod ✓ · i18n exit 0. Commit du correctif :
+`0fb18fc` (voir PROGRESS/TRACEABILITY, session 2026-08-31).
+
 ## Récapitulatif implémentation (sans régression)
 
 - **T-160 (P2)** — purge étendue (`purge-sim-data.mjs` : 122 wishlists

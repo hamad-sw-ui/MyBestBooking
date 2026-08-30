@@ -3562,3 +3562,37 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   devise rendu, filtres prix 200, API partage → 404 pour token inconnu.
 - Aucun fichier `src/` modifié (analyse seule) ; artefacts d'audit purgés
   (wishlists de test non touchées — traitement à l'implémentation T-160).
+
+## Session 2026-08-31 — Test intégral complet (demande utilisateur)
+
+- **Objet** : rejouer TOUTE la suite de validation du projet et faire passer
+  chaque échec avant conclusion (critère : 0 erreur partout).
+- **Premier passage — 3 échecs** : smoke 1 FAIL (`POST /api/bookings` vide),
+  surface 1 KO (`commission_rate` NOT NULL), paranoid crash
+  (`JSONDecodeError` ligne 445 sur `/api/properties`).
+- **Diagnostic (code réel, pas hypothèse)** :
+  - cause racine smoke/surface : **régression de nettoyage depuis T-157** —
+    un compte connecté réserve sous SON identité (`guest_email=customer@…`),
+    donc les suppressions par `guest_first_name IN ('Smoke',…)` sont
+    inopérantes ; après ~5 runs chaque fenêtre (`2027-01-15`, `2027-02-15`)
+    est pleine (chambre `quantity=5`) → **409 « plus disponible »**.
+  - cause paranoid : body vide (timeout de compilation à froid + contention)
+    faisait planter `json.loads` ; le test FK SQL direct omettait les colonnes
+    NOT NULL `commission_*` (erreur NOT NULL au lieu de la FK).
+- **Correctifs (additifs, aucun contrat API ni migration)** :
+  - `scripts/run_all_sims.py` + `scripts/smoke.sh` : nettoyage réentrant par
+    `guest_email` + fenêtres de scénarios (préserve la réservation de démo
+    du seed à aujourd'hui +14 j) ;
+  - `scripts/paranoid_sim.py` : insert FK complété (`commission_rate`,
+    `commission_amount`, `net_to_host`) ; section N+1 : KO/WARN net au lieu
+    d'un crash sur body vide ;
+  - `scripts/smoke.sh` : capture du code HTTP du booking pour un diagnostic
+    explicite en cas d'échec.
+- **Verdict final** : 🔨 `tsc --noEmit` **0** · 🔨 `lint` **0 err / 14 warn**
+  · ✅ `ai:check` **19 OK · 1 warn R7 · 0 fail** · ✅ `i18n:check` exit 0
+  · 🧪 `vitest run` **60 fichiers / 403 tests / 0 échec** · ▶️ 5 sims
+  **396 OK · 3 WARN · 0 KO** (smoke 94 · surface 68 · deep 80 · xtreme 83
+  · paranoid 71) · ▶️ probes n°30 `.data/a30/regression.mjs` **18/18** ·
+  ✅ `next build` (Turbopack, TS, 60 pages statiques).
+- **Preuves** : `/tmp/sim-runs/` (logs), `.ai/REPORTS/simulation_*.md`,
+  commit `0fb18fc`.
