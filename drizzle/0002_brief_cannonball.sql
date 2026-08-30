@@ -1,0 +1,1 @@
+CREATE INDEX "idx_bookings_room_dates" ON "bookings" USING btree ("room_id","check_in","check_out");

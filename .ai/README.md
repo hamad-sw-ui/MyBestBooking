@@ -1,24 +1,33 @@
-# 📁 .ai/ — Mémoire persistante du projet MobileCaisse
+# 📁 .ai/ — Mémoire persistante de MyBestBooking
 
-Ce dossier est la **source officielle de vérité** du projet.
-Il existe pour qu'une session de travail (humaine ou agent IA) puisse retrouver
-le contexte complet du dépôt **sans ré-analyser 12 000 lignes de Kotlin**.
+Ce dossier est la source documentaire officielle du projet **MyBestBooking**.
+Il décrit l'application réelle : Next.js App Router, React, PostgreSQL et
+Drizzle ORM.
 
-> ⚠️ Ce framework a été créé **une seule fois** (2026-07-28) et doit être
-> **réutilisé et mis à jour**, jamais reconstruit ni remplacé par un autre système.
+Les rapports historiques provenant d'un autre projet sont conservés à titre
+d'archive et ne décrivent pas l'architecture actuelle.
 
 ---
 
-## 🐳 Préalable absolu : l'environnement Docker
-
-Depuis la Phase 6, **aucune compilation ni aucun test ne se fait hors Docker**.
+## 🧰 Commandes de validation
 
 ```bash
-make verify      # AVANT toute modification
-make validate    # APRÈS chaque modification
+# Cohérence du framework .ai (garde-fous R1–R20)
+npm run ai:check
+# Qualité du code
+npm run typecheck
+npm run lint
+npm test
+npm run build
+# Base de données locale (embedded-postgres) + schéma
+npm run db:dev
+npm run db:push
+# Preuve runtime HTTP (≥ 40 assertions, ADR-008)
+npm run smoke
 ```
 
-Documentation : [`DEV_ENVIRONMENT.md`](DEV_ENVIRONMENT.md).
+> La CI (`.github/workflows/ci.yml`) exécute automatiquement
+> `ai:check · lint · typecheck · test · build` à chaque push/PR (ADR-002).
 
 ---
 
@@ -48,13 +57,13 @@ jamais la taille du diff :
 
 ## 🚦 Procédure obligatoire à chaque session
 
-0. **Valider l'environnement Docker** (`make verify`).
-1. **Lire tous les fichiers de `.ai/`** — ils font foi.
+0. **Vérifier PostgreSQL et `DATABASE_URL`**.
+1. **Lire les documents de vérité applicables**.
 2. **Analyser ensuite le code réel** (`app/src/...`).
-3. **Si le code a divergé de la documentation → mettre `.ai/` à jour EN PREMIER**,
+3. **Si le code a divergé de la documentation → mettre `.ai/` à jour en premier**,
    avant toute nouvelle implémentation.
 4. **Lire `CURRENT_TASK.md`** et exécuter **uniquement** cette tâche.
-5. **Respecter `CODING_RULES.md`** et `ANDROID_RULES.md`.
+5. **Respecter `CODING_RULES.md`** et les conventions Next.js/React.
 6. **Mettre à jour `PROGRESS.md` et `BACKLOG.md`** en fin de session.
 7. **Attendre les instructions** du responsable avant de passer à la tâche suivante.
 
@@ -66,24 +75,30 @@ Prompt de démarrage prêt à copier : [`PROMPTS/session_start.md`](PROMPTS/sess
 
 | Fichier | Rôle | Fréquence de mise à jour |
 |---|---|---|
-| `MISSION.md` | Mandat permanent de l'équipe technique | Jamais (sauf changement de mandat) |
-| `PROJECT_CONTEXT.md` | Quoi, pour qui, pourquoi — métier et contraintes terrain | Rare |
-| `ARCHITECTURE.md` | Architecture **réelle** constatée dans le code | À chaque changement structurel |
-| `CODING_RULES.md` | Règles de code non négociables | Rare |
-| `ANDROID_RULES.md` | Règles spécifiques Android/Compose/Room | Rare |
-| `DATABASE.md` | Entités, DAO, migrations, chiffrement | À chaque changement de schéma |
-| `API.md` | Interfaces externes (SMS, Bluetooth, Intents, licence) | À chaque nouvelle intégration |
+| `STATE.md` | État courant du projet et HEAD Git validé (source n°1) | **Chaque session** |
+| `MISSION.md` | Mandat permanent de l'équipe technique | Rare |
+| `PROJECT.md` | Quoi, pour qui, pourquoi — métier et contraintes terrain | Rare |
+| `ARCHITECTURE_MYBESTBOOKING.md` | Architecture **réelle** Next.js/Drizzle constatée dans le code | À chaque changement structurel |
+| `ARCHITECTURE.md` | Archive historique MobileCaisse (Kotlin/Android), non normative | Ne pas utiliser |
+| `CODING_RULES.md` | Processus §13–§22 (validation, impact, honnêteté technique) ; le corps des règles Kotlin est une archive | Rare |
+| `ANDROID_RULES.md` | Archive historique, non applicable à MyBestBooking | Ne pas utiliser |
+| `DATABASE.md` | Entités, schéma PostgreSQL, migrations, chiffrement | À chaque changement de schéma |
+| `FEATURES.md` | Inventaire de complétude produit (✅/🚧/🎯/❌) | À chaque changement API/schéma (R17) |
+| `PRODUCT_ACCEPTANCE.md` | Parcours utilisateur critiques et état E2E | À chaque parcours livré |
+| `API.md` | Interfaces externes (Stripe, emails, uploads, webhooks) | À chaque nouvelle intégration |
 | `ROADMAP.md` | Ordre logique de complétion du projet | À chaque jalon |
-| `BACKLOG.md` | Toutes les tâches restantes (□ / ☑) | **Chaque session** |
+| `BACKLOG.md` | Toutes les tâches restantes (T-xxx) | **Chaque session** |
 | `CURRENT_TASK.md` | La seule tâche autorisée en cours | **Chaque session** |
 | `PROGRESS.md` | Journal horodaté des sessions | **Chaque session** |
-| `BUGS.md` | Bugs identifiés, avec gravité et statut | Dès qu'un bug est trouvé/corrigé |
+| `BUGS.md` | Bugs identifiés (BUG-xxx), avec gravité et statut | Dès qu'un bug est trouvé/corrigé |
+| `TRACEABILITY.md` | Matrice preuves ↔ tâches/bugs | À chaque validation |
 | `KNOWN_LIMITATIONS.md` | Limites assumées (non-bugs) | Rare |
-| `DEPENDENCIES.md` | Dépendances, versions, risques | À chaque `libs.versions.toml` modifié |
+| `DEPENDENCIES.md` | Dépendances npm, versions, risques | À chaque changement de `package.json` |
 | `SECURITY.md` | Modèle de menace et posture sécurité | À chaque changement crypto/permission |
 | `TEST_PLAN.md` | Stratégie et couverture de tests | À chaque nouveau test |
 | `PROCESS_IMPROVEMENTS.md` | Rétrospectives et évolutions du framework (§17) | Après chaque tâche |
-| `DEV_ENVIRONMENT.md` | **Environnement Docker obligatoire** (Phase 6) | À chaque changement d'outillage |
+| `DEV_ENVIRONMENT.md` | Node.js, PostgreSQL et variables d'environnement | À chaque changement d'outillage |
+| `framework.manifest.json` | Manifeste pilotant `scripts/check-ai.mjs` (R1–R20) | À chaque évolution du framework |
 | `PROMPTS/` | Prompts réutilisables (démarrage, revue, rôles) | Rare |
 | `CHECKLISTS/` | Contrôles avant commit / avant PR / avant release | Rare |
 | `REPORTS/` | Modèles + rapports datés générés au fil du projet | À la demande |
@@ -93,10 +108,8 @@ Prompt de démarrage prêt à copier : [`PROMPTS/session_start.md`](PROMPTS/sess
 
 ## 🧠 Rôles spécialisés
 
-Toute décision technique importante doit être raisonnée successivement selon
-11 rôles (Architecte, Dev Android senior, Expert Kotlin, Expert Room, Expert
-Compose, Expert Hilt, Expert SQL, Ingénieur QA, Expert sécurité, DevOps,
-Relecteur). Grille détaillée : [`PROMPTS/roles.md`](PROMPTS/roles.md).
+Toute décision technique importante doit être examinée selon les rôles
+Architecture, Next.js/React, PostgreSQL/Drizzle, sécurité, QA, UX et DevOps.
 
 ---
 
@@ -106,8 +119,8 @@ Relecteur). Grille détaillée : [`PROMPTS/roles.md`](PROMPTS/roles.md).
   9 questions, enregistrée dans `REPORTS/`, antérieure au code.
 - **Un correctif non exécuté est une hypothèse.** Compilation réelle + tests
   passés + aucune régression = seule définition de « terminé » (`CODING_RULES.md` §13).
-- **Double validation** pour les composants critiques : implémentation de
-  référence indépendante **et** tests Kotlin réels.
+- **Double validation** pour les composants critiques : test ciblé indépendant
+  lorsque pertinent et validation réelle du code TypeScript/SQL.
 - **Comprendre avant de modifier.**
 - **Aucune régression** : une fonctionnalité qui marche ne doit jamais casser.
 - **Une tâche à la fois**, celle de `CURRENT_TASK.md`.

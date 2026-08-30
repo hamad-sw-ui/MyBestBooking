@@ -1,12 +1,22 @@
+import type { Metadata } from "next";
 import { db } from "@/db";
-import { properties, rooms } from "@/db/schema";
-import { eq, and, ilike, or, desc, sql } from "drizzle-orm";
+import { bookings, properties, rooms } from "@/db/schema";
+import { asc, count, eq, and, ilike, or, desc, sql, type SQL } from "drizzle-orm";
+
+export const metadata: Metadata = {
+  title: "Recherche d'hébergements",
+  description: "Trouvez le meilleur hébergement pour votre séjour : hôtel, riad, villa, appartement, camping.",
+};
 import { PropertyCard } from "@/components/property-card";
+import { toPublicPropertyCard } from "@/lib/public-property";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Input, Select } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, SlidersHorizontal, Building2 } from "lucide-react";
+import { Search, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
+import { RATES_FROM_EUR, priceBoundToStorage } from "@/lib/i18n";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
+import { SearchPriceFilter } from "@/components/search-price-filter";
 
 interface SearchPageProps {
   searchParams: Promise<{
@@ -17,52 +27,170 @@ interface SearchPageProps {
     checkOut?: string;
     minPrice?: string;
     maxPrice?: string;
+    /** T-133/A1 : devise dans laquelle l'utilisateur saisit la fourchette
+     *  de prix (celle affichée, ex. XAF). Les bornes sont converties vers la
+     *  devise de stockage (EUR) avant le filtrage. Absent/EUR = comportement
+     *  historique. */
+    displayCurrency?: string;
+    guests?: string;
+    amenity?: string;
+    sort?: string;
+    page?: string;
   }>;
 }
 
+
+
+function validStay(params: Awaited<SearchPageProps["searchParams"]>): params is Awaited<SearchPageProps["searchParams"]> & { checkIn: string; checkOut: string } {
+  return Boolean(
+    params.checkIn && params.checkOut
+    && /^\d{4}-\d{2}-\d{2}$/.test(params.checkIn)
+    && /^\d{4}-\d{2}-\d{2}$/.test(params.checkOut)
+    && params.checkOut > params.checkIn,
+  );
+}
+
+/** Même prédicat pour EXISTS et prix affiché : une seule room doit satisfaire
+ * tous les critères. L’alias est constant et ne provient jamais de l’URL. */
+function eligibleRoomPredicate(alias: "r" | "r2", params: Awaited<SearchPageProps["searchParams"]>): SQL {
+  const room = sql.raw(alias);
+  const clauses: SQL[] = [sql`${room}.is_active = true`];
+  const guests = Number(params.guests);
+  if (Number.isInteger(guests) && guests > 0) clauses.push(sql`${room}.max_occupancy >= ${guests}`);
+
+  // T-133 (A1) : prix normalisé en EUR dans le SQL, avec les mêmes taux figés
+  // que l'affichage (RATES_FROM_EUR) — source unique, valeurs injectées depuis
+  // le code (jamais depuis l'URL). Une chambre en devise X = prix_X / taux_X.
+  // Les taux sont castés en numeric : sinon le driver infère le type depuis
+  // le premier paramètre (EUR = 1, entier) et refuse « 1.08 » (22P02).
+  const rateCases = Object.entries(RATES_FROM_EUR)
+    .map(([c, rate]) => sql`WHEN ${c} THEN ${rate}::numeric`)
+    .reduce((acc, part) => sql`${acc} ${part}`);
+  const priceEur = sql`(${room}.base_price::numeric / COALESCE((CASE ${room}.currency ${rateCases} ELSE 1::numeric END), 1))`;
+
+  const minRaw = params.minPrice ? Number(params.minPrice) : null;
+  const maxRaw = params.maxPrice ? Number(params.maxPrice) : null;
+  // Bornes saisies dans la devise d'affichage (ex. FCFA) → converties en EUR.
+  const minPrice = minRaw !== null && Number.isFinite(minRaw) && minRaw >= 0
+    ? priceBoundToStorage(minRaw, params.displayCurrency) : null;
+  const maxPrice = maxRaw !== null && Number.isFinite(maxRaw) && maxRaw >= 0
+    ? priceBoundToStorage(maxRaw, params.displayCurrency) : null;
+  if (minPrice !== null) clauses.push(sql`${priceEur} >= ${minPrice}`);
+  if (maxPrice !== null) clauses.push(sql`${priceEur} <= ${maxPrice}`);
+
+  if (validStay(params)) {
+    clauses.push(sql`
+      COALESCE((
+        SELECT ra.min_stay FROM room_availability ra
+        WHERE ra.room_id = ${room}.id AND ra.date = ${params.checkIn}
+      ), 1) <= (${params.checkOut}::date - ${params.checkIn}::date)
+      AND NOT EXISTS (
+        SELECT 1
+        FROM generate_series(${params.checkIn}::date, ${params.checkOut}::date - interval '1 day', interval '1 day') AS stay(day)
+        LEFT JOIN room_availability ra
+          ON ra.room_id = ${room}.id AND ra.date = stay.day::date
+        WHERE COALESCE(ra.stop_sell, false) = true
+           OR COALESCE(ra.available_count, ${room}.quantity) <= (
+             SELECT COUNT(*) FROM bookings b
+             WHERE b.room_id = ${room}.id
+               AND b.status <> 'cancelled'
+               AND b.check_in <= stay.day::date
+               AND b.check_out > stay.day::date
+           )
+      )
+    `);
+  }
+  return sql.join(clauses, sql` AND `);
+}
+
 async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>) {
-  const conditions = [eq(properties.status, "active")];
+  const conditions: SQL[] = [eq(properties.status, "active")];
 
   if (params.city) {
-    conditions.push(
-      or(
-        ilike(properties.city, `%${params.city}%`),
-        ilike(properties.name, `%${params.city}%`)
-      )!
-    );
+    conditions.push(or(ilike(properties.city, `%${params.city}%`), ilike(properties.name, `%${params.city}%`))!);
   }
+  if (params.country) conditions.push(eq(properties.country, params.country));
+  if (params.type) conditions.push(eq(properties.type, params.type));
+  if (params.amenity) conditions.push(sql`${properties.amenities} @> ${JSON.stringify([params.amenity])}::jsonb`);
 
-  if (params.country) {
-    conditions.push(eq(properties.country, params.country));
-  }
+  // Une property est éligible seulement si une room unique l’est sur la totalité
+  // des filtres; cette même room participe au prix affiché ci-dessous.
+  const existsEligibleRoom = sql`EXISTS (
+    SELECT 1 FROM rooms r
+    WHERE r.property_id = ${properties.id}
+      AND ${eligibleRoomPredicate("r", params)}
+  )`;
+  conditions.push(existsEligibleRoom);
 
-  if (params.type) {
-    conditions.push(eq(properties.type, params.type));
-  }
+  const eligiblePrice = sql<string | null>`(
+    SELECT r2.base_price FROM rooms r2
+    WHERE r2.property_id = ${properties.id}
+      AND ${eligibleRoomPredicate("r2", params)}
+    ORDER BY r2.base_price ASC, r2.id ASC
+    LIMIT 1
+  )`;
+  const eligibleCurrency = sql<string | null>`(
+    SELECT r2.currency FROM rooms r2
+    WHERE r2.property_id = ${properties.id}
+      AND ${eligibleRoomPredicate("r2", params)}
+    ORDER BY r2.base_price ASC, r2.id ASC
+    LIMIT 1
+  )`;
 
-  const results = await db
-    .select()
+  const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  const [{ total }] = await db.select({ total: count() }).from(properties).where(and(...conditions));
+  const totalPages = Math.max(1, Math.ceil(total / 20));
+  const page = Math.min(requestedPage, totalPages);
+  const order = params.sort === "price_asc"
+    ? [sql`${eligiblePrice} ASC`, asc(properties.id)]
+    : params.sort === "price_desc"
+      ? [sql`${eligiblePrice} DESC`, asc(properties.id)]
+      : [desc(properties.averageRating), asc(properties.id)];
+
+  const rows = await db
+    .select({ property: properties, minPrice: eligiblePrice, minCurrency: eligibleCurrency })
     .from(properties)
     .where(and(...conditions))
-    .orderBy(desc(properties.averageRating))
-    .limit(20);
+    .orderBy(...order)
+    .limit(20)
+    .offset((page - 1) * 20);
 
-  return results;
+  return {
+    total,
+    page,
+    totalPages,
+    results: rows.map(({ property, minPrice, minCurrency }) => toPublicPropertyCard(property, {
+      minPrice: minPrice === null ? null : Number(minPrice),
+      minCurrency,
+    })),
+  };
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
   const params = await searchParams;
-  const results = await searchProperties(params);
+  const t = makeT(await getServerLocale());
+  const search = await searchProperties(params);
+  const { results, total, page: currentPage, totalPages } = search;
+  const pageQuery = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) if (value && key !== "page") pageQuery.set(key, value);
+  function pageHref(page: number) {
+    const query = new URLSearchParams(pageQuery);
+    query.set("page", String(page));
+    return `/recherche?${query.toString()}`;
+  }
+  const stayQuery = new URLSearchParams();
+  if (params.checkIn) stayQuery.set("checkIn", params.checkIn);
+  if (params.checkOut) stayQuery.set("checkOut", params.checkOut);
 
   const propertyTypes = [
-    { value: "", label: "Tous les types" },
-    { value: "hotel", label: "Hôtel" },
-    { value: "apartment", label: "Appartement" },
-    { value: "villa", label: "Villa" },
-    { value: "hostel", label: "Auberge" },
-    { value: "guesthouse", label: "Maison d'hôtes" },
-    { value: "riad", label: "Riad" },
-    { value: "resort", label: "Resort" },
+    { value: "", label: t("search.allTypes") },
+    { value: "hotel", label: t("search.type.hotel") },
+    { value: "apartment", label: t("search.type.apartment") },
+    { value: "villa", label: t("search.type.villa") },
+    { value: "hostel", label: t("search.type.hostel") },
+    { value: "guesthouse", label: t("search.type.guesthouse") },
+    { value: "riad", label: t("search.type.riad") },
+    { value: "resort", label: t("search.type.resort") },
   ];
 
   return (
@@ -70,22 +198,22 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {/* Search Header */}
       <div className="bg-white border-b border-gray-200 sticky top-16 z-30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <form className="flex flex-wrap gap-4 items-end">
+          <form method="get" action="/recherche" className="flex flex-wrap gap-4 items-end">
             <div className="flex-1 min-w-[200px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Destination</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.destination")}</label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
                   name="city"
                   defaultValue={params.city}
-                  placeholder="Ville ou hébergement"
+                  placeholder={t("search.destinationPlaceholder")}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
                 />
               </div>
             </div>
             <div className="w-[140px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Arrivée</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.arrival")}</label>
               <input
                 type="date"
                 name="checkIn"
@@ -94,7 +222,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               />
             </div>
             <div className="w-[140px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Départ</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.departure")}</label>
               <input
                 type="date"
                 name="checkOut"
@@ -103,7 +231,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               />
             </div>
             <div className="w-[160px]">
-              <label className="block text-xs font-medium text-gray-500 mb-1">Type</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.type")}</label>
               <select
                 name="type"
                 defaultValue={params.type}
@@ -116,9 +244,26 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 ))}
               </select>
             </div>
+            <div className="w-[110px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.travelers")}</label>
+              <input type="number" name="guests" min="1" defaultValue={params.guests} placeholder={t("search.travelersPlaceholder")} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+            </div>
+            <div className="w-[150px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.amenity")}</label>
+              <select name="amenity" defaultValue={params.amenity ?? ""} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="">{t("search.amenity.all")}</option><option value="wifi">WiFi</option><option value="parking">Parking</option><option value="pool">{t("amenity.pool")}</option><option value="spa">Spa</option><option value="restaurant">{t("amenity.restaurant")}</option>
+              </select>
+            </div>
+            <div className="w-[150px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.sort")}</label>
+              <select name="sort" defaultValue={params.sort ?? "rating"} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
+                <option value="rating">{t("search.sort.rating")}</option><option value="price_asc">{t("search.sort.priceAsc")}</option><option value="price_desc">{t("search.sort.priceDesc")}</option>
+              </select>
+            </div>
+            <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} />
             <Button type="submit" size="md">
               <Search className="w-4 h-4 mr-2" />
-              Rechercher
+              {t("search.button")}
             </Button>
           </form>
         </div>
@@ -131,42 +276,44 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
           <div>
             <h1 className="text-xl font-bold text-gray-900">
               {params.city ? (
-                <>Hébergements à {params.city}</>
+                <>{t("search.accommodationsIn")} {params.city}</>
               ) : (
-                <>Tous les hébergements</>
+                <>{t("search.allAccommodations")}</>
               )}
             </h1>
             <p className="text-sm text-gray-500 mt-1">
-              {results.length} résultat{results.length !== 1 ? "s" : ""} trouvé{results.length !== 1 ? "s" : ""}
+              {total} {total !== 1 ? t("search.resultsPlural") : t("search.resultsCount")} · {t("search.pageShort")} {currentPage} {t("search.pageOf")} {totalPages}
             </p>
           </div>
-          <button className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-lg text-sm hover:bg-gray-50">
-            <SlidersHorizontal className="w-4 h-4" />
-            Filtres
-          </button>
         </div>
 
         {/* Results Grid */}
         {results.length === 0 ? (
           <EmptyState
             icon={<Building2 className="w-8 h-8" />}
-            title="Aucun résultat"
+            title={t("search.noResults")}
             description={params.city 
-              ? `Aucun hébergement trouvé à "${params.city}". Essayez une autre destination.`
-              : "Commencez votre recherche pour trouver des hébergements."
+              ? t("search.noneInCity").replace("{city}", params.city)
+              : t("search.startSearch")
             }
             action={
               <Link href="/">
-                <Button variant="outline">Retour à l&apos;accueil</Button>
+                <Button variant="outline">{t("search.backHome")}</Button>
               </Link>
             }
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {results.map((property) => (
-              <PropertyCard key={property.id} property={property} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {results.map((property) => (
+                <PropertyCard key={property.id} property={property} searchQuery={stayQuery.toString()} />
+              ))}
+            </div>
+            <nav aria-label={t("search.pagination")} className="mt-8 flex justify-center gap-3">
+              {currentPage > 1 && <Link href={pageHref(currentPage - 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">{t("search.prev")}</Link>}
+              {currentPage < totalPages && <Link href={pageHref(currentPage + 1)} className="px-4 py-2 border border-gray-300 rounded-lg text-sm">{t("search.next")}</Link>}
+            </nav>
+          </>
         )}
       </div>
     </div>

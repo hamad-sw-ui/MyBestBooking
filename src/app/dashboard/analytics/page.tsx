@@ -1,6 +1,6 @@
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
-import { bookings, properties, reviews, users } from "@/db/schema";
+import { bookings, properties, reviews, rooms, users } from "@/db/schema";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
@@ -37,12 +37,12 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
 
   // Get bookings for current period (last 30 days)
   const currentPeriodBookings = allBookings.filter(
-    b => new Date(b.createdAt) >= thirtyDaysAgo
+    b => new Date(b.createdAt) >= thirtyDaysAgo && b.status !== "cancelled"
   );
 
   // Get bookings for previous period (30-60 days ago)
   const previousPeriodBookings = allBookings.filter(
-    b => new Date(b.createdAt) >= sixtyDaysAgo && new Date(b.createdAt) < thirtyDaysAgo
+    b => new Date(b.createdAt) >= sixtyDaysAgo && new Date(b.createdAt) < thirtyDaysAgo && b.status !== "cancelled"
   );
 
   // Calculate metrics
@@ -65,18 +65,35 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     : 100;
 
   // Average booking value
-  const avgBookingValue = currentPeriodBookings.length > 0
-    ? currentRevenue / currentPeriodBookings.length
+  const currentPaidBookings = currentPeriodBookings.filter(b => b.paymentStatus === "paid");
+  const previousPaidBookings = previousPeriodBookings.filter(b => b.paymentStatus === "paid");
+  const avgBookingValue = currentPaidBookings.length > 0
+    ? currentRevenue / currentPaidBookings.length
     : 0;
 
-  const previousAvgBookingValue = previousPeriodBookings.length > 0
-    ? previousRevenue / previousPeriodBookings.length
+  const previousAvgBookingValue = previousPaidBookings.length > 0
+    ? previousRevenue / previousPaidBookings.length
     : 0;
 
-  // Occupancy rate (simplified)
-  const totalNights = currentPeriodBookings.reduce((sum, b) => sum + b.numNights, 0);
-  const potentialNights = allProperties.length * 30; // Assuming 1 room per property for simplicity
-  const occupancyRate = potentialNights > 0 ? (totalNights / potentialNights) * 100 : 0;
+  // Occupation sur les nuits réellement situées dans la fenêtre, et non sur
+  // la date de création de la réservation. Les annulations sont exclues.
+  const propertyRooms = propertyIds.length > 0
+    ? await db.select({ quantity: rooms.quantity }).from(rooms).where(
+        and(eq(rooms.isActive, true), sql`${rooms.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`),
+      )
+    : [];
+  const startDay = thirtyDaysAgo.toISOString().slice(0, 10);
+  const endDay = now.toISOString().slice(0, 10);
+  const occupiedNights = allBookings
+    .filter((booking) => booking.status !== "cancelled" && booking.checkIn <= endDay && booking.checkOut > startDay)
+    .reduce((sum, booking) => {
+      const from = booking.checkIn > startDay ? booking.checkIn : startDay;
+      const until = booking.checkOut < endDay ? booking.checkOut : endDay;
+      const nights = Math.max(0, Math.round((Date.parse(`${until}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
+      return sum + nights;
+    }, 0);
+  const potentialNights = propertyRooms.reduce((sum, room) => sum + (room.quantity ?? 1) * 30, 0);
+  const occupancyRate = potentialNights > 0 ? (occupiedNights / potentialNights) * 100 : 0;
 
   // Average rating
   const reviewsQuery = isAdmin
@@ -109,6 +126,7 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
   // Top properties
   const propertyRevenue = new Map<string, { name: string; revenue: number; bookings: number }>();
   for (const booking of allBookings) {
+    if (booking.status === "cancelled" || booking.paymentStatus !== "paid") continue;
     const prop = allProperties.find(p => p.id === booking.propertyId);
     if (!prop) continue;
     
@@ -123,12 +141,6 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     .slice(0, 5)
     .map(([id, data]) => ({ id, ...data }));
 
-  // Booking sources (simplified)
-  const bookingSources = {
-    direct: Math.round(currentPeriodBookings.length * 0.6),
-    mobile: Math.round(currentPeriodBookings.length * 0.3),
-    partners: Math.round(currentPeriodBookings.length * 0.1),
-  };
 
   return {
     currentRevenue,
@@ -144,7 +156,6 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     totalReviews: allReviews.length,
     revenueByDay,
     topProperties,
-    bookingSources,
     totalProperties: allProperties.length,
     totalBookings: allBookings.length,
   };
@@ -347,32 +358,10 @@ export default async function AnalyticsPage() {
             <CardTitle>Sources des réservations</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {[
-                { label: "Site web", value: analytics.bookingSources.direct, color: "bg-[#1B3A6B]" },
-                { label: "Application mobile", value: analytics.bookingSources.mobile, color: "bg-[#FF5A5F]" },
-                { label: "Partenaires", value: analytics.bookingSources.partners, color: "bg-[#F5A623]" },
-              ].map((source) => {
-                const total = analytics.bookingSources.direct + analytics.bookingSources.mobile + analytics.bookingSources.partners;
-                const percentage = total > 0 ? (source.value / total) * 100 : 0;
-                return (
-                  <div key={source.label}>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-gray-600">{source.label}</span>
-                      <span className="font-medium">{source.value} ({percentage.toFixed(0)}%)</span>
-                    </div>
-                    <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full ${source.color} rounded-full transition-all`}
-                        style={{ width: `${percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <p className="text-sm text-gray-500">La source d&apos;acquisition n&apos;est pas encore collectée de manière fiable. Aucun pourcentage estimatif n&apos;est affiché.</p>
           </CardContent>
         </Card>
+
       </div>
     </div>
   );

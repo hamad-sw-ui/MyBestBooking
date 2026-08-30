@@ -1,24 +1,56 @@
 {
-  "version": "3.0.0",
-  "name": "MobileCaisse AI Development Operating System (AI-DOS)",
-  "description": "Système de traçabilité des preuves techniques et de gouvernance autonome",
+  "version": "3.0.1",
+  "name": "MyBestBooking AI Development Operating System (AI-DOS)",
+  "description": "Gouvernance et traçabilité des preuves techniques pour Next.js et PostgreSQL",
   "mandatory_documents": [
     "STATE.md",
     "INDEX.md",
     "TRACEABILITY.md",
     "MISSION.md",
-    "PROJECT_CONTEXT.md",
-    "ARCHITECTURE.md",
+    "PROJECT.md",
+    "ARCHITECTURE_MYBESTBOOKING.md",
     "DATABASE.md",
     "SECURITY.md",
     "CODING_RULES.md",
     "ANDROID_RULES.md",
     "ROADMAP.md",
+    "FEATURES.md",
+    "PRODUCT_ACCEPTANCE.md",
     "BUGS.md",
     "CURRENT_TASK.md",
     "TEST_PLAN.md",
     "DEVLOG.md"
   ],
+  "git": {
+    "branch_patterns": ["^arena/[0-9a-f]+-mybestbooking$"],
+    "protected_branches": ["main"]
+  },
+  "product_coverage": {
+    "exempted_tables": [
+      "sessions",
+      "verification_tokens",
+      "email_outbox",
+      "payment_event_inbox",
+      "provider_test_logs"
+    ],
+    "endpoint_aliases": {
+      "review_votes": ["reviews"],
+      "upload_objects": ["uploads", "messages"],
+      "wishlist_items": ["wishlists"],
+      "provider_credentials": ["admin/providers", "providers/stripe"],
+      "audit_log": ["admin/audit"]
+    },
+    "expected_endpoint_tables": [],
+    "ui_action_labels": [
+      "Envoyer", "Répondre", "Publier", "Annuler", "Valider",
+      "Supprimer", "Uploader", "Enregistrer", "Confirmer", "Créer",
+      "Modifier", "Approuver", "Rejeter", "Suspendre", "Réserver",
+      "Payer", "Contacter"
+    ],
+    "max_commits_without_features_update": 30,
+    "max_commits_without_progress_update": 5,
+    "max_sessions_without_product_audit": 5
+  },
   "optional_documents": [
     "DEPENDENCIES.md",
     "KNOWN_LIMITATIONS.md",
@@ -30,7 +62,9 @@
     "INDEX.md",
     "framework.manifest.json",
     "MISSION.md",
-    "CURRENT_TASK.md"
+    "CURRENT_TASK.md",
+    "PROJECT.md",
+    "ARCHITECTURE_MYBESTBOOKING.md"
   ],
   "critical_documents": [
     "STATE.md",
@@ -39,6 +73,25 @@
     "CODING_RULES.md",
     "ADR/"
   ],
+  "roles": [
+    "Architecte",
+    "Développeur Next.js senior",
+    "Expert TypeScript",
+    "Expert React (RSC / Client)",
+    "Expert Drizzle / SQL",
+    "Expert PostgreSQL",
+    "Expert sécurité web (auth, cookies, CSP)",
+    "Ingénieur QA",
+    "DevOps / SRE",
+    "Expert UX / a11y",
+    "Relecteur (advocatus diaboli)"
+  ],
+  "proportionality_levels": {
+    "T": "Trivial",
+    "L": "Local",
+    "S": "Structurant",
+    "C": "Critique"
+  },
   "blocking_rules": {
     "missing_mandatory_document": true,
     "obsolete_roadmap": true,

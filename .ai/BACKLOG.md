@@ -1,180 +1,287 @@
 # 📋 BACKLOG
 
-Légende : `□` tâche non terminée · `☑` tâche terminée
+> **Actions à faire**, distinct de `FEATURES.md` (inventaire de ce qui
+> existe) et `BUGS.md` (défauts). Un item de backlog devient une tâche
+> `T-xxx` dans `CURRENT_TASK.md` quand elle est démarrée.
+>
+> Réécrit intégralement en Session 5 après ADR-006. Les items 🔴/🟠
+> corrigés en Sessions 3-4 ont été retirés.
 
-Le backlog est déduit de l'**écart entre ce que le projet devrait faire et ce
-qu'il fait réellement** (audit du 2026-07-28). L'ordre d'exécution est défini
-par `ROADMAP.md`.
-
-Identifiants stables : `B-xxx` (ne jamais renuméroter).
-
-> **Rév. 2 — 2026-07-28** : intégration des décisions D1–D4 du responsable et
-> révision après vérification des correctifs de sécurité antérieurs
-> (voir `BUGS.md` § Note de révision).
-> Contexte clé : **aucun utilisateur en production** → les priorités sont
-> réordonnées en faveur d'un socle propre plutôt que d'un sauvetage de données.
+## Légende
+- 🔴 **P1** — bloquant pour ouvrir aux vrais utilisateurs
+- 🟠 **P2** — important pour l'usage quotidien
+- 🟢 **P3** — confort, backlog non urgent
 
 ---
 
-## P0 — Sauver le build et les données (bloquant)
+## Session courante
 
-- ☑ **B-001** `gradlew` rendu exécutable
-- ☑ **B-002** `app/proguard-rules.pro` créé (Room, SQLCipher, serialization, ML Kit)
-- ☑ **B-003** Migré vers `ComponentActivity` + thème plateforme — **zéro dépendance ajoutée** *(BUG-003)*
-- ☑ **B-004** `sqlcipher` et `sqlite-ktx` déplacés dans le version catalog
-- ☑ **B-005** Kotlin figé à 2.1.0 par le catalog ; `.kotlin/errors/` dé-versionné
-- ☑ **B-006** `configuration-cache=false` + `kotlin.compiler.execution.strategy=in-process`
-- ☑ **B-007** `conversation.txt` supprimé (1 084 lignes)
-- ☑ **B-008** Dépôt nettoyé : 28 fichiers dé-versionnés, logo déplacé dans `res/`
-- □ **B-009** Activer `exportSchema = true` et versionner `app/schemas/` en Git
-- □ **B-010** 🔴 Réécrire les 6 migrations divergentes + migration corrective 28→29 *(BUG-001)*
-- □ **B-011** 🔴 Bases < v18 : détection + écran de consentement + export de courtoisie + recréation *(BUG-002 — **décision D1 : perte assumée avec accord de l'utilisateur**)*
-- □ **B-012** Écrire les tests `MigrationTestHelper` pour toute la chaîne 18→29
-- ☑ **B-013** Checkpoint WAL + copie via fichier temporaire *(BUG-011)*
-- ☑ **B-120** Corriger le chiffrement AES-GCM *(BUG-018)* — tag géré par `doFinal`, format v2
-- ☑ **B-121** Chiffrer réellement la base dans l'archive *(BUG-019)* — chiffrement en flux
-- ☑ **B-122** Remplacer `java.time.Instant` et `readAllBytes()` *(BUG-020)* — API 24 garantie par test
-- ☑ **B-123** `databaseVersion` fourni par l'appelant *(BUG-021)*
-- ☑ **B-124** 26 tests unitaires `BackupManager` + harnais Python indépendant (16/16)
-- ☑ **B-101** `BackupManager` branché sur A, B, C *(BUG-017)*
-- ☑ **B-140** Restauration via fichier de transit validé avant `db.close()` *(BUG-024, risque R2)*
-- ☑ **B-141** `BackupFormat.detect()` — détection par signature binaire + 9 tests *(risque R1)*
-- ☑ **B-142** `BackupPasswordDialog` partagé par les 3 écrans
-- ☑ **B-143** Avertissement non contournable dans le dialogue d'export
-- □ **B-144** Documenter dans l'UI la coexistence des deux formats de sauvegarde
-- ☑ **B-156** Fenêtre de concurrence réduite au minimum *(BUG-024)*
+Voir `CURRENT_TASK.md` pour la tâche active.
 
-### Issus du débat technique (2026-07-28)
-- □ **B-145** Extraire un `BackupRepository` — *avis Architecte, reporté à J5*
-- □ **B-146** Mesurer la durée d'export sur une base de 50 Mo avant d'optimiser
-- ☑ **B-157** `CHECKLISTS/verification_sauvegarde.md` — protocole avant/après, 6 chemins *(exigence QA levée)*
-- ☑ **B-158** L'ancien export non protégé n'est plus atteignable depuis l'UI
+### Remédiations issues de l’audit post T-107 (à arbitrer avant implémentation)
 
-### Opportunités identifiées (rapport `opportunites_2026-07-28_sauvegarde.md`) — **non planifiées**
-- □ **B-155** 🔴 Double saisie du mot de passe à l'export *(supprime le mode d'échec le plus probable)*
-- ☑ **B-147** `shareBackupFile()` centralise le partage *(partiel : CSV/PDF restent)*
-- □ **B-148** Fusionner les deux implémentations d'export CSV
-- □ **B-149** Extraire les utilitaires Base64 dans `utils/Base64Compat.kt`
-- □ **B-150** Restauration en flux plutôt qu'en mémoire *(pic mémoire ÷ 2)*
-- □ **B-151** `BackupWorker` : éviter les sauvegardes identiques
-- □ **B-152** Journaliser export et restauration dans `action_logs`
-- □ **B-153** Purger les fichiers de cache après partage
-- □ **B-154** Afficher la date de la dernière sauvegarde
-- ☑ **B-138** Corriger l'erreur de compilation de `BackupManager` *(BUG-023, découvert en réparant)*
-- ☑ **B-125** `MIGRATION_25_26` aligné sur `StaffEntity` : `pinSalt` nullable, `phone` ajouté *(BUG-022)*
-- □ **B-014** Retirer la contrainte `NetworkType.CONNECTED` de `BackupWorker` *(BUG-015)*
+- 🔴 **T-108 (C)** — frontières publiques/RBAC, DTO RSC de recherche,
+  annulation financière admin, suppressions/agrégats transactionnels et 2FA
+  locale/réauthentifiée. Couvre BUG-035/036/037, migration additive et tests de
+  sécurité négatifs.
+- 🔴 **T-109 (C)** — saga d’annulation/reprise paiement, outbox unifiée,
+  claim checkout invité, messagerie hôte et politique de timezone/devise. Couvre
+  le noyau financier et compte de BUG-038.
+- 🔴 **T-110 (S/P0)** — JSON-LD script-safe, journal refund crash-safe,
+  consommation claim atomique et retrait des promesses commerciales non
+  implémentées. Voir audit profond post T-109.
+- 🟠 **T-111 (C/P1)** — chiffrement TOTP, devise/ledger, timezone/dates,
+  inventaire compatible booking et settings réellement appliqués.
+- 🟠 **T-112 (S/P2)** — referral/promos, ~~conversations uniques~~ ✅
+  (validé 2026-08-27, tests idempotence/concurrence, voir
+  `REPORTS/validation_T-112_2026-08-27.md`), rétention, support/ticketing,
+  UX restantes, navigateur CI et upgrade dépendances.
 
-## P1 — Sécurité
+#### Écarts fonctionnels relevés à l'exécution (audit 2026-08-27, voir
+`REPORTS/audit_fonctionnel_2026-08-27_execution.md`)
 
-- ☑ **B-020** ~~Renforcer la dérivation de clé SQLCipher~~ — **déjà traité** (correctif n°3 : dérivation `phone`+`managerCode`, AndroidKeyStore, rekey auto/manuel, mode standard SQLCipher). Reste optionnel : ajouter un sel aléatoire *(BUG-004 requalifié 🟡, non prioritaire)*
-- ☑ **B-021** ~~Migration des bases existantes vers la nouvelle dérivation~~ — **déjà implémentée** (`performRekeyIfNecessary` + `forceRekey`, couvertes par `SecurityMigrationTest`)
-- □ **B-022** Activer R8 en release (`isMinifyEnabled`, `isShrinkResources`) + règles keep (Room, SQLCipher, serialization, ML Kit)
-- □ **B-023** Retirer `LicenseUtil.generateActivationKey` de l'APK client *(BUG-005)*
-- □ **B-024** Sortir `SECRET_SALT` du code source clair *(BUG-005)*
-- □ **B-025** Sécuriser et centraliser `PRAGMA rekey` (validation stricte de l'entrée) *(BUG-006)*
-- □ **B-026** Réserver `DataSeeder.seedSampleData()` à `BuildConfig.DEBUG` *(BUG-014)*
-- □ **B-027** Porter le rôle requis dans `Screen` au lieu de la liste codée en dur *(BUG-013)*
-- □ **B-028** Augmenter `PBKDF2_ITERATIONS` pour les PIN (5 000 → ≥ 100 000) — le mécanisme de re-hash paresseux existe déjà ✅, il suffit de relever la constante *(incohérence : `BackupManager` utilise déjà 100 000)*
-- □ **B-029** Corriger la détection d'anomalie de date SMS *(BUG-008)*
+- 🔵 ~~**T-113 (L/P2)** — Upload des photos d'annonce~~ ✅ livré 2026-08-27 :
+  `POST /api/properties/upload` (image publique, host/admin) + stockage
+  `PublicLocalUploader`/S3 + `<input type=file>` dans `properties/new`
+  (URL gardée en alternative). Voir rapport d'audit fonctionnel.
+- 🔵 ~~**T-114 (L/P3)** — Page `/bestrewards` personnalisée~~ ✅ livré
+  2026-08-27 : `<BestRewardsStatus>` affiche niveau réel, séjours, wallet et
+  code de parrainage (`/api/auth/me` + `/api/users/me/referral`) ; bug
+  d'affichage des réductions `${...}` corrigé.
+- ⚪ ~~**T-115 (L/P3)** — Sous-notes d'avis~~ ✅ livré 2026-08-27 : 6 critères
+  (propreté, confort, emplacement, équipements, accueil, rapport qualité-prix)
+  alimentent les champs déjà acceptés par `POST /api/reviews`.
+- ⚪ ~~**T-116 (C/P2)** — Factures légales~~ ✅ livré 2026-08-27 :
+  `GET /api/bookings/[id]/invoice` produit un document HTML imprimable
+  (→ PDF via le navigateur, zéro dépendance). Réglages `billing` étendus
+  (raison sociale, SIREN/SIRET/RCCM, n° TVA, adresse, email, préfixe,
+  pied de facture) éditables dans le panneau admin. Si ces mentions ne
+  sont pas renseignées, le document est un **« REÇU »** portant la mention
+  explicite « non conforme facturation légale » ; dès que société + n°
+  légal sont saisis, il devient **« FACTURE »** numérotée. Accès réservé
+  au voyageur propriétaire, à l'hôte du bien et à l'admin (401 anonyme,
+  404 inexistant). Vérifié à l'exécution (200 owner/host/admin, bascule
+  REÇU↔FACTURE). Aucune fausse facture fiscale tant que non configuré.
+- ⚪ ~~**T-117 (T/P3)** — Régénérer `PRODUCT_ACCEPTANCE.md`~~ ✅ fait
+  2026-08-27 : parcours réévalués sur l'exécution réelle (smoke 91/91,
+  curl, tests). Couverture P1 fonctionnelle ~100 % ; restent hors-code la
+  validation Stripe réelle et les E2E Playwright (Chromium indisponible).
+- ⚪ ~~**T-119 (L/P2)** — Corrections d'audit fonctionnel (recherche & CTA)~~
+  ✅ livré 2026-08-27, suite à l'audit profond `REPORTS/audit_fonctionnel_profond_2026-08-27_T116.md` :
+  - **A1** : `GET /api/properties?guests=N` exclut désormais les hébergements
+    dont aucune chambre n'a la capacité demandée (le LEFT JOIN laissait
+    passer des résultats `roomCount=0` impossibles à réserver).
+  - **A2** : `guests` invalide (négatif, non numérique) → **400** explicite ;
+    dates de séjour incohérentes (départ ≤ arrivée) → liste vide au lieu
+    d'ignorer le filtre.
+  - **B1** : la carte de réservation borne le sélecteur d'adultes à la
+    capacité réelle de la chambre (`maxAdults` propagé), au lieu de 1–6 figé.
+  - **B2** : sans chambre disponible, le CTA affiche « Aucune chambre
+    disponible » (désactivé) au lieu de rediriger en silence vers /recherche.
+  - **B3** : la barre de recherche de la page d'accueil a un champ
+    « Voyageurs » (1–8), déjà compris par /recherche.
+  Toutes non régressives (champs optionnels, validation additive) ; B4
+  (taux d'occupation analytics) reste en backlog.
+- ⚪ ~~**T-120 (L/P2)** — Robustesse API & finitions auth (2e audit)~~
+  ✅ livré 2026-08-27, suite à l'audit
+  `REPORTS/audit_fonctionnel_profond2_2026-08-27.md` :
+  - **D1** : un corps JSON vide/mal formé sur les routes d'écriture
+    provoquait une fausse erreur **500** (`SyntaxError` de
+    `request.json()` non capturée). Désormais toutes les routes répondent
+    **400** « Corps de requête invalide ou manquant » (garde-fou
+    `instanceof SyntaxError` devant le test ZodError, sur les 32 routes
+    d'écriture). Le chemin valide est inchangé.
+  - **E1** : formulaire d'inscription enrichi d'un champ
+    « Confirmer le mot de passe » avec vérification client (et `pattern`
+    HTML) — aucune modification d'API.
+  - **E2** : un compte suspendu (soft-delete **réversible**) affichait
+    « Ce compte a été supprimé » à la connexion → reformulé
+    « Ce compte est désactivé. Contactez le support pour le réactiver. »
+- ⚪ ~~**T-121 (L/P2)** — Robustesse GET /api/properties + pagination/devise (3e audit)~~
+  ✅ livré 2026-08-27, suite à l'audit
+  `REPORTS/audit_fonctionnel_profond3_2026-08-27.md` :
+  - **F1** : paramètres numériques de `GET /api/properties` faisaient 500
+    (`?offset=-10` → « OFFSET must not be negative », `?minRating=abc` → cast
+    SQL échoué) ou étaient ignorés (`?limit=-5`). Désormais `limit` borné
+    (1–100, défaut 20), `offset` négatif/non numérique → **400**,
+    `minRating`/`minPrice`/`maxPrice` non numériques ou hors bornes → **400**.
+  - **F2** : réponse enrichie `{ properties, total, limit, offset }` ; la
+    pagination est appliquée APRÈS tous les filtres (prix JS, disponibilité,
+    distance, capacité) pour que `total` et la tranche soient cohérents.
+    Champs additifs (aucun appelant cassé).
+  - **F3** : chaque propriété expose `currency` (devise de la chambre la
+    moins chère) avec `minPrice`.
+  Non régressif : guests/ville/prix/dates/tri vérifiés à l'exécution ; page
+  `/recherche` (SQL SSR propre) non touchée. B4 (taux d'occupation) reste
+  en backlog.
+- ⚪ **T-118 (T/P3)** — FEATURES.md annonçait un composant `<ImageUploader>`
+  (`src/components/ui/image-uploader.tsx`) inexistant ; corriger la doc.
 
-## P2 — Architecture : Hilt & assainissement
+### Chantiers Sessions 5-7 (livrés)
 
-- □ **B-030** Introduire Hilt (plugin, dépendances, `@HiltAndroidApp`, `@AndroidEntryPoint`)
-- □ **B-031** `DatabaseModule` : `AppDatabase` + 20 DAO en `@Singleton`
-- □ **B-032** `RepositoryModule` + `@ApplicationContext` contraint
-- □ **B-033** `@HiltViewModel` sur `MainViewModel` ; supprimer `MainViewModelFactory` *(BUG-007)*
-- □ **B-034** `@HiltWorker` + `HiltWorkerFactory` pour `BackupWorker` et `SubscriptionWorker`
-- □ **B-035** `EntryPointAccessors` pour `SmsReceiver` (fin des instanciations ad hoc de repository)
-- □ **B-036** Fusionner les deux `NotificationHelper` en une seule classe injectée *(BUG-012)*
-- □ **B-037** Supprimer les 5 accès directs à `AppDatabase` depuis `ui/`
-- □ **B-038** Corriger le scope de coroutine de `SmsReceiver` *(BUG-009)*
-- □ **B-039** Déplacer permissions et planification WorkManager hors de `MainActivity`
-- □ **B-040** Supprimer le code mort : `PlaceholderScreens.kt`, `StaffDao.getStaffByPin`, `FeeCalculator.calculateMomoFees`, `DataSeeder.seedIfNeeded`
-- □ **B-041** Auditer l'usage réel de `BigButton`, `CaisseDialogs`, `CaisseTextFields`, `BackupManager`
+- ✅ **T-011** Framework v1.1.0 — livré Session 5
+- ✅ **T-012** Vérification disponibilité + chevauchement bookings — livré
+- ✅ **T-013** Emails transactionnels (Resend/SMTP dev) — livré
+- ✅ **T-014** Uploads d'images (adapter S3-compatible + local) — livré
+- ✅ **T-015** Vague API mutations manquantes — livré
+- ✅ **T-016** UI compte + endpoints mineurs — livré
+- ✅ **T-017** SEO + a11y + CSP + BUG-016 — livré
+- ✅ **T-018** Éditeur calendrier hôte — livré
+- ✅ **T-019** Tests intégration + Playwright specs — livré
+- ✅ **T-020** Paiement Stripe test-mode + webhook — livré
+- ✅ **T-021** Panel d'administration configurable + UI suspend user
+  (Session 7, ADR-007)
+- ✅ **T-022** Câblage effectif du mode maintenance (Session 7)
+- ✅ **T-023** Modération d'avis admin (endpoint + UI, recalcul
+  atomique averageRating) (Session 7)
+- ✅ **T-024** Table `audit_log` globale + endpoint + page + hooks
+  4 handlers admin (Session 7)
+- ✅ **T-025** Templates emails éditables via `app_settings` (Session 7)
+- ✅ **T-026** Recherche & filtres avancés (amenities, guests, dates,
+  sort, near) + upload delete + price alerts + referral (Session 8)
+- ✅ **T-027** Emails cancellation/newMessage + wallet + BestRewards
+  discount + delete account (Session 8)
+- ✅ **T-028** Rate-limits bookings/reviews/wishlists + logger
+  structuré (Session 8)
+- ✅ **T-029** 2FA TOTP + i18n EN + devise dynamique + dark mode +
+  guest booking + attachments messages + skip link a11y + rotation
+  secret docs (Session 8)
 
-## P3 — Architecture : découpage
+### Sandbox-limited restants (documenté FEATURES.md)
 
-- □ **B-050** Découper `MainRepository` (992 l.) : `SalesRepository`, `StockRepository`, `CustomerRepository`, `SupplierRepository`, `CashRepository`, `SettingsRepository`
-- □ **B-051** Extraire la génération PDF/ticket hors du repository
-- □ **B-052** Extraire les `Intent` Android (partage, SMS, USSD) dans une couche `platform/`
-- □ **B-053** Introduire un `UiState` par écran (commencer par `NewSaleScreen`)
-- □ **B-054** Découper `MainViewModel` (586 l.) en ViewModels par écran
-- □ **B-055** Remplacer les statuts en chaînes (`"CONFIRMED"`, `"MANAGER"`…) par des `enum class`
-- □ **B-056** Paginer `allVentes` (Paging 3 ou requêtes bornées)
-- □ **B-057** Ajouter les index manquants : `vente_items.venteId`, `audit_items.auditId`
-- □ **B-058** Transformer `audit_items.auditId` en véritable `ForeignKey`
-- □ **B-059** Centraliser la gestion d'erreur (type `AppError` scellé au lieu de `String`)
+Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 
-## P4 — Fonctionnalités manquantes / incomplètes
+- 🟢 `next/font/google` — CDN Google indispo au sandbox build
+- 🟢 Playwright Chromium — CDN Google indispo
+- 🟢 CI GitHub Actions — permission `workflows` manquante sur token
+- 🟢 Dependabot — activation UI GitHub
+- 🟢 Rate-limit Redis — mono-instance suffit V1
+- 🟢 Dockerfile prod — pas requis Vercel/Node
+- 🟢 Backup DB auto — dépend de l'hébergeur
 
-### Décision D2 — sauvegarde distante (deux volets en parallèle)
-- ☑ **B-110** « Exporter et partager » — libellés UI, chooser, `logAction`, nom de fichier. Noms de fonctions **non modifiés** (consigne)
-- □ **B-111** Volet 2a : rapport d'analyse comparatif Google Drive vs Dropbox (`REPORTS/`)
-- □ **B-112** Volet 2b : implémenter la sauvegarde automatique distante retenue (dépend de B-101 : on n'envoie que des archives `BackupManager`)
+### Backlog UX/métier non prioritaire
 
-- ☑ **B-070** Écran de gestion du personnel — CRUD, rôles, désactivation sans perte d'historique
-- □ **B-071** Compléter le pilotage des sessions de caisse (ouverture/fermeture guidée + rapprochement)
-- □ **B-072** Enrichir `AnomalyEngine` et exposer les alertes dans l'UI
-- □ **B-073** Externaliser tous les textes vers `strings.xml` (aujourd'hui 9 usages de `R.string`)
-- □ **B-074** Ajouter la traduction `values-en/`
-- ☑ **B-075** ~~Décider du sort de la « sync cloud »~~ — **tranché (D2)** : renommage honnête *et* vrai service distant en parallèle → voir B-110, B-111, B-112
-- □ **B-076** Remplacer `Toast`/messages bruts par des `Snackbar` Material 3 cohérents
-- □ **B-077** Étudier le passage des montants de `Double` vers un type exact (centimes en `Long`)
-- □ **B-078** Refondre le parcours de permissions (contextuel + gestion du refus) *(BUG-010)*
-
-## P7 — Software Factory *(construite au fil des besoins réels)*
-
-- ☑ **SF-01** `preflight` — analyse statique pré-compilation, 8 contrôles, rapport §19.6
-- ☑ **SF-02** `orchestrator` + `analyzers` — cycle complet, causes racines, 10 tests
-- ☑ **SF-03** `autofix` — 141 corrections appliquées, zones protégées respectées
-- ☑ **SF-06** Canal de retour `last-cycle/` — supprime le copier-coller de journal
-- ☑ **SF-04** `environment` (détection + émulateur) + pipeline unifié en 8 étapes
-- ☑ **SF-05** Execution Engine — point d'entrée unique, reprise, boucle auto
-- ☑ **SF-06** `./software-factory/run` — point d'entrée unique + promotion automatique des statuts
-- ☑ **SF-08** `environment/provision.py` — SDK, AVD, licences, Docker, adb automatisés (6 tests)
-- □ **SF-07** CI GitHub Actions *(quand le build est stable)*
-
-## P6 — Environnement Docker *(livré 2026-07-28, à valider)*
-
-- ☑ **B-130** Créer `docker/` : Dockerfile (JDK 21 + SDK 35 + build-tools 35), 3 compose, 13 scripts
-- ☑ **B-131** Documenter dans `.ai/DEV_ENVIRONMENT.md` (analyse de valeur, usage, exceptions)
-- ☑ **B-132** Intégrer Docker aux checklists et règles `.ai/`
-- □ **B-133** 🔴 **Première exécution par le responsable** : `make image && make verify` *(bloquant — l'agent n'a pas Docker)*
-- □ **B-134** Exécuter `make validate` et archiver les rapports dans `.ai/REPORTS/`
-- □ **B-135** Ajouter les plugins Gradle ktlint/detekt pour que les analyses bloquent la chaîne *(lié à B-097)*
-- □ **B-136** Ajouter le plugin JaCoCo pour rendre la couverture réellement mesurable *(lié à B-099)*
-- □ **B-137** Réutiliser l'image Docker dans la CI GitHub Actions *(lié à B-098)*
-
-## P5 — Qualité, tests, CI
-
-- □ **B-090** Tests unitaires `SmsParser` (jeu de SMS MTN/Orange réels + pièges)
-- □ **B-091** Tests unitaires `FeeCalculator` (barèmes MTN/Orange)
-- □ **B-092** Tests unitaires `LicenseUtil` (clé valide, expirée, falsifiée)
-- □ **B-093** Tests unitaires `AnomalyEngine`
-- □ **B-094** Tests de repository avec base Room en mémoire (vente + stock + recette + dette)
-- □ **B-095** Tests instrumentés Compose sur les parcours critiques (nouvelle vente, clôture)
-- □ **B-096** Supprimer les tests générés vides (`ExampleUnitTest`, `ExampleInstrumentedTest`)
-- □ **B-097** Ajouter ktlint ou detekt + configuration
-- □ **B-098** CI GitHub Actions : `assembleDebug`, `test`, `lint` sur chaque PR
-- □ **B-099** Mesurer la couverture (JaCoCo) et publier dans `REPORTS/`
-- ☑ **B-100** `README.md` racine rédigé
+- 🟢 Comparateur d'hébergements
+- 🟢 Rendu carte Mapbox/Leaflet (endpoint `?near=` déjà livré)
+- 🟢 Analytics avancées ADR/RevPAR
+- 🟢 PDF invoice (dépend prestataire compta)
+- 🟢 Cron notification price_alerts (job planifié)
 
 ---
 
-## Vue d'ensemble
+## Sécurité résiduelle
 
-| Priorité | Total | Terminées |
-|---|---|---|
-| P0 — Build & données | 28 | 17 |
-| P1 — Sécurité | 10 | 2 |
-| P2 — Hilt & assainissement | 12 | 0 |
-| P3 — Découpage | 10 | 0 |
-| P4 — Fonctionnalités | 12 | 1 |
-| P5 — Qualité & CI | 11 | 1 |
-| P6 — Environnement Docker | 8 | 3 |
-| **TOTAL** | **114** | **48** |
+- 🟠 Rate-limit sur `/api/bookings`, `/api/reviews`, `/api/wishlists`
+  (utilisateur connecté peut spammer aujourd'hui)
+- 🟢 Rate-limit Redis (multi-instance) — remplace le Map en mémoire
+- 🟠 CSP fine (`Content-Security-Policy`) dans `next.config.ts`
+- 🟢 CSRF token explicite (double-submit) sur formulaires HTML
+- ✅ Support du 2FA TOTP côté réglages et connexion ; ajouter davantage de
+  tests E2E autour de la récupération reste souhaitable.
+- 🟠 Procédure documentée de rotation `JWT_SECRET` et `CREDENTIALS_ENCRYPTION_KEY` en cas de fuite
 
-> 14 tâches ajoutées par la Phase 7 (débat + opportunités) : autant de défauts
-> ou d'améliorations identifiés **avant** d'écrire une ligne de code.
+## Base de données & performance
 
-*Dernière mise à jour : 2026-07-28 (rév. 4 — Phase 6 : environnement Docker)*
+- 🟢 Index composé sur `bookings (roomId, checkIn, checkOut)` pour
+  accélérer les recherches de disponibilité (T-012 va en avoir besoin)
+- 🟢 Pagination + tri stables (tie-breaker par `id`) partout où on
+  paginee (aujourd'hui : `properties`, `bookings`, `reviews`)
+- 🟢 Cache RSC (`revalidateTag`, `unstable_cache`) sur la liste des
+  properties « populaires » de la home
+
+## UI / UX
+
+- 🟠 Dark mode + toggle
+- 🟠 i18n réelle (`next-intl`) — le modèle DB supporte déjà
+  `descriptionEn`, `users.language`, `users.currency`
+- 🟠 `useToast` réellement utilisé dans les formulaires (aujourd'hui
+  monté mais jamais appelé)
+- 🟠 `Modal` réellement utilisée pour confirmations destructives
+- ✅ Mode invité au checkout ; email déjà associé exige une connexion.
+- ✅ Filtre par équipements (`amenities`) côté API ; UI de recherche à exposer.
+- 🟢 Comparateur d'hébergements
+
+## Dashboard hôte étendu
+
+- 🟠 Analytics complémentaires : ADR, RevPAR et export CSV. Le taux
+  d'occupation de base est déjà calculé avec les chambres actives.
+- 🟠 Notifications email/webhook sur nouvelle réservation (T-013 + T-015)
+- ✅ Édition d'une property disponible ; renforcer validation et UX mobile.
+- 🟢 Édition d'une room complète et calendrier avancé.
+
+## Idées produit
+
+- 🟢 Carte géographique (Mapbox/Leaflet) sur `/recherche` et fiche
+- ✅ ~~Programme parrainage lié à `walletBalance`~~ **livré T-125** (2026-08-28) : `referred_by` + `referral_rewarded_at` (migration 0017), `referralCode` au register + `?ref=` à l'inscription, récompense idempotente au séjour terminé (parrain/filleul, réglable `bestrewards.referral`). Voir `REPORTS/validation_T-125_2026-08-28.md`.
+- 🟢 Réductions réelles BestRewards sur properties `isBestrewards:true`
+- 🟢 Monitoring/observabilité du cron d'alertes prix et de clôture des séjours (le handler idempotent est livré T-102).
+- ✅ Système d'avis de base ; votes « utile » restent à améliorer.
+
+## Observabilité & prod
+
+- 🟠 Sentry (ou équivalent) branché sur les 5xx et erreurs client
+- 🟠 Logs structurés JSON (pino) au lieu de `console.error`
+- 🟠 Dockerfile prod + `docker-compose.yml` pour parité dev/prod
+- 🟠 Runbook incidents (DB HS, paiement HS, `JWT_SECRET` fuité)
+- 🟢 Backup DB automatique + procédure de restore testée
+- 🟢 Dependabot ou Renovate branché
+
+## Framework `.ai/` (jaunes reportés en Session 4)
+
+- 🟢 **F** Étendre R17 pour vérifier plus finement PROGRESS.md
+- 🟢 **G** Ajouter dans INDEX.md une note « pour lire le manifest,
+  voir `npm run ai:check` »
+- 🟢 **H** Clarifier DEVLOG (notes libres) vs PROGRESS (journal formel)
+- 🟢 **I** Remplacer les refs commit en dur `4ad8884` dans les docs
+  vivantes par « commit initial »
+- 🟢 **J** Étendre R9 (liens Markdown) à `ADR/`, `REPORTS/`, `PROMPTS/`,
+  `LOGS/`
+- 🟢 Hook Git `pre-commit` qui lance `npm run ai:check`
+- 🟢 R18 : chaque `PAR-xxx` de `PRODUCT_ACCEPTANCE.md` doit avoir un
+  test Playwright associé
+- 🟢 R19 : chaque nouveau endpoint API doit avoir un test d'intégration
+- 🟢 Vérifier que `EXPECTED_ENDPOINT_TABLES` du manifest reste aligné
+  avec `src/db/schema.ts` (test dédié Vitest)
+
+## Documentation publique
+
+- 🟢 Screenshots dans le README
+- 🟢 Vidéo de démo
+- 🟢 CHANGELOG.md (auto-généré depuis `git log`)
+- 🟢 `LICENSE` (annoncée « projet privé » mais aucun fichier)
+- 🟢 `SECURITY.md` racine (policy de divulgation responsable)
+- 🟢 `CONTRIBUTING.md`, `CODE_OF_CONDUCT.md`
+- 🟢 OpenAPI / Swagger auto-généré pour `/api/*`
+
+---
+
+### Audit 4 (2026-08-27) — `REPORTS/audit_fonctionnel_profond4_2026-08-27.md`
+
+- ✅ ~~**T-122 (L/P2)** — G1 : routes API dynamiques → **500 sur id non-UUID**~~
+  **LIVRÉ** 2026-08-27. Helper `isUuid()` ajouté dans `src/lib/http.ts` ;
+  garde-fou `if (!isUuid(id)) → 400` en tête de **tous** les handlers dynamiques
+  (`rooms/[id]` GET/PUT, `rooms/[id]/{rate-plans,availability}`, `properties/[id]`
+  GET/PUT + `validate`, `bookings/[id]` GET/PUT + `{invoice,cancellation,payment}`,
+  `messages/attachments/[id]`, `price-alerts/[id]`, `promotions/[id]` PATCH/DELETE,
+  `reviews/[id]/{helpful,reply,moderate}`, `users/[id]/suspend`). UUID valide
+  absent → reste **404** ; id mal formé → **400**. Tests `src/lib/http.test.ts`.
+- ✅ ~~**T-123 (S/P2)** — G2 : la **garde de rôle des pages `/dashboard/*` ne
+  s'appliquait pas au plein-chargement**~~ **LIVRÉ** 2026-08-27 (vérifié en
+  build de production). Le JWT embarque désormais le `role`
+  (`createToken(userId, exp, role)`, `createSession` lit le rôle en base) ;
+  `src/proxy.ts` applique la garde par segment au chargement direct :
+  customer → 307 `/` ; host sur sections admin-only
+  (`users`,`settings`,`audit`,`promotions`) → 307 `/dashboard` ; host/admin
+  sur leurs sections → 200. Anciens tokens (sans claim role) tolérés
+  (proxy laisse passer, gardes RSC tranchent). Colonne `sessions.token`
+  passée en `text` (migration `0016_sessions-token-text.sql`) car le JWT
+  avec rôle dépassait varchar(255) (erreur 22001). Tests `src/proxy.test.ts`
+  (11 cas). Gardes RSC conservées en 2e couche.
+- ✅ ~~**T-124 (L/P3)** — E2 : pages RSC par `[id]`~~ **LIVRÉ** 2026-08-27 :
+  validation UUID avant SQL dans `dashboard/messages/[id]`,
+  `dashboard/bookings/[id]`, `dashboard/rooms/[id]/calendrier`,
+  `(main)/messages/[id]` → `notFound()` propre, plus aucune erreur Postgres
+  `22P02` dans les logs.
+- ℹ️ **Confirmé (produit)** : la promotion est **admin-only** (page ET API,
+  403 pour un host). C'est cohérent avec la sidebar admin ; le smoke a été
+  aligné (host → 307 sur `/dashboard/promotions*`).

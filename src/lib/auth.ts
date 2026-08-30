@@ -5,11 +5,28 @@ import { db } from "@/db";
 import { users, sessions } from "@/db/schema";
 import { eq } from "drizzle-orm";
 
-const JWT_SECRET = new TextEncoder().encode(
-  process.env.JWT_SECRET || "mybestbooking-secret-key-2025"
-);
+const jwtSecretEnv = process.env.JWT_SECRET;
+if (!jwtSecretEnv) {
+  throw new Error(
+    "JWT_SECRET is required. Generate one with `openssl rand -hex 32` " +
+    "and set it in your environment. See .ai/SECURITY.md."
+  );
+}
+if (jwtSecretEnv.length < 32) {
+  console.warn(
+    "[auth] JWT_SECRET is shorter than 32 characters — this is insecure. " +
+    "Regenerate with `openssl rand -hex 32`."
+  );
+}
+const JWT_SECRET = new TextEncoder().encode(jwtSecretEnv);
 
-const SESSION_DURATION = 30 * 24 * 60 * 60 * 1000; // 30 days
+// BUG-023 (Session 11 quinquies) : réduire l'expiration JWT de 30j à 7j
+// pour limiter la fenêtre d'exploitation d'un token volé. Compromis
+// UX/sécurité : 7j = confortable pour un utilisateur régulier, forcé à
+// se ré-authentifier hebdomadairement. Refresh token flow non requis
+// à ce stade (sessions DB permettent la révocation immédiate).
+const SESSION_DURATION = 7 * 24 * 60 * 60 * 1000;
+const REMEMBERED_SESSION_DURATION = 30 * 24 * 60 * 60 * 1000;
 
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 12);
@@ -19,26 +36,60 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-export async function createToken(userId: string): Promise<string> {
-  return new SignJWT({ userId })
+export async function createToken(
+  userId: string,
+  expiresIn: "7d" | "30d" = "7d",
+  role?: string,
+): Promise<string> {
+  // T-017 (BUG-016) : ajout d'un jti aléatoire pour éviter que deux
+  // logins simultanés du même user à la même seconde produisent le
+  // même JWT (violation de sessions_token_unique).
+  // T-123 (G2) : le rôle est embarqué dans le JWT pour que le proxy edge
+  // (`src/proxy.ts`) puisse appliquer les gardes d'accès par rôle au
+  // plein-chargement (le runtime edge n'a pas accès à la base).
+  const { randomUUID } = await import("node:crypto");
+  return new SignJWT(role ? { userId, role } : { userId })
     .setProtectedHeader({ alg: "HS256" })
-    .setExpirationTime("30d")
+    .setJti(randomUUID())
+    .setExpirationTime(expiresIn)
     .setIssuedAt()
     .sign(JWT_SECRET);
 }
 
-export async function verifyToken(token: string): Promise<{ userId: string } | null> {
+export async function verifyToken(
+  token: string,
+): Promise<{ userId: string; role?: string } | null> {
   try {
     const { payload } = await jwtVerify(token, JWT_SECRET);
-    return { userId: payload.userId as string };
+    // Rétrocompatibilité T-123 : les tokens émis avant embarquaient
+    // seulement `userId` ; `role` est alors `undefined` (l'appelant doit
+    // retomber sur une vérification RSC/base plutôt que de casser la
+    // session existante).
+    return {
+      userId: payload.userId as string,
+      role: typeof payload.role === "string" ? payload.role : undefined,
+    };
   } catch {
     return null;
   }
 }
 
-export async function createSession(userId: string): Promise<string> {
-  const token = await createToken(userId);
-  const expiresAt = new Date(Date.now() + SESSION_DURATION);
+export async function createSession(userId: string, rememberMe = false): Promise<string> {
+  // T-123 (G2) : embarquer le rôle dans le JWT pour le garde-fou du proxy
+  // edge. On lit le rôle en base (source de vérité) ; un échec de lecture
+  // ne bloque pas la connexion (le token embarque alors userId seul, et les
+  // gardes RSC prennent le relai).
+  let role: string | undefined;
+  try {
+    const [u] = await db.select({ role: users.role }).from(users).where(eq(users.id, userId));
+    role = u?.role;
+  } catch {
+    role = undefined;
+  }
+  const token = await createToken(userId, rememberMe ? "30d" : "7d", role);
+  const expiresAt = new Date(
+    Date.now() + (rememberMe ? REMEMBERED_SESSION_DURATION : SESSION_DURATION),
+  );
 
   await db.insert(sessions).values({
     userId,

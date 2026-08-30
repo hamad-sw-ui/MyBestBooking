@@ -7,7 +7,12 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { PropertyCard } from "@/components/property-card";
-import { Heart, Plus, Share2, Trash2, Bell, FolderPlus } from "lucide-react";
+import { WishlistActions } from "@/components/wishlist-actions";
+import { CreateWishlistButton } from "@/components/create-wishlist-button";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
+import { PriceAlertsSection } from "@/components/price-alerts-section";
+import { Heart, Bell } from "lucide-react";
 import Link from "next/link";
 
 async function getWishlists(userId: string) {
@@ -41,6 +46,7 @@ async function getWishlists(userId: string) {
 
 export default async function FavoritesPage() {
   const user = await getCurrentUser();
+  const t = makeT(await getServerLocale());
 
   if (!user) {
     redirect("/connexion");
@@ -58,27 +64,24 @@ export default async function FavoritesPage() {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Mes favoris
+              {t("fav.title")}
             </h1>
             <p className="text-gray-600 mt-1">
-              {allFavoriteProperties.length} hébergement{allFavoriteProperties.length !== 1 ? "s" : ""} sauvegardé{allFavoriteProperties.length !== 1 ? "s" : ""}
+              {allFavoriteProperties.length} {allFavoriteProperties.length === 1 ? t("fav.countOne") : t("fav.countMany")}
             </p>
           </div>
-          <Button variant="outline">
-            <FolderPlus className="w-4 h-4 mr-2" />
-            Nouvelle liste
-          </Button>
+          <CreateWishlistButton />
         </div>
 
         {userWishlists.length === 0 ? (
           <Card>
             <EmptyState
               icon={<Heart className="w-8 h-8" />}
-              title="Aucun favori"
-              description="Sauvegardez vos hébergements préférés pour les retrouver facilement"
+              title={t("fav.emptyTitle")}
+              description={t("fav.emptyDesc")}
               action={
                 <Link href="/recherche">
-                  <Button>Explorer les hébergements</Button>
+                  <Button>{t("bookings.explore")}</Button>
                 </Link>
               }
               className="py-16"
@@ -86,17 +89,21 @@ export default async function FavoritesPage() {
           </Card>
         ) : (
           <div className="space-y-8">
-            {/* Quick actions */}
-            <div className="flex flex-wrap gap-4">
-              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                <Bell className="w-4 h-4 text-gray-500" />
-                <span className="text-sm">Alertes prix</span>
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-lg hover:bg-gray-50">
-                <Share2 className="w-4 h-4 text-gray-500" />
-                <span className="text-sm">Partager une liste</span>
-              </button>
-            </div>
+            {/* T-031 : liste des alertes prix réellement branchée */}
+            <PriceAlertsSection
+              properties={allFavoriteProperties
+                .filter((p): p is NonNullable<typeof p> => p !== null)
+                .map((p) => ({
+                  id: p.id,
+                  name: p.name,
+                  city: p.city,
+                }))}
+            />
+
+            <p className="text-xs text-gray-500 flex items-center gap-1">
+              <Bell className="w-3 h-3" />
+              {t("fav.alertsManaged")}
+            </p>
 
             {/* Wishlists */}
             {userWishlists.map((wishlist) => (
@@ -110,17 +117,11 @@ export default async function FavoritesPage() {
                       {wishlist.itemCount} hébergement{wishlist.itemCount !== 1 ? "s" : ""}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {wishlist.isPublic && (
-                      <Button variant="ghost" size="sm">
-                        <Share2 className="w-4 h-4 mr-2" />
-                        Partager
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700 hover:bg-red-50">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <WishlistActions
+                    wishlistId={wishlist.id}
+                    isPublic={wishlist.isPublic ?? false}
+                    shareToken={wishlist.shareToken}
+                  />
                 </div>
 
                 {wishlist.items.length === 0 ? (
@@ -168,9 +169,9 @@ export default async function FavoritesPage() {
               <Bell className="w-5 h-5 text-blue-600" />
             </div>
             <div>
-              <h3 className="font-semibold text-blue-900">Alertes prix</h3>
+              <h3 className="font-semibold text-blue-900">{t("fav.priceAlertsTitle")}</h3>
               <p className="text-sm text-blue-700 mt-1">
-                Activez les alertes pour être notifié quand le prix d&apos;un de vos favoris baisse.
+                {t("fav.priceAlertsDesc")}
                 Vous recevrez un email dès qu&apos;une bonne affaire se présente !
               </p>
             </div>

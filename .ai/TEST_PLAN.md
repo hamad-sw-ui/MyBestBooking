@@ -1,8 +1,45 @@
-# 🧪 PLAN DE TESTS
+# 🧪 PLAN DE TESTS — MyBestBooking
+
+> Le corpus Android historique est conserve dans les sections archivees. Les
+> validations normatives de MyBestBooking sont celles decrites ci-dessous.
+
+## Validation actuelle
+
+| Controle | Commande | Dernier resultat |
+|---|---|---|
+| Types | `npx tsc --noEmit` | ✅ OK le 2026-08-23 |
+| Build | `npm run build` | ✅ OK le 2026-08-23 |
+| Lint cible | `npx eslint ...` | ✅ 0 erreur |
+| Authentification | `npx vitest run src/lib/auth.test.ts` | ✅ 10/10 |
+| Smoke navigateur | `npx playwright test tests/e2e/smoke.spec.ts --workers=1` | ✅ 6/6 |
+| Santé API | `GET /api/health` | ✅ `{"ok":true}` quand DB disponible |
+
+## Parcours à couvrir ensuite
+
+- Recherche avec prix, dates, chambre indisponible et pagination multi-pages.
+- Connexion avec et sans TOTP, `rememberMe` et expiration de session.
+- Réservation invitée avec email nouveau puis email déjà lié à un compte.
+- Ajout favori, doublon, création automatique de liste et suppression.
+- Avis sur réservation terminée, avis dupliqué, réservation non propriétaire.
+- Actions dashboard sur mobile, bulk et permissions admin/hôte.
+- Analytics avec annulation, remboursement, plusieurs chambres et quantités.
+
+## Commandes officielles
+
+```powershell
+Set-Location MyBestBooking
+npm run typecheck
+npm run lint
+npm run build
+npm test
+npx playwright test tests/e2e/smoke.spec.ts --workers=1
+```
+
+Le test bulk admin peut nécessiter un serveur local sur `127.0.0.1:3000`.
 
 ---
 
-## 1. État actuel (2026-07-28)
+## Archive Android (non normative pour MyBestBooking)
 
 | Type | Fichier | Contenu | Valeur |
 |---|---|---|---|

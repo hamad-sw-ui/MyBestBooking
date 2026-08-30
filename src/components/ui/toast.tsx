@@ -85,8 +85,13 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
     >
       {icons[toast.type]}
       <p className="text-sm text-gray-800">{toast.message}</p>
-      <button onClick={onRemove} className="ml-2 p-1 hover:bg-black/5 rounded">
-        <X className="w-4 h-4 text-gray-400" />
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Fermer la notification"
+        className="ml-2 p-1 hover:bg-black/5 rounded"
+      >
+        <X className="w-4 h-4 text-gray-400" aria-hidden="true" />
       </button>
     </div>
   );

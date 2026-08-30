@@ -2,8 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { rooms, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid, frenchZodMessage } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
+import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
 
 const updateRoomSchema = z.object({
   name: z.string().min(3).optional(),
@@ -13,12 +15,12 @@ const updateRoomSchema = z.object({
     type: z.string(),
     count: z.number(),
   })).optional(),
-  maxOccupancy: z.number().min(1).optional(),
-  maxAdults: z.number().min(1).optional(),
-  maxChildren: z.number().min(0).optional(),
+  maxOccupancy: z.number().int().min(1).optional(),
+  maxAdults: z.number().int().min(1).optional(),
+  maxChildren: z.number().int().min(0).optional(),
   sizeSqm: z.number().optional(),
-  quantity: z.number().min(1).optional(),
-  basePrice: z.number().min(0).optional(),
+  quantity: z.number().int().min(1).max(ROOM_MAX_QUANTITY, `La quantité ne peut pas dépasser ${ROOM_MAX_QUANTITY}`).optional(),
+  basePrice: z.number().positive("Le prix de base doit être strictement positif").optional(),
   currency: z.string().length(3).optional(),
   amenities: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
@@ -31,20 +33,26 @@ export async function GET(
 ) {
   try {
     const { id } = await params;
-
-    const [room] = await db
-      .select()
-      .from(rooms)
-      .where(eq(rooms.id, id));
-
-    if (!room) {
-      return NextResponse.json(
-        { error: "Chambre non trouvée" },
-        { status: 404 }
-      );
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
     }
 
-    return NextResponse.json({ room });
+    const [row] = await db
+      .select({ room: rooms, property: properties })
+      .from(rooms)
+      .leftJoin(properties, eq(rooms.propertyId, properties.id))
+      .where(eq(rooms.id, id));
+
+    if (!row?.room || !row.property) {
+      return NextResponse.json({ error: "Chambre non trouvée" }, { status: 404 });
+    }
+    const user = await getCurrentUser();
+    const canSeePrivate = user?.role === "admin" || row.property.hostId === user?.id;
+    if ((!row.room.isActive || row.property.status !== "active") && !canSeePrivate) {
+      return NextResponse.json({ error: "Chambre non trouvée" }, { status: 404 });
+    }
+
+    return NextResponse.json({ room: row.room });
   } catch (error) {
     console.error("Error fetching room:", error);
     return NextResponse.json(
@@ -68,6 +76,9 @@ export async function PUT(
     }
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    }
     const body = await request.json();
     const data = updateRoomSchema.parse(body);
 
@@ -92,6 +103,20 @@ export async function PUT(
       );
     }
 
+    // T-129 : cohérence des capacités sur le résultat final (valeurs éditées
+    // fusionnées avec l'existant), pour refuser une mise à jour qui rendrait la
+    // chambre incohérente (ex. capacité réduite sous le nombre d'adultes).
+    const capacityError = validateRoomCapacity({
+      maxOccupancy: data.maxOccupancy ?? room.maxOccupancy,
+      maxAdults: data.maxAdults ?? room.maxAdults,
+      maxChildren: data.maxChildren ?? room.maxChildren ?? 0,
+      basePrice: data.basePrice !== undefined ? data.basePrice : Number(room.basePrice),
+      quantity: data.quantity ?? room.quantity ?? null,
+    });
+    if (capacityError) {
+      return NextResponse.json({ error: capacityError }, { status: 400 });
+    }
+
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
     if (data.basePrice !== undefined) {
       updateData.basePrice = data.basePrice.toFixed(2);
@@ -108,9 +133,13 @@ export async function PUT(
 
     return NextResponse.json({ room: updatedRoom });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: frenchZodMessage(error) },
         { status: 400 }
       );
     }

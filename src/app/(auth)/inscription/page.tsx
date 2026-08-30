@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
-import { Mail, Lock, User, Eye, EyeOff, Building2 } from "lucide-react";
+import { Mail, Lock, User, Eye, EyeOff, Building2, Gift } from "lucide-react";
+import { safeNextPath } from "@/lib/safe-next";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -14,6 +15,15 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isHost, setIsHost] = useState(false);
+  // T-120 (E1) : confirmation du mot de passe (validation purement client,
+  // le backend ne reçoit que `password`).
+  const [confirmPassword, setConfirmPassword] = useState("");
+  // T-125 (P2) : code de parrainage, pré-rempli depuis ?ref= / ?referral=.
+  const [referralCode, setReferralCode] = useState(() => {
+    if (typeof window === "undefined") return "";
+    const params = new URLSearchParams(window.location.search);
+    return (params.get("ref") ?? params.get("referral") ?? "").trim().toUpperCase();
+  });
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -26,6 +36,13 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
+    // T-120 (E1) : les deux saisies doivent correspondre avant l'appel API.
+    if (formData.password !== confirmPassword) {
+      setError("Les mots de passe ne correspondent pas.");
+      setLoading(false);
+      return;
+    }
+
     try {
       const response = await fetch("/api/auth/register", {
         method: "POST",
@@ -33,6 +50,9 @@ export default function RegisterPage() {
         body: JSON.stringify({
           ...formData,
           role: isHost ? "host" : "customer",
+          // T-125 (P2) : code de parrainage optionnel (ignoré côté serveur
+          // s'il est vide ou inconnu — jamais bloquant).
+          ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
         }),
       });
 
@@ -44,11 +64,9 @@ export default function RegisterPage() {
         return;
       }
 
-      if (isHost) {
-        router.push("/dashboard");
-      } else {
-        router.push("/");
-      }
+      const requested = new URLSearchParams(window.location.search).get("next");
+      const safeNext = safeNextPath(requested);
+      router.push(safeNext ?? (isHost ? "/dashboard" : "/"));
       router.refresh();
     } catch {
       setError("Une erreur est survenue");
@@ -63,7 +81,7 @@ export default function RegisterPage() {
           Créer un compte
         </h1>
         <p className="text-gray-600 mt-1">
-          Rejoignez mybestbooking gratuitement
+          Rejoignez MyBestBooking gratuitement
         </p>
       </div>
 
@@ -154,9 +172,36 @@ export default function RegisterPage() {
           </button>
         </div>
 
+        {/* T-120 (E1) : confirmation du mot de passe */}
+        <Input
+          type={showPassword ? "text" : "password"}
+          label="Confirmer le mot de passe"
+          placeholder="Ressaisissez votre mot de passe"
+          icon={<Lock className="w-5 h-5" />}
+          value={confirmPassword}
+          onChange={(e) => setConfirmPassword(e.target.value)}
+          required
+          minLength={8}
+          // Le navigateur signale l'incohérence avant même la soumission.
+          pattern={formData.password ? formData.password.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : undefined}
+          title="Les mots de passe doivent correspondre"
+        />
+
+        {/* T-125 (P2) : code de parrainage optionnel. */}
+        <Input
+          type="text"
+          label="Code de parrainage (facultatif)"
+          placeholder="Ex : 4WHABQ4M"
+          icon={<Gift className="w-5 h-5" />}
+          value={referralCode}
+          onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+          maxLength={12}
+          autoComplete="off"
+        />
+
         <p className="text-xs text-gray-500">
           En créant un compte, vous acceptez nos{" "}
-          <Link href="/cgu" className="text-[#1B3A6B] hover:underline">CGU</Link> et notre{" "}
+          <Link href="/mentions-legales" className="text-[#1B3A6B] hover:underline">Mentions légales &amp; CGU</Link> et notre{" "}
           <Link href="/confidentialite" className="text-[#1B3A6B] hover:underline">Politique de confidentialité</Link>.
         </p>
 

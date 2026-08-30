@@ -1,123 +1,127 @@
-# 🎭 RÔLES SPÉCIALISÉS
+# Prompt — débat multi-rôles (PRESCRIT §15.2)
 
-Pour **chaque décision technique importante**, raisonner successivement selon
-les 11 rôles ci-dessous, puis seulement valider l'implémentation.
+À utiliser pour toute décision technique de niveau **C**, ou de niveau **S**
+en cas de désaccord initial.
 
-Une « décision importante » = tout ce qui touche au schéma de base, à la
-sécurité, à l'architecture, aux dépendances, ou tout changement de plus de
-~50 lignes.
-
----
-
-## 1. 🏛️ Architecte logiciel
-- Cette modification respecte-t-elle les couches (`UI → ViewModel → Repository → DAO`) ?
-- Crée-t-elle un couplage nouveau ? Une dépendance circulaire ?
-- Rapproche-t-elle ou éloigne-t-elle de la cible de `ARCHITECTURE.md` ?
-- Que devient ce choix si le projet double de taille ?
-- **Question piège sur ce projet** : est-ce que j'alourdis encore
-  `MainRepository` (992 l.) ou `MainViewModel` (586 l.) ?
-
-## 2. 📱 Développeur Android senior
-- Cycle de vie respecté (rotation, mort du processus, retour arrière) ?
-- Fuite de `Context`, d'Activity, de `NavController` ?
-- Comportement sur Android 7 (minSdk 24) **et** Android 15 ?
-- Que se passe-t-il en mode avion, batterie faible, appareil lent ?
-- Les permissions manquantes sont-elles gérées sans crash ?
-
-## 3. 🅺 Expert Kotlin
-- Nullabilité correcte, aucun `!!` non justifié ?
-- Immutabilité privilégiée (`val`, `data class`, collections en lecture seule) ?
-- Concurrence structurée, pas de scope orphelin ?
-- `CancellationException` non avalée par un `catch (e: Exception)` ?
-- Idiomes appropriés (`sealed`, `when` exhaustif, fonctions d'extension) ?
-
-## 4. 🗄️ Expert Room
-- Le schéma généré correspond-il **exactement** à ce que produit la migration ?
-- Faut-il incrémenter la version ? La migration est-elle testée ?
-- Les index nécessaires existent-ils (clés étrangères, colonnes filtrées) ?
-- Les opérations multi-tables sont-elles dans `withTransaction` ?
-- Un `Flow` mal cadré déclenche-t-il des recompositions en cascade ?
-- **Rappel projet** : `exportSchema = false` et 6 migrations divergentes (BUG-001).
-
-## 5. 🎨 Expert Jetpack Compose
-- Recompositions maîtrisées ? Paramètres stables ? `key` sur les listes ?
-- État hissé au bon niveau (*state hoisting*) ?
-- `collectAsStateWithLifecycle` plutôt que `collectAsState` ?
-- Material 3 uniquement, couleurs issues du thème ?
-- Preview possible sans base de données ?
-- Accessibilité : `contentDescription`, taille des cibles, contraste plein soleil ?
-
-## 6. 💉 Expert Hilt
-- La portée est-elle correcte (`@Singleton` vs `@ViewModelScoped`) ?
-- Le graphe de dépendances reste-t-il lisible ?
-- `@ApplicationContext` et non un contexte d'Activity ?
-- Les points d'entrée hors-Compose (Worker, BroadcastReceiver) sont-ils couverts ?
-- Cette dépendance est-elle substituable en test ?
-
-## 7. 🧮 Expert SQL
-- La requête est-elle indexée ? Provoque-t-elle un scan complet ?
-- Le filtrage et l'agrégation sont-ils faits en SQL plutôt qu'en Kotlin ?
-- Les `JOIN` sont-ils corrects sur les données réelles (nullables, orphelins) ?
-- Comportement avec 50 000 ventes, pas seulement 10 ?
-- Aucune concaténation de chaîne dans le SQL ?
-
-## 8. 🧪 Ingénieur QA
-- Quels sont les cas limites ? (zéro, négatif, `null`, chaîne vide, très grand)
-- Que se passe-t-il si l'utilisateur double-tape, tourne l'écran, coupe l'app ?
-- Comment prouver que cette modification **ne casse rien** ?
-- Peut-on écrire un test automatisé ? Sinon, quel est le protocole manuel ?
-- Le comportement d'erreur est-il visible et compréhensible par le commerçant ?
-
-## 9. 🔐 Expert sécurité
-- Un secret est-il introduit dans le code ? Dans les logs ?
-- La donnée personnelle reste-t-elle sur l'appareil ?
-- Cette modification affaiblit-elle le chiffrement ou l'authentification ?
-- Un employé mal intentionné peut-il en tirer parti ?
-- Faut-il tracer l'action dans `action_logs` ?
-
-## 10. ⚙️ Ingénieur DevOps
-- Le build reste-t-il reproductible ? La dépendance est-elle dans le catalog ?
-- Impact sur la durée de build, la taille de l'APK ?
-- Faut-il une règle R8 ?
-- Est-ce vérifiable en CI, sans appareil ?
-- La migration est-elle déployable progressivement ?
-
-## 11. 👁️ Relecteur de code
-- Le nom dit-il exactement ce que fait la chose ?
-- Y a-t-il duplication avec du code existant ? (`grep` fait ?)
-- Un développeur découvrant le projet comprend-il en 30 secondes ?
-- Le commentaire explique-t-il le **pourquoi** ?
-- Le diff est-il minimal, sans reformatage parasite ?
-- `.ai/` a-t-il été mis à jour ?
+Chaque rôle raisonne **indépendamment** en 3 à 5 lignes. Chacun a le droit
+(et le devoir) d'émettre une **objection bloquante** si sa perspective
+détecte un risque. Le débat entier est consigné dans
+`REPORTS/debat_technique_<date>_<sujet>.md`.
 
 ---
 
-## Grille de synthèse
+## Rôles
 
-À recopier dans `REPORTS/` pour toute décision structurante :
+### 1. Architecte
+- **Question directrice** : la solution respecte-t-elle l'architecture
+  cible (`ARCHITECTURE.md`) ? Introduit-elle une dépendance transverse
+  non prévue ?
+- **Objection typique** : couplage nouveau entre deux couches jusque-là
+  séparées.
+
+### 2. Développeur Next.js senior
+- **Question directrice** : est-ce idiomatique de l'App Router 16 ?
+  RSC/Client, Server Actions vs route handlers, `cookies()`/`params`
+  asynchrones ?
+- **Objection typique** : `"use client"` posé alors qu'un RSC ferait
+  l'affaire ; `useEffect` qui refetch en boucle.
+
+### 3. Expert TypeScript
+- **Question directrice** : les types sont-ils précis ? Y a-t-il des `any`,
+  des assertions dangereuses (`as unknown as T`), des `!` non-null qui
+  masquent une invariance ?
+- **Objection typique** : type dérivé à la main quand `typeof table.$inferSelect`
+  ferait mieux.
+
+### 4. Expert React (RSC / Client)
+- **Question directrice** : cohérence RSC ↔ Client. Frontière server/client
+  claire ? Streaming et `<Suspense>` bien placés ? Erreurs bien gérées avec
+  `error.tsx` ?
+- **Objection typique** : donnée sensible passée du serveur au client dans
+  les props d'un composant client.
+
+### 5. Expert Drizzle / SQL
+- **Question directrice** : la requête est-elle typée, paramétrée, sans N+1 ?
+  Utilise-t-elle les index existants ? Les jointures sont-elles nécessaires ?
+- **Objection typique** : boucle `Promise.all` là où un `LEFT JOIN` suffit.
+
+### 6. Expert PostgreSQL
+- **Question directrice** : indexation, contraintes, `NULL`, transactions
+  atomiques, isolation, verrous ? La migration est-elle idempotente et
+  rollbackable ?
+- **Objection typique** : `UPDATE ... SET averageRating = ...` sans
+  transaction → race condition.
+
+### 7. Expert sécurité web (auth, cookies, CSP)
+- **Question directrice** : nouvelle surface d'attaque ? Élévation de
+  privilèges possible ? Cookie mal configuré ? CSRF ? Injection ?
+  Rate-limiting ? Secrets bien isolés ?
+- **Objection typique** : nouveau endpoint qui accepte du HTML sans
+  échappement, ou qui expose `passwordHash`.
+
+### 8. Ingénieur QA
+- **Question directrice** : comment tester ce changement ? Cas nominaux,
+  cas d'erreur, cas limites, régressions possibles ? Fixtures et
+  déterminisme ?
+- **Objection typique** : le fix n'a pas de test de non-régression alors
+  que le bug est arrivé deux fois.
+
+### 9. DevOps / SRE
+- **Question directrice** : impact runtime (mémoire, connexions DB, cold
+  start), logs exploitables, observabilité, rollback simple ? Nouvelles env
+  vars documentées ?
+- **Objection typique** : le pool `pg` va exploser sous charge parce que
+  chaque requête ouvre une connexion.
+
+### 10. Expert UX / a11y
+- **Question directrice** : parcours utilisateur cohérent, messages en
+  français corrects, focus visible, contraste AA, mobile OK, erreurs
+  actionnables ?
+- **Objection typique** : bouton icône-seul sans `aria-label`, formulaire
+  qui ne dit pas ce qui a échoué.
+
+### 11. Relecteur (advocatus diaboli)
+- **Rôle** : chercher **activement** les défauts que les 10 autres n'ont
+  pas vus. Poser les questions gênantes : et si l'utilisateur double-clique ?
+  Et si la DB est down ? Et si on redéploie au milieu d'une transaction ?
+- **Objection typique** : « le code fait ce qui est écrit, mais est-ce ce
+  qu'on veut vraiment ? »
+
+---
+
+## Règles du débat
+
+1. **Chaque rôle s'exprime.** On ne saute pas un rôle sous prétexte qu'il
+   « n'aurait rien à dire ». S'il n'a rien à dire, il l'écrit :
+   « RAS pour ce rôle sur cette décision. »
+2. **Les objections bloquantes** doivent être **résolues explicitement**
+   avant décision : soit acceptées (le design change), soit rejetées avec
+   argument tracé.
+3. **Décision finale** consignée à la fin du rapport, signée par le
+   responsable.
+4. **Le rôle Relecteur** parle en dernier — c'est sa fonction.
+
+## Format du rapport `debat_technique_<date>_<sujet>.md`
 
 ```markdown
-### Décision : <intitulé>
+# Débat technique — <sujet>
 
-| Rôle | Verdict | Réserve principale |
-|---|---|---|
-| Architecte | ✅ / ⚠️ / ❌ | |
-| Dev Android senior | | |
-| Expert Kotlin | | |
-| Expert Room | | |
-| Expert Compose | | |
-| Expert Hilt | | |
-| Expert SQL | | |
-| Ingénieur QA | | |
-| Expert sécurité | | |
-| Ingénieur DevOps | | |
-| Relecteur | | |
+- **Date** : YYYY-MM-DD
+- **Tâche** : B-xxx
+- **Niveau** : C | S (désaccord)
+- **Proposition initiale** : <résumé 3 lignes>
 
-**Décision retenue** :
-**Alternatives écartées** :
-**Risque résiduel accepté** :
+## Rôle 1 — Architecte
+<avis>
+
+## Rôle 2 — Développeur Next.js senior
+<avis>
+
+... (rôles 3 à 11)
+
+## Objections bloquantes
+- Rôle X : <objection> — Résolution : <accepté | rejeté + argument>
+
+## Décision finale
+<décision, signée par <responsable>>
 ```
-
-**Règle d'arbitrage** : un ❌ de l'**Expert sécurité** ou de l'**Expert Room**
-est bloquant sur ce projet (données financières irremplaçables). Les autres
-réserves se négocient et se documentent.

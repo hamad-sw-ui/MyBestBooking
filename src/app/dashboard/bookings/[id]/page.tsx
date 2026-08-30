@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
+import { isUuid } from "@/lib/http";
 import { db } from "@/db";
 import { bookings, properties, rooms, users, reviews } from "@/db/schema";
 import { eq, and } from "drizzle-orm";
@@ -13,6 +14,7 @@ import {
   CheckCircle, XCircle, AlertCircle
 } from "lucide-react";
 import Link from "next/link";
+import { BookingRowActions } from "@/components/booking-row-actions";
 
 interface BookingDetailPageProps {
   params: Promise<{ id: string }>;
@@ -64,6 +66,8 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   if (!user) redirect("/connexion");
 
   const { id } = await params;
+  // T-124 (E2) : identifiant mal formé → 404 propre (pas d'erreur Postgres 22P02).
+  if (!isUuid(id)) notFound();
   const isAdmin = user.role === "admin";
   const data = await getBookingDetails(id, user.id, isAdmin);
 
@@ -72,6 +76,10 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   }
 
   const { booking, property, room, guest, review } = data;
+
+  // T-130 : l'hôte du bien (ou l'admin) peut clôturer un séjour / marquer un
+  // no-show. Le voyageur propriétaire ne voit pas ces actions.
+  const canManageStay = isAdmin || property?.hostId === user.id;
 
   const statusLabels: Record<string, string> = {
     pending: "En attente",
@@ -364,23 +372,17 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
             </CardContent>
           </Card>
 
-          {/* Actions */}
+          {/* Actions — T-031 branchées */}
           <Card>
-            <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full">
-                <MessageSquare className="w-4 h-4 mr-2" />
-                Envoyer un message
-              </Button>
-              <Button variant="outline" className="w-full">
-                <Download className="w-4 h-4 mr-2" />
-                Télécharger la confirmation
-              </Button>
-              {booking.status === "confirmed" && (
-                <Button variant="danger" className="w-full">
-                  <XCircle className="w-4 h-4 mr-2" />
-                  Annuler la réservation
-                </Button>
-              )}
+            <CardContent className="flex flex-wrap gap-2">
+              <BookingRowActions
+                bookingId={booking.id}
+                bookingReference={booking.bookingReference}
+                propertyId={booking.propertyId}
+                status={booking.status}
+                messageArea="dashboard"
+                canManageStay={canManageStay}
+              />
             </CardContent>
           </Card>
         </div>

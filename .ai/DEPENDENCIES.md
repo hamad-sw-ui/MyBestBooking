@@ -1,4 +1,7 @@
-# 📦 DÉPENDANCES
+# 📦 DÉPENDANCES — ARCHIVE HISTORIQUE
+
+> ⚠️ Ce document décrit Gradle/Android et ne s'applique pas à MyBestBooking.
+> Les dépendances actuelles sont définies dans `package.json`.
 
 Source unique de vérité : `gradle/libs.versions.toml` (version catalog).
 ⚠️ Deux dépendances y échappent aujourd'hui (voir §4).

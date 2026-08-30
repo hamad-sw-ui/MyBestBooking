@@ -48,11 +48,11 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
 
   // Calculate stats
   const totalRevenue = allBookings
-    .filter(b => b.paymentStatus === "paid")
+    .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
     .reduce((sum, b) => sum + parseFloat(b.total), 0);
   
   const recentRevenue = recentBookings
-    .filter(b => b.paymentStatus === "paid")
+    .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
     .reduce((sum, b) => sum + parseFloat(b.total), 0);
 
   // Get reviews count
@@ -193,7 +193,7 @@ export default async function DashboardPage() {
           Bonjour, {user.firstName} 👋
         </h1>
         <p className="text-gray-600 mt-1">
-          Voici un aperçu de votre activité sur mybestbooking
+          Voici un aperçu de votre activité sur MyBestBooking
         </p>
       </div>
 

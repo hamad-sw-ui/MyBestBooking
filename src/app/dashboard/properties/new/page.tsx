@@ -5,8 +5,9 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { PhotoUploadButton } from "@/components/photo-upload-button";
 
 const PROPERTY_TYPES = [
   { value: "hotel", label: "Hôtel" },
@@ -48,6 +49,8 @@ export default function NewPropertyPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     type: "hotel",
@@ -63,6 +66,27 @@ export default function NewPropertyPage() {
     amenities: [] as string[],
     mainImage: "",
   });
+
+  // T-113 : upload d'une photo via /api/properties/upload (image publique).
+  // T-141 : déclenché par un bouton « Importer » (gestionnaire de fichiers de
+  // la machine). Le champ URL reste disponible comme alternative.
+  const handlePhotoUpload = async (file: File) => {
+    if (!file) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/properties/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      setFormData((prev) => ({ ...prev, mainImage: data.url }));
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleAmenityToggle = (amenityId: string) => {
     setFormData((prev) => ({
@@ -292,7 +316,29 @@ export default function NewPropertyPage() {
           <CardHeader>
             <CardTitle>Photo principale</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Téléverser une photo
+              </label>
+              <PhotoUploadButton
+                onFile={handlePhotoUpload}
+                loading={uploading}
+                ariaLabel="Importer une photo depuis l'ordinateur"
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {uploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+              </PhotoUploadButton>
+              <p id="photo-help" className="text-xs text-gray-500 mt-1">
+                {uploading ? "Téléversement en cours…" : "JPEG, PNG, WebP ou GIF — 5 Mo max."}
+              </p>
+              {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-gray-400">ou</span>
+            </div>
+
             <Input
               label="URL de l'image"
               placeholder="https://..."
@@ -301,11 +347,24 @@ export default function NewPropertyPage() {
             />
             {formData.mainImage && (
               <div className="mt-4">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={formData.mainImage}
-                  alt="Preview"
+                  alt="Aperçu de la photo principale"
                   className="w-full max-w-md h-48 object-cover rounded-lg"
                 />
+                <div className="mt-2">
+                  <PhotoUploadButton
+                    variant="outline"
+                    size="sm"
+                    loading={uploading}
+                    onFile={handlePhotoUpload}
+                    ariaLabel="Changer la photo principale"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Changer l&apos;image
+                  </PhotoUploadButton>
+                </div>
               </div>
             )}
           </CardContent>

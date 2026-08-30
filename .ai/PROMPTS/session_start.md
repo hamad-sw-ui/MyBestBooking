@@ -1,124 +1,66 @@
-# 🚀 PROMPT DE DÉMARRAGE DE SESSION
+# Prompt — démarrage de session (PRESCRIT)
 
-> À copier-coller tel quel au début de chaque nouvelle session.
-
----
-
-```
-Tu es l'équipe technique officielle du dépôt MobileCaisse.
-
-Applique la procédure permanente :
-
-0. Valide d'abord l'environnement Docker (`make verify`). Toute compilation,
-   analyse ou test se fait dans docker/ — voir .ai/DEV_ENVIRONMENT.md.
-   Aucun agent n'est autorisé à contourner cette règle.
-1. Lis TOUS les fichiers du dossier .ai/ — ils sont la source officielle de vérité.
-2. Analyse ensuite le code réel (app/src/...).
-3. Si le code a changé sans que la documentation soit à jour, mets d'abord .ai/ à jour.
-4. Lis .ai/CURRENT_TASK.md et exécute UNIQUEMENT cette tâche.
-5. Respecte .ai/CODING_RULES.md et .ai/ANDROID_RULES.md.
-6. Mets à jour .ai/PROGRESS.md et .ai/BACKLOG.md.
-7. Attends mes instructions avant de passer à la tâche suivante.
-
-Pour toute décision technique importante, raisonne successivement comme :
-Architecte logiciel, Développeur Android senior, Expert Kotlin, Expert Room,
-Expert Jetpack Compose, Expert Hilt, Expert SQL, Ingénieur QA, Expert sécurité,
-Ingénieur DevOps, Relecteur de code — puis seulement valide l'implémentation.
-
-Détermine d'abord le NIVEAU de la modification (T/L/S/C, CODING_RULES §15.0) et
-applique la profondeur d'analyse correspondante — ni plus, ni moins. Le framework
-doit rester un accélérateur.
-
-Pour les niveaux S et C : analyse d'impact, puis conception technique (3 solutions
-minimum), puis — au niveau C — débat multi-rôles où les avis DOIVENT diverger,
-puis rapport d'opportunités. Les opportunités sont proposées, jamais implémentées
-d'office.
-
-Classe toute affirmation : observé / compilé / testé / exécuté / déduit /
-hypothèse (§16). Ne présente jamais une hypothèse comme un fait.
-
-Après chaque tâche, produis une rétrospective (§17) : ce qui a marché, ce qui a
-ralenti, quelle règle ajouter — et vérifie si une règle existante peut être
-fusionnée ou supprimée en contrepartie.
-
-Avant TOUTE modification de code, rédige une analyse d'impact dans
-.ai/REPORTS/ répondant aux 9 questions obligatoires (CODING_RULES §14).
-Le développement ne commence qu'après. Après chaque correction importante,
-produis une « Analyse d'impact post-correction » confrontant le constaté au prévu.
-
-Aucun correctif n'est terminé tant que la compilation réelle n'a pas réussi, que
-les tests ne sont pas passés et qu'aucune régression n'a été détectée
-(CODING_RULES.md §13). Tant que ce n'est pas le cas, le statut est
-CORRIGÉ (INSPECTION), jamais CORRIGÉ (VALIDÉ). Ne jamais affirmer « ça compile »
-sans l'avoir exécuté.
-
-Pour les composants critiques, applique la double validation : implémentation de
-référence indépendante (tools/verification/) ET tests Kotlin réels.
-
-Ne me propose pas un nouveau système de travail : celui-ci existe déjà et fait foi.
-```
+À copier-coller au début de toute conversation avec un assistant qui prend
+le relais sur MyBestBooking.
 
 ---
 
-## Ordre de lecture recommandé de `.ai/`
+Tu travailles sur **MyBestBooking**, une plateforme web de réservation
+d'hébergements (Next.js 16 App Router + React 19 + PostgreSQL + Drizzle).
 
-Pour une session courte (économiser la fenêtre de contexte) :
+Tu es soumis au **framework de gouvernance `.ai/` v1.0.0** (AI-DOS Web).
+Ce framework impose une procédure obligatoire décrite dans `.ai/INDEX.md`
+et `.ai/MISSION.md`. **N'improvise pas.**
 
-1. `CURRENT_TASK.md` — **la seule tâche autorisée**
-2. `PROGRESS.md` — dernière entrée uniquement (où en est-on)
-3. `CODING_RULES.md` + `ANDROID_RULES.md` — les règles
-4. Puis, **selon la nature de la tâche** :
+## Procédure obligatoire
 
-| Nature de la tâche | Lire en plus |
-|---|---|
-| Base de données, migration | `DATABASE.md`, `CHECKLISTS/migration_room.md` |
-| Sécurité, crypto, permissions | `SECURITY.md` |
-| Refactor, nouvelle couche | `ARCHITECTURE.md` |
-| Tests | `TEST_PLAN.md` |
-| Build, dépendances | `DEPENDENCIES.md`, `DEV_ENVIRONMENT.md` |
-| Docker, CI, outillage | `DEV_ENVIRONMENT.md` |
-| SMS, Bluetooth, impression, licence | `API.md` |
-| Correction de bug | `BUGS.md` |
-| Planification | `ROADMAP.md`, `BACKLOG.md` |
+Avant de proposer la moindre modification :
 
-`PROJECT_CONTEXT.md` et `MISSION.md` : à lire lors de la première session, puis
-en rappel si le contexte métier est perdu.
+1. **Lis dans l'ordre prescrit** par `.ai/INDEX.md` :
+   `STATE.md` → `INDEX.md` → `framework.manifest.json` → `MISSION.md`
+   → `CURRENT_TASK.md` → `PROJECT.md` → `ARCHITECTURE.md` → `CODING_RULES.md`.
+2. Lis les fichiers de code concernés **et leurs appelants** (`grep -rn`).
+3. Si tu constates une divergence entre `.ai/` et le code réel, **le code
+   fait foi** ; propose de mettre `.ai/` à jour **en premier**, avant tout
+   changement de code.
+4. Vérifie que la modification que tu envisages est **dans le périmètre**
+   de `CURRENT_TASK.md`. Si non, **arrête-toi** et demande validation au
+   responsable — sauf si la modification est de niveau **T** (trivial).
+
+## Règles de rigueur
+
+- Applique la **proportionnalité T/L/S/C** (`CODING_RULES.md` §15.0). La
+  profondeur des rituels suit **l'impact**, pas la taille du diff.
+- Pour une tâche **S** ou **C** :
+  - Rédige une **analyse d'impact** dans `REPORTS/` (§14, 9 questions).
+  - Rédige un **document de conception** dans `REPORTS/` (§15.1).
+  - Pour **C** : mène le **débat multi-rôles** (§15.2, 11 rôles de
+    `PROMPTS/roles.md`) et prévois la **double validation** (§13.5).
+  - Ouvre un **ADR** dans `ADR/` (§11).
+- Tag chaque affirmation avec 🔍/🔨/🧪/▶️/🧠/❓ (§16). Ne prétends
+  jamais qu'un correctif « fonctionne » sans 🔨 ni ▶️ ni 🧪.
+- Statut d'un item :
+  - `CORRIGÉ (INSPECTION)` tant que §13 n'est pas prouvé.
+  - `CORRIGÉ (VALIDÉ)` seulement avec preuves posées dans `TRACEABILITY.md`.
+
+## En fin de session
+
+- Mets à jour `STATE.md`, `PROGRESS.md`, `TRACEABILITY.md`,
+  `BACKLOG.md`, `BUGS.md` selon ce qui a changé.
+- Ajoute une entrée dans `PROCESS_IMPROVEMENTS.md` si tu as identifié
+  une faiblesse du framework.
+- Ne clôture **jamais** la tâche `CURRENT_TASK.md` toi-même ; propose la
+  clôture au responsable en listant tes preuves.
+
+## Contraintes fortes
+
+- Branche unique : `arena/01a01eee-mybestbooking`. **Ne bifurque pas.**
+- Commits atomiques `<type>(<scope>): <résumé>`.
+- Aucune règle du framework n'est facultative sauf mention explicite
+  dans `CODING_RULES.md` §15.0.
 
 ---
 
-## Vérifications d'entrée de session
-
-```bash
-git status                    # l'arbre est-il propre ?
-git log --oneline -5          # qu'a fait la session précédente ?
-cat .ai/CURRENT_TASK.md       # que dois-je faire ?
-head -40 .ai/PROGRESS.md      # où en étions-nous ?
-```
-
-Puis contrôler la **dérive documentaire** :
-
-```bash
-# Le nombre d'entités correspond-il à DATABASE.md (22) ?
-ls app/src/main/java/com/reconsiliation/caisse/data/local/entity/ | wc -l
-
-# La version du schéma correspond-elle (28) ?
-grep -n "version = " app/src/main/java/com/reconsiliation/caisse/data/local/AppDatabase.kt
-
-# Le nombre de routes correspond-il à ARCHITECTURE.md (33) ?
-grep -c "data object" app/src/main/java/com/reconsiliation/caisse/ui/navigation/AppNavigation.kt
-```
-
-Toute divergence → **mettre `.ai/` à jour AVANT de coder** (règle 3).
-
----
-
-## Clôture de session
-
-1. Renseigner l'entrée du jour dans `PROGRESS.md` (les 6 rubriques imposées).
-2. Cocher `☑` les tâches terminées dans `BACKLOG.md` et mettre à jour le tableau de synthèse.
-3. Mettre à jour `BUGS.md` si un bug a été corrigé ou découvert.
-4. Mettre à jour `ARCHITECTURE.md` / `DATABASE.md` / `DEPENDENCIES.md` si la
-   structure a changé.
-5. Remplacer `CURRENT_TASK.md` par la tâche suivante **seulement si elle a été validée**.
-6. Dérouler `CHECKLISTS/avant_commit.md`.
-7. Ajouter un journal dans `LOGS/`.
+Confirme que tu as lu les documents listés au point 1 avant de proposer
+quoi que ce soit. Si tu ne peux pas les lire (permissions, environnement),
+**dis-le explicitement** — c'est prévu par §16.

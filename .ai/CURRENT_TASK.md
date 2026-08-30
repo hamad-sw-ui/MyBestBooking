@@ -1,23 +1,30 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** Synchronisation documentaire post-J5.8.2 (Extraction CustomerViewModel).
+**ID** : T-149
 
-## État de la Roadmap
+**Titre** : Paiement Stripe en mode réel opérationnel de bout en bout + e-mail
+plateforme stylé pour chaque événement du cycle de vie, localisé dans la langue
+du destinataire.
 
-| Jalon | Description | Statut |
-|---|---|---|
-| J5.6 | Extraction Intents/Share | ✅ VALIDÉ (056be5b) |
-| J5.7 | ViewModel NewSale + UiState | ✅ VALIDÉ (66c4285) |
-| J5.8.1 | InventoryViewModel | ✅ VALIDÉ (7c870b1) |
-| J5.8.2 | CustomerViewModel | ✅ TERMINÉ (61b616e) |
+**Statut** : CORRIGÉ (VALIDÉ)
 
-## Objectif du cycle
-1. Extraire le domaine Clients de `MainViewModel` (TERMINÉ).
-2. Supprimer la fuite d\u0027Intent SMS dans l\u0027UI via `ShareManager` (TERMINÉ).
-3. Raccorder les écrans `DebtScreen` et `CustomerProfileScreen` (TERMINÉ).
+Rapport : `REPORTS/t-149_paiement_stripe_emails_2026-08-30.md`.
 
-## Prochaine étape
-- ⏸ **À PLANIFIER / EN ATTENTE D\u0027AUTORISATION** : J5.8.3 (Extension du découpage architectural : Sessions de caisse ou Dépenses).
+## Résumé
+- 🔨 Tunnel Stripe audité : déjà complet (abstraction mock/stripe sans SDK,
+  webhook HMAC vérifié, inbox idempotente, remboursements, clés chiffrées
+  AES-256-GCM via l'admin avec fallback env, test de connexion réel) → câblage
+  vérifié + doc de mise en route.
+- 🔨 E-mails : logo → MyBestBooking ; 3 templates manquants créés et câblés
+  (bienvenue après vérification, rappels J-3/J-1, demande d'avis post-séjour
+  via cron) ; alerte prix passée au gabarit de marque.
+- 🔨 Localisation fr/en de l'habillage des e-mails selon la langue du
+  destinataire (nouveau `src/lib/mail/strings.ts`).
 
----
-*Mis à jour le 2026-08-19 (Post-J5.8.2).*
+## Validation
+🧪 tsc 0 · lint 0 erreur · vitest 299/299 (+11) · smoke 94/94 · build 60 pages ·
+ai:check OK. Données de test nettoyées (8 users, seed intact, outbox vide).
+
+## Reste en production
+Saisir les clés Stripe/Resend dans `/dashboard/settings` → Providers (exige
+`CREDENTIALS_ENCRYPTION_KEY`) + webhook Stripe → `/api/webhooks/stripe`.

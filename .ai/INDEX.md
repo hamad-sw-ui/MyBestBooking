@@ -1,21 +1,26 @@
 # 📇 INDEX DU FRAMEWORK IA
 
-Ce document est le point d'entrée unique et obligatoire du framework. Il répertorie tous les documents constituant la "Source de Vérité" du projet MobileCaisse.
+Ce document est le point d'entrée obligatoire du framework. Il répertorie les documents constituant la source de vérité de MyBestBooking.
 
 ## 📜 Documents Fondamentaux (Obligatoires)
 
 * **[STATE.md](STATE.md)** : Mémoire officielle et état courant du projet (Source de Vérité n°1).
 * **[MISSION.md](MISSION.md)** : Objectifs globaux et périmètre d'intervention.
-* **[PROJECT_CONTEXT.md](PROJECT_CONTEXT.md)** : État actuel, historique et environnement.
-* **[ARCHITECTURE.md](ARCHITECTURE.md)** : Principes de conception et structure technique.
-* **[DATABASE.md](DATABASE.md)** : Schéma Room, migrations et sécurité SQLCipher.
-* **[SECURITY.md](SECURITY.md)** : Protocoles de chiffrement, hachage et protection des données.
+* **[PROJECT.md](PROJECT.md)** : État actuel, historique et environnement.
+* **[ARCHITECTURE_MYBESTBOOKING.md](ARCHITECTURE_MYBESTBOOKING.md)** : Architecture réelle Next.js/Drizzle.
+* **[ARCHITECTURE.md](ARCHITECTURE.md)** : Archive historique MobileCaisse, non normative.
+* **[DATABASE.md](DATABASE.md)** : Schéma PostgreSQL et synchronisation Drizzle.
+* **[SECURITY.md](SECURITY.md)** : Authentification, sessions, secrets et données personnelles.
 * **[CODING_RULES.md](CODING_RULES.md)** : Règles de développement, de nommage, de validation (§13) et d'audit des preuves (§22).
-* **[ANDROID_RULES.md](ANDROID_RULES.md)** : Conventions spécifiques à la plateforme Android (minSdk 24, Compose, MVVM).
-* **[DEPENDENCIES.md](DEPENDENCIES.md)** : Gestion des bibliothèques et versions.
-* **[TEST_PLAN.md](TEST_PLAN.md)** : Stratégie de test, couverture et protocoles de validation.
+* **[ANDROID_RULES.md](ANDROID_RULES.md)** : Archive historique, non applicable à MyBestBooking.
+* **[DEPENDENCIES.md](DEPENDENCIES.md)** : Dépendances npm et versions.
+* **[TEST_PLAN.md](TEST_PLAN.md)** : Validation TypeScript, lint, build et API.
 * **[ROADMAP.md](ROADMAP.md)** : Planification des jalons et état d'avancement.
-* **[BACKLOG.md](BACKLOG.md)** : Liste exhaustive des tâches (B-xxx).
+* **[FEATURES.md](FEATURES.md)** : Inventaire de complétude produit ✅/🚧/🎯/❌ par domaine (ADR-006, R14/R17).
+* **[PRODUCT_ACCEPTANCE.md](PRODUCT_ACCEPTANCE.md)** : Parcours utilisateur critiques et leur état de validation E2E (ADR-006).
+* **[UI.md](UI.md)** : Inventaire des écrans et composants branchés.
+* **[API.md](API.md)** : Interfaces externes (Stripe, emails, uploads, webhooks).
+* **[BACKLOG.md](BACKLOG.md)** : Liste exhaustive des tâches (T-xxx).
 * **[BUGS.md](BUGS.md)** : Registre des défauts identifiés et statut des correctifs.
 * **[TRACEABILITY.md](TRACEABILITY.md)** : Matrice de traçabilité des preuves (Lien Bug/Tâche ↔ Preuve).
 * **[CURRENT_TASK.md](CURRENT_TASK.md)** : Détail de la tâche en cours d'exécution.
@@ -27,7 +32,7 @@ Ce document est le point d'entrée unique et obligatoire du framework. Il réper
 * **[DEVLOG.md](DEVLOG.md)** : Journal de développement et historique des cycles.
 * **[ADR/](ADR/TEMPLATE.md)** : Architecture Decision Records (Registre des décisions).
 * **[framework.manifest.json](framework.manifest.json)** : Manifeste technique du framework AI-DOS.
-* **[DEV_ENVIRONMENT.md](DEV_ENVIRONMENT.md)** : Configuration de la Software Factory et Docker.
+* **[DEV_ENVIRONMENT.md](DEV_ENVIRONMENT.md)** : Node.js, PostgreSQL, environnement et démarrage.
 
 ## 📂 Dossiers Spécifiques
 

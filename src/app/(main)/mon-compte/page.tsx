@@ -11,6 +11,16 @@ import {
   Shield, Bell, LogOut, Trash2, ChevronRight 
 } from "lucide-react";
 import Link from "next/link";
+import { ProfileForm } from "@/components/profile-form";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
+import { UserAvatar } from "@/components/user-avatar";
+import { ChangePasswordForm } from "@/components/change-password-form";
+import { TwoFactorSection } from "@/components/two-factor-section";
+import { DeleteAccountSection } from "@/components/delete-account-section";
+import { NotificationPrefsSection } from "@/components/notification-prefs-section";
+import { ReferralCard } from "@/components/referral-card";
+import { ResendVerificationButton } from "@/components/resend-verification-button";
 
 interface UserData {
   id: string;
@@ -26,14 +36,23 @@ interface UserData {
   walletBalance: string | null;
   emailVerified: boolean | null;
   twoFactorEnabled: boolean | null;
+  avatarUrl?: string | null;
 }
 
 export default function MyAccountPage() {
   const router = useRouter();
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [activeTab, setActiveTab] = useState("profile");
+  // T-143 : seuils/taux BestRewards lus depuis les réglages publics (mêmes
+  // valeurs que la page /bestrewards) au lieu d'être codés en dur.
+  const [rewardsConfig, setRewardsConfig] = useState<{
+    thresholds: [number, number];
+    discounts: [number, number, number];
+  }>({ thresholds: [5, 15], discounts: [10, 15, 20] });
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -50,6 +69,20 @@ export default function MyAccountPage() {
         }
         setLoading(false);
       });
+    // Réglages BestRewards (non bloquant : repli sur les valeurs par défaut).
+    fetch("/api/app-preferences")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((prefs) => {
+        if (prefs?.bestrewards?.thresholds && prefs?.bestrewards?.discounts) {
+          setRewardsConfig({
+            thresholds: prefs.bestrewards.thresholds,
+            discounts: prefs.bestrewards.discounts,
+          });
+        }
+      })
+      .catch(() => {
+        /* conserve les valeurs par défaut */
+      });
   }, [router]);
 
   if (loading) {
@@ -62,10 +95,15 @@ export default function MyAccountPage() {
 
   if (!user) return null;
 
+  // Niveaux dérivés des réglages publics (T-143) : mêmes seuils et taux que
+  // la page /bestrewards. Le cashback Ambassador (5%) est une règle fixe de
+  // la plateforme, également annoncée sur la page publique.
+  const [level2Threshold, level3Threshold] = rewardsConfig.thresholds;
+  const [level1Discount, level2Discount, level3Discount] = rewardsConfig.discounts;
   const bestrewardsLevels = [
-    { level: 1, name: "Explorer", bookings: 0, benefits: "-10% sur BestRewards" },
-    { level: 2, name: "Voyageur", bookings: 5, benefits: "-15% + Petit-déj." },
-    { level: 3, name: "Ambassador", bookings: 15, benefits: "-20% + Cashback 5%" },
+    { level: 1, name: "Explorer", bookings: 0, benefits: `-${level1Discount}% sur les hébergements BestRewards` },
+    { level: 2, name: "Voyageur", bookings: level2Threshold, benefits: `-${level2Discount}% + tous les avantages Explorer` },
+    { level: 3, name: "Ambassador", bookings: level3Threshold, benefits: `-${level3Discount}% + Cashback 5% en wallet` },
   ];
 
   const currentLevel = bestrewardsLevels.find((l) => l.level === user.bestrewardsLevel) || bestrewardsLevels[0];
@@ -75,8 +113,8 @@ export default function MyAccountPage() {
   const tabs = [
     { id: "profile", label: "Profil", icon: User },
     { id: "bestrewards", label: "BestRewards", icon: Award },
-    { id: "security", label: "Sécurité", icon: Shield },
-    { id: "notifications", label: "Notifications", icon: Bell },
+    { id: "security", label: t("account.security"), icon: Shield },
+    { id: "notifications", label: t("account.notifications"), icon: Bell },
   ];
 
   return (
@@ -129,16 +167,17 @@ export default function MyAccountPage() {
           <div className="md:col-span-3 space-y-6">
             {activeTab === "profile" && (
               <>
+                {/* T-137 (A3) : renvoi de l'email de vérification si non vérifié. */}
+                <ResendVerificationButton verified={user.emailVerified} />
+
                 {/* Profile Info */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Informations personnelles</CardTitle>
+                    <CardTitle>{t("account.personalInfo")}</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="flex items-center gap-4 mb-6">
-                      <div className="w-20 h-20 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white text-2xl font-bold">
-                        {user.firstName.charAt(0)}{user.lastName.charAt(0)}
-                      </div>
+                      <UserAvatar avatarUrl={user.avatarUrl} firstName={user.firstName} lastName={user.lastName} size={80} className="text-2xl font-bold" />
                       <div>
                         <h3 className="text-lg font-semibold">{user.firstName} {user.lastName}</h3>
                         <p className="text-gray-500">{user.email}</p>
@@ -148,64 +187,22 @@ export default function MyAccountPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <Input
-                        label="Prénom"
-                        value={user.firstName}
-                        onChange={() => {}}
-                        icon={<User className="w-4 h-4" />}
-                      />
-                      <Input
-                        label="Nom"
-                        value={user.lastName}
-                        onChange={() => {}}
-                      />
-                      <Input
-                        label="Email"
-                        value={user.email}
-                        onChange={() => {}}
-                        icon={<Mail className="w-4 h-4" />}
-                        disabled
-                      />
-                      <Input
-                        label="Téléphone"
-                        value={user.phone || ""}
-                        onChange={() => {}}
-                        placeholder="+33 6 00 00 00 00"
-                        icon={<Phone className="w-4 h-4" />}
-                      />
+                    <div className="mb-2 text-sm text-gray-600">
+                      Email : <strong>{user.email}</strong>{" "}
+                      <span className="text-xs text-gray-500">
+                        (non modifiable ici — contact support si besoin)
+                      </span>
                     </div>
-                  </CardContent>
-                  <CardFooter>
-                    <Button loading={saving}>Enregistrer les modifications</Button>
-                  </CardFooter>
-                </Card>
-
-                {/* Preferences */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Préférences</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Langue</label>
-                        <select className="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
-                          <option value="fr">🇫🇷 Français</option>
-                          <option value="en">🇬🇧 English</option>
-                          <option value="ar">🇸🇦 العربية</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
-                        <select className="w-full px-4 py-2.5 border border-gray-300 rounded-lg">
-                          <option value="EUR">€ EUR</option>
-                          <option value="USD">$ USD</option>
-                          <option value="MAD">MAD</option>
-                          <option value="TND">TND</option>
-                        </select>
-                      </div>
-                    </div>
+                    <ProfileForm initial={{
+                      firstName: user.firstName,
+                      lastName: user.lastName,
+                      phone: user.phone,
+                      country: null,
+                      language: user.language ?? null,
+                      currency: user.currency ?? null,
+                      timezone: (user as unknown as { timezone?: string | null }).timezone ?? null,
+                      avatarUrl: user.avatarUrl ?? null,
+                    }} />
                   </CardContent>
                 </Card>
               </>
@@ -256,7 +253,7 @@ export default function MyAccountPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Wallet className="w-5 h-5" />
-                      Wallet mybestbooking
+                      Wallet MyBestBooking
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -267,13 +264,21 @@ export default function MyAccountPage() {
                           €{parseFloat(user.walletBalance || "0").toFixed(2)}
                         </p>
                       </div>
-                      <Button variant="outline">Utiliser mon solde</Button>
+                      <Link
+                        href="/recherche"
+                        className="inline-flex items-center px-4 py-2 rounded-lg border border-[#1B3A6B] text-[#1B3A6B] font-medium hover:bg-[#1B3A6B] hover:text-white transition"
+                      >
+                        Utiliser mon solde
+                      </Link>
                     </div>
                     <p className="text-sm text-gray-500 mt-3">
-                      Votre solde peut être utilisé lors de votre prochaine réservation.
+                      {t("account.walletHint")}
                     </p>
                   </CardContent>
                 </Card>
+
+                {/* T-130 : parrainage réellement exposé (T-125 livré côté API) */}
+                <ReferralCard />
 
                 {/* Levels */}
                 <Card>
@@ -317,101 +322,48 @@ export default function MyAccountPage() {
               <>
                 <Card>
                   <CardHeader>
-                    <CardTitle>Mot de passe</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <Input
-                      type="password"
-                      label="Mot de passe actuel"
-                      placeholder="••••••••"
-                    />
-                    <Input
-                      type="password"
-                      label="Nouveau mot de passe"
-                      placeholder="Min. 8 caractères"
-                    />
-                    <Input
-                      type="password"
-                      label="Confirmer le nouveau mot de passe"
-                      placeholder="••••••••"
-                    />
-                  </CardContent>
-                  <CardFooter>
-                    <Button>Modifier le mot de passe</Button>
-                  </CardFooter>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Authentification à deux facteurs</CardTitle>
+                    <CardTitle>{t("account.password")}</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">2FA par SMS</p>
-                        <p className="text-sm text-gray-500">
-                          Recevez un code par SMS lors de la connexion
-                        </p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" checked={user.twoFactorEnabled || false} onChange={() => {}} />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-                      </label>
-                    </div>
+                    <ChangePasswordForm />
                   </CardContent>
                 </Card>
 
-                <Card className="border-red-200">
-                  <CardHeader>
-                    <CardTitle className="text-red-600">Zone de danger</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-red-600">Supprimer mon compte</p>
-                        <p className="text-sm text-gray-500">
-                          Cette action est irréversible
-                        </p>
-                      </div>
-                      <Button variant="danger" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Supprimer
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* T-030 : 2FA TOTP complète (setup + QR + verify + disable) */}
+                <TwoFactorSection initiallyEnabled={user.twoFactorEnabled || false} />
+
+                {/* T-030 : suppression compte réelle */}
+                <DeleteAccountSection />
               </>
             )}
 
             {activeTab === "notifications" && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Préférences de notification</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {[
-                    { id: "booking", label: "Confirmations de réservation", desc: "Emails et SMS pour vos réservations" },
-                    { id: "reminder", label: "Rappels de voyage", desc: "Notifications avant votre séjour" },
-                    { id: "promo", label: "Offres et promotions", desc: "Bons plans et réductions exclusives" },
-                    { id: "review", label: "Demandes d'avis", desc: "Invitations à laisser un avis après séjour" },
-                    { id: "price", label: "Alertes prix", desc: "Baisse de prix sur vos favoris" },
-                  ].map((notif) => (
-                    <div key={notif.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{notif.label}</p>
-                        <p className="text-sm text-gray-500">{notif.desc}</p>
-                      </div>
-                      <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" defaultChecked />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
-                      </label>
-                    </div>
-                  ))}
-                </CardContent>
-                <CardFooter>
-                  <Button>Enregistrer les préférences</Button>
-                </CardFooter>
-              </Card>
+              <div className="space-y-6">
+                {/* T-030 : préférence user réellement branchée */}
+                <NotificationPrefsSection
+                  initial={{
+                    priceAlertEnabled: (user as unknown as { priceAlertEnabled?: boolean }).priceAlertEnabled ?? false,
+                  }}
+                />
+                {/* T-130 : le parrainage est disponible (T-125) ; on renvoie vers l'onglet BestRewards */}
+                <Card>
+                  <CardContent className="flex items-start gap-3 py-4">
+                    <Award className="w-5 h-5 text-[#F5A623] mt-0.5 flex-shrink-0" />
+                    <p className="text-sm text-gray-600">
+                      Parrainez vos amis et gagnez des crédits : retrouvez votre
+                      code de parrainage dans l&apos;onglet{" "}
+                      <button
+                        type="button"
+                        onClick={() => setActiveTab("bestrewards")}
+                        className="text-[#1B3A6B] font-medium hover:underline"
+                      >
+                        BestRewards
+                      </button>
+                      .
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             )}
           </div>
         </div>

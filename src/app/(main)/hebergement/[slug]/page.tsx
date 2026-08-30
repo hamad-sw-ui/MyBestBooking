@@ -1,34 +1,77 @@
+import type { Metadata } from "next";
+import Script from "next/script";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
 import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { formatPrice, formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+import { safeJsonForScript } from "@/lib/safe-json-ld";
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+  const { slug } = await params;
+  const [p] = await db.select().from(properties).where(and(eq(properties.slug, slug), eq(properties.status, "active"))).limit(1);
+  if (!p) return { title: "Hébergement introuvable" };
+  const desc = `${p.name} à ${p.city}, ${p.country}. ${p.description ? p.description.slice(0, 140) : "Réservez au meilleur prix."}`;
+  return {
+    title: p.name,
+    description: desc,
+    openGraph: {
+      title: p.name,
+      description: desc,
+      images: p.mainImage ? [{ url: p.mainImage }] : undefined,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: p.name,
+      description: desc,
+    },
+  };
+}
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { PriceAlertButton } from "@/components/price-alert-button";
+import { PropertyHeaderActions } from "@/components/property-header-actions";
+import { ReviewHelpfulButton } from "@/components/review-helpful-button";
+import { PropertyBookingCard } from "@/components/property-booking-card";
+import { LocalizedRoomPrice } from "@/components/localized-room-price";
+import { LocalizedDescription } from "@/components/localized-description";
+import { ContactHostButton } from "@/components/contact-host-button";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
+import { buildReservationUrl } from "@/lib/reservation-url";
 import {
-  Star, MapPin, Heart, Share2, Check, X, Wifi, Car, Utensils, Waves,
+  Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
   Dumbbell, Wind, Users, Calendar, Shield, MessageCircle, Award
 } from "lucide-react";
 import Link from "next/link";
 
 interface PropertyPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{
+    checkIn?: string;
+    checkOut?: string;
+    adults?: string;
+    children?: string;
+  }>;
 }
 
-async function getProperty(slug: string) {
+async function getProperty(slug: string, viewerId?: string, isAdmin = false) {
   const [property] = await db
     .select()
     .from(properties)
     .where(eq(properties.slug, slug));
 
   if (!property) return null;
+  const canSeePrivate = isAdmin || property.hostId === viewerId;
+  if (property.status !== "active" && !canSeePrivate) return null;
 
   const propertyRooms = await db
     .select()
     .from(rooms)
-    .where(and(eq(rooms.propertyId, property.id), eq(rooms.isActive, true)));
+    .where(and(eq(rooms.propertyId, property.id), ...(canSeePrivate ? [] : [eq(rooms.isActive, true)])));
 
   const propertyReviews = await db
     .select({
@@ -72,23 +115,67 @@ const AMENITY_LABELS: Record<string, string> = {
   garden: "Jardin",
 };
 
-export default async function PropertyPage({ params }: PropertyPageProps) {
+export default async function PropertyPage({ params, searchParams }: PropertyPageProps) {
   const { slug } = await params;
-  const data = await getProperty(slug);
-  const user = await getCurrentUser();
+  const query = await searchParams;
+  const viewer = await getCurrentUser();
+  const t = makeT(await getServerLocale());
+  const data = await getProperty(slug, viewer?.id, viewer?.role === "admin");
 
   if (!data) {
     notFound();
   }
 
   const { property, rooms: propertyRooms, reviews: propertyReviews } = data;
+  // T-030 : chambre la moins chère pour le CTA "Voir dispo" et alerte prix
+  const cheapestRoom = propertyRooms.length > 0
+    ? [...propertyRooms].sort((a, b) => parseFloat(a.basePrice) - parseFloat(b.basePrice))[0]
+    : null;
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating) : null;
   const amenities = (property.amenities as string[]) || [];
   const images = (property.images as string[]) || [];
 
+  // T-017 : Schema.org Hotel/Product pour SEO enrichi
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Hotel",
+    name: property.name,
+    description: property.description ?? undefined,
+    image: property.mainImage ?? undefined,
+    starRating: property.starRating
+      ? { "@type": "Rating", ratingValue: property.starRating }
+      : undefined,
+    address: {
+      "@type": "PostalAddress",
+      streetAddress: property.addressLine ?? undefined,
+      addressLocality: property.city,
+      postalCode: property.postalCode ?? undefined,
+      addressCountry: property.country,
+    },
+    geo: property.latitude && property.longitude
+      ? { "@type": "GeoCoordinates", latitude: property.latitude, longitude: property.longitude }
+      : undefined,
+    aggregateRating:
+      property.averageRating && property.totalReviews
+        ? {
+            "@type": "AggregateRating",
+            ratingValue: property.averageRating,
+            reviewCount: property.totalReviews,
+            bestRating: 10,
+            worstRating: 0,
+          }
+        : undefined,
+  };
+
   return (
     <div className="bg-gray-50">
+      <Script
+        id="property-json-ld"
+        type="application/ld+json"
+        // eslint-disable-next-line react/no-danger
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       {/* Breadcrumb */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
@@ -140,14 +227,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <Heart className="w-5 h-5 text-gray-500" />
-            </button>
-            <button className="p-2 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
-              <Share2 className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
+          <PropertyHeaderActions propertyId={property.id} propertyName={property.name} />
         </div>
 
         {/* Image Gallery */}
@@ -178,24 +258,24 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
               <CardContent>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-[#F5A623] text-xl">✦</span>
-                  <span className="font-semibold text-[#1B3A6B]">La Promesse mybestbooking</span>
+                  <span className="font-semibold text-[#1B3A6B]">Informations MyBestBooking</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-[#1B3A6B]" />
-                    <span>Prix garanti</span>
+                    <span>Prix vérifié au paiement</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-[#00A699]" />
-                    <span>0 frais cachés</span>
+                    <span>Frais affichés avant confirmation</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="w-4 h-4 text-[#F5A623]" />
-                    <span>Avis vérifiés</span>
+                    <span>{t("property.verifiedReviews")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4 text-[#1B3A6B]" />
-                    <span>Support 24/7</span>
+                    <span>Contact support par email</span>
                   </div>
                 </div>
               </CardContent>
@@ -204,12 +284,13 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             {/* Description */}
             <Card>
               <CardHeader>
-                <CardTitle>À propos</CardTitle>
+                <CardTitle>{t("property.about")}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-gray-600 leading-relaxed">
-                  {property.description || "Découvrez cet hébergement exceptionnel et profitez d'un séjour inoubliable."}
-                </p>
+                <LocalizedDescription
+                  description={property.description ?? null}
+                  descriptionEn={property.descriptionEn ?? null}
+                />
               </CardContent>
             </Card>
 
@@ -217,7 +298,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             {amenities.length > 0 && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Équipements</CardTitle>
+                  <CardTitle>{t("property.amenities")}</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -235,11 +316,11 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             {/* Rooms */}
             <Card>
               <CardHeader>
-                <CardTitle>Chambres disponibles</CardTitle>
+                <CardTitle>{t("property.rooms")}</CardTitle>
               </CardHeader>
               <CardContent>
                 {propertyRooms.length === 0 ? (
-                  <p className="text-gray-500 text-center py-8">Aucune chambre disponible pour le moment</p>
+                  <p className="text-gray-500 text-center py-8">{t("property.noRooms")}</p>
                 ) : (
                   <div className="space-y-4">
                     {propertyRooms.map((room) => (
@@ -257,18 +338,22 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                             {room.sizeSqm && <span>{room.sizeSqm} m²</span>}
                           </div>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="success">✓ Annulation gratuite</Badge>
+                            <Badge variant="info">{property.cancellationPolicy === "free" ? t("property.cancellationFree") : property.cancellationPolicy === "non_refundable" ? t("property.cancellationNonRefundable") : property.cancellationPolicy ?? t("property.cancellationSeeRate")}</Badge>
                             {room.amenities && (room.amenities as string[]).includes("wifi") && (
                               <Badge variant="info">WiFi</Badge>
                             )}
                           </div>
                         </div>
                         <div className="mt-4 md:mt-0 md:text-right">
-                          <p className="text-2xl font-bold text-gray-900">
-                            {formatPrice(room.basePrice, room.currency || "EUR")}
-                          </p>
-                          <p className="text-sm text-gray-500">par nuit</p>
-                          <Link href={user ? `/reservation?property=${property.id}&room=${room.id}` : "/connexion"}>
+                          <LocalizedRoomPrice basePrice={room.basePrice} currency={room.currency ?? "EUR"} />
+                          <Link href={buildReservationUrl({
+                            propertyId: property.id,
+                            roomId: room.id,
+                            checkIn: query.checkIn,
+                            checkOut: query.checkOut,
+                            numAdults: Number(query.adults ?? "2"),
+                            numChildren: Number(query.children ?? "0"),
+                          })}>
                             <Button className="mt-2" size="sm">
                               Réserver
                             </Button>
@@ -285,7 +370,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
-                  <CardTitle>Avis vérifiés ✓</CardTitle>
+                  <CardTitle>{t("property.verifiedReviews")} ✓</CardTitle>
                   {rating && (
                     <div className="flex items-center gap-2">
                       <div className="flex items-center gap-1 px-3 py-1 bg-[#1B3A6B] text-white font-semibold rounded">
@@ -303,7 +388,7 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                 {propertyReviews.length === 0 ? (
                   <div className="text-center py-8">
                     <Award className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-500">Nouveau partenaire — pas encore d&apos;avis</p>
+                    <p className="text-gray-500">{t("property.newPartner")}</p>
                   </div>
                 ) : (
                   <div className="space-y-6">
@@ -341,9 +426,16 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
                             <span className="text-gray-400">👎</span> {review.negativeComment}
                           </p>
                         )}
+                        {review.hostReply && (
+                          <div className="mt-3 ml-3 border-l-2 border-[#1B3A6B] bg-blue-50/60 p-3 rounded-r-lg">
+                            <p className="text-xs font-semibold text-[#1B3A6B]">{t("property.hostReply")}</p>
+                            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{review.hostReply}</p>
+                          </div>
+                        )}
                         <p className="text-xs text-gray-400 mt-2">
                           {formatDate(review.createdAt)}
                         </p>
+                        <ReviewHelpfulButton reviewId={review.id} initialCount={review.helpfulCount} isOwn={review.userId === viewer?.id} />
                       </div>
                     ))}
                   </div>
@@ -356,74 +448,43 @@ export default async function PropertyPage({ params }: PropertyPageProps) {
           <div className="lg:col-span-1">
             <div className="sticky top-24 space-y-4">
               {/* Booking Card */}
-              <Card>
-                <CardContent>
-                  <div className="text-center mb-4">
-                    <p className="text-sm text-gray-500">À partir de</p>
-                    <p className="text-3xl font-bold text-gray-900">
-                      {propertyRooms.length > 0 
-                        ? formatPrice(Math.min(...propertyRooms.map(r => parseFloat(r.basePrice))))
-                        : "—"
-                      }
-                    </p>
-                    <p className="text-sm text-gray-500">par nuit</p>
-                  </div>
+              <PropertyBookingCard
+                propertyId={property.id}
+                room={cheapestRoom ? {
+                  id: cheapestRoom.id,
+                  basePrice: cheapestRoom.basePrice,
+                  currency: cheapestRoom.currency,
+                  maxAdults: cheapestRoom.maxAdults,
+                  maxOccupancy: cheapestRoom.maxOccupancy,
+                } : null}
+                initialCheckIn={query.checkIn}
+                initialCheckOut={query.checkOut}
+                initialAdults={Number(query.adults ?? "2") || 2}
+                initialChildren={Number(query.children ?? "0") || 0}
+              />
 
-                  <div className="space-y-3 mb-4">
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Arrivée</label>
-                        <input
-                          type="date"
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Départ</label>
-                        <input
-                          type="date"
-                          className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">Voyageurs</label>
-                      <select className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                        <option>1 adulte</option>
-                        <option>2 adultes</option>
-                        <option>2 adultes, 1 enfant</option>
-                        <option>2 adultes, 2 enfants</option>
-                      </select>
-                    </div>
-                  </div>
+              {/* T-133 (A3) : contacter l'hôte avant réservation. Masqué pour
+                  l'hôte sur sa propre propriété (l'API refuse déjà ce cas). */}
+              {property.hostId !== viewer?.id && (
+                <ContactHostButton propertyId={property.id} />
+              )}
 
-                  <Button className="w-full" size="lg">
-                    Voir les disponibilités
-                  </Button>
-
-                  <p className="text-xs text-center text-gray-500 mt-3">
-                    ✓ Annulation gratuite • ✓ Paiement sécurisé
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Price Guarantee */}
-              <Card className="bg-[#F5A623]/10 border-[#F5A623]/30">
-                <CardContent>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Shield className="w-5 h-5 text-[#F5A623]" />
-                    <span className="font-semibold text-[#1B3A6B]">Garantie Meilleur Prix</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Trouvé moins cher ailleurs ? On vous rembourse la différence.
-                  </p>
-                </CardContent>
-              </Card>
+              <div className="-mt-1">
+                <PriceAlertButton
+                  propertyId={property.id}
+                  currency={cheapestRoom?.currency ?? "EUR"}
+                  defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
+                  checkIn={query.checkIn}
+                  checkOut={query.checkOut}
+                  numAdults={Number(query.adults ?? "") || undefined}
+                  numChildren={Number(query.children ?? "") || undefined}
+                />
+              </div>
 
               {/* Policies */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Politiques</CardTitle>
+                  <CardTitle className="text-base">{t("property.policies")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">

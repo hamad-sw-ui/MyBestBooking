@@ -1,4 +1,43 @@
-# 🔐 SÉCURITÉ
+# 🔐 SÉCURITÉ — MyBestBooking
+
+> ⚠️ Ce document décrit la sécurité Android/MobileCaisse et ne s'applique pas à MyBestBooking.
+> Toute analyse actuelle doit partir de `src/lib/auth.ts`, des routes API et de `.env.local`.
+
+## État actuel Next.js (normatif)
+
+- `JWT_SECRET` est obligatoire et ne possède aucun fallback.
+- Les sessions sont stockées en DB et expirent après 7 jours par défaut,
+  30 jours avec `rememberMe`.
+- La connexion exige le code TOTP quand la 2FA du compte est active.
+- Les routes de réservation vérifient l'identité, la disponibilité, les
+  chevauchements, `stopSell` et les transitions de statut.
+- Une réservation invitée ne réutilise pas un compte existant sans connexion.
+- Les routes publiques ne doivent pas exposer `hostId`, `validatedBy` ou la
+  commission interne.
+- Les endpoints mutables appliquent des contrôles de rôle et plusieurs routes
+  critiques disposent d'un rate-limit process-local.
+- Les overrides Stripe, Resend et S3 saisis via `/dashboard/settings` sont
+  chiffrés AES-256-GCM dans `provider_credentials`. La clé maître
+  `CREDENTIALS_ENCRYPTION_KEY` reste exclusivement en variable d'environnement,
+  hors DB et hors UI ; les endpoints admin ne retournent que des métadonnées.
+- Les variables d'environnement restent le fallback compatible si aucun
+  override chiffré n'est enregistré. La rotation utilise temporairement un
+  keyring : nouvelle clé `CREDENTIALS_ENCRYPTION_KEY`, ancienne clé
+  `CREDENTIALS_ENCRYPTION_KEY_PREVIOUS`, réchiffrement admin explicite,
+  vérification des providers, puis retrait de la clé précédente. Aucune clé
+  ne transite en HTTP, dans l’UI, les audits ou les logs.
+- Les nouvelles pièces jointes de messagerie sont privées et ne sont servies
+  qu'après vérification du participant ; les images publiques d'hébergement
+  restent un domaine distinct.
+- Les projections publiques property sont allowlistées et les fiches non
+  `active` renvoient 404 aux visiteurs. Les payloads RSC ne reçoivent ni marge,
+  ni hostId, ni validateur.
+- La 2FA TOTP n’envoie plus le secret à un service QR externe. Setup/disable
+  exigent le mot de passe; une rotation exige aussi le code actif et promeut un
+  secret pending seulement après vérification.
+
+Les sections Android ci-dessous sont conservées comme archive et ne doivent
+pas servir de source de vérité pour le code actuel.
 
 État au 2026-07-28, **révision 2** après confirmation des correctifs de
 sécurité antérieurs (audit GitHub Copilot + Gemini Code Assist).

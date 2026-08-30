@@ -1,161 +1,112 @@
-# 🔌 API & INTERFACES EXTERNES
+# 🔌 API REST
 
-> **Il n'y a aucune API HTTP dans ce projet.** Pas de Retrofit, Ktor, OkHttp,
-> Firebase ni backend. L'application est **100 % hors-ligne**.
-> Ce document recense les **interfaces externes réelles** : SMS, Bluetooth,
-> Intents système, caméra, licence.
+Toutes les routes vivent sous `src/app/api/**/route.ts`. Tous les corps de
+requête sont validés avec **Zod**. Les réponses sont du JSON.
 
----
+Authentification :
+- 🔓 = public
+- 🔒 = utilisateur connecté requis (`getCurrentUser()`)
+- 👤 = restreint par rôle (précisé)
 
-## 1. SMS Mobile Money — l'interface la plus critique
+## Système
 
-### Entrée temps réel
-
-`SmsReceiver` (`BroadcastReceiver`, exporté, `android.permission.BROADCAST_SMS`,
-priorité 999) écoute :
-- `android.provider.Telephony.SMS_RECEIVED`
-- `android.intent.action.BOOT_COMPLETED` / `QUICKBOOT_POWERON`
-
-### Contrat de parsing — `SmsParser.parse(body, originatingAddress): ParsedSms?`
-
-```kotlin
-data class ParsedSms(
-    val amount: Double,
-    val transactionId: String,
-    val sender: String,        // n° camerounais 9 chiffres
-    val type: String,          // MOMO_MTN | MOMO_ORANGE | SUB_CONFIRMATION
-    val receiver: String? = null,
-    val isSecure: Boolean = false   // expéditeur officiel reconnu
-)
-```
-
-**Algorithme (scoring, seuil = 50)** :
-
-| Signal | Points |
-|---|---|
-| Expéditeur officiel (`mobilemoney`, `mtnmomo`, `orangemoney`, `om`, `6700`, `momo`, ou adresse ≤ 6 caractères) | +40 |
-| Chaque mot-clé de succès (`recu`, `reçu`, `succes`, `confirme`, `effectue`, `valide`…) | +15 |
-| Chaque indicateur de devise (`fcfa`, `fcf`, `xaf`, ` f`) | +10 |
-
-Puis extraction chirurgicale :
-- **Montant** : `(\d{2,})\s*(?:fcfa|fcf|xaf|f)\b`, repli `(?:montant|somme|valeur)[:\s]*(\d{2,})`
-- **ID transaction** : `(?:id|ref|transaction|no|n°|reference)[:\s]*([a-z0-9]{8,})`, repli = premier mot ≥ 10 caractères non téléphone
-- **Numéro** : `(?:de|from|par|sender)[:\s]*(?:237)?(6[25-9]\d{7})`, repli = première séquence `6[25-9]\d{7}`
-- **Type** : `SUB_CONFIRMATION` si le corps contient `692971991` ou `reconciliation`, sinon MTN / Orange par mots-clés
-
-**Rejet** si `amount <= 0` ou `transactionId` vide.
-
-⚠️ Aucun test unitaire sur ce parser alors qu'il pilote la création
-automatique de ventes. Priorité de test n°1 (voir `TEST_PLAN.md`).
-
-### Traitement aval (`SmsReceiver.processSms`)
-
-1. Ne traite que `parsed.isSecure && transactionId.isNotBlank()`.
-2. Contrôle d'anomalie de date (écart > 30 min → `logAction("DATE_ANOMALY", CRITICAL)`).
-   ⚠️ Comparaison actuellement inopérante : `networkTime` et `systemTime` valent
-   tous deux `System.currentTimeMillis()` (BUG-008).
-3. Déduplication : `processed_sms` + recherche par `transactionId` dans `ventes`.
-4. `SUB_CONFIRMATION` → `processSubscriptionSms` (activation d'abonnement).
-5. Sinon : rapprochement avec une vente `PENDING` de même montant, ou création
-   d'une vente « orphan », ou insertion dans `sms_errors`.
-6. Notification via `notification/NotificationHelper`.
-
-### Rattrapage — `SmsSyncManager.catchUp(context)`
-
-Lit le `ContentProvider` SMS (`content://sms/inbox`) depuis
-`PreferencesManager.getLastSmsSyncTime()` et rejoue `processSms`.
-Déclenché par `MainViewModel.catchUpSms()` au démarrage.
-
----
-
-## 2. Impression ESC/POS (Bluetooth)
-
-`printing/EscPosPrinter(context)` :
-- `BluetoothAdapter` → `BluetoothDevice` par adresse MAC
-  (`boutique.printerAddress`), UUID SPP standard `00001101-...`.
-- Ouvre un `BluetoothSocket`, envoie des commandes ESC/POS brutes
-  (init, alignement, gras, coupe papier).
-- Appelé par `MainRepository.printTicket(venteId, address)` et `testPrint(address)`.
-- Contenu du ticket piloté par `boutique` : `receiptFooter`, `showTaxesOnReceipt`,
-  `showCustomerPhoneOnReceipt`, `showTotalQuantityOnReceipt`, `printMerchantCopy`.
-
-Permissions : `BLUETOOTH`/`BLUETOOTH_ADMIN` (≤ API 30),
-`BLUETOOTH_CONNECT`/`BLUETOOTH_SCAN` (API 31+).
-
----
-
-## 3. Scanner de code-barres
-
-`ui/scanner/BarcodeScanner.kt` — CameraX (`camera-core`, `camera2`,
-`lifecycle`, `view` 1.4.0) + ML Kit (`play-services-mlkit-barcode-scanning:18.3.1`).
-Résultat injecté dans la route `stock?barcode=<valeur>`.
-Permission `CAMERA`. ⚠️ ML Kit via Play Services : indisponible sur les appareils
-sans GMS (voir `KNOWN_LIMITATIONS.md`).
-
----
-
-## 4. Intents système sortants
-
-| Usage | Intent | Déclenché par |
-|---|---|---|
-| « Sync cloud » | `ACTION_SEND` du fichier `.db` via `FileProvider` | `MainRepository.syncToCloud` |
-| Export CSV / PDF | `ACTION_SEND` avec URI `FileProvider` | `ExportUtil.shareFile` |
-| Relance de dette | `ACTION_SENDTO` `smsto:` prérempli | `MainRepository.sendDebtReminder` |
-| Paiement abonnement | code USSD MTN/Orange (`ACTION_DIAL`) | `MainRepository.getPaymentUssd(operator, amount)` |
-
-`FileProvider` : autorité `${applicationId}.fileprovider`, chemins dans
-`res/xml/file_paths.xml`.
-
----
-
-## 5. Licence / abonnement (protocole hors-ligne)
-
-`utils/LicenseUtil` :
-
-```
-clé = SIGNATURE(8 car.) + "-" + EXPIRY(DDMMYY)
-SIGNATURE = base32-custom( HmacSHA256( "phone|DDMMYY|SECRET_SALT", SECRET_SALT ) )[0..7]
-alphabet  = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"   (sans 0/1/I/O)
-```
-
-- `verifyKey(phone, key): Date?` — recalcule la signature, retourne la date d'expiration.
-- `generateActivationKey(phone, months)` — **outil admin embarqué dans l'APK**.
-- Le numéro est normalisé par `PhoneUtil.normalize`.
-- Activation possible par saisie manuelle ou automatiquement via un SMS
-  `SUB_CONFIRMATION` provenant du numéro développeur `692971991`.
-
-🔴 `SECRET_SALT` est **en clair dans le code** et `isMinifyEnabled = false`
-→ licence contournable (voir `SECURITY.md`, BUG-005).
-
----
-
-## 6. WorkManager
-
-| Worker | Périodicité | Contraintes | Rôle |
+| Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
-| `BackupWorker` (`"DailyBackup"`) | 24 h, `KEEP` | `NetworkType.CONNECTED` ⚠️ inutile (aucun upload) | Sauvegarde locale + miroir externe |
-| `SubscriptionWorker` (`"SubscriptionCheck"`) | 24 h, `KEEP` | aucune | Notifications J-7 / J-3 / J-1 / J-0 |
+| GET | `/api/health` | 🔓 | `select 1` sur la DB, retourne `{ok:true}` ou 500 |
+| POST | `/api/seed` | 🔓 en dev / 🔒 en prod | Idempotent : peuple 8 propriétés de démo + 3 comptes (admin, host, customer) si la base est vide. En production, retourne 404 sauf si l'en-tête `x-seed-token` correspond à `process.env.SEED_TOKEN` (voir ADR-004, BUG-002). |
 
-Planifiés dans `MainActivity.onCreate` ⚠️ (à déplacer dans `Application` /
-`Configuration.Provider` lors du passage à Hilt).
+## Auth
 
----
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| POST | `/api/auth/register` | 🔓 | Crée un `users`, hash bcrypt, ouvre une session. Body : `{email, password (≥8), firstName, lastName, role?}`. |
+| POST | `/api/auth/login` | 🔓 | Vérifie mdp, met à jour `lastLoginAt`, ouvre une session. |
+| POST | `/api/auth/logout` | 🔓 | Supprime la session en base + le cookie, `302 → /`. |
+| GET | `/api/auth/me` | 🔒 | Retourne le profil courant (sans le hash). |
 
-## 7. Permissions déclarées
+## Properties
 
-`RECEIVE_SMS`, `READ_SMS`, `VIBRATE`, `CAMERA`, `BLUETOOTH`, `BLUETOOTH_ADMIN`,
-`BLUETOOTH_CONNECT`, `BLUETOOTH_SCAN`, `POST_NOTIFICATIONS`, `RECEIVE_BOOT_COMPLETED`.
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/properties` | 🔓 | Liste paginée (`limit`, `offset`) des properties `active`. Filtres : `city`, `country`, `type`, `minRating`, `search` (ilike sur name/city/description), et post-filtrage `minPrice`/`maxPrice` sur le `min(basePrice)` des rooms. Trié par `averageRating desc`. ⚠️ N+1 sur les rooms. |
+| POST | `/api/properties` | 👤 `host`, `admin` | Crée une property. Génère un slug unique. Admin → `active`, host → `pending`. |
+| GET | `/api/properties/[id]` | 🔓 | Détail (avec rooms et reviews). |
+| PATCH | `/api/properties/[id]` | 👤 propriétaire ou `admin` | Mise à jour partielle. |
+| DELETE | `/api/properties/[id]` | 👤 propriétaire ou `admin` | Suppression (soft/hard selon impl.). |
 
-Demandées en bloc dans `MainActivity.checkAppPermissions()` (requestCode 101),
-⚠️ sans traitement du résultat ni explication pédagogique (BUG-010).
+## Rooms
 
----
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/rooms?propertyId=…` | 🔓 | Liste les rooms actives d'une property. `propertyId` requis. |
+| POST | `/api/rooms` | 👤 host propriétaire ou `admin` | Crée une room. |
+| GET | `/api/rooms/[id]` | 🔓 | Détail room. |
+| PATCH | `/api/rooms/[id]` | 👤 host propriétaire ou `admin` | Mise à jour partielle. |
+| DELETE | `/api/rooms/[id]` | 👤 host propriétaire ou `admin` | Suppression. |
+| GET/POST/PATCH | `/api/rooms/[id]/rate-plans` | 👤 host propriétaire ou admin | Liste, crée, archive/réactive ou édite les plans proposés. Les modifications n’altèrent jamais les snapshots des bookings existants. |
 
-## 8. Si une API HTTP est ajoutée un jour
+## Bookings
 
-Contraintes à respecter (marché cible) :
-- **Offline-first obligatoire** : la base locale reste la source de vérité.
-- File d'attente de synchronisation persistée + `WorkManager` avec backoff.
-- Idempotence par `transactionId` / `invoiceNumber`.
-- Aucun secret en dur ; certificat pinné ; timeouts courts (réseau instable).
-- Documenter ici **avant** d'écrire la moindre ligne de code réseau.
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/bookings` | 🔒 | Filtré selon rôle : `customer` → siennes, `host` → sur ses properties, `admin` → toutes. Filtres additionnels : `status`, `propertyId`. Joint property, room, user. |
+| POST | `/api/bookings` | 🔒 ou 👤 invité | Crée le hold après validation transactionnelle : dates, capacité adultes/enfants, stock par nuit, stop-sell et `minStay`. Prix journalier, TVA/réductions/wallet sont recalculés serveur. L’intent PSP est créé **après** commit avec clé d’idempotence ; le cron reprend un intent non rattaché avant TTL. Réponse `payment` distingue mock/wallet confirmés et Stripe `pending`. |
+| GET | `/api/bookings/[id]` | 🔒 propriétaire, host de la property, ou admin | Détail booking, y compris états paiement/remboursement. |
+| POST | `/api/bookings/[id]/payment` | 🔒 propriétaire/admin | Reprend le même hold/intention PSP avec la clé existante; ne crée pas une seconde réservation. |
+| PUT | `/api/bookings/[id]` | 🔒 même règle | Voyageur : annulation uniquement. Hôte/admin : clôture contrôlée après départ. Annulation calcule frais et remboursement provider idempotent. |
+
+## Reviews
+
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/reviews?propertyId=…` | 🔓 approved, 👤 host/admin modération | Public force `approved`; les statuts hidden/pending/rejected sont réservés à l’admin et à l’hôte propriétaire. `limit`/`offset` bornés. |
+| POST | `/api/reviews` | 🔒 | Crée un avis pour un booking `completed` de l'utilisateur. Met à jour `properties.averageRating` et `totalReviews`. |
+
+## Wishlists
+
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/wishlists` | 🔒 | Liste des wishlists de l'utilisateur avec items et propriétés jointes. |
+| POST | `/api/wishlists` | 🔒 | Crée une wishlist (`name`, `isPublic?`) ou ajoute un item (`wishlistId`, `propertyId`). |
+| PATCH | `/api/wishlists` | 🔒 propriétaire | Rend une liste publique/privée et génère ou renouvelle son `shareToken`. |
+| DELETE | `/api/wishlists?wishlistId=…&propertyId?=…` | 🔒 propriétaire | Retire un item ou supprime la liste entière. |
+| GET/POST | `/api/conversations` | 🔒 | Liste les fils accessibles ou ouvre/récupère le fil voyageur-hôte associé à une réservation. |
+| GET/POST | `/api/messages` | 🔒 participant | Liste ou envoie les messages ; les nouvelles pièces jointes utilisent `attachmentKey` privé. |
+| GET | `/api/messages/attachments/[id]` | 🔒 participant | Sert une pièce jointe privée après vérification conversation. |
+| GET | `/api/cron/price-alerts` | 🔒 cron | Évalue alertes prix (quote de séjour si dates/voyageurs fournis, sinon prix de base), clôture séjours payés, reprend intents sans rattachement, expire holds, compense paiements tardifs et traite outbox/uploads ; `CRON_SECRET` obligatoire en production. |
+
+## Administration des providers
+
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/providers/stripe` | 🔓 | Retourne uniquement la clé Stripe publiable résolue depuis env/coffre, jamais un secret serveur. |
+| GET | `/api/admin/providers` | 👤 admin | Retourne uniquement metadata : provider, état, source, champs présents et date. Jamais les valeurs. |
+| POST | `/api/admin/providers/[provider]` | 👤 admin | Test explicite : intent Stripe annulé, email Resend administrateur ou objet S3 temporaire supprimé. Aucune valeur retournée. |
+| PUT | `/api/admin/providers/[provider]` | 👤 admin | Chiffre et stocke les champs saisis pour `stripe`, `resend` ou `s3`. Requiert `CREDENTIALS_ENCRYPTION_KEY` côté serveur. |
+| DELETE | `/api/admin/providers/[provider]` | 👤 admin | Retire les overrides chiffrés après confirmation et repasse au fallback variables d’environnement. |
+| POST | `/api/admin/providers/rotation` | 👤 admin | Réchiffre les overrides DB avec la clé primaire, après configuration temporaire de `CREDENTIALS_ENCRYPTION_KEY_PREVIOUS`. Ne reçoit ni ne retourne aucun secret. |
+
+| GET | `/api/dashboard/billing/export` | 👤 host/admin | Télécharge un CSV privé des bookings payés non annulés ; ce n’est pas une facture légale. |
+
+## Conventions
+
+- **Erreurs de validation** Zod → `400 {error: <premier message>}` (on utilise
+  `error.issues[0].message`).
+- **Auth manquante** → `401 {error: "Non autorisé"}` (ou `"Veuillez vous connecter…"`
+  selon le contexte).
+- **Erreurs serveur** → `500 {error: "Une erreur est survenue"}` +
+  `console.error()`.
+- **Réponses succès** :
+  - Création → `201 {…}` avec la ressource sous une clé nommée
+    (`{property: …}`, `{booking: …}`).
+  - Lecture liste → `200 {properties: [...]}` / `{bookings: [...]}` etc.
+- **Filtrage par rôle** : dans les listes, on filtre **au niveau du WHERE SQL**
+  (pas après), sauf `GET /api/properties` qui post-filtre `minPrice/maxPrice`.
+
+## Ce qui n'existe pas encore
+
+- Les routes promotions, conversations, messages, rate-plans et disponibilité
+  sont présentes dans `src/app/api`; ce document doit rester synchronisé avec
+  leurs contrats réels.
+- La capture Stripe live et les factures légales restent dépendantes de la
+  configuration fournisseur et ne sont pas déclarées validées dans le sandbox.

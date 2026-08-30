@@ -1,35 +1,55 @@
 import Link from "next/link";
+import Image from "next/image";
+import { redirect } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { getCurrentUser } from "@/lib/auth";
+import { isMaintenanceActive } from "@/lib/maintenance";
 import { db } from "@/db";
-import { properties, reviews, users } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { properties, reviews, users, rooms } from "@/db/schema";
+import { eq, desc, and, min } from "drizzle-orm";
 import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 import { Star, Shield, MessageCircle, Zap, Award, ChevronRight, MapPin, Heart } from "lucide-react";
 import { PropertyCard } from "@/components/property-card";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getFeaturedProperties() {
   const results = await db
-    .select()
+    .select({ property: properties, minPrice: min(rooms.basePrice), minCurrency: min(rooms.currency) })
     .from(properties)
+    .leftJoin(rooms, and(eq(rooms.propertyId, properties.id), eq(rooms.isActive, true)))
     .where(eq(properties.status, "active"))
+    .groupBy(properties.id)
     .orderBy(desc(properties.averageRating))
     .limit(4);
-  
-  return results;
+
+  return results.map(({ property, minPrice, minCurrency }) => ({
+    ...property,
+    minPrice: minPrice === null ? null : Number(minPrice),
+    minCurrency,
+  }));
 }
 
 export default async function HomePage() {
   const user = await getCurrentUser();
+  const t = makeT(await getServerLocale());
+
+  // T-022 : mode maintenance — les non-admins sont redirigés vers
+  // /maintenance. La page racine n'est pas dans le groupe (main),
+  // donc le guard du layout (main) ne s'y applique pas.
+  if ((!user || user.role !== "admin") && (await isMaintenanceActive())) {
+    redirect("/maintenance");
+  }
+
   const featuredProperties = await getFeaturedProperties();
   
   const destinations = [
-    { name: "Paris", country: "France", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400", count: 2450 },
-    { name: "Marrakech", country: "Maroc", image: "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400", count: 890 },
-    { name: "Barcelone", country: "Espagne", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400", count: 1820 },
-    { name: "Rome", country: "Italie", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400", count: 1650 },
-    { name: "Tunis", country: "Tunisie", image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400", count: 420 },
+    { name: "Paris", country: "France", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400" },
+    { name: "Marrakech", country: "Maroc", image: "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400" },
+    { name: "Barcelone", country: "Espagne", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400" },
+    { name: "Rome", country: "Italie", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400" },
+    { name: "Tunis", country: "Tunisie", image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400" },
   ];
 
   return (
@@ -45,12 +65,12 @@ export default async function HomePage() {
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="max-w-3xl">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Réservez mieux.<br />
-              <span className="text-[#FF5A5F]">Voyagez plus.</span>
+              {t("home.heroTitle1")}<br />
+              <span className="text-[#FF5A5F]">{t("home.heroTitle2")}</span>
             </h1>
             <p className="text-xl text-white/80 mb-8">
-              Trouvez les meilleurs hébergements au meilleur prix.<br />
-              Prix garantis, avis vérifiés, zéro frais cachés.
+              {t("home.heroSub1")}<br />
+              {t("home.heroSub2")}
             </p>
             
             {/* Search Box */}
@@ -63,14 +83,14 @@ export default async function HomePage() {
                     <input
                       type="text"
                       name="city"
-                      placeholder="Où voulez-vous aller ?"
+                      placeholder={t("home.whereGo")}
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
                     />
                   </div>
                 </div>
                 <div className="flex gap-4">
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Arrivée</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">{t("book.checkIn")}</label>
                     <input
                       type="date"
                       name="checkIn"
@@ -78,7 +98,7 @@ export default async function HomePage() {
                     />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">Départ</label>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">{t("book.checkOut")}</label>
                     <input
                       type="date"
                       name="checkOut"
@@ -86,12 +106,25 @@ export default async function HomePage() {
                     />
                   </div>
                 </div>
+                <div>
+                  <label htmlFor="home-guests" className="block text-xs font-medium text-gray-500 mb-1">{t("search.travelers")}</label>
+                  <select
+                    id="home-guests"
+                    name="guests"
+                    defaultValue="2"
+                    className="px-4 py-3 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                      <option key={n} value={n}>{n} {n > 1 ? t("home.travelerMany") : t("home.travelerOne")}</option>
+                    ))}
+                  </select>
+                </div>
                 <div className="flex items-end">
                   <button
                     type="submit"
                     className="w-full md:w-auto px-8 py-3 bg-[#FF5A5F] text-white font-semibold rounded-lg hover:bg-[#e54a4f] transition-colors"
                   >
-                    Rechercher
+                    {t("home.search")}
                   </button>
                 </div>
               </form>
@@ -101,15 +134,15 @@ export default async function HomePage() {
             <div className="flex flex-wrap gap-6 mt-8 text-sm">
               <span className="flex items-center gap-2">
                 <Shield className="w-5 h-5 text-[#F5A623]" />
-                Prix garantis
+                {t("home.trustPrice")}
               </span>
               <span className="flex items-center gap-2">
                 <Star className="w-5 h-5 text-[#F5A623]" />
-                Avis vérifiés
+                {t("home.trustReviews")}
               </span>
               <span className="flex items-center gap-2">
                 <Zap className="w-5 h-5 text-[#F5A623]" />
-                0 frais cachés
+                {t("home.trustNoFees")}
               </span>
             </div>
           </div>
@@ -123,15 +156,15 @@ export default async function HomePage() {
             <div className="flex items-center justify-between mb-8">
               <div>
                 <h2 className="text-2xl md:text-3xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                  🔥 Hébergements populaires
+                  {t("home.featuredTitle")}
                 </h2>
-                <p className="text-gray-600 mt-1">Les mieux notés par nos voyageurs</p>
+                <p className="text-gray-600 mt-1">{t("home.featuredSub")}</p>
               </div>
               <Link
                 href="/recherche"
                 className="hidden md:flex items-center gap-1 text-[#1B3A6B] font-medium hover:underline"
               >
-                Voir tout
+                {t("home.seeAll")}
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -147,7 +180,7 @@ export default async function HomePage() {
                 href="/recherche"
                 className="inline-flex items-center gap-1 text-[#1B3A6B] font-medium"
               >
-                Voir tous les hébergements
+                {t("home.seeAllProperties")}
                 <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -159,7 +192,7 @@ export default async function HomePage() {
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-8" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            🌍 Destinations tendance
+            {t("home.destTitle")}
           </h2>
           
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -169,15 +202,17 @@ export default async function HomePage() {
                 href={`/recherche?city=${encodeURIComponent(dest.name)}`}
                 className="group relative rounded-xl overflow-hidden aspect-[4/5]"
               >
-                <img
+                <Image
                   src={dest.image}
                   alt={dest.name}
-                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                  fill
+                  sizes="(max-width: 768px) 50vw, 20vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
                 <div className="absolute bottom-4 left-4 text-white">
                   <h3 className="font-bold text-lg">{dest.name}</h3>
-                  <p className="text-sm text-white/80">{dest.count}+ hébergements</p>
+                  <p className="text-sm text-white/80">{t("home.discover")} {dest.country}</p>
                 </div>
               </Link>
             ))}
@@ -189,7 +224,7 @@ export default async function HomePage() {
       <section className="py-16 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-2xl md:text-3xl font-bold text-gray-900 text-center mb-12" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            ✦ Pourquoi choisir mybestbooking ?
+            {t("home.whyTitle")}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -197,9 +232,9 @@ export default async function HomePage() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#1B3A6B]/10 flex items-center justify-center">
                 <Shield className="w-8 h-8 text-[#1B3A6B]" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Prix Garantis</h3>
+              <h3 className="text-lg font-semibold mb-2">{t("home.whyPriceTitle")}</h3>
               <p className="text-gray-600">
-                Trouvé moins cher ailleurs ? On vous rembourse la différence. C&apos;est notre engagement.
+                {t("home.whyPriceBody")}
               </p>
             </div>
             
@@ -207,9 +242,9 @@ export default async function HomePage() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#FF5A5F]/10 flex items-center justify-center">
                 <Star className="w-8 h-8 text-[#FF5A5F]" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Avis 100% Vérifiés</h3>
+              <h3 className="text-lg font-semibold mb-2">{t("home.whyReviewTitle")}</h3>
               <p className="text-gray-600">
-                Seuls les voyageurs ayant réservé et séjourné peuvent laisser un avis. Zéro faux avis.
+                {t("home.whyReviewBody")}
               </p>
             </div>
             
@@ -217,9 +252,9 @@ export default async function HomePage() {
               <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#00A699]/10 flex items-center justify-center">
                 <MessageCircle className="w-8 h-8 text-[#00A699]" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Support 24/7</h3>
+              <h3 className="text-lg font-semibold mb-2">{t("home.whySupportTitle")}</h3>
               <p className="text-gray-600">
-                Une équipe humaine disponible à tout moment pour vous aider. Pas des bots.
+                {t("home.whySupportBody")}
               </p>
             </div>
           </div>
@@ -238,10 +273,10 @@ export default async function HomePage() {
                 </span>
               </div>
               <h2 className="text-xl md:text-2xl font-bold text-white mb-2">
-                Les vrais avantages, dès votre 1ère réservation
+                {t("home.rewardsTitle")}
               </h2>
               <p className="text-white/90">
-                Jusqu&apos;à -20% sur vos réservations, petits-déjeuners offerts, surclassements...
+                {t("home.rewardsBody")}
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
@@ -249,14 +284,14 @@ export default async function HomePage() {
                 href="/bestrewards"
                 className="px-6 py-3 bg-white text-[#F5A623] font-semibold rounded-lg hover:bg-gray-100 transition-colors text-center"
               >
-                En savoir plus
+                {t("home.learnMore")}
               </Link>
               {!user && (
                 <Link
                   href="/inscription"
                   className="px-6 py-3 bg-[#1B3A6B] text-white font-semibold rounded-lg hover:bg-[#152d54] transition-colors text-center"
                 >
-                  Rejoindre gratuitement
+                  {t("home.joinFree")}
                 </Link>
               )}
             </div>
@@ -269,17 +304,17 @@ export default async function HomePage() {
         <section className="py-16 bg-blue-50">
           <div className="max-w-3xl mx-auto px-4 text-center">
             <h2 className="text-xl font-bold text-gray-900 mb-4">
-              🚀 Première visite ?
+              {t("home.firstVisit")}
             </h2>
             <p className="text-gray-600 mb-6">
-              Pour voir l&apos;application en action avec des données de démonstration, cliquez sur le bouton ci-dessous.
+              {t("home.firstVisitBody")}
             </p>
             <form action="/api/seed" method="POST">
               <button
                 type="submit"
                 className="px-6 py-3 bg-[#1B3A6B] text-white font-semibold rounded-lg hover:bg-[#152d54] transition-colors"
               >
-                Charger les données de démo
+                {t("home.loadDemo")}
               </button>
             </form>
           </div>

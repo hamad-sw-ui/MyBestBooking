@@ -2,8 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { reviews, properties, users, bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, or, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
+import {
+  assertNotMaintenance,
+  MaintenanceError,
+  maintenanceResponse,
+} from "@/lib/maintenance";
+import { rateLimit } from "@/lib/rate-limit";
+import { frenchZodMessage } from "@/lib/http";
+import { isReviewEligible, type BookingStatus } from "@/lib/booking-lifecycle";
+import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
+import { getSetting } from "@/lib/settings";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -20,120 +30,102 @@ const reviewSchema = z.object({
   travelerType: z.enum(["solo", "couple", "family", "group", "business"]).optional(),
 });
 
+const listSchema = z.object({
+  propertyId: z.string().uuid().optional(),
+  status: z.enum(["approved", "hidden", "rejected", "pending"]).optional(),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  offset: z.coerce.number().int().min(0).max(10_000).default(0),
+});
+
+/**
+ * Public = avis approuvés uniquement. Les avis modérés restent visibles aux
+ * dashboards admin et hôte propriétaire, jamais grâce à un simple query param.
+ */
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const propertyId = searchParams.get("propertyId");
-    const status = searchParams.get("status") || "approved";
-    const limit = parseInt(searchParams.get("limit") || "20");
-    const offset = parseInt(searchParams.get("offset") || "0");
-
+    const parsed = listSchema.parse(Object.fromEntries(new URL(request.url).searchParams));
     const user = await getCurrentUser();
+    const requestedStatus = parsed.status ?? "approved";
+    const conditions = [];
 
-    let conditions = [eq(reviews.status, status)];
-
-    if (propertyId) {
-      conditions.push(eq(reviews.propertyId, propertyId));
+    if (user?.role === "admin") {
+      conditions.push(eq(reviews.status, requestedStatus));
+      if (parsed.propertyId) conditions.push(eq(reviews.propertyId, parsed.propertyId));
     } else if (user?.role === "host") {
-      // Get host's properties reviews
-      const hostProperties = await db
-        .select({ id: properties.id })
-        .from(properties)
-        .where(eq(properties.hostId, user.id));
-      
-      if (hostProperties.length === 0) {
-        return NextResponse.json({ reviews: [] });
+      const hostProperties = await db.select({ id: properties.id }).from(properties).where(eq(properties.hostId, user.id));
+      const ids = hostProperties.map((property) => property.id);
+      if (!ids.length) return NextResponse.json({ reviews: [] });
+      if (parsed.propertyId && !ids.includes(parsed.propertyId)) {
+        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
       }
+      conditions.push(eq(reviews.status, requestedStatus));
+      conditions.push(parsed.propertyId ? eq(reviews.propertyId, parsed.propertyId) : inArray(reviews.propertyId, ids));
+    } else {
+      // Client anonyme ou voyageur : on ignore volontairement les status non
+      // publics, SAUF les propres avis de l'utilisateur connecté. T-125 (P1) :
+      // quand la modération préalable est active, l'auteur doit pouvoir voir
+      // son avis « en attente » (aucune fuite : condition sur son propre userId).
+      if (user) {
+        conditions.push(or(eq(reviews.status, "approved"), eq(reviews.userId, user.id)));
+      } else {
+        conditions.push(eq(reviews.status, "approved"));
+      }
+      if (parsed.propertyId) conditions.push(eq(reviews.propertyId, parsed.propertyId));
     }
 
     const results = await db
       .select({
         review: reviews,
-        user: {
-          firstName: users.firstName,
-          lastName: users.lastName,
-          country: users.country,
-        },
-        property: {
-          id: properties.id,
-          name: properties.name,
-          city: properties.city,
-        },
+        user: { firstName: users.firstName, lastName: users.lastName, country: users.country },
+        property: { id: properties.id, name: properties.name, city: properties.city },
       })
       .from(reviews)
       .leftJoin(users, eq(reviews.userId, users.id))
       .leftJoin(properties, eq(reviews.propertyId, properties.id))
       .where(and(...conditions))
-      .orderBy(desc(reviews.createdAt))
-      .limit(limit)
-      .offset(offset);
+      .orderBy(desc(reviews.createdAt), desc(reviews.id))
+      .limit(parsed.limit)
+      .offset(parsed.offset);
 
     return NextResponse.json({ reviews: results });
   } catch (error) {
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+    }
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("Error fetching reviews:", error);
-    return NextResponse.json(
-      { error: "Une erreur est survenue" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) {
-      return NextResponse.json(
-        { error: "Non autorisé" },
-        { status: 401 }
-      );
-    }
+    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    await assertNotMaintenance(user);
 
-    const body = await request.json();
-    const data = reviewSchema.parse(body);
+    const rl = rateLimit(`reviews:user:${user.id}`, { limit: 20, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) return NextResponse.json({ error: "Trop d'avis publiés, réessayez plus tard" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
-    // Get booking and verify ownership
-    const [booking] = await db
-      .select()
-      .from(bookings)
-      .where(eq(bookings.id, data.bookingId));
+    const data = reviewSchema.parse(await request.json());
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, data.bookingId));
+    if (!booking) return NextResponse.json({ error: "Réservation non trouvée" }, { status: 404 });
+    if (booking.userId !== user.id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+    if (!isReviewEligible(booking.status as BookingStatus, booking.checkOut)) return NextResponse.json({ error: "Vous ne pouvez laisser un avis qu'après un séjour terminé" }, { status: 400 });
 
-    if (!booking) {
-      return NextResponse.json(
-        { error: "Réservation non trouvée" },
-        { status: 404 }
-      );
-    }
+    // T-125 (P1) : la modération préalable est un réglage admin. Par défaut
+    // (`requireModeration=false`) le comportement historique est conservé :
+    // l'avis d'un voyageur ayant réellement séjourné est publié immédiatement.
+    // Si l'admin active la modération, le nouvel avis passe en `pending` et
+    // rejoint la file « En attente » du back-office (`/dashboard/reviews`).
+    const { requireModeration } = await getSetting("reviews");
+    const initialStatus = requireModeration ? "pending" : "approved";
 
-    if (booking.userId !== user.id) {
-      return NextResponse.json(
-        { error: "Non autorisé" },
-        { status: 403 }
-      );
-    }
-
-    if (booking.status !== "completed") {
-      return NextResponse.json(
-        { error: "Vous ne pouvez laisser un avis qu'après votre séjour" },
-        { status: 400 }
-      );
-    }
-
-    // Check if review already exists
-    const existingReview = await db
-      .select()
-      .from(reviews)
-      .where(eq(reviews.bookingId, data.bookingId));
-
-    if (existingReview.length > 0) {
-      return NextResponse.json(
-        { error: "Vous avez déjà laissé un avis pour cette réservation" },
-        { status: 400 }
-      );
-    }
-
-    const [newReview] = await db
-      .insert(reviews)
-      .values({
+    const created = await db.transaction(async (tx) => {
+      const [existing] = await tx.select({ id: reviews.id }).from(reviews).where(eq(reviews.bookingId, data.bookingId)).for("update");
+      if (existing) return null;
+      const [review] = await tx.insert(reviews).values({
         bookingId: data.bookingId,
         userId: user.id,
         propertyId: booking.propertyId,
@@ -149,39 +141,21 @@ export async function POST(request: NextRequest) {
         negativeComment: data.negativeComment,
         travelerType: data.travelerType,
         isVerified: true,
-        status: "approved",
-      })
-      .returning();
-
-    // Update property average rating
-    const propertyReviews = await db
-      .select({ overallRating: reviews.overallRating })
-      .from(reviews)
-      .where(and(eq(reviews.propertyId, booking.propertyId), eq(reviews.status, "approved")));
-
-    const totalRating = propertyReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0);
-    const averageRating = totalRating / propertyReviews.length;
-
-    await db
-      .update(properties)
-      .set({
-        averageRating: averageRating.toFixed(1),
-        totalReviews: propertyReviews.length,
-      })
-      .where(eq(properties.id, booking.propertyId));
-
-    return NextResponse.json({ review: newReview }, { status: 201 });
+        status: initialStatus,
+      }).returning();
+      await recomputePropertyReviewAggregate(tx, booking.propertyId);
+      return review;
+    });
+    if (!created) return NextResponse.json({ error: "Vous avez déjà laissé un avis pour cette réservation" }, { status: 400 });
+    return NextResponse.json({ review: created }, { status: 201 });
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: error.issues[0].message },
-        { status: 400 }
-      );
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
+    // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
+    if (error instanceof SyntaxError) {
+      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("Error creating review:", error);
-    return NextResponse.json(
-      { error: "Une erreur est survenue" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
   }
 }

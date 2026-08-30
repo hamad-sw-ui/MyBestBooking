@@ -1,109 +1,109 @@
 import Link from "next/link";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
-export function Footer() {
+/**
+ * Footer public. Ne référence QUE des routes qui existent réellement
+ * (règle R19 du framework — pas de lien qui envoie sur une 404).
+ * Les liens marketing/entreprise non implémentés sont volontairement
+ * remplacés par du texte grisé plutôt que par des liens morts.
+ */
+export async function Footer() {
+  const t = makeT(await getServerLocale());
   return (
     <footer className="bg-[#1B3A6B] text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-          {/* Company */}
+          {/* Découvrir */}
           <div>
-            <h3 className="text-sm font-semibold mb-4">mybestbooking</h3>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.discover")}</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/a-propos" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  À propos
+                <Link href="/recherche" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("footer.searchAccommodation")}
                 </Link>
               </li>
-              <li>
-                <Link href="/carrieres" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Carrières
-                </Link>
-              </li>
-              <li>
-                <Link href="/presse" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Presse
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Blog
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Discover */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4">Découvrir</h3>
-            <ul className="space-y-2">
               <li>
                 <Link href="/bestrewards" className="text-sm text-gray-300 hover:text-white transition-colors">
                   💎 BestRewards
                 </Link>
               </li>
               <li>
-                <Link href="/garantie-prix" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Garantie Prix
-                </Link>
-              </li>
-              <li>
-                <Link href="/destinations" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Destinations
-                </Link>
-              </li>
-              <li>
-                <Link href="/avis" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Avis vérifiés
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Partners */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4">Partenaires</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/devenir-partenaire" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Devenir partenaire
-                </Link>
-              </li>
-              <li>
-                <Link href="/extranet" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Extranet hébergeurs
-                </Link>
-              </li>
-              <li>
-                <Link href="/affiliation" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Programme d&apos;affiliation
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Support */}
-          <div>
-            <h3 className="text-sm font-semibold mb-4">Aide</h3>
-            <ul className="space-y-2">
-              <li>
                 <Link href="/aide" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Centre d&apos;aide
+                  {t("footer.helpCenter")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Voyageurs */}
+          <div>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.travelers")}</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/mon-compte" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("nav.myAccount")}
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-sm text-gray-300 hover:text-white transition-colors">
-                  Nous contacter
+                <Link href="/mes-reservations" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("nav.bookings")}
                 </Link>
               </li>
               <li>
-                <span className="text-sm text-gray-300">
+                <Link href="/mes-favoris" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("nav.favorites")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/messages" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("footer.messaging")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Hébergeurs */}
+          <div>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.hosts")}</h3>
+            <ul className="space-y-2">
+              <li>
+                <Link href="/dashboard/properties/new" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("footer.addProperty")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("footer.hostArea")}
+                </Link>
+              </li>
+              <li>
+                <Link href="/inscription" className="text-sm text-gray-300 hover:text-white transition-colors">
+                  {t("footer.createAccount")}
+                </Link>
+              </li>
+            </ul>
+          </div>
+
+          {/* Contact */}
+          <div>
+            <h3 className="text-sm font-semibold mb-4">{t("footer.contact")}</h3>
+            <ul className="space-y-2">
+              <li>
+                <a
+                  href="mailto:support@mybestbooking.com"
+                  className="text-sm text-gray-300 hover:text-white transition-colors"
+                >
                   📧 support@mybestbooking.com
-                </span>
+                </a>
               </li>
               <li>
-                <span className="text-sm text-gray-300">
-                  💬 Chat 24/7
-                </span>
+                <a
+                  href="mailto:partners@mybestbooking.com"
+                  className="text-sm text-gray-300 hover:text-white transition-colors"
+                >
+                  🤝 partners@mybestbooking.com
+                </a>
               </li>
             </ul>
           </div>
@@ -114,22 +114,24 @@ export function Footer() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <span className="text-[#F5A623] text-xl">✦</span>
-              <span className="font-bold">mybest</span>
-              <span className="font-bold text-[#FF5A5F]">booking</span>
+              <span className="font-bold">MyBest</span>
+              <span className="font-bold text-[#FF5A5F]">Booking</span>
               <span className="text-xs text-gray-400">.com</span>
             </div>
             <p className="text-sm text-gray-400">
-              &quot;Réservez mieux. Voyagez plus.&quot;
+              &ldquo;{t("footer.tagline")}&rdquo;
             </p>
             <div className="flex items-center gap-4 text-sm text-gray-400">
-              <Link href="/cgu" className="hover:text-white transition-colors">CGU</Link>
-              <Link href="/cgv" className="hover:text-white transition-colors">CGV</Link>
-              <Link href="/confidentialite" className="hover:text-white transition-colors">Confidentialité</Link>
-              <Link href="/cookies" className="hover:text-white transition-colors">Cookies</Link>
+              <Link href="/mentions-legales" className="hover:text-white transition-colors">
+                {t("footer.legal")}
+              </Link>
+              <Link href="/confidentialite" className="hover:text-white transition-colors">
+                {t("footer.privacy")}
+              </Link>
             </div>
           </div>
           <p className="text-center text-xs text-gray-500 mt-6">
-            © 2025 mybestbooking.com — Tous droits réservés
+            {t("footer.rights")}
           </p>
         </div>
       </div>

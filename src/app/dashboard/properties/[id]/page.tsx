@@ -6,8 +6,10 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Save, Eye, Plus, Trash2, Star } from "lucide-react";
+import { ArrowLeft, Save, Eye, Plus, Trash2, Star, Upload, RefreshCw } from "lucide-react";
 import Link from "next/link";
+import { PropertySubmitButton } from "@/components/property-submit-button";
+import { PhotoUploadButton } from "@/components/photo-upload-button";
 
 interface Property {
   id: string;
@@ -29,6 +31,8 @@ interface Property {
   status: string | null;
   averageRating: string | null;
   totalReviews: number | null;
+  // T-145 : commission spécifique à l'hébergement (admin uniquement).
+  commissionRate?: string | null;
 }
 
 interface Room {
@@ -81,6 +85,18 @@ export default function EditPropertyPage() {
   const [property, setProperty] = useState<Property | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [activeTab, setActiveTab] = useState("general");
+  // T-130 : upload de photos dans l'édition (réutilise POST /api/properties/upload).
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  // T-145 : seul un admin peut modifier la commission de l'hébergement.
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setIsAdmin(data?.user?.role === "admin"))
+      .catch(() => setIsAdmin(false));
+  }, []);
 
   useEffect(() => {
     fetch(`/api/properties/${propertyId}`)
@@ -127,6 +143,9 @@ export default function EditPropertyPage() {
           amenities: property.amenities,
           mainImage: property.mainImage,
           images: property.images,
+          // T-145 : la commission n'est envoyée que par un admin (l'API
+          // ignore/refuse ce champ pour un hôte) ; on ne l'envoie que si admin.
+          ...(isAdmin ? { commissionRate: property.commissionRate ?? "15" } : {}),
         }),
       });
 
@@ -153,6 +172,63 @@ export default function EditPropertyPage() {
         ? property.amenities.filter((a) => a !== amenityId)
         : [...property.amenities, amenityId],
     });
+  };
+
+  // T-130 : upload d'une photo dans l'édition (même endpoint qu'à la création).
+  // T-141 : refactorisé pour servir aussi bien l'ajout que le remplacement
+  // (« Changer » une photo existante) depuis le gestionnaire de fichiers.
+  const uploadPhoto = async (file: File, replaceUrl?: string) => {
+    if (!property) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/properties/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      setProperty((prev) => {
+        if (!prev) return prev;
+        if (replaceUrl) {
+          // Remplacement : on échange l'ancienne URL par la nouvelle, sans
+          // toucher à l'ordre ni au statut « principale ».
+          const images = prev.images.map((img) => (img === replaceUrl ? data.url : img));
+          return {
+            ...prev,
+            images,
+            mainImage: prev.mainImage === replaceUrl ? data.url : prev.mainImage,
+          };
+        }
+        const images = prev.images.includes(data.url) ? prev.images : [...prev.images, data.url];
+        return { ...prev, mainImage: prev.mainImage ?? data.url, images };
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const addGalleryImage = (url: string) => {
+    if (!property || !url.trim()) return;
+    const value = url.trim();
+    setProperty((prev) => prev
+      ? { ...prev, images: prev.images.includes(value) ? prev.images : [...prev.images, value] }
+      : prev);
+  };
+
+  const removeGalleryImage = (url: string) => {
+    if (!property) return;
+    setProperty((prev) => {
+      if (!prev) return prev;
+      const images = prev.images.filter((img) => img !== url);
+      return { ...prev, images, mainImage: prev.mainImage === url ? (images[0] ?? null) : prev.mainImage };
+    });
+  };
+
+  const setMainImage = (url: string) => {
+    if (!property) return;
+    setProperty((prev) => prev ? { ...prev, mainImage: url } : prev);
   };
 
   if (loading) {
@@ -201,10 +277,14 @@ export default function EditPropertyPage() {
               <Badge className={
                 property.status === "active" ? "bg-green-100 text-green-800" :
                 property.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                property.status === "suspended" ? "bg-red-100 text-red-800" :
                 "bg-gray-100 text-gray-800"
               }>
-                {property.status === "active" ? "Actif" : 
-                 property.status === "pending" ? "En attente" : property.status}
+                {property.status === "active" ? "Actif" :
+                 property.status === "pending" ? "En attente de validation" :
+                 property.status === "suspended" ? "Suspendu" :
+                 property.status === "draft" ? "Brouillon / rejeté" :
+                 property.status === "archived" ? "Archivé" : property.status}
               </Badge>
             </div>
             {property.averageRating && (
@@ -226,9 +306,22 @@ export default function EditPropertyPage() {
               <Save className="w-4 h-4 mr-2" />
               Enregistrer
             </Button>
+            {/* T-137 (A2) : re-soumission après rejet (draft) ou suspension. */}
+            <PropertySubmitButton propertyId={property.id} currentStatus={property.status} />
           </div>
         </div>
       </div>
+
+      {/* T-137 (A2) : explique à l'hôte pourquoi son annonce n'est pas publique
+          et comment la re-soumettre (auparavant, une annonce rejetée restait
+          bloquée en brouillon sans action possible). */}
+      {(property.status === "draft" || property.status === "suspended") && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+          {property.status === "draft"
+            ? "Votre annonce a été rejetée ou est en brouillon : elle n'est pas visible du public. Corrigez les informations puis « Soumettre pour validation »."
+            : "Votre annonce est suspendue et n'est plus visible du public. Corrigez les points demandés puis « Soumettre pour validation »."}
+        </div>
+      )}
 
       {/* Messages */}
       {error && (
@@ -375,6 +468,40 @@ export default function EditPropertyPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* T-145 : commission spécifique à l'hébergement (admin uniquement).
+              Un hôte ne voit pas ce champ et ne peut pas modifier son taux. */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Commission plateforme</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="max-w-xs">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Taux de commission (%)
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={property.commissionRate ?? "15"}
+                      onChange={(e) => setProperty({ ...property, commissionRate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+                    />
+                    <span className="text-gray-500">%</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Prélevé sur chaque réservation. Par défaut : le taux global
+                    défini dans les réglages admin. Le net versé à l&apos;hôte =
+                    total − commission.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
@@ -383,20 +510,24 @@ export default function EditPropertyPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <CardTitle>Chambres</CardTitle>
-              <Button size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Ajouter une chambre
-              </Button>
+              <Link href="/dashboard/rooms/new">
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ajouter une chambre
+                </Button>
+              </Link>
             </div>
           </CardHeader>
           <CardContent>
             {rooms.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
                 <p>Aucune chambre configurée</p>
-                <Button variant="outline" className="mt-4">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Ajouter une chambre
-                </Button>
+                <Link href="/dashboard/rooms/new">
+                  <Button variant="outline" className="mt-4">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Ajouter une chambre
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="space-y-4">
@@ -413,9 +544,11 @@ export default function EditPropertyPage() {
                     </div>
                     <div className="flex items-center gap-4">
                       <p className="font-bold">€{parseFloat(room.basePrice).toFixed(0)}/nuit</p>
-                      <Button variant="ghost" size="sm">
-                        Modifier
-                      </Button>
+                      <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
+                        <Button variant="ghost" size="sm">
+                          Calendrier
+                        </Button>
+                      </Link>
                     </div>
                   </div>
                 ))}
@@ -430,24 +563,116 @@ export default function EditPropertyPage() {
           <CardHeader>
             <CardTitle>Photos</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <Input
-                label="Photo principale (URL)"
-                value={property.mainImage || ""}
-                onChange={(e) => setProperty({ ...property, mainImage: e.target.value })}
-              />
-              {property.mainImage && (
-                <img
-                  src={property.mainImage}
-                  alt="Preview"
-                  className="w-full max-w-md h-48 object-cover rounded-lg"
-                />
-              )}
-              <p className="text-sm text-gray-500">
-                Ajoutez des URLs d&apos;images supplémentaires pour la galerie
+          <CardContent className="space-y-6">
+            {/* Import d'une photo depuis le gestionnaire de fichiers de la
+                machine (même mécanisme d'upload qu'à la création, T-113). */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Ajouter une photo
+              </label>
+              <PhotoUploadButton
+                onFile={(file) => uploadPhoto(file)}
+                loading={uploading}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+                {uploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+              </PhotoUploadButton>
+              <p className="text-xs text-gray-500 mt-1">
+                {uploading
+                  ? "Téléversement en cours…"
+                  : "JPEG, PNG, WebP ou GIF — 5 Mo max. La nouvelle photo est enregistrée quand vous cliquez sur « Enregistrer »."}
               </p>
+              {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
             </div>
+
+            {/* Galerie */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                Galerie ({property.images.length} photo{property.images.length > 1 ? "s" : ""})
+              </p>
+              {property.images.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  Aucune photo. Uploadez une image ci-dessus ou ajoutez une URL plus bas.
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {property.images.map((url) => {
+                    const isMain = property.mainImage === url;
+                    return (
+                      <div key={url} className="relative group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={url} alt="" className="w-full h-32 object-cover rounded-lg border" />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-2 py-1 bg-black/50 rounded-b-lg">
+                          <button
+                            type="button"
+                            onClick={() => setMainImage(url)}
+                            disabled={isMain}
+                            className={`text-xs font-medium ${isMain ? "text-[#F5A623]" : "text-white hover:underline"}`}
+                          >
+                            {isMain ? "★ Principale" : "Définir principale"}
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {/* T-141 : remplacer directement cette photo depuis
+                                le gestionnaire de fichiers (sans supprimer/ré-ajouter). */}
+                            <PhotoUploadButton
+                              variant="ghost"
+                              size="sm"
+                              loading={uploading}
+                              onFile={(file) => uploadPhoto(file, url)}
+                              className="text-white hover:bg-white/10 hover:text-white p-1.5"
+                              title="Changer cette image"
+                              ariaLabel={`Changer l'image de la position ${property.images.indexOf(url) + 1}`}
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </PhotoUploadButton>
+                            <button
+                              type="button"
+                              onClick={() => removeGalleryImage(url)}
+                              className="text-white hover:text-red-300 p-1.5"
+                              aria-label="Supprimer cette photo"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* URL alternative */}
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-600 hover:text-[#1B3A6B]">
+                Ou ajouter une photo par URL
+              </summary>
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="url"
+                  placeholder="https://…/photo.jpg"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addGalleryImage((e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={(e) => {
+                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                    addGalleryImage(input.value);
+                    input.value = "";
+                  }}
+                >
+                  Ajouter
+                </Button>
+              </div>
+            </details>
           </CardContent>
         </Card>
       )}

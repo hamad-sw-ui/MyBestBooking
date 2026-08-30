@@ -1,42 +1,30 @@
-# 📓 LOGS
+# LOGS
 
-Journaux bruts de session : décisions prises, commandes exécutées, pistes
-explorées puis abandonnées.
+Notes brutes de session — commandes lancées, sorties intéressantes,
+raisonnements en cours. Idéal pour laisser une trace quand on interrompt un
+travail au milieu.
 
-## Différence avec `PROGRESS.md`
+**Facultatif** (les entrées formelles vont dans `PROGRESS.md`). Utile quand
+on veut garder la trace complète d'une exploration sans polluer
+`PROGRESS.md`.
 
-| `PROGRESS.md` | `LOGS/` |
-|---|---|
-| Synthèse formelle, 6 rubriques imposées | Journal détaillé, format libre |
-| Ce qui a été livré | Comment on y est arrivé |
-| Lu à chaque session | Consulté seulement en cas d'enquête |
-| Une entrée par session | Un fichier par session |
+## Nommage
 
-## Convention de nommage
+`YYYY-MM-DD_<sujet>.md`.
 
-```
-AAAA-MM-JJ_session.md
-AAAA-MM-JJ_session-2.md   # si plusieurs sessions le même jour
-```
+## Contenu type
 
-## À consigner
+- Sortie de commandes (`ls`, `grep`, `curl`, `npm run typecheck`)
+- Extraits de logs applicatifs
+- Hypothèses en cours d'exploration (tag ❓)
+- Décisions provisoires (à formaliser ensuite dans un ADR si structurant)
 
-- Commandes exécutées et leur résultat (surtout les échecs)
-- Hypothèses testées et invalidées — **précieux** : évite de refaire deux fois
-  la même impasse
-- Décisions techniques et leur justification
-- Questions restées sans réponse
-- Extraits de code ou de logs pertinents
+## Discipline
 
-## À ne pas consigner
+Un LOG **n'est pas une source de vérité**. Il documente le chemin, pas
+la destination. Les conclusions doivent être **remontées** dans
+`PROGRESS.md`, `BUGS.md`, `BACKLOG.md`, `STATE.md`, ou un rapport
+`REPORTS/`.
 
-- Secrets, clés, PIN, contenus de SMS réels
-- Volumes bruts de sortie de commande (résumer)
-
-## Sessions
-
-| Date | Fichier | Objet |
-|---|---|---|
-| 2026-07-28 | `2026-07-28_session.md` | Audit initial + création du framework `.ai/` |
-| 2026-07-28 | `2026-07-28_session-2.md` | Vérification des correctifs de sécurité + décisions D1–D4 |
-| 2026-07-28 | `2026-07-28_session-3.md` | Phase 6 — environnement Docker |
+Un LOG plus vieux que 90 jours **peut être supprimé** en rétrospective §17,
+sauf s'il documente une décision référencée par un ADR ou un rapport.

@@ -1,4 +1,7 @@
-# 🏗️ ARCHITECTURE
+# 🏗️ ARCHITECTURE — ARCHIVE HISTORIQUE
+
+> ⚠️ Ce document décrit MobileCaisse/Android et ne s'applique pas à MyBestBooking.
+> L'architecture actuelle est documentée dans `ARCHITECTURE_MYBESTBOOKING.md`.
 
 > Ce document décrit l'architecture **réellement constatée dans le code**
 > au 2026-07-28, pas une architecture idéale. Les écarts avec la cible sont

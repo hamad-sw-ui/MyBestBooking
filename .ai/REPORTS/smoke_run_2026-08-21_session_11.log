@@ -1,0 +1,133 @@
+
+> smoke
+> bash scripts/smoke.sh
+
+
+=== 0. Prérequis (DB + serveur Next) ===
+  ▶ npm run db:dev (background)
+  ✅ PostgreSQL up
+  ▶ npm run db:push (idempotent)
+  ▶ npx next dev -H 0.0.0.0 -p 3000 (background)
+  ✅ Next dev up
+
+=== 1. Seed ===
+  ✅ POST /api/seed → OK ({"message":"Données déjà présentes"})
+
+=== 2. Login × 3 rôles (admin@, host@, customer@) ===
+  ✅ login customer@mybestbooking.com → role=customer
+  ✅ login host@mybestbooking.com → role=host
+  ✅ login admin@mybestbooking.com → role=admin
+
+=== 3. Pages publiques (11) ===
+  ✅ 200 / (public)
+  ✅ 200 /recherche (public)
+  ✅ 200 /aide (public)
+  ✅ 200 /bestrewards (public)
+  ✅ 200 /confidentialite (public)
+  ✅ 200 /mentions-legales (public)
+  ✅ 200 /connexion (public)
+  ✅ 200 /inscription (public)
+  ✅ 200 /mot-de-passe-oublie (public)
+  ✅ 200 /verifier-email (public)
+  ✅ 200 /maintenance (public)
+
+=== 4. Pages protégées sans cookie (20 → 307 proxy) ===
+  ✅ 307 /mon-compte (proxy edge)
+  ✅ 307 /mes-reservations (proxy edge)
+  ✅ 307 /mes-favoris (proxy edge)
+  ✅ 307 /messages (proxy edge)
+  ✅ 307 /reservation (proxy edge)
+  ✅ 307 /dashboard (proxy edge)
+  ✅ 307 /dashboard/bookings (proxy edge)
+  ✅ 307 /dashboard/properties (proxy edge)
+  ✅ 307 /dashboard/rooms (proxy edge)
+  ✅ 307 /dashboard/reviews (proxy edge)
+  ✅ 307 /dashboard/messages (proxy edge)
+  ✅ 307 /dashboard/promotions (proxy edge)
+  ✅ 307 /dashboard/settings (proxy edge)
+  ✅ 307 /dashboard/users (proxy edge)
+  ✅ 307 /dashboard/analytics (proxy edge)
+  ✅ 307 /dashboard/billing (proxy edge)
+  ✅ 307 /dashboard/audit (proxy edge)
+  ✅ 307 /dashboard/rooms/new (proxy edge)
+  ✅ 307 /dashboard/properties/new (proxy edge)
+  ✅ 307 /dashboard/promotions/new (proxy edge)
+
+=== 5. Customer authentifié — 9 pages ===
+  ✅ 200 / (customer)
+  ✅ 200 /mon-compte (customer)
+  ✅ 200 /mes-reservations (customer)
+  ✅ 200 /mes-favoris (customer)
+  ✅ 200 /messages (customer)
+  ✅ 200 /reservation (customer)
+  ✅ 200 /recherche (customer)
+  ✅ 200 /aide (customer)
+  ✅ 200 /bestrewards (customer)
+
+=== 6. Guards role (body-check) — customer bloqué du dashboard ===
+  ✅ body /dashboard exclut /DashboardSidebar|Tableau de bord|Espace propriétaire/ (customer→/dashboard, guard actif)
+  ✅ body /dashboard/properties exclut /DashboardSidebar|Tableau de bord|Espace propriétaire/ (customer→/dashboard/properties, guard actif)
+  ✅ body /dashboard/rooms exclut /DashboardSidebar|Tableau de bord|Espace propriétaire/ (customer→/dashboard/rooms, guard actif)
+  ✅ body /dashboard/promotions exclut /DashboardSidebar|Tableau de bord|Espace propriétaire/ (customer→/dashboard/promotions, guard actif)
+  ✅ body /dashboard/users exclut /DashboardSidebar|Tableau de bord|Espace propriétaire/ (customer→/dashboard/users, guard actif)
+  ✅ body /dashboard/settings exclut /DashboardSidebar|Tableau de bord|Espace propriétaire/ (customer→/dashboard/settings, guard actif)
+  ✅ body /dashboard/audit exclut /DashboardSidebar|Tableau de bord|Espace propriétaire/ (customer→/dashboard/audit, guard actif)
+
+=== 7. Host — 11 pages dashboard ===
+  ✅ 200 /dashboard (host)
+  ✅ 200 /dashboard/bookings (host)
+  ✅ 200 /dashboard/properties (host)
+  ✅ 200 /dashboard/rooms (host)
+  ✅ 200 /dashboard/rooms/new (host)
+  ✅ 200 /dashboard/reviews (host)
+  ✅ 200 /dashboard/messages (host)
+  ✅ 200 /dashboard/promotions (host)
+  ✅ 200 /dashboard/promotions/new (host)
+  ✅ 200 /dashboard/analytics (host)
+  ✅ 200 /dashboard/billing (host)
+
+=== 8. Admin — 9 pages incluant admin-only ===
+  ✅ 200 /dashboard (admin)
+  ✅ 200 /dashboard/users (admin)
+  ✅ 200 /dashboard/audit (admin)
+  ✅ 200 /dashboard/settings (admin)
+  ✅ 200 /dashboard/properties (admin)
+  ✅ 200 /dashboard/bookings (admin)
+  ✅ 200 /dashboard/reviews (admin)
+  ✅ 200 /dashboard/analytics (admin)
+  ✅ 200 /dashboard/billing (admin)
+
+=== 9. /api/auth/me pour chaque rôle ===
+  ✅ /api/auth/me [customer.jar] → role=customer
+  ✅ /api/auth/me [host.jar] → role=host
+  ✅ /api/auth/me [admin.jar] → role=admin
+
+=== 10. APIs protégées sans cookie (9) ===
+  ✅ 401 /api/bookings (unauth)
+  ✅ 401 /api/wishlists (unauth)
+  ✅ 401 /api/conversations (unauth)
+  ✅ 401 /api/price-alerts (unauth)
+  ✅ 401 /api/users/me/referral (unauth)
+  ✅ 401 /api/auth/me (unauth)
+  ✅ 403 /api/admin/settings (unauth-admin)
+  ✅ 403 /api/admin/audit (unauth-admin)
+
+=== 11. RBAC — customer refusé sur admin ===
+  ✅ 403 /api/admin/settings (customer→admin)
+  ✅ 403 /api/admin/audit (customer→admin)
+
+=== 12. Scénarios métier ===
+  ✅ 200 /api/properties?guests=2&checkIn=2026-09-01&checkOut=2026-09-05&sort=price_asc (search filtrée)
+  ✅ seed extract : PROP=941a231d-fa07-49e5-8b35-eadd4a0eb1b6 ROOM=d8bc6067-13e6-4766-95f8-2c1240acd901 SLUG=b-b-toscana
+  ✅ 200 /hebergement/b-b-toscana (page hebergement dynamique)
+  ✅ POST /api/wishlists (add item) → 400 (idempotent : déjà présent)
+  ✅ POST /api/price-alerts → 201
+  ✅ body /api/users/me/referral contient /"code":/ (referral code présent)
+  ✅ POST /api/bookings → ref=MBB-2026-D0RV1X status=confirmed
+
+=== RÉSULTAT ===
+  Total assertions : 91
+  PASS             : 91
+  FAIL             : 0
+
+  ✅ smoke OK (91 assertions)
