@@ -48,3 +48,14 @@ résolu par ce commit) · ▶️ preuves runtime A/B/C/D/E (détails dans
   retirée (champs additifs uniquement) ; contrats 200/400/409/503 inchangés.
 - Défauts conservés : langue `fr`, devise EUR (cas réel du seed → rendus
   identiques), CTA avis (avant dépôt).
+
+---
+
+## ℹ️ Audit fonctionnel n°25 (après T-152)
+
+🔍 Rapport produit : `REPORTS/audit_fonctionnel_profond25_2026-08-30.md`
+(7 findings A→G, **aucune modification de code**). Les plus intéressants :
+**A** wallet EUR appliqué 1:1 à un total USD (preuve runtime
+`MBB-2026-9HYHNJ`), **B** promos `fixed_amount` sans devise, **C** cashback
+BestRewards crédité sans conversion. En attente de l'arbitrage utilisateur
+avant implémentation (A+B recommandés en priorité — véracité monétaire).

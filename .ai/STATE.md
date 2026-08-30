@@ -15,6 +15,16 @@
   `.github/workflows/ci.yml` (T-113) reste hors suivi
   git de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
+- **Dernière activité (2026-08-30)** : **audit fonctionnel n°25** —
+  `REPORTS/audit_fonctionnel_profond25_2026-08-30.md` (rapport seul, aucun
+  code modifié) : 132 pages × 4 rôles + 60 routes API crawlees ; 7 findings
+  — A wallet EUR appliqué 1:1 à un total USD (preuve runtime
+  `MBB-2026-9HYHNJ`), B promos `fixed_amount` sans devise, C cashback
+  BestRewards sans conversion, D `notFound()` → HTTP 200 (5 URLs testées),
+  E `€` durs restants (4 fichiers), F fléchage wallet, G UX avis. Données
+  de test nettoyées (chambre USD, booking, wishlist, conversation, alerte,
+  outbox supprimés ; wallet 25,00 et langue fr restaurés). En attente
+  d'arbitrage avant implémentation.
 - **Dernière tâche validée** : **T-152 (2026-08-30)** — implémentation des
   findings de l'audit n°24 (A→E + G) : A réservation `pending` actionnable
   (« Payer maintenant » + reprise auto du paiement, annulation étendue) ; B

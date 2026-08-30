@@ -9,6 +9,61 @@
 
 ---
 
+## Session 43 — 2026-08-30 : audit fonctionnel n°25 (à l'exécution) — 7 findings, rapport seul
+
+**Audit fonctionnel n°25 (rapport seul, aucune modification de code).**
+Crawls réels : 132 vérifications pages (anonyme/customer/host/admin), 60
+routes API, tests de parcours de bout en bout. **Ce qui est sain :** RBAC
+pages/API complet, aucune page en erreur, messagerie complète (unread
+bidirectionnel), annulation cohérente (frais en pourcentages, remboursement
+PSP post-wallet + restitution wallet séparée — pas de double remboursement),
+recherche/filtres prix convertis correctement (T-133), alertes prix avec
+devise, `<html lang>` dynamique (T-152), tunnel devises (T-152).
+
+**7 findings identifiés (problème → solution sans régression) :**
+- **A (P1)** wallet BestRewards EUR appliqué au total d'une chambre USD au
+  taux **1:1** (`POST /api/bookings` : `min(wallet, total)` sans
+  conversion ; UI affiche la déduction en € sur un solde en $US). Preuve
+  runtime : booking `MBB-2026-9HYHNJ` USD 268,82 avec wallet 25,00 déduit
+  1:1 + promo 20,00 déduite 1:1.
+- **B (P1)** promos `fixed_amount` sans devise (`promotions.value` décimal
+  seul, libellé € dans l'admin) appliquées telles quelles au total de la
+  chambre (USD/GBP) — même cause racine que A.
+- **C (P2)** cashback BestRewards (5 % × `booking.total`) et bonus de
+  parrainage crédités au wallet **sans conversion** depuis la devise du
+  booking (cron price-alerts, `loyalty.ts`).
+- **D (P2)** `notFound()` après `await` dans les pages dynamiques → page 404
+  correcte mais **statut HTTP 200** (layout `(main)` streame). Testé sur 5
+  URLs : toutes 200 + « Page introuvable ».
+- **E (P2)** `€` codés en dur restants : `dashboard/properties/[id]`
+  (prix/nuit — afficherait €170 pour une chambre USD),
+  `promo-code-input` (remise en €), `mon-compte`+`bestrewards-status`
+  (wallet EUR, correct mais non explicite).
+- **F (P3)** bouton « Utiliser mon solde » → `/recherche` sans fléchage du
+  wallet.
+- **G (P3)** absence d'explication du non-affichage du CTA avis (séjour non
+  terminé).
+
+▶️ **Preuves runtime** (dev :3000 + Postgres 55432) : booking USD via POST
+API (wallet+promo → discount 105,18 sur 374,00 USD) ; messagerie
+conversation→message→unread→reset ; `cancellation` devis 0,00 € J-13 ;
+`PATCH language` → `<html lang="en">` puis `fr` ; partage wishlist
+200/404 selon token ; RBAC 200/307 conforme. **Playwright indisponible**
+(CDN Chromium) → E2E CI-only.
+
+**Nettoyage post-audit (vérifié) :** chambre USD supprimée, booking
+`MBB-2026-9HYHNJ` supprimé, wishlist « A25 Partage » + items supprimés,
+conversation + 2 messages supprimés, alerte prix supprimée, 4 e-mails
+d'outbox supprimés, `wallet_balance` restauré 25,00, `language` restauré
+fr. État final : users 8 · bookings 30 (seed) · reviews 21 · outbox 0 ·
+wishlists 1 · promos 4 · conversations 0.
+
+**Prochaine étape :** arbitrage des findings (A+B recommandés — véracité
+monétaire) puis implémentation avec tests + smoke + build + ai:check
+(workflow §15).
+
+---
+
 ## Session 42 — 2026-08-30 : T-152 implémentation des findings de l'audit n°24 (A→E + G)
 
 **T-152 (implémenté et validé).** Mise en œuvre des 5 findings + 1
