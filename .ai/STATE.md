@@ -365,6 +365,5 @@
   ✅ ai:check.
 - Compteurs : `sessions_since_last_product_audit: 0` (audit produit exécuté
   ce jour) ; branche `arena/01a052ed-mybestbooking`.
-- HEAD Git : à mettre à jour en fin de session (commit de clôture de
-  l'audit n°29 : `a55c12a` initialement — voir `git log -1` pour le SHA
-  final après amendement de ce fichier ; motif toléré par R7).
+- HEAD Git : à mettre à jour en fin de session (motif toléré R7 ;
+  commit de clôture audit n°29 poussé : `39bf3b3`).
