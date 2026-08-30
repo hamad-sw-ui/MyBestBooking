@@ -2,6 +2,8 @@
 
 **ID** : T-149
 
+**Niveau de proportionnalité** : L
+
 **Titre** : Paiement Stripe en mode réel opérationnel de bout en bout + e-mail
 plateforme stylé pour chaque événement du cycle de vie, localisé dans la langue
 du destinataire.
