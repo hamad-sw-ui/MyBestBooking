@@ -9,6 +9,40 @@
 
 ---
 
+## Session 37 — 2026-08-30 : 22e audit fonctionnel (T-147) — messages FR sur routes 2FA
+
+Audit n°22 à l'exécution (3 rôles + anonyme, DEV 3000 puis **PROD 3009** avec
+`CRON_SECRET`). Rapport : `REPORTS/audit_fonctionnel_profond22_2026-08-30.md`.
+
+🔨 **Seul correctif (P3, i18n, additif)** : `src/app/api/auth/2fa/{setup,
+verify,disable}/route.ts` renvoyaient le message Zod **anglais brut**
+(« Invalid input: expected string… ») quand un champ requis manquait/avait le
+mauvais type. Remplacé par `frenchZodMessage(error)` (`src/lib/http.ts`, déjà
+utilisé T-140) → « Valeur invalide ou manquante ». Aucun flux modifié.
+
+🧪 **Scénarios profonds vérifiés SAINS** : surbooking (qty 2 : 2 réservations
+OK, 3ᵉ refusée ; nuits adjacentes OK, vrai chevauchement refusé) · propriété
+suspendue non réservable · wallet BestRewards débité et plafonné · codes promo
+· 2FA TOTP bout en bout (setup/verify/login totpCode/disable) · parrainage
+(filleul +5 €, parrain +10 € une fois, cron idempotent) · **sécurité cron/seed**
+(prod : seed exige `SEED_TOKEN` sinon 404 ; cron exige `Bearer CRON_SECRET`
+sinon 401 ; en dev l'auth est volontairement ouverte) · annulation (devis,
+remboursement total, double → 409, IDOR → 403) · disponibilité calendaire hôte
+(availableCount 0 bloque, non-propriétaire → 403) · messagerie (message
+stocké, compteurs, vide → 400, tiers → 403) · alertes de prix (création,
+idempotence, mise à jour, seuil négatif refusé) · page d'aide.
+
+📌 Remarques non bloquantes : penser à définir `CRON_SECRET` en production ;
+`vercel.json` appelle le cron sans en-tête d'auth (tâches idempotentes) ; en
+prod sans clés Stripe l'étape de reprise de paiement du cron lève une erreur
+(dette Stripe connue, T-145) — suggestion future : isoler chaque étape dans un
+try/catch.
+
+🧪 `tsc` 0 · `eslint` 0 · `vitest` **288/288** · ▶️ `smoke` **94/94** ·
+`build` ✓ (**60 pages**) · `ai:check` **19 OK / 1 warn**. Données de test
+nettoyées (utilisateurs anonymisés, réservations 2028 et surcharges calendaires
+supprimées, wallet démo remis à 25,00 €).
+
 ## Session 36 — 2026-08-29 : 21e audit fonctionnel (T-146) — correctif récapitulatif rate plan dans le tunnel
 
 Audit n°21 à l'exécution (3 rôles + anonyme, DEV 3000 puis **PROD 3009**).

@@ -1,60 +1,62 @@
 # 🎯 TÂCHE EN COURS
 
-**Tâche :** T-146 — 21e audit fonctionnel profond : analyse à l'exécution
-(pages, boutons, scénarios) des éléments inachevés/mal pensés, avec explication
-du problème et solution sans régression. Détail :
-`REPORTS/audit_fonctionnel_profond21_2026-08-29.md`.
+**Tâche :** T-147 — 22e audit fonctionnel profond : analyse à l'exécution
+(pages, boutons, scénarios profonds) des éléments inachevés/mal pensés, avec
+explication du problème et solution sans régression. Détail :
+`REPORTS/audit_fonctionnel_profond22_2026-08-30.md`.
 
-**Méthode :** exécution DEV (3000) puis **PROD `next start` (3009)**, 3 rôles
-(client/hôte/admin) + anonyme. Données de test créées puis nettoyées (37
-réservations, 0 en 2028, 0 rate-plan/propriété de test).
+**Méthode :** DEV (3000) puis **PROD `next start` (3009)** avec `CRON_SECRET`
+défini ; 3 rôles + anonyme. Environnement restauré (re-clone). Données de test
+nettoyées (utilisateurs de test **anonymisés** comme le fait l'admin,
+réservations 2028, surcharges calendaires, alerte, conversation orpheline
+supprimées ; wallet client démo remis à 25,00 €).
 
-## Défaut corrigé (1 seul, additif — aucun calcul/paiement touché)
+## Défaut corrigé (1 seul, additif — aucun flux touché)
 
-- 🔨 **P2 — Récapitulatif tunnel de réservation : la remise du tarif (rate plan)
-  était comptée deux fois dans le détail.** `src/app/(main)/reservation/page.tsx`
-  affichait `subtotal` (déjà remisé) sur la ligne « N nuits × €tarif/nuit », puis
-  re-soustrayait la remise sur la ligne verte → détail arithmétiquement faux
-  (ex. 2×118,67 : 213,61 − 23,73 + 21,36 = 211,24 au lieu de 234,97). Le **Total
-  final et le calcul serveur restaient justes** (le serveur recalcule).
-  Correctif : afficher `baseSubtotal` (nuits × tarif) sur cette ligne. Sans rate
-  plan, `baseSubtotal === subtotal` → aucun changement.
+- 🔨 **Messages d'erreur Zod en anglais sur les routes 2FA** :
+  `api/auth/2fa/{setup,verify,disable}/route.ts` renvoyaient
+  `error.issues[0]?.message` brut → « Invalid input: expected string… »
+  lorsqu'un champ requis manquait/avait le mauvais type. Corrigé en utilisant
+  `frenchZodMessage(error)` (déjà dans `src/lib/http.ts`, utilisé T-140 sur les
+  routes admin) : les messages métier FR personnalisés sont conservés, les
+  messages Zod par défaut sont traduits (« Valeur invalide ou manquante »).
+  Après correctif, les 3 routes répondent en français ; le flux 2FA complet
+  (setup → verify → login totpCode → disable) reste fonctionnel.
 
-## Point documenté (connu, déjà mitigé — pas de code modifié)
+## Scénarios profonds vérifiés SAINS
 
-- ℹ️ **Soft-404 HTTP 200 :** `notFound()` pendant le rendu RSC streamé renvoie un
-  code **200** (corps = page 404) car `src/app/loading.tsx` démarre le streaming
-  (vérifié : sans `loading.tsx`, `notFound()` renvoie bien 404). Comportement
-  documenté Next 16 (loading.md « Status codes »). Déjà mitigé T-135 via
-  `<meta robots noindex>` (vérifié présent sur fiches/tokens absents, absent des
-  pages valides). Impact résiduel : analytics/conformité seulement. Solution
-  recommandée sans risque : `proxy.ts` avec vérification de slug avant streaming
-  — non appliquée (ajout de latence/DB sur le chemin critique) ; à ne faire que
-  si une exigence de conformité l'exige. Ne pas retirer `loading.tsx` (perte du
-  spinner).
+Surbooking (qty 2 : 2 OK, 3ᵉ refusée ; nuits adjacentes OK, chevauchement
+refusé) · propriété suspendue non réservable · wallet débité/plafonné ·
+codes promo (valide/inconnu/montant invalide) · 2FA bout en bout ·
+parrainage (filleul +5 €, parrain +10 € une fois, cron idempotent) ·
+**sécurité cron/seed** (prod : seed exige SEED_TOKEN sinon 404 ; cron exige
+Bearer CRON_SECRET sinon 401 ; en dev l'auth est volontairement ouverte) ·
+annulation (devis, remboursement total, double → 409, IDOR → 403) ·
+disponibilité calendaire hôte (availableCount 0 bloque, non-propriétaire 403)
+· messagerie (message stocké, compteurs, vide → 400, tiers → 403) · alertes
+de prix (création/idempotence/mise à jour/seuil négatif refusé) · page d'aide.
 
-## Scénarios vérifiés SAINS (sélection)
+## Remarques non bloquantes (aucune action sans décision)
 
-Paiement mock/Stripe · rate plans API + application réelle −10 % + formulaire
-hôte complet · contact hôte pré-résa · propriété suspendue (invisible, fiche
-404, **réservation bloquée** 400) · IDOR réservations/facture/devis/avis → 403 ·
-modération propriétés (pending→approve admin, hôte 403) · avis (après séjour
-uniquement) · partage wishlist (rotation invalide l'ancien token) · auth
-(logout, forgot/reset sans fuite, change-password fr) · avatar · recherche (0
-résultat, tri prix) · promotions admin-only · audit/analytics admin. Aucun lien
-mort ni handler vide (R18/R19 OK).
+- Cron ouvert en dev **volontairement** (`NODE_ENV`), sécurisé en prod →
+  penser à définir `CRON_SECRET` en production.
+- `vercel.json` planifie le cron sans en-tête d'auth (idempotent, effet
+  limité) ; à aligner si `CRON_SECRET` activé.
+- En prod sans clés Stripe, l'étape de reprise de paiement du cron lève une
+  erreur (dette Stripe déjà connue/différée T-145) et fait répondre 500 pour
+  tout le cron ; suggestion future : isoler chaque étape dans un try/catch.
 
-**ID** : T-146. **Niveau** : L. **Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-29.
+**ID** : T-147. **Niveau** : L. **Statut** : **CORRIGÉ (VALIDÉ)** — 2026-08-30.
 
-## Sortie (validé — T-146)
+## Sortie (validé — T-147)
 
-- 🔨 `tsc` 0 · `eslint` 0 (1 warning `<img>` préexistant, non lié).
-  🧪 `vitest` **288 (42 fichiers)**.
-- ▶️ `smoke` **94/94** · `build` ✓ (Compiled successfully, **60 pages**) ·
-  `ai:check` **19 OK · 1 warn · 0 fail**.
-- Rapport : `.ai/REPORTS/audit_fonctionnel_profond21_2026-08-29.md`.
+- 🔨 `tsc` 0 · `eslint` 0. 🧪 `vitest` **288/288 (42 fichiers)**.
+- ▶️ `smoke` **94/94** · `build` ✓ (**60 pages**) · `ai:check` **19 OK · 1 warn**.
+- Rapport : `.ai/REPORTS/audit_fonctionnel_profond22_2026-08-30.md`.
 
 ---
+
+## Avant : T-146 — 21e audit fonctionnel profond (récapitulatif rate plan)
 
 ## Avant : T-145 — implémentation des remarques produit (photo de profil,
 ## commission par hébergement admin, langue « ar ») — CORRIGÉ (VALIDÉ) 2026-08-29

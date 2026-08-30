@@ -4,6 +4,7 @@ import speakeasy from "speakeasy";
 import { db } from "@/db";
 import { users } from "@/db/schema";
 import { getCurrentUser, verifyPassword } from "@/lib/auth";
+import { frenchZodMessage } from "@/lib/http";
 import { eq } from "drizzle-orm";
 
 const schema = z.object({
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: error.issues[0]?.message ?? "Payload invalide" }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     console.error("[2fa/disable]", error);
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }
