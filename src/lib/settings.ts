@@ -151,10 +151,16 @@ export const securitySchema = z.object({
 
 // T-025 — Templates emails. Placeholders supportés via {name} :
 //   emailVerification / passwordReset  : firstName, url
+//   welcomeEmail                       : firstName, url
 //   bookingConfirmation                : firstName, bookingReference,
 //     propertyName, city, checkIn, checkOut, total, currency
 //   bookingHostNotification            : hostFirstName, bookingReference,
 //     propertyName, guestName, checkIn, checkOut, dashboardUrl
+//   bookingCancellation                : firstName, bookingReference,
+//     propertyName, cancellationFee, currency
+//   bookingReminder (J-3 / J-1)        : firstName, bookingReference,
+//     propertyName, city, checkIn, checkOut, daysLabel, url
+//   reviewRequest                      : firstName, propertyName, bookingReference, url
 const templateBlockSchema = z.object({
   subject: z.string().min(1).max(200),
   body: z.string().min(1).max(5000),
@@ -162,9 +168,12 @@ const templateBlockSchema = z.object({
 export const emailTemplatesSchema = z.object({
   emailVerification: templateBlockSchema,
   passwordReset: templateBlockSchema,
+  welcomeEmail: templateBlockSchema,
   bookingConfirmation: templateBlockSchema,
   bookingHostNotification: templateBlockSchema,
   bookingCancellation: templateBlockSchema,
+  bookingReminder: templateBlockSchema,
+  reviewRequest: templateBlockSchema,
   newMessage: templateBlockSchema,
 });
 export type EmailTemplateBlock = z.infer<typeof templateBlockSchema>;
@@ -272,6 +281,13 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
         "Vous avez demandé à réinitialiser votre mot de passe.\n\n" +
         "Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.",
     },
+    welcomeEmail: {
+      subject: "Bienvenue sur MyBestBooking 🎉",
+      body:
+        "Bonjour {firstName} 👋\n\n" +
+        "Votre adresse email est vérifiée : votre compte MyBestBooking est prêt.\n\n" +
+        "Recherchez un hébergement, suivez vos coups de cœur et retrouvez vos réservations depuis votre tableau de bord. Bonnes réservations !",
+    },
     bookingConfirmation: {
       subject: "Réservation confirmée {bookingReference}",
       body:
@@ -298,6 +314,20 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
         "Bonjour {firstName},\n\n" +
         "Vous avez reçu un nouveau message sur MyBestBooking. " +
         "Connectez-vous pour y répondre.",
+    },
+    bookingReminder: {
+      subject: "Votre séjour à {propertyName} approche ({checkIn})",
+      body:
+        "Bonjour {firstName},\n\n" +
+        "Votre séjour pour {propertyName}, {city} commence le {checkIn} (départ le {checkOut}).\n\n" +
+        "{daysLabel}. Retrouvez votre réservation {bookingReference} et toutes les infos pratiques dans votre tableau de bord.",
+    },
+    reviewRequest: {
+      subject: "Comment s'est passé votre séjour à {propertyName} ?",
+      body:
+        "Bonjour {firstName},\n\n" +
+        "Nous espérons que votre séjour à {propertyName} s'est bien passé.\n\n" +
+        "Votre avis aide les autres voyageurs à mieux réserver. Cela ne prend qu'une minute — merci pour votre retour !",
     },
   },
 };

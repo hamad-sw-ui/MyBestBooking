@@ -9,6 +9,50 @@
 
 ---
 
+## Session 39 — 2026-08-30 : T-149 Stripe réel + e-mails plateforme stylés et localisés
+
+Levée de la dette T-145 (Stripe/Resend « différés »). 🔨 Audit : le **tunnel Stripe
+était déjà complet** (abstraction mock/stripe sans SDK, webhook HMAC vérifié à la
+main, inbox idempotente, remboursements tardifs, clés chiffrées AES-256-GCM via
+l'admin avec fallback env, test de connexion réel) → pas de reconstruction, câblage
+vérifié + doc de mise en route. 🔨 Côté e-mails, comblement des événements sans
+déclencheur :
+
+- Logo des e-mails corrigé en **MyBestBooking** (CamelCase, cohérent avec la marque).
+- 3 nouveaux templates éditables admin (`welcomeEmail`, `bookingReminder` J-3/J-1,
+  `reviewRequest`) dans le schéma zod + DEFAULTS + panneau admin ; gabarit
+  `priceAlert` de marque (était en HTML brut).
+- Déclencheurs réels : e-mail de **bienvenue** après vérification d'email
+  (`auth/verify`), **rappels J-3/J-1** et **demande d'avis post-séjour** via un
+  nouveau `lib/booking-lifecycle-emails.ts` câblé au cron, idempotents
+  (`eventKey` + `NOT EXISTS` sur l'outbox), fenêtre d'avis 14 j, exclusions
+  correctes (séjour trop vieux, déjà notifié/commenté).
+- **Localisation des e-mails dans la langue du destinataire** (nouveau
+  `lib/mail/strings.ts` fr/en) : habillage (boutons, en-têtes tableau, slogans,
+  alertes prix, claim invité) ; langue passée depuis chaque déclencheur pour le
+  bon destinataire (voyageur vs hôte). Corps éditables admin laissés dans la
+  langue de rédaction admin (limite documentée).
+
+▶️ Preuves : rappels J-3/J-1 = 2, demande d'avis = 1 (vieux séjour exclu), re-jeu
+= 0/0 ; bienvenue après verify (307 `?ok=1`, re-token `?ok=0` sans doublon) ;
+user `language=en` reçoit « Book better / View my booking / Check-in / Price
+alert » ; `ar` → repli fr. Admin : 9 templates exposés, PATCH 200, client 403.
+🧪 **tsc 0 · lint 0 err · vitest 299/299 (+11) · smoke 94/94 · build 60 pages ·
+ai:check 20 OK/0 warn**. Données de test nettoyées (8 users, 31 bookings seed,
+outbox vide, réglages en DEFAULTS). Rapport : `REPORTS/t-149_paiement_stripe_emails_2026-08-30.md`.
+
+**Devise/langue (clarification utilisateur) :** l'interface web et l'habillage des
+e-mails suivent la **préférence de celui qui reçoit** (vue/usage) ; les montants
+transactionnels (paiement/total/remboursement/portefeuille) restent en devise de
+facturation (EUR) et ne sont jamais convertis (Stripe ne gère pas le FCFA).
+
+**Prochaine étape :** saisie des vraies clés Stripe/Resend en production (panneau
+`/dashboard/settings` → Providers, exige `CREDENTIALS_ENCRYPTION_KEY`) + webhook
+Stripe pointant vers `/api/webhooks/stripe` ; option futur : traduction des corps
+éditables admin (arabe).
+
+---
+
 ## Session 38 — 2026-08-30 : 23e audit fonctionnel (T-148) — RAS, aucun correctif
 
 Audit n°23 à l'exécution (3 rôles + anonyme, DEV). Rapport :

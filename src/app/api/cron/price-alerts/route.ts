@@ -12,6 +12,8 @@ import { getUploader } from "@/lib/storage";
 import { getPaymentProvider } from "@/lib/payment";
 import { recoverPendingPaymentIntents } from "@/lib/payment-intents";
 import { processPendingPaymentEvents, reconcileLateCapturedPaymentRefunds } from "@/lib/payment-events";
+import { sendBookingReminders, sendReviewRequests } from "@/lib/booking-lifecycle-emails";
+import { templates } from "@/lib/mail";
 
 export const dynamic = "force-dynamic";
 
@@ -149,6 +151,10 @@ export async function GET(request: NextRequest) {
 
   try {
     const completedBookings = await completeEligibleBookings(new Date().toISOString().slice(0, 10));
+    // T-149 : e-mails de cycle de vie (rappels J-3/J-1 et demande d'avis),
+    // idempotents via des eventKeys déterministes.
+    const bookingRemindersSent = await sendBookingReminders();
+    const reviewRequestsSent = await sendReviewRequests();
     const emailDelivery = await deliverPendingEmails();
     // Reprise des bookings committés avant l’appel PSP : aucun lock room/user
     // n’est maintenu pendant l’I/O fournisseur.
@@ -186,13 +192,24 @@ export async function GET(request: NextRequest) {
       })) continue;
 
       const currency = quote.currency;
-      const offerLabel = quote.mode === "trip" ? "pour votre séjour (hors taxes et réductions personnelles)" : "à partir de (prix de base)";
+      const isEn = entry.user.language === "en";
+      const offerLabel = quote.mode === "trip"
+        ? (isEn ? "for your stay (excluding taxes and personal discounts)" : "pour votre séjour (hors taxes et réductions personnelles)")
+        : (isEn ? "from (base price)" : "à partir de (prix de base)");
+      const alertMail = await templates.priceAlert({
+        firstName: entry.user.firstName,
+        propertyName: entry.property.name,
+        price: price.toFixed(2),
+        currency,
+        maxPrice: Number(entry.alert.maxPrice).toFixed(2),
+        offerLabel,
+        url: `${process.env.NEXT_PUBLIC_APP_URL ?? ""}/hebergement/${entry.property.slug}`,
+        language: entry.user.language ?? null,
+      });
       await enqueueEmail({
         eventKey: `price-alert:${entry.alert.id}:${quote.mode}:${price.toFixed(2)}`,
         to: entry.user.email,
-        subject: `Alerte prix : ${entry.property.name}`,
-        text: `Bonjour ${entry.user.firstName},\n\n${entry.property.name} est maintenant proposé ${offerLabel} à ${price.toFixed(2)} ${currency}, sous votre seuil de ${Number(entry.alert.maxPrice).toFixed(2)} ${currency}.\n\nConnectez-vous à MyBestBooking pour consulter l'offre.`,
-        html: `<p>Bonjour ${entry.user.firstName},</p><p><strong>${entry.property.name}</strong> est maintenant proposé ${offerLabel} à <strong>${price.toFixed(2)} ${currency}</strong>, sous votre seuil de ${Number(entry.alert.maxPrice).toFixed(2)} ${currency}.</p><p>Connectez-vous à MyBestBooking pour consulter l'offre.</p>`,
+        ...alertMail,
       });
       await db
         .update(priceAlerts)
@@ -202,7 +219,7 @@ export async function GET(request: NextRequest) {
     }
 
     const alertEmailDelivery = await deliverPendingEmails();
-    return NextResponse.json({ ok: true, scanned: alerts.length, notified, completedBookings, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
+    return NextResponse.json({ ok: true, scanned: alerts.length, notified, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
   } catch (error) {
     console.error("[cron price-alerts]", error);
     return NextResponse.json({ error: "Échec du traitement des alertes prix" }, { status: 500 });

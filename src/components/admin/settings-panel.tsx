@@ -501,6 +501,10 @@ const TEMPLATE_LABELS: Record<keyof SettingValue<"emailTemplates">, { title: str
     title: "Réinitialisation mot de passe",
     vars: "{firstName}, {url}",
   },
+  welcomeEmail: {
+    title: "Bienvenue (email vérifié)",
+    vars: "{firstName}, {url}",
+  },
   bookingConfirmation: {
     title: "Confirmation de réservation (voyageur)",
     vars: "{firstName}, {bookingReference}, {propertyName}, {city}, {checkIn}, {checkOut}, {total}, {currency}",
@@ -512,6 +516,14 @@ const TEMPLATE_LABELS: Record<keyof SettingValue<"emailTemplates">, { title: str
   bookingCancellation: {
     title: "Annulation de réservation (voyageur)",
     vars: "{firstName}, {bookingReference}, {propertyName}, {cancellationFee}, {currency}",
+  },
+  bookingReminder: {
+    title: "Rappel avant séjour (J-3 / J-1)",
+    vars: "{firstName}, {bookingReference}, {propertyName}, {city}, {checkIn}, {checkOut}, {daysLabel}, {url}",
+  },
+  reviewRequest: {
+    title: "Demande d'avis (après séjour)",
+    vars: "{firstName}, {propertyName}, {bookingReference}, {url}",
   },
   newMessage: {
     title: "Nouveau message reçu",

@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
-import { bookings, properties } from "@/db/schema";
+import { bookings, properties, users } from "@/db/schema";
 import { computeCancellationFeeWithGrid, daysUntil, type CancellationPolicy } from "@/lib/cancellation";
 import { getSetting } from "@/lib/settings";
 import { getPaymentProvider } from "@/lib/payment";
@@ -74,12 +74,17 @@ export async function cancelBooking(bookingId: string, reason: string): Promise<
 }
 
 export async function notifyBookingCancellation(outcome: CancellationOutcome): Promise<void> {
+  // Langue du voyageur destinataire.
+  const [guest] = outcome.booking.userId
+    ? await db.select({ language: users.language }).from(users).where(eq(users.id, outcome.booking.userId))
+    : [];
   const mail = await templates.bookingCancellation({
     firstName: outcome.booking.guestFirstName,
     bookingReference: outcome.booking.bookingReference,
     propertyName: outcome.propertyName,
     cancellationFee: outcome.cancellationFee.toFixed(2),
     currency: outcome.booking.currency ?? "EUR",
+    language: guest?.language ?? null,
   });
   const eventKey = `booking-cancellation:${outcome.booking.id}`;
   await enqueueEmail({ eventKey, to: outcome.booking.guestEmail, ...mail });

@@ -14,6 +14,10 @@ export async function sendBookingConfirmationIfNeeded(bookingId: string): Promis
     const [booking] = await tx.select().from(bookings).where(eq(bookings.id, bookingId)).for("update");
     if (!booking || booking.status !== "confirmed" || booking.paymentStatus !== "paid" || booking.confirmationEmailSentAt) return [];
     const [property] = await tx.select().from(properties).where(eq(properties.id, booking.propertyId));
+    // Langue du voyageur (destinataire) : l'e-mail est localisé pour lui.
+    const [guest] = booking.userId
+      ? await tx.select({ language: users.language }).from(users).where(eq(users.id, booking.userId))
+      : [];
     const traveller = await templates.bookingConfirmation({
       firstName: booking.guestFirstName,
       bookingReference: booking.bookingReference,
@@ -23,12 +27,13 @@ export async function sendBookingConfirmationIfNeeded(bookingId: string): Promis
       checkOut: String(booking.checkOut),
       total: String(booking.total),
       currency: booking.currency,
+      language: guest?.language ?? null,
     });
     const guestKey = `booking-confirmation:${booking.id}:guest`;
     await tx.insert(emailOutbox).values({ eventKey: guestKey, to: booking.guestEmail, ...traveller }).onConflictDoNothing({ target: emailOutbox.eventKey });
     const keys = [guestKey];
     if (property?.hostId) {
-      const [host] = await tx.select({ email: users.email, firstName: users.firstName }).from(users).where(eq(users.id, property.hostId));
+      const [host] = await tx.select({ email: users.email, firstName: users.firstName, language: users.language }).from(users).where(eq(users.id, property.hostId));
       if (host) {
         const hostEmail = await templates.bookingHostNotification({
           hostFirstName: host.firstName,
@@ -37,6 +42,7 @@ export async function sendBookingConfirmationIfNeeded(bookingId: string): Promis
           guestName: `${booking.guestFirstName} ${booking.guestLastName}`,
           checkIn: String(booking.checkIn),
           checkOut: String(booking.checkOut),
+          language: host.language ?? null,
         });
         const hostKey = `booking-confirmation:${booking.id}:host`;
         await tx.insert(emailOutbox).values({ eventKey: hostKey, to: host.email, ...hostEmail }).onConflictDoNothing({ target: emailOutbox.eventKey });

@@ -68,6 +68,7 @@ export async function POST() {
       const mail = await templates.emailVerification({
         firstName: fresh?.firstName ?? user.firstName ?? "",
         url,
+        language: user.language ?? null,
       });
       // eventKey distinct de l'inscription pour autoriser plusieurs renvois.
       const eventKey = `email-verification-resend:${user.id}:${Date.now()}`;

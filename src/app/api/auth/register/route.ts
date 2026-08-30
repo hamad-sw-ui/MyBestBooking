@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
       const { clear } = await issueToken(newUser.id, "email_verification");
       const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       const url = `${base}/api/auth/verify?token=${encodeURIComponent(clear)}`;
-      const mail = await templates.emailVerification({ firstName: newUser.firstName, url });
+      const mail = await templates.emailVerification({ firstName: newUser.firstName, url, language: newUser.language });
       const eventKey = `email-verification:${newUser.id}`;
       await enqueueEmail({ eventKey, to: newUser.email, ...mail });
       await deliverEmail(eventKey);

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         const { clear } = await issueToken(user.id, "password_reset");
         const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const url = `${base}/reinitialiser?token=${encodeURIComponent(clear)}`;
-        const mail = await templates.passwordReset({ firstName: user.firstName, url });
+        const mail = await templates.passwordReset({ firstName: user.firstName, url, language: user.language });
         const eventKey = `password-reset:${user.id}:${hashToken(clear).slice(0, 24)}`;
         await enqueueEmail({ eventKey, to: user.email, ...mail });
         await deliverEmail(eventKey);

@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
         const recipientId = ok.isGuest ? convWithProperty.hostId : convWithProperty.userId;
         if (recipientId && recipientId !== user.id) {
           const [recipient] = await db
-            .select({ email: users.email, firstName: users.firstName })
+            .select({ email: users.email, firstName: users.firstName, language: users.language })
             .from(users)
             .where(eq(users.id, recipientId))
             .limit(1);
@@ -150,6 +150,7 @@ export async function POST(request: NextRequest) {
             const mail = await templates.newMessage({
               firstName: recipient.firstName ?? "",
               senderName,
+              language: recipient.language ?? null,
             });
             const eventKey = `message:${msg.id}:${recipientId}`;
             await enqueueEmail({ eventKey, to: recipient.email, ...mail });
