@@ -145,6 +145,11 @@ export async function PUT(
           },
           Number(lockedBooking.total),
           br.thresholds,
+          // T-154b (audit n°26, P1-3) : le caller « Terminer le séjour »
+          // passait la devise de la réservation au cron (T-153 C) mais pas
+          // ici — un séjour facturé en devise non EUR créditait un cashback
+          // 1:1 (ex. 500 $US → 25,00 € au lieu de 23,15 €).
+          lockedBooking.currency ?? "EUR",
         );
         await tx
           .update(users)

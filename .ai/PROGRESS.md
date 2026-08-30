@@ -23,7 +23,12 @@
   `minPrice=95&maxPrice=120` → 2 ; `sort=price_asc` = 89/89/89/100/118,67/
   118,67/148,33/148,33 ; `sort=price_desc` inverse ; 0 « Prix indisponible ».
 - ✔️ smoke **94/94**.
-- **Étape suivante** : T-154b (P1-3 cashback « Terminer le séjour »).
+- **T-154b (P1-3)** : `PUT /api/bookings/[id]` (`status:"completed"`) passe
+  désormais `lockedBooking.currency ?? "EUR"` à `calculateLoyaltyAward`
+  (comme le cron, T-153 C) ; nouveau test route (2 cas) : 200,00 $US →
+  **9,26 €** (au lieu de 10,00 € 1:1), 200,00 € → **10,00 €** inchangé.
+- **Étape suivante** : T-154c (P2-5 grille annulation, P2-6 favoris DELETE,
+  P2-7 alerte devise).
 
 ## Session 44 — 2026-08-30 : audit fonctionnel n°26 (à l'exécution) — 14 findings, rapport seul
 
