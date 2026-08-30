@@ -374,11 +374,11 @@ record(S, f"Unicité booking_reference : {'aucun doublon' if not refs_dup else '
        "OK" if not refs_dup else "KO", f"doublons: {refs_dup}")
 
 # FK : créer un booking avec userId inexistant via SQL direct (contourner API)
-# Payload complet avec currency (contrainte NOT NULL séparée), pour bien
-# isoler la contrainte FK sur user_id
+# Payload complet avec currency + commission_* (contraintes NOT NULL séparées),
+# pour bien isoler la contrainte FK sur user_id
 fk_test = db_query(
-    f"INSERT INTO bookings (booking_reference,user_id,property_id,room_id,check_in,check_out,num_nights,num_adults,guest_first_name,guest_last_name,guest_email,subtotal,taxes,discount,total,currency) "
-    f"VALUES ('MBB-FK-{int(time.time())}','00000000-0000-0000-0000-000000000000','{prop_id}','{room_id}','2030-06-01','2030-06-03',2,1,'X','Y','x@t.local',100,10,0,110,'EUR')"
+    f"INSERT INTO bookings (booking_reference,user_id,property_id,room_id,check_in,check_out,num_nights,num_adults,guest_first_name,guest_last_name,guest_email,subtotal,taxes,discount,total,currency,commission_rate,commission_amount,net_to_host) "
+    f"VALUES ('MBB-FK-{int(time.time())}','00000000-0000-0000-0000-000000000000','{prop_id}','{room_id}','2030-06-01','2030-06-03',2,1,'X','Y','x@t.local',100,10,0,110,'EUR',15,16.5,93.5)"
 )
 # Détecte l'erreur FK (code 23503 ou message contenant "foreign key" / "violates")
 err = fk_test.get("error", "") if isinstance(fk_test, dict) else ""
@@ -442,9 +442,21 @@ curl(BASE + "/api/properties")
 start = time.time()
 code, body = curl(BASE + "/api/properties")
 t_all = time.time() - start
-n_props = len(json.loads(body).get("properties", []))
+try:
+    n_props = len(json.loads(body).get("properties", []))
+except Exception:
+    # Body vide (timeout curl) ou JSON invalide → on enregistre un KO net au
+    # lieu de faire planter tout le run (le contrat reste vérifié ci-dessous).
+    record(S, f"GET /api/properties → HTTP {code} · JSON invalide ({t_all*1000:.0f}ms)",
+           "KO" if code != 200 else "WARN",
+           f"body[:160]={body[:160]!r} — réexécuter le run si infra seule en cause")
+    n_props = 0
+if n_props == 0 and code == 200:
+    # Cas limite : body JSON valide mais liste vide — le run ne doit pas
+    # planter non plus sur la section suivante.
+    pass
 record(S, f"GET /api/properties ({n_props} props) → {t_all*1000:.0f}ms (après warm-up)",
-       "OK" if t_all < 2 else "WARN",
+       "OK" if t_all < 2 and n_props > 0 else "WARN",
        f"budget : < 2s pour {n_props} props")
 
 # GET une propriété individuelle

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Heart, Loader2, Share2 } from "lucide-react";
 import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
 // T-154d (audit n°26, P2-8) : confirmation favori via ToastProvider.
@@ -14,6 +15,7 @@ import { makeT } from "@/lib/ui-strings";
  * et partage Web Share/clipboard. */
 export function PropertyHeaderActions({ propertyId, propertyName }: { propertyId: string; propertyName: string }) {
   const favorite = useWishlistToggle(propertyId);
+  const router = useRouter();
   const { addToast } = useToast();
   const { language } = useDisplayPreferences();
   const t = makeT(language);
@@ -25,7 +27,7 @@ export function PropertyHeaderActions({ propertyId, propertyName }: { propertyId
     setMessage(null);
     const outcome = await favorite.toggle();
     if (outcome === "unauthenticated") {
-      window.location.href = "/connexion?next=" + encodeURIComponent(window.location.pathname);
+      router.push("/connexion?next=" + encodeURIComponent(window.location.pathname));
       return;
     }
     const text = wasSaved ? t("headerActions.favoriteRemoved") : t("headerActions.favoriteAdded");

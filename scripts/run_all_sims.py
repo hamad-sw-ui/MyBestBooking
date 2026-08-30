@@ -57,6 +57,14 @@ def cleanup_db():
     db_query("UPDATE users SET wallet_balance='25.00', bestrewards_bookings_count=7, bestrewards_level=2 WHERE email='customer@mybestbooking.com'")
     # Effacer les bookings de test des runs précédents
     db_query("DELETE FROM bookings WHERE guest_first_name IN ('Racer','ParaFix','RaceFix','Trans','Calc','Wallet','Anonymous','Blocked','Deep','Sim','BlockTest','FreeTest','Combo','Simulation','Delete','Verify','Reset','Gdpr','Suspend','Cookie','Emoji','Long','Xss') OR guest_first_name LIKE 'Race%' OR guest_first_name LIKE 'Trans%' OR guest_first_name LIKE 'Chevauchement%' OR guest_first_name LIKE 'Rate%' OR guest_first_name LIKE 'Wallet%'")
+    # T-157 (audit n°29) : un compte connecté réserve sous SON identité — les
+    # sims qui bookent avec le cookie customer sont donc enregistrés avec
+    # guest_email=customer@mybestbooking.com, quel que soit le nom envoyé.
+    # Le nettoyage par guest_first_name était inopérant : les créations
+    # s'accumulaient (5 runs → chambre quantity=5 pleine → 409 smoke/surface).
+    # On supprime toutes les créations de scénarios (check_in >= 2027-01-01),
+    # en préservant la réservation de démo du seed (aujourd'hui +14 j).
+    db_query("DELETE FROM bookings WHERE guest_email='customer@mybestbooking.com' AND check_in >= '2027-01-01'")
     # Effacer les users test créés (email @t.local ou @test.local, sauf seed)
     db_query("DELETE FROM sessions WHERE user_id IN (SELECT id FROM users WHERE email LIKE '%@t.local' OR email LIKE '%@test.local' OR email LIKE '%@anonymized.local')")
     # T-160/T-166 (audit n°30) : les runs laissent aussi des votes d'avis,

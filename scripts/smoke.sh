@@ -122,6 +122,11 @@ if [ -n "$DB_URL" ]; then
     c.connect().then(async () => {
       try {
         await c.query(\"DELETE FROM bookings WHERE guest_first_name = 'Smoke' AND guest_last_name = 'Test'\");
+        // T-157 (audit n°29) : un compte connecté réserve sous SON identité →
+        // le booking est enregistré avec guest_email=customer@…, quel que soit
+        // le nom envoyé. Sans ce nettoyage chaque run accumule une réservation
+        // sur la même fenêtre (chambre quantity=5 → 409 après ~5 runs).
+        await c.query(\"DELETE FROM bookings WHERE guest_email = 'customer@mybestbooking.com' AND check_in = '2027-01-15' AND check_out = '2027-01-18'\");
         await c.query(\"DELETE FROM price_alerts WHERE max_price = '50.00' AND check_in IS NULL AND check_out IS NULL\");
         console.log('cleanup OK');
       } catch (e) { console.error('cleanup KO: ' + e.message); }
@@ -416,7 +421,8 @@ assert_body_contains "/api/users/me/referral" "\"code\":" "referral code présen
 # Booking bout-en-bout — la vraie preuve
 if [ -n "$PROP" ] && [ -n "$ROOM" ]; then
   BODY=$(curl -s -b "$JAR_DIR/customer.jar" -X POST "$BASE_URL/api/bookings" \
-    -H "Content-Type: application/json" -d "{
+    -H "Content-Type: application/json" \
+    -w "\n__HTTP__%{http_code}" -d "{
       \"propertyId\":\"$PROP\",
       \"roomId\":\"$ROOM\",
       \"checkIn\":\"2027-01-15\",
@@ -425,12 +431,14 @@ if [ -n "$PROP" ] && [ -n "$ROOM" ]; then
       \"guestFirstName\":\"Smoke\",\"guestLastName\":\"Test\",
       \"guestEmail\":\"customer@mybestbooking.com\"
     }")
+  code=$(printf '%s' "$BODY" | sed -n 's/.*__HTTP__//p')
+  BODY=$(printf '%s' "$BODY" | sed 's/__HTTP__.*$//')
   ref=$(python3 -c "import sys,json;print(json.load(sys.stdin).get('booking',{}).get('bookingReference',''))" <<<"$BODY" 2>/dev/null || echo "")
   status=$(python3 -c "import sys,json;print(json.load(sys.stdin).get('booking',{}).get('status',''))" <<<"$BODY" 2>/dev/null || echo "")
   if [ -n "$ref" ] && [ "$status" = "confirmed" ]; then
-    ok "POST /api/bookings → ref=$ref status=$status"
+    ok "POST /api/bookings → $code ref=$ref status=$status"
   else
-    ko "POST /api/bookings → ref='$ref' status='$status' (attendu confirmed avec ref)"
+    ko "POST /api/bookings → HTTP $code ref='$ref' status='$status' body='$(printf '%s' "$BODY" | head -c 160)' (attendu confirmed avec ref)"
   fi
 fi
 

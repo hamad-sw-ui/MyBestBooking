@@ -1,6 +1,6 @@
 # 🕵️ Simulation PARANOÏAQUE — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-30 23:01
+**Généré le** : 2026-08-30 23:32
 **Base URL** : `http://127.0.0.1:3000`
 
 Après surface (68), deep (81), xtreme (89), l'utilisateur demande
@@ -61,11 +61,11 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **JWT header : alg=HS256, typ=None**  
   <sub>complet : {'alg': 'HS256'}</sub>
 
-- ✅ **JWT payload : userId=6f08c8c9… jti=ae996332… exp=1788735704**  
-  <sub>complet : {'userId': '6f08c8c9-622a-4ce4-a437-00e07a1db6ab', 'role': 'customer', 'jti': 'ae996332-1d0e-4c50-b53e-7d8cc8001ed7', 'exp': 1788735704, 'iat': 1788130904}</sub>
+- ✅ **JWT payload : userId=e0623bcc… jti=b38296aa… exp=1788737562**  
+  <sub>complet : {'userId': 'e0623bcc-b44c-4337-b909-f8d1e98082c8', 'role': 'customer', 'jti': 'b38296aa-fa91-4d3f-90f3-72f3e1d8387c', 'exp': 1788737562, 'iat': 1788132762}</sub>
 
 - ✅ **JWT expiration → 168.0h dans le futur (attendu 1-192h)**  
-  <sub>exp=1788735704 now=1788130904 — 7 jours = 168h</sub>
+  <sub>exp=1788737562 now=1788132762 — 7 jours = 168h</sub>
 
 - ✅ **JWT payload tamperisé (userId changé) → 401**  
   <sub>code=401 body={"error":"Non authentifié"}</sub>
@@ -73,13 +73,13 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **JWT avec alg=none → 401 (aucune fuite)**  
   <sub>code=401 body={"error":"Non authentifié"}</sub>
 
-- ✅ **JWT jti unique entre 2 logins (jti1=ae996332…, jti2=28587e6d…)**  
+- ✅ **JWT jti unique entre 2 logins (jti1=b38296aa…, jti2=1653ec14…)**  
 
 
 ## 3. Intégrité DB — FK, contraintes, unicité
 
 - ✅ **Register avec MiXeD case → 200**  
-  <sub>body={"message":"Inscription réussie","user":{"id":"8d592abb-fb45-4392-9033-1ece731eb1f4","email":"mixed1788130905@t.local","firstName":"Mixed","lastName":</sub>
+  <sub>body={"message":"Inscription réussie","user":{"id":"f3e52d93-9520-4783-94f4-650caedecc7d","email":"mixed1788132763@t.local","firstName":"Mixed","lastName":</sub>
 
 - ✅ **Register même email en lowercase → refusé (400/409, unicité case-insensitive)**  
   <sub>code=409 body={"error":"Un compte existe déjà avec cet email"}</sub>
@@ -91,9 +91,9 @@ Verdict : **✅ TOUT PASSE**
   <sub>doublons: []</sub>
 
 - ✅ **Insert booking avec userId inexistant → FK constraint refuse**  
-  <sub>err: null value in column "commission_rate" of relation "bookings" violates not-null constraint</sub>
+  <sub>err: insert or update on table "bookings" violates foreign key constraint "bookings_user_id_users_id_fk"</sub>
 
-- ✅ **Soft-delete users historique : 7 users deletedAt IS NOT NULL**  
+- ✅ **Soft-delete users historique : 12 users deletedAt IS NOT NULL**  
   <sub>cohérent avec le design (préservation historique)</sub>
 
 
@@ -123,26 +123,26 @@ Verdict : **✅ TOUT PASSE**
 
 ## 5. N+1 queries — performance /api/properties
 
-- ✅ **GET /api/properties (8 props) → 17ms (après warm-up)**  
+- ✅ **GET /api/properties (8 props) → 19ms (après warm-up)**  
   <sub>budget : < 2s pour 8 props</sub>
 
-- ✅ **GET /api/properties/[id] → 108ms (après warm-up)**  
+- ✅ **GET /api/properties/[id] → 120ms (après warm-up)**  
   <sub>budget : < 1s</sub>
 
 
 ## 6. Promotions — edge cases
 
 - ✅ **POST promo maxUses=1 → 201**  
-  <sub>body={"promotion":{"id":"2de186fb-9dea-48ed-8a33-97c32ebaf38f","code":"MAX1_1788130907","name":"Test maxUses","type":"percentage","value":"10.00","minBookingAmount":"0.00","maxDiscount"</sub>
+  <sub>body={"promotion":{"id":"7a4ece70-6295-4d9d-8a3d-a518b6c342b6","code":"MAX1_1788132766","name":"Test maxUses","type":"percentage","value":"10.00","minBookingAmount":"0.00","maxDiscount"</sub>
 
 - ✅ **Apply promo maxUses=1 (1ère fois) → 200**  
-  <sub>body={"ok":true,"promotion":{"code":"MAX1_1788130907","name":"Test maxUses","type":"percentage","value":"10.00"},"discount":10,"finalTotal":90,"currency":"EUR"}</sub>
+  <sub>body={"ok":true,"promotion":{"code":"MAX1_1788132766","name":"Test maxUses","type":"percentage","value":"10.00"},"discount":10,"finalTotal":90,"currency":"EUR"}</sub>
 
 - ✅ **Apply promo minBookingAmount=200 sur amount=100 → refusé**  
   <sub>code=400 body={"ok":false,"error":"Réservation minimum 200.00"}</sub>
 
 - ✅ **Apply promo min=200 sur amount=300 → 200 discount 60**  
-  <sub>code=200 body={"ok":true,"promotion":{"code":"MIN200_1788130908","name":"Test min","type":"percentage","value":"20.00"},"discount":60,"finalTotal":240,"currency":"EUR"}</sub>
+  <sub>code=200 body={"ok":true,"promotion":{"code":"MIN200_1788132766","name":"Test min","type":"percentage","value":"20.00"},"discount":60,"finalTotal":240,"currency":"EUR"}</sub>
 
 - ✅ **Apply promo expirée (2020) → refusé**  
   <sub>code=400 body={"ok":false,"error":"Code expiré"}</sub>
@@ -165,7 +165,7 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **Wallet réinitialisé à 500€ pour tests : mesuré 500.0€**  
 
 - ✅ **Booking avec wallet 500€ > total : total_final=0.0€ discount=195.8€**  
-  <sub>code=201 body={"booking":{"id":"87c1d130-8bdc-4071-b07d-205a3f4a7cf3","bookingReference":"MBB-2026-D87UGC","userId":"030d648e-37f0-45fc-aa93-a797673abc43","propertyId":"3a1269e2-bc10-46b3-9c80-d1c0011202a4","roomId":"ca7db064-be31-43cf-8940-1e9773613f58","status":</sub>
+  <sub>code=201 body={"booking":{"id":"6b1a071e-b431-4684-9d08-ad352e0db6f8","bookingReference":"MBB-2026-BOFY46","userId":"c4d93c0e-f250-4870-b06d-352064889219","propertyId":"3a1269e2-bc10-46b3-9c80-d1c0011202a4","roomId":"ca7db064-be31-43cf-8940-1e9773613f58","status":</sub>
 
 - ✅ **Wallet après booking : 323.78€ (500€ initial - discount wallet appliqué)**  
   <sub>wallet_debit = 176.22000000000003€</sub>
@@ -173,7 +173,7 @@ Verdict : **✅ TOUT PASSE**
 
 ## 9. Status transitions bookings
 
-- ✅ **Booking test dédié transitions : id=32f504dd… status='confirmed'**  
+- ✅ **Booking test dédié transitions : id=82a6898c… status='confirmed'**  
 
 - ✅ **Transition VALIDE confirmed → cancelled → status='cancelled'**  
   <sub>c1=200</sub>
@@ -239,7 +239,7 @@ Verdict : **✅ TOUT PASSE**
 
 ## 16. Timing safe — hash password (BUG-024 fix)
 
-- ✅ **Timing existant vs inconnu : 365ms vs 371ms (diff 6ms)**  
+- ✅ **Timing existant vs inconnu : 349ms vs 348ms (diff 1ms)**  
   <sub>BUG-024 fix : bcrypt fake sur user inconnu → diff < 200ms attendue, les 2 > 50ms</sub>
 
 
@@ -279,7 +279,7 @@ Verdict : **✅ TOUT PASSE**
 ## 21. Availability endpoint : cohérence dates fermées vs disponibles
 
 - ✅ **PUT stopSell puis GET availability → date visible comme fermée**  
-  <sub>days retournés : 1, locked=True</sub>
+  <sub>days retournés : 2, locked=True</sub>
 
 
 ## 22. Immuables : booking payé ne peut pas être modifié en pending
@@ -297,19 +297,19 @@ Verdict : **✅ TOUT PASSE**
 ## 25. Cookie session — attributs sécurité complets
 
 - ✅ **Cookie session : HttpOnly**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6ImNhMzFkMTAwLWE1O</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6IjdjM2ZlMzkzLWM0N</sub>
 
 - ✅ **Cookie session : SameSite=Lax**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6ImNhMzFkMTAwLWE1O</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6IjdjM2ZlMzkzLWM0N</sub>
 
 - ✅ **Cookie SameSite=Strict : non (Lax est acceptable)**  
   <sub>Lax préférable pour l'UX login redirects</sub>
 
 - ✅ **Cookie session : Path=/**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6ImNhMzFkMTAwLWE1O</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6IjdjM2ZlMzkzLWM0N</sub>
 
 - ✅ **Cookie session : Max-Age**  
-  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6ImNhMzFkMTAwLWE1O</sub>
+  <sub>cookie: set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6IjdjM2ZlMzkzLWM0N</sub>
 
 - ✅ **Cookie Secure conditionnel prod (code src)**  
   <sub>src/lib/auth.ts contient bien la condition NODE_ENV</sub>
