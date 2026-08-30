@@ -3481,9 +3481,12 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
 - **T-158** i18n vague 1 : fiche propriété entièrement localisée (boutons,
   formulaire d'avis, bannière confiance, badge, breadcrumb, tooltips,
   **métadonnées** via cookie `mybb:ui-language` + `getServerLocale`) ;
-  sélecteur de devise publique EUR/USD/GBP/XAF dans la recherche
-  (priorité compte > localStorage > plateforme ; `displayCurrency`
-  serveur inchangé ; EUR 1:1).
+  **help-center bilingue** (8 articles fr/en, recherche sur la langue
+  active, métadonnées localisées — probe `/aide` EN 200) ;
+  **garde-fou CI** `npm run i18n:check` (warn-only, inventaire 460 lignes
+  / 66 fichiers UI) ; sélecteur de devise publique EUR/USD/GBP/XAF dans la
+  recherche (priorité compte > localStorage > plateforme ;
+  `displayCurrency` serveur inchangé ; EUR 1:1).
 - **T-159** hygiène : `scripts/purge-sim-data.mjs` (dry-run) ; PATCH settings
   merge additif + erreurs Zod sans `issues` ; codes de règle → **400**
   (`dates|capacity|min_stay|bad_price`) vs **409** (`unavailable`) ; tests

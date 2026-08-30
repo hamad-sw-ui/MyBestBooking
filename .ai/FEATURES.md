@@ -325,7 +325,9 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
 - **i18n fiche propriété (vague 1)** : tous les libellés de la fiche
   publique sont localisés fr/en — y compris le formulaire d'avis, l'alerte
   prix, les actions favori/partage et les métadonnées (la langue anonyme est
-  mémorisée via cookie après le premier choix).
+  mémorisée via cookie après le premier choix). Le **centre d'aide** est
+  bilingue (8 articles + métadonnées) et un **garde-fou CI** (`npm run
+  i18n:check`, warn-only) inventorie les libellés FR résiduels de l'UI.
 - **Sélecteur de devise d'affichage** (EUR/USD/GBP/XAF) dans la recherche,
   persistant localement ; priorité compte > localStorage > plateforme ;
   aucune conversion transactionnelle.

@@ -1,6 +1,6 @@
 # 🎬 Simulation utilisateur exhaustive — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-30 21:20
+**Généré le** : 2026-08-30 21:36
 **Base URL testée** : `http://127.0.0.1:3000` (Next.js 16 dev, PostgreSQL embarqué :55432)
 **Comptes utilisés** :
 
@@ -442,7 +442,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-reservations
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Mes réservations Retrouvez toutes vos réservations MyBestBooking À venir ( 1 ) Confirmée Hôtel Barcelona Center Barcelone , ES Réf. MBB-2026-BIZ0GH Arrivée 15 janv. 2027 Départ 18 janv. 2027 Chambre Chambre Standard Total 325,04 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu Annuler Passées ( 1 ) Annulée Hôtel Le Magnifique 13 sept. 2026 - 16 sept. 2026 391,61 € 3 nuits Frais : 0,00 € · Remboursement : 391,61 € ( en cours ) Découvrir Rechercher un hébergement 💎 BestRewards Centr …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Mes réservations Retrouvez toutes vos réservations MyBestBooking À venir ( 8 ) Confirmée Hôtel Barcelona Center Barcelone , ES Réf. MBB-2026-C48KA0 Arrivée 11 juil. 2048 Départ 14 juil. 2048 Chambre Chambre Standard Total 267,53 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu Annuler Confirmée B&B Toscana Florence , IT Réf. MBB-2026-P5DLL0 Arrivée 8 juin 2035 Départ 10 juin 2035 Chambre Chambre Standard Total 166,43 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu Annuler …
 
 ---
 
@@ -461,7 +461,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-favoris
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Mes favoris 1 hébergement sauvegardé Nouvelle liste Alertes prix Chargement… Vos alertes prix sont gér …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Mes favoris 2 hébergements sauvegardés Nouvelle liste Alertes prix Chargement… Vos alertes prix sont g …
 
 ---
 
@@ -480,7 +480,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/messages
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Messages Vos conversations avec les hébergeurs Rechercher dans les messages Aucun message Vos conversations avec les hébergeurs apparaîtront ici. Utilisez « Contacter l'hôte » sur une fiche ou depuis une réservation. Trouver un hébergement Besoin d'aide ? Notre équipe support répond par email aux demandes envoyées depuis ce lien. Contacter le support Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajou …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Messages Vos conversations avec les hébergeurs Rechercher dans les messages Aucun message Vos conversa …
 
 ---
 
@@ -537,7 +537,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/aide
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Comment pouvons-nous vous aider ? Recherchez une réponse ou contactez notre équipe par email. Articles Annuler une réservation Modifier mes dates Paiement et confirmation Remboursement Laisser un avis BestRewards et cashback Sécurité et suppression du compte Gérer une chambre et ses tarifs Réservations Annuler une réservation Ouvrez Mes réservations, choisissez une réservation confirmée puis Annuler. Les frais et le remboursement dépendent de la politique snapshotée dans votre réservation …
+> Aller au contenu principal ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Comment pouvons-nous vous aider ? Recherchez une réponse ou contactez notre équipe par email. Articles Annuler une réservation Modifier mes dates Paiement et confirmation Remboursement Laisser un avis BestRewards et cashback Sécurité et suppression du compte Gérer une chambre et ses tarifs Réservations Annuler une réservation Ouvrez Mes réservations, choisissez une réservation confirmée puis Annuler. Les frais et le remboursement dépendent de la politique snapshotée dans votre réservation. Écrire au support D …
 
 ---
 
@@ -674,7 +674,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 8 8 actifs Réservations 36 36 ce mois Revenus 20 480,00 € 20 480,00 € ce mois Avis 26 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-BIZ0GH Marie Martin Hôtel Barcelona Center Barcelone 15 janv. 2027 → 18 janv. 2027 325,04 € Confirmée MBB-2026- …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 9 8 actifs Réservations 44 44 ce mois Revenus 22 113,59 € 22 113,59 € ce mois Avis 26 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-JIDIF8 Marie Martin Hôtel Barcelona Center Barcelone 15 janv. 2027 → 18 janv. 2027 325,04 € Confirmée MBB-2026- …
 
 ---
 
@@ -693,7 +693,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Réservations Réservations de vos hébergements — filtres et recherche. Total 36 Confirmées 1 En attente 0 Revenus 20 872 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 36 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-BIZ0GH Marie Martin customer@mybestbo …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Réservations Réservations de vos hébergements — filtres et recherche. Total 44 Confirmées 8 En attente 0 Revenus 22 830 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 44 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-JIDIF8 Marie Martin customer@mybestbo …
 
 ---
 
@@ -712,7 +712,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/properties
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Hébergements Gérez vos hébergements — filtres et recherche. Ajouter un hébergement Total 8 Actifs 8 En attente 0 Brouillons 0 Rechercher (tapez « / ») Filtrer Tous les statuts Actif En attente Brouillon Suspendu Rejeté Tous types Appartement B&B Maison d'hôtes Hôtel Resort Riad Villa 8 hébergement s affiché s Hébergement Type Localisation Note Statut Actions B&B Toscana ★★★ B&B Flor …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Hébergements Gérez vos hébergements — filtres et recherche. Ajouter un hébergement Total 9 Actifs 8 En attente 0 Brouillons 1 Rechercher (tapez « / ») Filtrer Tous les statuts Actif En attente Brouillon Suspendu Rejeté Tous types Appartement B&B Maison d'hôtes Hôtel Resort Riad Villa 9 hébergement s affiché s Hébergement Type Localisation Note Statut Actions Deep Villa 1788124830 ★★ …
 
 ---
 
@@ -731,7 +731,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total 27 Actives 27 Unités 98 Prix moyen 180,17 € Rechercher (tapez « / ») Filtrer Toutes Actives Inactives Tous types Double Familiale Suite 27 chambre s affichée s Chambre Familiale Hôtel Le Magnifique Familiale 4 pers. 43.10 m² 212,00 € par nuit · 6 unité s Calendrier Suite Junior Hôtel Le Magnifique Suite 3 pers …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total 28 Actives 28 Unités 99 Prix moyen 177,31 € Rechercher (tapez « / ») Filtrer Toutes Actives Inactives Tous types Double Familiale Suite 28 chambre s affichée s Chambre Familiale Hôtel Le Magnifique Familiale 4 pers. 43.10 m² 212,00 € par nuit · 6 unité s Calendrier Suite Junior Hôtel Le Magnifique Suite 3 pers …
 
 ---
 
@@ -750,7 +750,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms/new
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Nouvelle chambre Ajoutez une chambre à l'un de vos hébergements. Détails de la chambre Hébergement Hôtel Le Magnifique Riad Jardin Secret Villa Azure Côte d'Azur Appartement Montmartre Dar El Medina Resort Les Dunes Hôtel Barcelona Center B&B Toscana Nom de la chambre Description (optionnel) Type Simple Double Twin Suite Studio Familiale Dortoir Capacité (personnes) Superficie (m²)  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Nouvelle chambre Ajoutez une chambre à l'un de vos hébergements. Détails de la chambre Hébergement Hôtel Le Magnifique Riad Jardin Secret Villa Azure Côte d'Azur Appartement Montmartre Dar El Medina Resort Les Dunes Hôtel Barcelona Center Deep Villa 1788124830 B&B Toscana Nom de la chambre Description (optionnel) Type Simple Double Twin Suite Studio Familiale Dortoir Capacité (perso …
 
 ---
 
@@ -807,7 +807,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/promotions
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 8 8 actifs Réservations 36 36 ce mois Revenus 20 480,00 € 20 480,00 € ce mois Avis 26 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-BIZ0GH Marie Martin Hôtel Barcelona Center Barcelone 15 janv. 2027 → 18 janv. 2027 325,04 € Confirmée MBB-2026- …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 9 8 actifs Réservations 44 44 ce mois Revenus 22 113,59 € 22 113,59 € ce mois Avis 26 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-JIDIF8 Marie Martin Hôtel Barcelona Center Barcelone 15 janv. 2027 → 18 janv. 2027 325,04 € Confirmée MBB-2026- …
 
 ---
 
@@ -826,7 +826,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/promotions/new
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 8 8 actifs Réservations 36 36 ce mois Revenus 20 480,00 € 20 480,00 € ce mois Avis 26 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-BIZ0GH Marie Martin Hôtel Barcelona Center Barcelone 15 janv. 2027 → 18 janv. 2027 325,04 € Confirmée MBB-2026- …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 9 8 actifs Réservations 44 44 ce mois Revenus 22 113,59 € 22 113,59 € ce mois Avis 26 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-JIDIF8 Marie Martin Hôtel Barcelona Center Barcelone 15 janv. 2027 → 18 janv. 2027 325,04 € Confirmée MBB-2026- …
 
 ---
 
@@ -845,7 +845,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 20 480,00 € Revenus (30j) 100.0 % 35 Réservations (30j) 0.0 % 585,14 € Panier moyen 8.5/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 5 réservations 4 038,81 € 2 Resort Les Dunes 4 réservations 3 184,48 € 3 Riad Jardin Secret 4 réservations 3 056,56  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 22 113,59 € Revenus (30j) 100.0 % 42 Réservations (30j) 0.0 % 526,51 € Panier moyen 8.5/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 5 réservations 4 038,81 € 2 Hôtel Barcelona Center 8 réservations 3 775,21 € 3 Resort Les Dunes 4 réservations 3 184 …
 
 ---
 
@@ -864,7 +864,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/billing
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 17 408,00 € 35 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 17 408,00 € 35 réservation s au total Factures Export CSV Factures légales indisponibles Les factures et exports seront disponibles après intégration du moteur comptable. Transactions récentes MBB-2026-BIZ0GH Hôtel Barcelo …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 18 796,56 € 42 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 18 796,56 € 42 réservation s au total Factures Export CSV Factures légales indisponibles Les factures et exports seront disponibles après intégration du moteur comptable. Transactions récentes MBB-2026-JIDIF8 Hôtel Barcelo …
 
 ---
 
@@ -904,7 +904,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/audit
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations, actions groupées). Rechercher (tapez « / ») Action Toutes actions Action groupée Avis modéré Réglage modifié Entité Toutes entités promotions properties review reviews rooms setting users 22 entrée s affichée s Date Acteur Action Entité Détails  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations, actions groupées). Rechercher (tapez « / ») Action Toutes actions Action groupée Property rejetée Property validée Avis modéré Réglage modifié Utilisateur suspendu Entité Toutes entités promotions properties property review reviews rooms setting …
 
 ---
 
@@ -942,7 +942,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 20 480,00 € Revenus (30j) 100.0 % 35 Réservations (30j) 0.0 % 585,14 € Panier moyen 8.5/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 5 réservations 4 038,81 € 2 Resort Les Dunes 4 réservations 3 184,48 € 3 Riad Ja …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 22 113,59 € Revenus (30j) 100.0 % 42 Réservations (30j) 0.0 % 526,51 € Panier moyen 8.5/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 5 réservations 4 038,81 € 2 Hôtel Barcelona Center 8 réservations 3 775,21 € 3 R …
 
 ---
 
@@ -1007,13 +1007,13 @@ curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/dar-el-medina
 
 ## H. Partage public d'une wishlist — /wishlists/share/[token]
 
-### 1. `GET /wishlists/share/57018e8f-0d79-410e-a58e-cb219d9a253b`
+### 1. `GET /wishlists/share/819a6d02-6129-4b16-8d89-a415ab9c101a`
 
 **Scénario** : Le voyageur envoie le lien à un ami. L'ami (non connecté) ouvre la wishlist publique.
 
 **Requête simulée** :
 ```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/57018e8f-0d79-410e-a58e-cb219d9a253b
+curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/819a6d02-6129-4b16-8d89-a415ab9c101a
 ```
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
@@ -1119,7 +1119,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> ref=MBB-2026-CPYAL4 · status=confirmed · discount=66.57 € · total=325.04 €
+> ref=MBB-2026-WAOI60 · status=confirmed · discount=66.57 € · total=325.04 €
 
 ---
 
@@ -1138,7 +1138,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/wishlists
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"item":{"id":"ba048287-1a6c-4993-bf6b-dad3253022be","wishlistId":"87aa51a2-9062-441f-a635-de080cffddc9","propertyId":"f2200919-dab8-4884-9e3c-456cbe119d22","addedAt":"2026-08-30T21:20:04.956Z","price
+> {"item":{"id":"5d6f4dd3-77ba-437b-996c-d5adc8f5779b","wishlistId":"5f4c629e-4a28-4a96-8593-962862edd5ef","propertyId":"f2200919-dab8-4884-9e3c-456cbe119d22","addedAt":"2026-08-30T21:36:15.805Z","price
 
 ---
 
@@ -1157,7 +1157,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/price-alerts
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"alert":{"id":"8a188779-42c0-4f44-94e0-1e989c2a7d6d","userId":"031f4535-d8ff-49e3-9f51-382da59c7bf6","propertyId":"f2200919-dab8-4884-9e3c-456cbe119d22","maxPrice":"100.00","currency":"EUR","checkIn"
+> {"alert":{"id":"e61a938d-12a8-4a44-8b5a-d044ed19c06d","userId":"031f4535-d8ff-49e3-9f51-382da59c7bf6","propertyId":"f2200919-dab8-4884-9e3c-456cbe119d22","maxPrice":"100.00","currency":"EUR","checkIn"
 
 ---
 
@@ -1182,7 +1182,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/api/users/me/referral
 
 ### 9. `POST /api/auth/register`
 
-**Scénario** : Un nouveau visiteur crée un compte sim1788124805@test.local.
+**Scénario** : Un nouveau visiteur crée un compte sim1788125776@test.local.
 
 **Requête simulée** :
 ```bash
@@ -1195,7 +1195,7 @@ curl -X POST (anonyme) http://127.0.0.1:3000/api/auth/register
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"message":"Inscription réussie","user":{"id":"28f33595-59e9-4a83-8454-49e47bf07cdb","email":"sim1788124805@test.local","firstName":"Sim","lastName":"User","role":"customer","language":"fr"}}
+> {"message":"Inscription réussie","user":{"id":"53cb6629-43b7-49e4-b2b7-519aef989061","email":"sim1788125776@test.local","firstName":"Sim","lastName":"User","role":"customer","language":"fr"}}
 
 ---
 

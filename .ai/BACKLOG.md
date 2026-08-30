@@ -314,9 +314,10 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
   un user connecté) ; UI lecture seule + option « réserver pour un
   proche » à arbitrer. Guest mode inchangé.
 - 🟠 **T-158 (P2)** — i18n : vague 1 = fiche propriété publique (EN) +
-  help-center bilingue + garde-fou CI (warn) ; sélecteur de devise dans la
-  recherche (priorité compte > localStorage > locale, contrat
-  `displayCurrency` inchangé).
+  **help-center bilingue** (8 articles fr/en + métadonnées) + **garde-fou CI
+  (warn)** `npm run i18n:check` ; sélecteur de devise dans la recherche
+  (priorité compte > localStorage > locale, contrat `displayCurrency`
+  inchangé).
 - 🟢 **T-159 (P3)** — Hygiène : script de purge des artefacts de
   simulation (`--dry-run`) ; PATCH settings par section (merge additif) +
   suppression des `issues` dans la réponse d'erreur ; alignement 409→400

@@ -66,8 +66,17 @@ Logs : `.data/a29/pages-run.log`, `.data/a29/apis-run.log`, sessions `{customer,
 - fiche : bouton « Réserver », breadcrumb, badge Éco, bannière de confiance (4 items) ;
 - **métadonnées** (`generateMetadata`) : `<title>`/description 404 localisés — via nouvel ordre `getServerLocale()` : compte > **cookie `mybb:ui-language`** (posé par le script d'init `<html lang>`) > plateforme ; le SSR anonyme EN fonctionne ensuite (RSC, soft navigation).
 - `src/lib/ui-strings.ts` : ~60 clés fr/en ajoutées, dictionnaire par `makeT` inchangé.
+- **Centre d'aide (`/aide`) bilingue** : `help-center.tsx` réécrit — 8 articles
+  traduits fr/en (recherche sur le texte affiché dans la langue active),
+  hero/CTA/états vides via `t()` ; métadonnées de la page localisées via
+  `getServerLocale()` (cookie `mybb:ui-language` → `<title>Help and FAQ`
+  prouvé au runtime).
+- **Garde-fou CI i18n (warn)** : `scripts/check-i18n.mjs` + `npm run
+  i18n:check` — signale les libellés FR en dur de la surface UI
+  (**460 lignes / 66 fichiers** d'inventaire), warn-only par défaut
+  (exit 0, `--strict` disponible) ; hors périmètre : données/mails/settings.
 
-**Preuve** : 🧪 suite `ui-strings`/`ui-currency` (même mécanisme) ; crawl pages 200 ; aucun libellé FR résiduel détecté sur la fiche (grep accents = 0).
+**Preuve** : 🧪 suite `ui-strings`/`ui-currency` (même mécanisme) ; crawl pages 200 ; fiche : 0 libellé FR résiduel (grep accents) · `/aide` : 200 + title FR sans cookie / **EN avec cookie** ; `npm run i18n:check` exit 0.
 
 ### 🟠 F4 — P2/T-158 : devise d'affichage publique
 **Problème (audit n°28)** : recherche anonyme en FCFA **sans sélecteur** — un visiteur européen tapait « 100 » (0,15 €) et n'obtenait rien.
@@ -109,6 +118,8 @@ Logs : `.data/a29/pages-run.log`, `.data/a29/apis-run.log`, sessions `{customer,
 | `npx vitest run` | ✅ **57 fichiers · 390/390 tests** (dont +16 nouveaux : identity 3, actor 4, quote 4, settings 2, devise 4, tests corrigés) |
 | `python3 scripts/run_all_sims.py` | ✅ **5/5 · 396 assertions · 0 KO** (smoke 94 · surface 68 · deep 80 · xtreme 83+3WARN · paranoid 71) |
 | `node .data/a29/probes.mjs` | ✅ 30/30 |
+| `node scripts/check-i18n.mjs` (garde-fou i18n) | ✅ exit 0 (warn-only) · inventaire 460 lignes/66 fichiers |
+| Probe `/aide` SSR | ✅ 200 · `<title>` FR sans cookie → **EN avec cookie `mybb:ui-language=en`** |
 | `npm run ai:check` | **19 OK · 1 warn (R7 HEAD différé, motif toléré) · 0 fail** |
 
 **Non-régression vérifiée** : cas EUR numériquement identiques (test `ui-currency`) ; `displayCurrency` et contrats API existants intacts ; quote d'annulation : champs `actor/fullRefund` **uniquement pour hôte/admin** (voyageur = réponse historique) ; aucune migration de schéma, aucun changement de colonne ; reservation page : section invité en lecture seule **seulement si connecté**.

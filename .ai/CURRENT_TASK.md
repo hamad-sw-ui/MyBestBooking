@@ -37,7 +37,9 @@ Rapport : `.ai/REPORTS/audit_fonctionnel_profond29_2026-08-30.md` (source).
 - **🟠 T-158 (P2)** — i18n vague 1 fiche propriété : boutons (Réserver,
   favori, partage, alerte prix, avis utile), formulaire d'avis complet,
   bannière confiance, breadcrumb, badge, tooltips, **métadonnées** (title/
-  description via cookie `mybb:ui-language` + `getServerLocale`) ; sélecteur
+  description via cookie `mybb:ui-language` + `getServerLocale`) ;
+  **help-center bilingue** (8 articles fr/en + métadonnées, probe `/aide`
+  EN 200) ; **garde-fou CI** `npm run i18n:check` (warn-only) ; sélecteur
   de devise publique EUR/USD/GBP/XAF (priorité compte > localStorage >
   plateforme, `displayCurrency` serveur inchangé). 🧪 `ui-currency.test.ts` ;
   0 libellé FR résiduel détecté sur la fiche.

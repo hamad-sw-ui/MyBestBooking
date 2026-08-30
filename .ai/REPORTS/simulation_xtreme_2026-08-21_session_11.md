@@ -1,6 +1,6 @@
 # 🧪 Simulation EXTRÊME — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-30 21:21
+**Généré le** : 2026-08-30 21:37
 **Base URL** : `http://127.0.0.1:3000`
 
 Complète les simulations précédentes (`simulation_*.md`,
@@ -72,7 +72,7 @@ Verdict : **✅ TOUT PASSE**
   <sub>jar_lines : 1</sub>
 
 - ✅ **Cookie session : HttpOnly + SameSite + Path=/ (via login live)**  
-  <sub>cookie complet : set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6ImMwYjQwMmM4LTM1OTEtNDZmYy1hODFkLTlhZGQwZGY1NDBmNyIsImV4cCI6MTc4ODc</sub>
+  <sub>cookie complet : set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6IjIyYTY5YWIwLTk0ODAtNDU0OC1iY2UxLWEzY2NmZDdkODAyOCIsImV4cCI6MTc4ODc</sub>
 
 
 ## 2. Injections XSS — reviews, messages, register
@@ -84,7 +84,7 @@ Verdict : **✅ TOUT PASSE**
   <sub>firstName stocké : '<script>alert(1)</script>Bob'</sub>
 
 - ✅ **guestFirstName='<script>' → booking 201 (validé, doit être échappé à l'affichage)**  
-  <sub>body[:200]={"booking":{"id":"ada5035a-829b-4e1d-80cf-4840b7f22533","bookingReference":"MBB-2026-8VXNK1","userId":"031f4535-d8ff-49e3-9f51-382da59c7bf6","propertyId":"f2200919-dab8-4884-9e3c-456cbe119d22","roomId</sub>
+  <sub>body[:200]={"booking":{"id":"8d3edb32-3edb-4540-b163-83d58c1ab72c","bookingReference":"MBB-2026-CGB3QY","userId":"031f4535-d8ff-49e3-9f51-382da59c7bf6","propertyId":"f2200919-dab8-4884-9e3c-456cbe119d22","roomId</sub>
 
 
 ## 3. SQL injection tentatives
@@ -102,7 +102,7 @@ Verdict : **✅ TOUT PASSE**
 ## 4. Inputs extrêmes — très longs, unicode, contrôles
 
 - ✅ **Register password 100 000 chars → 200**  
-  <sub>body={"message":"Inscription réussie","user":{"id":"2fe45244-d4d3-43fb-8b2d-b37e0cebae45","email":"long1788124850@t.local","firstName":"Long","lastName":"User","role":"customer","language":"fr"}}</sub>
+  <sub>body={"message":"Inscription réussie","user":{"id":"b07c3749-4fef-4f2d-998b-c15a0434cd7f","email":"long1788125818@t.local","firstName":"Long","lastName":"User","role":"customer","language":"fr"}}</sub>
 
 - ✅ **Register firstName Unicode/emoji 'Marie🎉👋' → conservé intégralement**  
   <sub>stocké : 'Marie🎉👋'</sub>
@@ -116,16 +116,16 @@ Verdict : **✅ TOUT PASSE**
 
 ## 5. Flow vérification email — bout-en-bout avec token réel
 
-- ✅ **Register verify1788124851@test.local → id créé, emailVerified=None**  
+- ✅ **Register verify1788125819@test.local → id créé, emailVerified=None**  
 
 - ✅ **Email de vérification reçu (subject='Vérifiez votre email — MyBestBooking') + token extrait**  
-  <sub>token[:16]='40590e9b-5106-41…' fichier=console_e0fe07a3833d7409b3a9d0f2.txt</sub>
+  <sub>token[:16]='22faa517-4354-44…' fichier=console_daad10a2ac3722a106b5aad3.txt</sub>
 
 - ✅ **GET /api/auth/verify?token=… → 307 (redirect)**  
   <sub>body[:200]=</sub>
 
 - ✅ **Après GET verify : /api/auth/me emailVerified=True**  
-  <sub>body[:200]={"user":{"id":"e8b9e34c-1264-4a3b-af92-03286cc8c629","email":"verify1788124851@test.local","firstName":"Verify","lastName":"Me","phone":null,"country":null,"language":"fr","currency":"EUR","role":"cus</sub>
+  <sub>body[:200]={"user":{"id":"3a893ad1-9140-4bb1-8318-5e7d789e9857","email":"verify1788125819@test.local","firstName":"Verify","lastName":"Me","phone":null,"country":null,"language":"fr","currency":"EUR","role":"cus</sub>
 
 
 ## 6. Flow reset password — bout-en-bout avec token réel
@@ -134,13 +134,13 @@ Verdict : **✅ TOUT PASSE**
   <sub>body={"message":"Si un compte existe pour cet email, un lien vous a été envoyé."}</sub>
 
 - ✅ **Email reset reçu (subject='Réinitialiser votre mot de passe — MyBestBooking') + token extrait**  
-  <sub>token[:16]='1ba228c9-a49e-4c…'</sub>
+  <sub>token[:16]='60d418b8-0d62-40…'</sub>
 
 - ✅ **POST reset-password avec token valide → 200**  
   <sub>body={"message":"Mot de passe réinitialisé. Vous pouvez vous connecter."}</sub>
 
 - ✅ **Login avec nouveau password → 200**  
-  <sub>body={"message":"Connexion réussie","user":{"id":"c0aab6dd-7883-4799-8c47-26623b4eb23f","email":"reset1788124852@test.local","firstName":"Reset","lastName"</sub>
+  <sub>body={"message":"Connexion réussie","user":{"id":"314a8c9d-625d-4b31-b29a-08166776b57b","email":"reset1788125820@test.local","firstName":"Reset","lastName"</sub>
 
 - ✅ **Login avec ancien password → 401**  
   <sub>body={"error":"Email ou mot de passe incorrect"}</sub>
@@ -157,8 +157,8 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **PATCH /api/reviews/d7fd8f46…/moderate (admin, approved) → 200**  
   <sub>body={"review":{"id":"d7fd8f46-d9b8-44dc-9f9e-c31b8a472692","bookingId":"3407dcf4-8112-458a-9047-a116149288c0","userId":"5f96cd55-04a2-478c-803f-d7a75801fabb","propertyId":"3a1269e2-bc10-46b3-9c80-d1c00112</sub>
 
-- ✅ **POST /api/reviews/d7fd8f46…/helpful (customer) → 200**  
-  <sub>body={"review":{"id":"d7fd8f46-d9b8-44dc-9f9e-c31b8a472692","helpfulCount":1}}</sub>
+- ✅ **POST /api/reviews/d7fd8f46…/helpful (customer) → 409**  
+  <sub>body={"error":"Vous avez déjà marqué cet avis comme utile"}</sub>
 
 - ✅ **POST helpful DOUBLE → refusé (déjà voté)**  
   <sub>body={"error":"Vous avez déjà marqué cet avis comme utile"}</sub>
@@ -173,7 +173,7 @@ Verdict : **✅ TOUT PASSE**
 ## 8. Rooms availability + rate-plans (host-only)
 
 - ✅ **GET availability (host) → 200**  
-  <sub>body={"roomId":"032d5876-7964-4059-bdd5-045c3baac42f","from":"2028-12-01","to":"2028-12-10","quantity":5,"basePrice":"118.67","days":[]}</sub>
+  <sub>body={"roomId":"032d5876-7964-4059-bdd5-045c3baac42f","from":"2028-12-01","to":"2028-12-10","quantity":5,"basePrice":"118.67","days":[{"id":"5d49fc94-95cf-4ed1-95f9-602f919ecb3a","roomId":"032d5876-7964-4059-bdd5-045c3baac42f</sub>
 
 - ✅ **PUT availability (3 jours stopSell) → 200**  
   <sub>body={"ok":true,"count":3}</sub>
@@ -185,27 +185,27 @@ Verdict : **✅ TOUT PASSE**
   <sub>body={"error":"Accès refusé"}</sub>
 
 - ✅ **GET rate-plans → 200**  
-  <sub>body={"ratePlans":[]}</sub>
+  <sub>body={"ratePlans":[{"id":"33a5bf5b-34a9-4639-942a-ed481ff9bff7","roomId":"032d5876-7964-4059-bdd5-045c3baac42f","name":"Sim Rate Plan","type":"non_refundable","discountPercentage":"15.00","includesBreakfas</sub>
 
 - ✅ **POST rate-plan (host) → 201**  
-  <sub>body={"ratePlan":{"id":"33a5bf5b-34a9-4639-942a-ed481ff9bff7","roomId":"032d5876-7964-4059-bdd5-045c3baac42f","name":"Sim Rate Plan","type":"non_refundable","discountPercentage":"15.00","includesBreakfast":true,"cancellationPolicy":"non_refundable","cance</sub>
+  <sub>body={"ratePlan":{"id":"345e8d72-c0f4-40bc-a14f-639f438f7bc7","roomId":"032d5876-7964-4059-bdd5-045c3baac42f","name":"Sim Rate Plan","type":"non_refundable","discountPercentage":"15.00","includesBreakfast":true,"cancellationPolicy":"non_refundable","cance</sub>
 
 
 ## 9. Promotions CRUD complet (admin — pas host)
 
-- ✅ **POST /api/promotions (host) code=SIMXTREME1788124861 → 201**  
-  <sub>body={"promotion":{"id":"0be8d3eb-b2c9-475d-abf0-747d04a4cbbe","code":"SIMXTREME1788124861","name":"Test extrême","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"validFrom":"2026-01-01T00:00</sub>
+- ✅ **POST /api/promotions (host) code=SIMXTREME1788125828 → 201**  
+  <sub>body={"promotion":{"id":"ab4ffb75-4e67-4499-93f9-1ad2b7d54359","code":"SIMXTREME1788125828","name":"Test extrême","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"validFrom":"2026-01-01T00:00</sub>
 
-- ✅ **GET promotions/apply?code=SIMXTREME1788124861&amount=200 → discount 30**  
-  <sub>code=200 body={"ok":true,"promotion":{"code":"SIMXTREME1788124861","name":"Test extrême","type":"percentage","value":"15.00"},"discount":30,"finalTotal":170,"currency":"EUR"}</sub>
+- ✅ **GET promotions/apply?code=SIMXTREME1788125828&amount=200 → discount 30**  
+  <sub>code=200 body={"ok":true,"promotion":{"code":"SIMXTREME1788125828","name":"Test extrême","type":"percentage","value":"15.00"},"discount":30,"finalTotal":170,"currency":"EUR"}</sub>
 
-- ✅ **PATCH /api/promotions/0be8d3eb… (admin) → 200**  
-  <sub>body={"promotion":{"id":"0be8d3eb-b2c9-475d-abf0-747d04a4cbbe","code":"SIMXTREME1788124861","name":"Test extrême updated","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"</sub>
+- ✅ **PATCH /api/promotions/ab4ffb75… (admin) → 200**  
+  <sub>body={"promotion":{"id":"ab4ffb75-4e67-4499-93f9-1ad2b7d54359","code":"SIMXTREME1788125828","name":"Test extrême updated","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"</sub>
 
 - ✅ **Apply promo désactivée → ok:false**  
   <sub>code=400 body={"ok":false,"error":"Code inactif"}</sub>
 
-- ✅ **DELETE /api/promotions/0be8d3eb… (admin) → 200/204**  
+- ✅ **DELETE /api/promotions/ab4ffb75… (admin) → 200/204**  
   <sub>body={"ok":true}</sub>
 
 - ✅ **Apply promo supprimée → 404**  
@@ -217,7 +217,7 @@ Verdict : **✅ TOUT PASSE**
 
 ## 10. Price alerts DELETE by id
 
-- ✅ **DELETE /api/price-alerts/8a188779… → 200/204**  
+- ✅ **DELETE /api/price-alerts/e61a938d… → 200/204**  
   <sub>body={"removed":true}</sub>
 
 - ✅ **DELETE alerte d'un autre user (host) → 403/404**  
@@ -226,9 +226,9 @@ Verdict : **✅ TOUT PASSE**
 
 ## 11. Pages dynamiques /dashboard/[id] — accessibilité
 
-- ✅ **GET /dashboard/bookings/ada5035a… (host) → 200**  
+- ✅ **GET /dashboard/bookings/8d3edb32… (host) → 200**  
 
-- ✅ **GET /dashboard/bookings/ada5035a… par customer → 200 (redirect RSC)**  
+- ✅ **GET /dashboard/bookings/8d3edb32… par customer → 200 (redirect RSC)**  
 
 - ✅ **GET /dashboard/rooms/032d5876…/calendrier (host) → 200**  
 
@@ -260,25 +260,25 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **Seed : 8/8 propriétés avec rooms, 8/8 avec reviews**  
   <sub>cohérence seed</sub>
 
-- ✅ **Seed promotions : 4/4 active(s)**  
+- ✅ **Seed promotions : 6/6 active(s)**  
 
 
 ## 14. Contenu des emails — subject, corps HTML, absence XSS
 
-- ✅ **console_0c76ebaa9c50b68b0811bb83.txt — Subject='Réinitialiser votre mot de passe — MyBestBooking' HTML=True link=True**  
-  <sub>To=reset1788124852@test.local unsafe=False</sub>
+- ✅ **console_29332318c0325574cb1da46e.txt — Subject='Réinitialiser votre mot de passe — MyBestBooking' HTML=True link=True**  
+  <sub>To=reset1788125820@test.local unsafe=False</sub>
 
-- ✅ **console_75b3f7c7cc08cbefe4759562.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
-  <sub>To=reset1788124852@test.local unsafe=False</sub>
+- ✅ **console_58cd691da0283e48d666759f.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
+  <sub>To=reset1788125820@test.local unsafe=False</sub>
 
-- ✅ **console_b2df99c17537b1eec45aa5ae.txt — Subject='Bienvenue sur MyBestBooking 🎉' HTML=True link=True**  
-  <sub>To=verify1788124851@test.local unsafe=False</sub>
+- ✅ **console_bcef67865039325680fe3f20.txt — Subject='Bienvenue sur MyBestBooking 🎉' HTML=True link=True**  
+  <sub>To=verify1788125819@test.local unsafe=False</sub>
 
-- ✅ **console_e0fe07a3833d7409b3a9d0f2.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
-  <sub>To=verify1788124851@test.local unsafe=False</sub>
+- ✅ **console_daad10a2ac3722a106b5aad3.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
+  <sub>To=verify1788125819@test.local unsafe=False</sub>
 
-- ✅ **console_e5805e0b3a08739329577d38.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
-  <sub>To=emoji1788124850@t.local unsafe=False</sub>
+- ✅ **console_12c27b3ca0ae8022ad333664.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
+  <sub>To=emoji1788125818@t.local unsafe=False</sub>
 
 
 ## 15. Webhook Stripe — signature mock
