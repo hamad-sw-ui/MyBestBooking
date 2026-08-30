@@ -16,7 +16,18 @@
   `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces push car le
   jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière activité (2026-08-30)** : **audit n°27 — T-155 livré/validé**
+- **Dernière activité (2026-08-30)** : **audit fonctionnel profond n°28
+  (rapport seul, aucun code modifié)** — 7 findings : **P1** annulation
+  par l'hôte (frais de politique facturés au voyageur — 277,38 € prouvé —
+  + bouton hôte « Annuler » inopérant, quote 403) ; **P2** identité
+  voyageur modifiable en mode connecté (confirmation envoyée à l'email
+  saisi), i18n public partiel (fiche propriété EN/FR mixte, 52 composants
+  client sans `makeT`), devise anonyme FCFA sans sélecteur ; **P3** hygiène
+  sims, PATCH settings partiel 400 + `issues`, cohérence 409/400.
+  Preuves : crawl 160 vérifs pages + 120 APIs (0 erreur), ~20 probes
+  runtime, baseline `run_all_sims.py` **396 OK · 3 WARN · 0 KO**.
+  Rapport : `REPORTS/audit_fonctionnel_profond28_2026-08-30.md`.
+  Précédent (même jour) : audit n°27 — T-155 livré/validé
   — remédiation des 9 KO du runner unifié : **P2** code promo inconnu →
   **400** (`PromoCodeNotFoundError` dans `src/app/api/bookings/route.ts`) ;
   **P3** `/recherche?amenity=` matche aussi `rooms.amenities`

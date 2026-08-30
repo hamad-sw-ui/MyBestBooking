@@ -7,6 +7,45 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 48 — 2026-08-30 : audit fonctionnel profond n°28 (à l'exécution) — 7 findings, rapport seul
+
+- **Méthode** : crawl **40 pages × 4 rôles** (160 vérifs, 0 marqueur
+  d'erreur, `.data/a28/pages.json`) + **30 routes API × 4 rôles** (120
+  vérifs, 0 erreur après restart du serveur — l'ancien process de la
+  session précédente a reçu SIGTERM pendant le crawl, pas un crash
+  produit) + ~20 probes curl (sessions customer/host/admin) + scan
+  statique (i18n, TODO, handlers morts).
+- **P1 — annulation hôte** : `cancelBooking` sans notion d'acteur →
+  frais de politique facturés au voyageur (preuve 277,38 € = 100 %
+  flexible < 24 h, refund 0, motif « … demandée par le voyageur », email
+  « Frais d'annulation appliqués ») ; bouton hôte « Annuler » inopérant
+  (quote 403 « Accès refusé »). Solution proposée : actor
+  (host/admin → fee 0 + refund intégral + raison/emails dédiés), quote
+  autorisé hôte, UI dédiée.
+- **P2 — identité voyageur connecté** : champs invité éditables même
+  connecté, garde email réservée à `isGuestBooking` contournée →
+  confirmation envoyée à un email arbitraire (preuve : l'hôte du bien a
+  reçu sa propre confirmation MBB-2026-WTKSPX). Solution : serveur =
+  autorité (identité compte), UI lecture seule.
+- **P2 — i18n public partiel** : fiche EN → « Réserver »×11,
+  « par nuit »×12, « Voir les disponibilités »… (Book×13 à côté) ;
+  52 composants client français dur sans `makeT` (help-center articles).
+- **P2 — devise anonyme** : bornes « FCFA min/max » par défaut
+  plateforme (XAF), aucun sélecteur public de devise → visiteur EUR
+  pourrait taper 100 = 0,15 €. Solution : sélecteur dans la recherche.
+- **P3** : hygiène sims (57 réservations « Gdpr/Calc/Wallet Test » dans
+  les vues hôte + users @t.local jamais purgés), PATCH settings partiel
+  400 + `issues` anglais exposés, cohérence 409/400 (capacité vs promo).
+- **Écartés** : /reservation anon 200 (guest mode T-109/T-030),
+  maintenance (garde client + écritures serveur), invoice hôte 200,
+  parrainage (referred_by en base), wishlist partage, messagerie
+  (`content`), chiffres hôte cohérents (brut×0,85 = net), recherche EN
+  SSR.
+- **Validation** : `run_all_sims.py` **5/5 · 396 OK · 3 WARN · 0 KO** ;
+  aucun fichier `src/` modifié ; artefacts purgés (réservations,
+  wishlist, promo AUD28X, users refaudit28*, conversation/messages).
+- Rapport : `REPORTS/audit_fonctionnel_profond28_2026-08-30.md`.
+
 ## Session 47 — 2026-08-30 : T-155 (audit n°27) — 9 KO du runner unifié → 2 fixes produit + harnais resynchronisé
 
 - **Contexte** : `run_all_sims.py` (smoke + surface + deep + xtreme +

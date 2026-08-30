@@ -1,6 +1,6 @@
 # 🎬 Simulation utilisateur exhaustive — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-30 20:05
+**Généré le** : 2026-08-30 20:34
 **Base URL testée** : `http://127.0.0.1:3000` (Next.js 16 dev, PostgreSQL embarqué :55432)
 **Comptes utilisés** :
 
@@ -96,7 +96,7 @@ curl -X GET (anonyme) http://127.0.0.1:3000/bestrewards
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programme de fidélité MyBestBooking. Rejoindre gratuitement Chargement de votre statut… Comment ça marche ? 1 Inscrivez-vous C'est gratuit et instantané. Vous êtes immédiatement Level 1 Explorer. 2 Réservez Chaque réservation confirmée compte. Plus vous voyagez, plus vous montez en niveau. 3 Profitez Utilisez vos réductions BestRewards et, au niveau Ambassador, votre cashback wallet. Les 3 niveau …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN Se connecter S'inscrire Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés BestRewards Les vrais avantages, dès votre 1ère réservation. Rejoignez le programm …
 
 ---
 
@@ -442,7 +442,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-reservations
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Mes réservations Retrouvez toutes vos réservations MyBestBooking À venir ( 14 ) Confirmée Villa Azure Côte d'Azur Nice , FR Réf. MBB-2026-H5SWVU Arrivée 16 juil. 2048 Départ 19 juil. 2048 Chambre Chambre Standard Total 374,07 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu Annuler Confirmée Villa Azure Côte d'Azur Nice , FR Réf. MBB-2026-736C3O Arrivée 15 juil. 2048 Départ 18 juil. 2048 Chambre Chambre Standard Total 374,07 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Mes réservations Retrouvez toutes vos réservations MyBestBooking À venir ( 15 ) Confirmée Villa Azure Côte d'Azur Nice , FR Réf. MBB-2026-H5SWVU Arrivée 16 juil. 2048 Départ 19 juil. 2048 Chambre Chambre Standard Total 374,07 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu Annuler Confirmée Villa Azure Côte d'Azur Nice , FR Réf. MBB-2026-736C3O Arrivée 15 juil. 2048 Départ 18 juil. 2048 Chambre Chambre Standard Total 374,07 € Voir l'hébergement Écrire à l'hébergeur Facture / Reçu …
 
 ---
 
@@ -461,7 +461,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/mes-favoris
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Mes favoris 7 hébergements sauvegardés Nouvelle liste Alertes prix Chargement… Vos alertes prix sont g …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Mes favoris 8 hébergements sauvegardés Nouvelle liste Alertes prix Chargement… Vos alertes prix sont g …
 
 ---
 
@@ -518,7 +518,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/recherche
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Resort Voyageurs Équipement Tous WiFi gratuit Parking Piscine Spa Restaurant Bar Salle de sport Climatisation Room service Conciergerie Accès plage Jardin Balcon Barbecue Plage Petit-déjeuner Vue sur la ville Vue sur la campagne Club enfants Cuisine Rooftop Vue sur la mer Terrasse Hammam traditionnel Machine à laver Sports nautiques TV Minibar Tri Mieux notés Prix croissant Prix décroissant  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking Hébergements 💎 BestRewards Aide FR EN M M Découvrir Rechercher un hébergement 💎 BestRewards Centre d'aide Voyageurs Mon compte Mes réservations Mes favoris Messagerie Hébergeurs Ajouter mon hébergement Espace hébergeur Créer un compte Contact 📧 support@mybestbooking.com 🤝 partners@mybestbooking.com ✦ MyBest Booking .com “ Réservez mieux. Voyagez plus. ” Mentions légales Confidentialité © 2025 MyBestBooking — Tous droits réservés Destination Arrivée Départ Type Tous les types Hôtel Appartement Villa Auberge Maison d'hôtes Riad Res …
 
 ---
 
@@ -674,7 +674,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 15 8 actifs Réservations 49 49 ce mois Revenus 24 151,27 € 24 151,27 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-FZSWIF Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-SP0 …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 16 8 actifs Réservations 51 51 ce mois Revenus 24 525,34 € 24 525,34 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-0SGJZ3 Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-HMT …
 
 ---
 
@@ -693,7 +693,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Réservations Réservations de vos hébergements — filtres et recherche. Total 49 Confirmées 14 En attente 0 Revenus 26 648 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 49 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-FZSWIF Smoke Test customer@mybestboo …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Réservations Réservations de vos hébergements — filtres et recherche. Total 51 Confirmées 15 En attente 0 Revenus 27 438 € Rechercher (tapez « / ») Filtrer Tous statuts En attente Confirmée Annulée Terminée No-show Check-in à partir de Check-out jusqu'à 51 réservation s affichée s Référence Client Hébergement Dates Montant Statut Actions MBB-2026-0SGJZ3 Smoke Test customer@mybestboo …
 
 ---
 
@@ -712,7 +712,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/properties
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Hébergements Gérez vos hébergements — filtres et recherche. Ajouter un hébergement Total 15 Actifs 8 En attente 0 Brouillons 7 Rechercher (tapez « / ») Filtrer Tous les statuts Actif En attente Brouillon Suspendu Rejeté Tous types Appartement B&B Maison d'hôtes Hôtel Resort Riad Villa 15 hébergement s affiché s Hébergement Type Localisation Note Statut Actions Deep Villa 1788120194  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Hébergements Gérez vos hébergements — filtres et recherche. Ajouter un hébergement Total 16 Actifs 8 En attente 0 Brouillons 8 Rechercher (tapez « / ») Filtrer Tous les statuts Actif En attente Brouillon Suspendu Rejeté Tous types Appartement B&B Maison d'hôtes Hôtel Resort Riad Villa 16 hébergement s affiché s Hébergement Type Localisation Note Statut Actions Deep Villa 1788120342  …
 
 ---
 
@@ -731,7 +731,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/rooms
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total 34 Actives 34 Unités 123 Prix moyen 154,22 € Rechercher (tapez « / ») Filtrer Toutes Actives Inactives Tous types Double Familiale Suite 34 chambre s affichée s Suite Junior Hôtel Le Magnifique Suite 3 pers. 24.75 m² 252,00 € par nuit · 2 unité s Calendrier Chambre Supérieure Hôtel Le Magnifique Double 2 pers. …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Chambres Gérez les chambres de vos hébergements Ajouter une chambre Total 35 Actives 35 Unités 124 Prix moyen 152,67 € Rechercher (tapez « / ») Filtrer Toutes Actives Inactives Tous types Double Familiale Suite 35 chambre s affichée s Suite Junior Hôtel Le Magnifique Suite 3 pers. 24.75 m² 252,00 € par nuit · 2 unité s Calendrier Chambre Supérieure Hôtel Le Magnifique Double 2 pers. …
 
 ---
 
@@ -807,7 +807,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/promotions
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 15 8 actifs Réservations 49 49 ce mois Revenus 24 151,27 € 24 151,27 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-FZSWIF Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-SP0 …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 16 8 actifs Réservations 51 51 ce mois Revenus 24 525,34 € 24 525,34 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-0SGJZ3 Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-HMT …
 
 ---
 
@@ -826,7 +826,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/promotions/new
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 15 8 actifs Réservations 49 49 ce mois Revenus 24 151,27 € 24 151,27 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-FZSWIF Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-SP0 …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Bonjour, Jean 👋 Voici un aperçu de votre activité sur MyBestBooking Hébergements 16 8 actifs Réservations 51 51 ce mois Revenus 24 525,34 € 24 525,34 € ce mois Avis 21 avis vérifiés Réservations récentes Voir tout → Référence Client Hébergement Dates Montant Statut MBB-2026-0SGJZ3 Marie Martin Villa Azure Côte d'Azur Nice 15 janv. 2027 → 18 janv. 2027 416,07 € Confirmée MBB-2026-HMT …
 
 ---
 
@@ -845,7 +845,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 151,27 € Revenus (30j) 100.0 % 43 Réservations (30j) 0.0 % 561,66 € Panier moyen 8.4/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 17 réservations 7 773,31 € 2 Riad Jardin Secret 4 réservations 4 150,69 € 3 Hôtel Barcelona Center 4 réservations 3  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 525,34 € Revenus (30j) 100.0 % 44 Réservations (30j) 0.0 % 557,39 € Panier moyen 8.4/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 18 réservations 8 147,38 € 2 Riad Jardin Secret 4 réservations 4 150,69 € 3 Hôtel Barcelona Center 4 réservations 3  …
 
 ---
 
@@ -864,7 +864,7 @@ curl -X GET cookie=host http://127.0.0.1:3000/dashboard/billing
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 20 528,53 € 43 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 20 528,53 € 43 réservation s au total Factures Export CSV Factures légales indisponibles Les factures et exports seront disponibles après intégration du moteur comptable. Transactions récentes MBB-2026-FZSWIF Villa Azure C …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking J D Jean Dupont Hébergeur Tableau de bord Hébergements Chambres Réservations Avis Messages Statistiques Facturation Aide Déconnexion ✦ MyBest Booking Facturation Gérez vos revenus et factures Ce mois Revenus nets 20 846,49 € 44 réservation s Mois dernier Revenus nets 0,00 € 0 réservation s Total Revenus cumulés 20 846,49 € 44 réservation s au total Factures Export CSV Factures légales indisponibles Les factures et exports seront disponibles après intégration du moteur comptable. Transactions récentes MBB-2026-0SGJZ3 Villa Azure C …
 
 ---
 
@@ -885,7 +885,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/users
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Utilisateurs Gérez les utilisateurs de la plateforme — filtres, recherche, actions groupées Total 87 Clients 85 Hébergeurs 1 Admins 1 Rechercher (tapez « / ») Filtrer Tous les statuts Actifs Suspendus Email vérifié Email non vérifié Tous les rôles Client Hébergeur Admin 87 utilisateur s affiché s Utilisateur Email Rôle BestRewards Inscrit Dernière …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Utilisateurs Gérez les utilisateurs de la plateforme — filtres, recherche, actions groupées Total 102 Clients 100 Hébergeurs 1 Admins 1 Rechercher (tapez « / ») Filtrer Tous les statuts Actifs Suspendus Email vérifié Email non vérifié Tous les rôles Client Hébergeur Admin 102 utilisateur s affiché s Utilisateur Email Rôle BestRewards Inscrit Derni …
 
 ---
 
@@ -904,7 +904,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/audit
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations, actions groupées). Rechercher (tapez « / ») Action Toutes actions Action groupée Property rejetée Property validée Avis modéré Utilisateur suspendu Entité Toutes entités promotions properties property review reviews rooms user users 71 entrée s  …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Journal d'audit 100 dernières actions admin sensibles (réglages, modérations, suspensions, validations, actions groupées). Rechercher (tapez « / ») Action Toutes actions Action groupée Property rejetée Property validée Avis modéré Réglage modifié Utilisateur suspendu Entité Toutes entités promotions properties property review reviews rooms setting …
 
 ---
 
@@ -942,7 +942,7 @@ curl -X GET cookie=admin http://127.0.0.1:3000/dashboard/analytics
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 151,27 € Revenus (30j) 100.0 % 43 Réservations (30j) 0.0 % 561,66 € Panier moyen 8.4/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 17 réservations 7 773,31 € 2 Riad Jardin Secret 4 réservations 4 150,69 € 3 Hôte …
+> Aller au contenu principal Chargement en cours… ✦ MyBest Booking A M Admin MBB Administrateur Tableau de bord Hébergements Réservations Utilisateurs Avis Promotions Statistiques Facturation Journal d'audit Paramètres Aide Déconnexion ✦ MyBest Booking Statistiques Aperçu de vos performances sur les 30 derniers jours 100.0 % 24 525,34 € Revenus (30j) 100.0 % 44 Réservations (30j) 0.0 % 557,39 € Panier moyen 8.4/10 Note moyenne Revenus par jour ( EUR ) Il y a 14j Aujourd'hui Top hébergements 1 Villa Azure Côte d'Azur 18 réservations 8 147,38 € 2 Riad Jardin Secret 4 réservations 4 150,69 € 3 Hôte …
 
 ---
 
@@ -1007,13 +1007,13 @@ curl -X GET (anonyme) http://127.0.0.1:3000/hebergement/appartement-montmartre
 
 ## H. Partage public d'une wishlist — /wishlists/share/[token]
 
-### 1. `GET /wishlists/share/a34d74d9-5d2e-4ad0-a425-6924385ad4ef`
+### 1. `GET /wishlists/share/801204dc-07ab-48e0-a05d-1af8b657a052`
 
 **Scénario** : Le voyageur envoie le lien à un ami. L'ami (non connecté) ouvre la wishlist publique.
 
 **Requête simulée** :
 ```bash
-curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/a34d74d9-5d2e-4ad0-a425-6924385ad4ef
+curl -X GET (anonyme) http://127.0.0.1:3000/wishlists/share/801204dc-07ab-48e0-a05d-1af8b657a052
 ```
 
 **Résultat serveur** : HTTP `200` (attendu `200`) → ✅ **OK**
@@ -1119,7 +1119,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/bookings
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> ref=MBB-2026-8YWUAC · status=confirmed · discount=73.42 € · total=416.07 €
+> ref=MBB-2026-KTLQOW · status=confirmed · discount=73.42 € · total=416.07 €
 
 ---
 
@@ -1138,7 +1138,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/wishlists
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"item":{"id":"dd69161a-5105-421d-83a4-2704f6e3d0e8","wishlistId":"86b66894-6dc2-4522-ad22-6c51c34fa0cc","propertyId":"4141ab8b-5f01-492f-9759-eca32dcda49b","addedAt":"2026-08-30T20:05:17.702Z","price
+> {"item":{"id":"005c5aa9-b237-47da-ae6e-3f7dc971d23e","wishlistId":"5e47a3a2-9e40-48bd-8e63-eb065759ae1a","propertyId":"4141ab8b-5f01-492f-9759-eca32dcda49b","addedAt":"2026-08-30T20:34:28.728Z","price
 
 ---
 
@@ -1157,7 +1157,7 @@ curl -X POST cookie=cust http://127.0.0.1:3000/api/price-alerts
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"alert":{"id":"ed69e784-1ea6-4e1f-9786-6bdce03a70c3","userId":"d6cec09e-88ad-4f5d-9d87-02895e72e6d7","propertyId":"4141ab8b-5f01-492f-9759-eca32dcda49b","maxPrice":"100.00","currency":"EUR","checkIn"
+> {"alert":{"id":"00c8798b-f441-46ae-9bb8-bd6649aeb350","userId":"d6cec09e-88ad-4f5d-9d87-02895e72e6d7","propertyId":"4141ab8b-5f01-492f-9759-eca32dcda49b","maxPrice":"100.00","currency":"EUR","checkIn"
 
 ---
 
@@ -1182,7 +1182,7 @@ curl -X GET cookie=cust http://127.0.0.1:3000/api/users/me/referral
 
 ### 9. `POST /api/auth/register`
 
-**Scénario** : Un nouveau visiteur crée un compte sim1788120317@test.local.
+**Scénario** : Un nouveau visiteur crée un compte sim1788122068@test.local.
 
 **Requête simulée** :
 ```bash
@@ -1195,7 +1195,7 @@ curl -X POST (anonyme) http://127.0.0.1:3000/api/auth/register
 
 **Ce que voit l'utilisateur** (texte visible extrait) :
 
-> {"message":"Inscription réussie","user":{"id":"fc7b3bcd-4826-48c1-bb1b-d90f2b3927b6","email":"sim1788120317@test.local","firstName":"Sim","lastName":"User","role":"customer","language":"fr"}}
+> {"message":"Inscription réussie","user":{"id":"8e766e33-040c-4251-819a-60f51b9cb8d0","email":"sim1788122068@test.local","firstName":"Sim","lastName":"User","role":"customer","language":"fr"}}
 
 ---
 

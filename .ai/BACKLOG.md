@@ -301,3 +301,23 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
   mails par `To:`, register 400/409) + robustesse (nettoyage réentrant
   smoke, timeouts/retry runner). Runner unifié : **396 OK · 3 WARN ·
   0 KO** · tsc 0 · vitest 372/372.
+
+### Audit 28 (2026-08-30) — `REPORTS/audit_fonctionnel_profond28_2026-08-30.md` (rapport seul, à arbitrer)
+
+- 🔴 **T-156 (P1)** — Annulation par l'hôte : `cancelBooking` sans notion
+  d'acteur → frais de politique facturés au voyageur (preuve 277,38 €) ;
+  bouton hôte « Annuler » inopérant (quote 403). → actor
+  (host/admin → fee 0 + refund intégral + raison/emails dédiés), quote
+  autorisé hôte du bien, UI hôte dédiée. Additif, cas voyageur inchangé.
+- 🟠 **T-157 (P2)** — Identité voyageur en mode connecté : le serveur doit
+  utiliser l'identité du compte (ignorer les champs invité du payload pour
+  un user connecté) ; UI lecture seule + option « réserver pour un
+  proche » à arbitrer. Guest mode inchangé.
+- 🟠 **T-158 (P2)** — i18n : vague 1 = fiche propriété publique (EN) +
+  help-center bilingue + garde-fou CI (warn) ; sélecteur de devise dans la
+  recherche (priorité compte > localStorage > locale, contrat
+  `displayCurrency` inchangé).
+- 🟢 **T-159 (P3)** — Hygiène : script de purge des artefacts de
+  simulation (`--dry-run`) ; PATCH settings par section (merge additif) +
+  suppression des `issues` dans la réponse d'erreur ; alignement 409→400
+  sur « capacité dépassée » (à décider).
