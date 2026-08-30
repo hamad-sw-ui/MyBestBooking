@@ -88,7 +88,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             __html:
               "try{var hasAccount=" + JSON.stringify(hasAccount) + ";" +
               "if(!hasAccount){var s=localStorage.getItem('mybb:ui-language');" +
-              "if(s==='en'||s==='fr')document.documentElement.lang=s;}}catch(e){}",
+              "if(s==='en'||s==='fr'){document.documentElement.lang=s;" +
+              "document.cookie='mybb:ui-language='+s+';path=/;max-age=31536000;SameSite=Lax';}" +
+              "}catch(e){}",
           }}
         />
         <ToastProvider>{children}</ToastProvider>

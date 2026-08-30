@@ -564,18 +564,30 @@ function ReservationPageInner() {
                   <CardTitle>{t("reservation.yourInfo")}</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                  {isAuthed && (
+                    // T-157 (audit n°29) : compte connecté → identité du
+                    // compte en lecture seule (le serveur est l'autorité ;
+                    // aucune confirmation ne peut partir vers un tiers).
+                    <p className="text-sm bg-blue-50 text-[#1B3A6B] border border-blue-100 rounded-lg p-3">
+                      ✓ {t("reservation.bookedAs")} <strong>{formData.guestFirstName} {formData.guestLastName}</strong> · {formData.guestEmail}
+                    </p>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <Input
                       label="Prénom"
                       value={formData.guestFirstName}
                       onChange={(e) => setFormData({ ...formData, guestFirstName: e.target.value })}
                       required
+                      readOnly={isAuthed}
+                      disabled={isAuthed}
                     />
                     <Input
                       label="Nom"
                       value={formData.guestLastName}
                       onChange={(e) => setFormData({ ...formData, guestLastName: e.target.value })}
                       required
+                      readOnly={isAuthed}
+                      disabled={isAuthed}
                     />
                   </div>
                   <Input
@@ -584,12 +596,16 @@ function ReservationPageInner() {
                     value={formData.guestEmail}
                     onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
                     required
+                    readOnly={isAuthed}
+                    disabled={isAuthed}
                   />
                   <Input
                     label="Téléphone"
                     value={formData.guestPhone}
                     onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
                     placeholder="+33 6 00 00 00 00"
+                    readOnly={isAuthed}
+                    disabled={isAuthed}
                   />
                   <div className="grid grid-cols-2 gap-4">
                     <Select
@@ -606,6 +622,7 @@ function ReservationPageInner() {
                       ]}
                       value={formData.guestCountry}
                       onChange={(e) => setFormData({ ...formData, guestCountry: e.target.value })}
+                      disabled={isAuthed}
                     />
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Heure d&apos;arrivée estimée</label>

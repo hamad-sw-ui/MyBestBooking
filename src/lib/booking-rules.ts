@@ -30,6 +30,13 @@ export interface OverlappingBookingRule {
 export interface BookingRuleResult {
   ok: boolean;
   error?: string;
+  /**
+   * T-157 (audit n°29) — classe de l'échec pour que la route distingue une
+   * ENTRÉE invalide (capacité, séjour min, dates → 400) d'un CONFLIT d'état
+   * (stop-sell, chambre complète → 409). Additif : les appelants existants
+   * (`price-alert-quote`, tests) ne lisent que `ok/error/nights/…`.
+   */
+  code?: "dates" | "capacity" | "min_stay" | "unavailable" | "bad_price";
   nights: string[];
   nightlyPrices: number[];
 }
@@ -95,11 +102,11 @@ export function evaluateBookingRules(input: {
 }): BookingRuleResult {
   const nights = stayNights(input.checkIn, input.checkOut);
   if (nights.length === 0) {
-    return { ok: false, error: "La date de départ doit être postérieure à la date d'arrivée", nights: [], nightlyPrices: [] };
+    return { ok: false, code: "dates", error: "La date de départ doit être postérieure à la date d'arrivée", nights: [], nightlyPrices: [] };
   }
 
   const capacity = capacityError(input.room, input.numAdults, input.numChildren);
-  if (capacity) return { ok: false, error: capacity, nights, nightlyPrices: [] };
+  if (capacity) return { ok: false, code: "capacity", error: capacity, nights, nightlyPrices: [] };
 
   const byDate = new Map(input.availability.map((day) => [toIsoDate(day.date), day]));
   const arrivalRule = byDate.get(input.checkIn);
@@ -107,6 +114,7 @@ export function evaluateBookingRules(input: {
   if (nights.length < minimumStay) {
     return {
       ok: false,
+      code: "min_stay",
       error: `Cet hébergement exige un séjour minimum de ${minimumStay} nuit${minimumStay > 1 ? "s" : ""}`,
       nights,
       nightlyPrices: [],
@@ -117,7 +125,7 @@ export function evaluateBookingRules(input: {
   for (const night of nights) {
     const rule = byDate.get(night);
     if (rule?.stopSell) {
-      return { ok: false, error: "Cette chambre n'est plus disponible pour ces dates", nights, nightlyPrices: [] };
+      return { ok: false, code: "unavailable", error: "Cette chambre n'est plus disponible pour ces dates", nights, nightlyPrices: [] };
     }
 
     // Une règle journalière réduit éventuellement le stock ; elle ne peut pas
@@ -130,12 +138,12 @@ export function evaluateBookingRules(input: {
     }).length;
 
     if (capacityForNight <= occupiedForNight) {
-      return { ok: false, error: "Cette chambre n'est plus disponible pour ces dates", nights, nightlyPrices: [] };
+      return { ok: false, code: "unavailable", error: "Cette chambre n'est plus disponible pour ces dates", nights, nightlyPrices: [] };
     }
 
     const price = Number(rule?.price ?? input.room.basePrice);
     if (!Number.isFinite(price) || price < 0) {
-      return { ok: false, error: "Le tarif de la chambre est invalide", nights, nightlyPrices: [] };
+      return { ok: false, code: "bad_price", error: "Le tarif de la chambre est invalide", nights, nightlyPrices: [] };
     }
     nightlyPrices.push(price);
   }

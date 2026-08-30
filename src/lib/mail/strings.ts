@@ -56,6 +56,13 @@ interface MailStrings {
   hostCancelBody: string;
   hostCancelCta: string;
   lblReason: string;
+  // T-156 (audit n°29) : annulation par l'hébergeur / l'administrateur —
+  // e-mail plateforme (jamais édité par l'admin), remboursement intégral.
+  operatorCancelHostSubject: string;
+  operatorCancelHostBody: string;
+  operatorCancelAdminSubject: string;
+  operatorCancelAdminBody: string;
+  lblFullRefund: string;
 }
 
 const FR: MailStrings = {
@@ -96,6 +103,17 @@ const FR: MailStrings = {
     "Le voyageur {guestName} ne séjournera pas du {checkIn} au {checkOut}.",
   hostCancelCta: "Voir mes réservations",
   lblReason: "Motif",
+  operatorCancelHostSubject: "Votre réservation {bookingReference} a été annulée par l'hébergeur",
+  operatorCancelHostBody:
+    "Bonjour {firstName},\n\n" +
+    "L'hébergeur de {propertyName} a annulé votre réservation {bookingReference}. " +
+    "Le montant de {refundAmount} {currency} vous sera remboursé intégralement.",
+  operatorCancelAdminSubject: "Votre réservation {bookingReference} a été annulée",
+  operatorCancelAdminBody:
+    "Bonjour {firstName},\n\n" +
+    "Votre réservation {bookingReference} chez {propertyName} a été annulée par l'équipe MyBestBooking. " +
+    "Le montant de {refundAmount} {currency} vous sera remboursé intégralement.",
+  lblFullRefund: "Remboursement intégral",
 };
 
 const EN: MailStrings = {
@@ -136,6 +154,17 @@ const EN: MailStrings = {
     "Guest {guestName} will not stay from {checkIn} to {checkOut}.",
   hostCancelCta: "View my bookings",
   lblReason: "Reason",
+  operatorCancelHostSubject: "Your booking {bookingReference} was cancelled by the host",
+  operatorCancelHostBody:
+    "Hi {firstName},\n\n" +
+    "The host of {propertyName} has cancelled your booking {bookingReference}. " +
+    "The amount of {refundAmount} {currency} will be refunded to you in full.",
+  operatorCancelAdminSubject: "Your booking {bookingReference} has been cancelled",
+  operatorCancelAdminBody:
+    "Hi {firstName},\n\n" +
+    "Your booking {bookingReference} at {propertyName} has been cancelled by the MyBestBooking team. " +
+    "The amount of {refundAmount} {currency} will be refunded to you in full.",
+  lblFullRefund: "Full refund",
 };
 
 export function mailStrings(locale: MailLocale): MailStrings {

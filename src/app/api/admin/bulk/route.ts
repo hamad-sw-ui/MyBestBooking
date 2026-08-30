@@ -302,8 +302,10 @@ async function bulkBookings(action: string, ids: string[]): Promise<Result> {
   if (action !== "cancel") throw new Error(`Action invalide pour bookings : ${action}`);
   for (const id of ids) {
     try {
-      const outcome = await cancelBooking(id, "Annulation administrative");
-      await notifyBookingCancellation(outcome);
+      // T-156 : l'admin annule sans frais (remboursement intégral) — le
+      // voyageur n'est jamais pénalisé par une décision administrative.
+      const outcome = await cancelBooking(id, "Annulation administrative", "admin");
+      await notifyBookingCancellation(outcome, "admin");
       r.succeeded += 1;
     } catch (error) {
       if (error instanceof BookingCancellationError) {

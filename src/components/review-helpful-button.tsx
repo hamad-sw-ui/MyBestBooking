@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { ThumbsUp } from "lucide-react";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 export function ReviewHelpfulButton({
   reviewId,
@@ -15,6 +17,9 @@ export function ReviewHelpfulButton({
 }) {
   const [count, setCount] = useState(initialCount ?? 0);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
+  // T-158 (audit n°29) : libellés localisés (la fiche est publique).
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
 
   async function vote() {
     if (state !== "idle") return;
@@ -37,8 +42,8 @@ export function ReviewHelpfulButton({
   return (
     <button type="button" onClick={vote} disabled={state === "sending" || state === "done"} className="mt-3 inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#1B3A6B] disabled:opacity-60">
       <ThumbsUp className="w-3.5 h-3.5" />
-      {state === "done" ? "Merci" : "Utile"} ({count})
-      {state === "error" && <span className="text-red-600"> — connexion requise</span>}
+      {state === "done" ? t("review.thanks") : t("review.helpful")} ({count})
+      {state === "error" && <span className="text-red-600">{t("review.helpfulLogin")}</span>}
     </button>
   );
 }

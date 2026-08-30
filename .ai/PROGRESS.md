@@ -3465,3 +3465,31 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   G1+G2 · smoke **94/94** (aligné sur promotions admin-only) · ai:check
   **20 OK / 0 warn / 0 fail**.
 - Données de test nettoyées (34 réservations smoke supprimées).
+
+## Session 2026-08-30 — Audit n°29 (implémentation validée)
+
+- **T-156** annulation par acteur : `CancellationActor` sur `cancelBooking`
+  (host/admin → **fee 0 + remboursement intégral**, motif forcé serveur) ;
+  mail `bookingCancelledByOperator` fr/en (« Remboursement intégral ») ;
+  quote GET autorisé hôte du bien + admin avec champs additifs
+  `actor`/`fullRefund` ; UI hôte dédiée (confirmation + PUT sans raison
+  client) ; flux voyageur strictement inchangé.
+- **T-157** identité connectée : `bookingGuestIdentity()` — POST /api/bookings
+  ignore les champs invité du payload pour un compte ; guest mode inchangé ;
+  étape 2 du checkout en lecture seule + encart « Réservé au nom de votre
+  compte ».
+- **T-158** i18n vague 1 : fiche propriété entièrement localisée (boutons,
+  formulaire d'avis, bannière confiance, badge, breadcrumb, tooltips,
+  **métadonnées** via cookie `mybb:ui-language` + `getServerLocale`) ;
+  sélecteur de devise publique EUR/USD/GBP/XAF dans la recherche
+  (priorité compte > localStorage > plateforme ; `displayCurrency`
+  serveur inchangé ; EUR 1:1).
+- **T-159** hygiène : `scripts/purge-sim-data.mjs` (dry-run) ; PATCH settings
+  merge additif + erreurs Zod sans `issues` ; codes de règle → **400**
+  (`dates|capacity|min_stay|bad_price`) vs **409** (`unavailable`) ; tests
+  corrigés (property non-BR dédiée + cas BR « +2 » ; mocks auth complets).
+- Preuves : 🔨 `tsc` 0 err · 🧪 **390/390** (57 fichiers, +16 tests) · ▶️
+  `run_all_sims.py` **5/5 · 396 OK · 0 KO** (3 WARN statiques justifiés :
+  `maintenance-gate`/`unread-messages-badge` silencieux par design) · ▶️
+  probes `.data/a29/probes.mjs` **30/30** · ▶️ crawl n°29 **0 erreur**
+  (40 pages × 4 rôles + 30 APIs × 4 rôles) · ✅ `ai:check`.

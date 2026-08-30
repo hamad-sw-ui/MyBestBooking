@@ -84,7 +84,14 @@ export async function PATCH(
 
   try {
     const previous = await getSetting(key);
-    const value = await setSetting(key, body, user.id);
+    // T-159 (audit n°29) : PATCH partiel accepté — fusion sur la valeur
+    // persistée (avec defaults appliqués par getSetting) puis validation
+    // du résultat complet. Envoyer la section entière reste accepté
+    // (le merge est alors une identité) → aucun changement pour le panneau.
+    const merged = (body && typeof body === "object" && !Array.isArray(body))
+      ? { ...previous, ...body }
+      : body;
+    const value = await setSetting(key, merged, user.id);
     // T-024 : audit log
     await recordAudit({
       actorId: user.id,
@@ -101,13 +108,9 @@ export async function PATCH(
       return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        {
-          error: frenchZodMessage(error),
-          issues: error.issues,
-        },
-        { status: 400 },
-      );
+      // T-159 : message français seul — les détails internes de validation
+      // (issues en anglais) ne sont plus exposés.
+      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
     }
     console.error(`[admin/settings/${key}] PATCH error:`, error);
     return NextResponse.json(

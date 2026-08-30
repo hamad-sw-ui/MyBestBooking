@@ -354,3 +354,17 @@
 
 ---
 *Mis à jour le 2026-08-23, T-109 validée; audit post-T-109 sur `400e37b`.*
+
+## Session 2026-08-30 — audit fonctionnel profond n°29 (implémenté + validé)
+
+- Tâches T-156/T-157/T-158/T-159 **CORRIGÉ (VALIDÉ)** — voir
+  `.ai/REPORTS/audit_fonctionnel_profond29_2026-08-30.md` et
+  `.ai/TRACEABILITY.md` (preuves rejouables).
+- Preuves : 🔨 tsc 0 · 🧪 vitest **57 fichiers / 390 tests** · ▶️
+  `run_all_sims.py` **5/5 · 396 OK · 0 KO** · ▶️ probes **30/30** ·
+  ✅ ai:check.
+- Compteurs : `sessions_since_last_product_audit: 0` (audit produit exécuté
+  ce jour) ; branche `arena/01a052ed-mybestbooking`.
+- HEAD Git : à mettre à jour en fin de session (commit de clôture de
+  l'audit n°29 : `a55c12a` initialement — voir `git log -1` pour le SHA
+  final après amendement de ce fichier ; motif toléré par R7).

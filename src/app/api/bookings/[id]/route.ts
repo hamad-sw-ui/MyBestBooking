@@ -98,8 +98,13 @@ export async function PUT(
     // Elle conserve les états refund, libère les avantages et émet l’outbox.
     if (data.status === "cancelled") {
       try {
-        const outcome = await cancelBooking(id, data.cancellationReason?.trim() || "Annulation demandée");
-        await notifyBookingCancellation(outcome);
+        // T-156 : l'acteur est connu (voyageur / hôte du bien / admin) : un
+        // hôte annule SANS frais (remboursement intégral) et la raison est
+        // forcée serveur. Les effets (refund PSP, avantages, outbox) sont
+        // identiques — seule la politique de frais et le motif changent.
+        const actor = actorFor(user.role, isOwner);
+        const outcome = await cancelBooking(id, data.cancellationReason?.trim() || "Annulation demandée", actor);
+        await notifyBookingCancellation(outcome, actor);
         return NextResponse.json({ booking: outcome.booking });
       } catch (cancellationError) {
         if (cancellationError instanceof BookingCancellationError) {

@@ -312,3 +312,22 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
   chargement direct. Le rôle est embarqué dans le JWT de session.
 - Les pages de détail (conversation, réservation, calendrier) renvoient une
   page 404 propre sur identifiant invalide, sans erreur serveur journalisée.
+
+## Audit n°29 — annulation par acteur, identité, i18n fiche + devise publique (2026-08-30)
+
+- **Annulation par acteur** : un hébergeur ou administrateur annule sans
+  frais (remboursement intégral, motif et e-mail plateforme dédiés) ; le
+  voyageur reste soumis à la grille de politique. Quote d'annulation
+  disponible à l'hôte du bien et à l'admin (champs `actor`/`fullRefund`).
+- **Identité du compte** : un utilisateur connecté réserve sous son identité
+  (champs invité du payload ignorés côté serveur ; confirmation vers l'email
+  du compte uniquement). Le mode invité (anonyme) est inchangé.
+- **i18n fiche propriété (vague 1)** : tous les libellés de la fiche
+  publique sont localisés fr/en — y compris le formulaire d'avis, l'alerte
+  prix, les actions favori/partage et les métadonnées (la langue anonyme est
+  mémorisée via cookie après le premier choix).
+- **Sélecteur de devise d'affichage** (EUR/USD/GBP/XAF) dans la recherche,
+  persistant localement ; priorité compte > localStorage > plateforme ;
+  aucune conversion transactionnelle.
+- **Réglages admin** : PATCH partiel par section (fusion additive) et
+  erreurs de validation en français, sans détails internes.

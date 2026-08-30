@@ -10,9 +10,12 @@ import { safeJsonForScript } from "@/lib/safe-json-ld";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
+  // T-158 (audit n°29) : métadonnées localisées (le <title> restait FR pour
+  // un visiteur anonyme en EN — le SSR ne connaissait pas sa langue).
+  const t = makeT(await getServerLocale());
   const [p] = await db.select().from(properties).where(and(eq(properties.slug, slug), eq(properties.status, "active"))).limit(1);
-  if (!p) return { title: "Hébergement introuvable" };
-  const desc = `${p.name} à ${p.city}, ${p.country}. ${p.description ? p.description.slice(0, 140) : "Réservez au meilleur prix."}`;
+  if (!p) return { title: t("meta.notFound") };
+  const desc = `${p.name} à ${p.city}, ${p.country}. ${p.description ? p.description.slice(0, 140) : t("meta.bookBestPrice")}`;
   return {
     title: p.name,
     description: desc,
@@ -171,9 +174,9 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
           <div className="flex items-center gap-2 text-sm text-gray-500">
-            <Link href="/" className="hover:text-gray-700">Accueil</Link>
+            <Link href="/" className="hover:text-gray-700">{t("crumb.home")}</Link>
             <span>/</span>
-            <Link href="/recherche" className="hover:text-gray-700">Hébergements</Link>
+            <Link href="/recherche" className="hover:text-gray-700">{t("crumb.properties")}</Link>
             <span>/</span>
             <Link href={`/recherche?city=${property.city}`} className="hover:text-gray-700">{property.city}</Link>
             <span>/</span>
@@ -195,7 +198,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 <Badge variant="bestrewards">💎 BestRewards</Badge>
               )}
               {property.isEcoCertified && (
-                <Badge variant="success">🌱 Éco</Badge>
+                <Badge variant="success">{t("badge.eco")}</Badge>
               )}
             </div>
             <h1 className="text-2xl md:text-3xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
@@ -249,16 +252,16 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
               <CardContent>
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-[#F5A623] text-xl">✦</span>
-                  <span className="font-semibold text-[#1B3A6B]">Informations MyBestBooking</span>
+                  <span className="font-semibold text-[#1B3A6B]">{t("trust.title")}</span>
                 </div>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4 text-[#1B3A6B]" />
-                    <span>Prix vérifié au paiement</span>
+                    <span>{t("trust.priceChecked")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Check className="w-4 h-4 text-[#00A699]" />
-                    <span>Frais affichés avant confirmation</span>
+                    <span>{t("trust.feesShown")}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <Star className="w-4 h-4 text-[#F5A623]" />
@@ -266,7 +269,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                   </div>
                   <div className="flex items-center gap-2">
                     <MessageCircle className="w-4 h-4 text-[#1B3A6B]" />
-                    <span>Contact support par email</span>
+                    <span>{t("trust.supportEmail")}</span>
                   </div>
                 </div>
               </CardContent>
@@ -346,7 +349,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                             numChildren: Number(query.children ?? "0"),
                           })}>
                             <Button className="mt-2" size="sm">
-                              Réserver
+                              {t("book.reserve")}
                             </Button>
                           </Link>
                         </div>

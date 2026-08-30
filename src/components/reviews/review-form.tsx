@@ -9,6 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Textarea, Select } from "@/components/ui/input";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
+// T-158 (audit n°29) : formulaire d'avis de la fiche propriété localisé
+// (un compte EN ne doit plus voir de libellés FR).
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 /**
  * <ReviewForm /> (T-125, P4)
@@ -19,6 +23,8 @@ import { useToast } from "@/components/ui/toast";
 export function ReviewForm({ bookingId, requireModeration }: { bookingId: string; requireModeration: boolean }) {
   const router = useRouter();
   const { addToast } = useToast();
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
   const [rating, setRating] = useState(8);
   const [travelerType, setTravelerType] = useState("leisure");
   const [positiveComment, setPositiveComment] = useState("");
@@ -30,12 +36,12 @@ export function ReviewForm({ bookingId, requireModeration }: { bookingId: string
   // suivent la note globale tant que l'utilisateur ne les affine pas, ce
   // qui rend la saisie non bloquante et conserve le comportement actuel.
   const SUB_RATINGS = [
-    { key: "cleanlinessRating", label: "Propreté" },
-    { key: "comfortRating", label: "Confort" },
-    { key: "locationRating", label: "Emplacement" },
-    { key: "facilitiesRating", label: "Équipements" },
-    { key: "staffRating", label: "Accueil / service" },
-    { key: "valueRating", label: "Rapport qualité-prix" },
+    { key: "cleanlinessRating", label: t("review.cleanliness") },
+    { key: "comfortRating", label: t("review.comfort") },
+    { key: "locationRating", label: t("review.location") },
+    { key: "facilitiesRating", label: t("review.facilities") },
+    { key: "staffRating", label: t("review.staff") },
+    { key: "valueRating", label: t("review.value") },
   ] as const;
   const [subRatings, setSubRatings] = useState<Record<string, number>>({});
   const subRating = (key: string) => subRatings[key] ?? Math.round(rating);
@@ -65,13 +71,14 @@ export function ReviewForm({ bookingId, requireModeration }: { bookingId: string
         }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error ?? "Impossible d'envoyer votre avis");
-      addToast("success", requireModeration ? "Avis envoyé — en attente de modération" : "Merci, votre avis est publié");
+      if (!response.ok) throw new Error(data.error ?? t("review.sendError"));
+      addToast("success", requireModeration ? t("review.sentModerated") : t("review.sentPublished"));
       router.push("/mes-reservations");
       router.refresh();
     } catch (submissionError) {
-      setError(submissionError instanceof Error ? submissionError.message : "Erreur lors de l'envoi");
-      addToast("error", submissionError instanceof Error ? submissionError.message : "Erreur lors de l'envoi");
+      const message = submissionError instanceof Error ? submissionError.message : t("review.genericError");
+      setError(message);
+      addToast("error", message);
       setLoading(false);
     }
   }
@@ -80,31 +87,29 @@ export function ReviewForm({ bookingId, requireModeration }: { bookingId: string
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-2xl mx-auto px-4">
         <Link href="/mes-reservations" className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-6">
-          <ArrowLeft className="w-4 h-4" /> Retour à mes réservations
+          <ArrowLeft className="w-4 h-4" /> {t("review.back")}
         </Link>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Star className="w-5 h-5 text-[#F5A623]" />
-              Partager votre expérience
+              {t("review.title")}
             </CardTitle>
             <p className="text-sm text-gray-600">
-              {requireModeration
-                ? "Votre séjour est vérifié. Votre avis sera publié après modération."
-                : "Votre séjour est déjà vérifié : votre avis sera publié immédiatement après envoi."}
+              {requireModeration ? t("review.verifiedModerated") : t("review.verifiedImmediate")}
             </p>
           </CardHeader>
           <CardContent>
             <form onSubmit={submitReview} className="space-y-5">
               {error && <p role="alert" className="p-3 rounded-lg bg-red-50 border border-red-200 text-sm text-red-700">{error}</p>}
               <label className="block">
-                <span className="block text-sm font-medium text-gray-700 mb-2">Note globale : <strong>{rating}/10</strong></span>
+                <span className="block text-sm font-medium text-gray-700 mb-2">{t("review.overall")} <strong>{rating}/10</strong></span>
                 <input type="range" min="1" max="10" step="0.5" value={rating} onChange={(event) => setRating(Number(event.target.value))} className="w-full accent-[#1B3A6B]" />
               </label>
 
               <fieldset className="border-t border-gray-100 pt-4">
                 <legend className="block text-sm font-medium text-gray-700 mb-3">
-                  Notes par critère <span className="text-gray-400 font-normal">(facultatif — égales à la note globale par défaut)</span>
+                  {t("review.subtitle")} <span className="text-gray-400 font-normal">{t("review.subtitleHint")}</span>
                 </legend>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                   {SUB_RATINGS.map((criterion) => (
@@ -119,7 +124,7 @@ export function ReviewForm({ bookingId, requireModeration }: { bookingId: string
                           value={subRating(criterion.key)}
                           onChange={(event) => setSubRating(criterion.key, Number(event.target.value))}
                           className="w-28 accent-[#1B3A6B]"
-                          aria-label={`Note pour ${criterion.label}`}
+                          aria-label={`${t("review.ratingFor")} ${criterion.label}`}
                         />
                         <span className="w-8 text-right text-sm font-medium text-gray-900">
                           {subRating(criterion.key)}/10
@@ -130,21 +135,21 @@ export function ReviewForm({ bookingId, requireModeration }: { bookingId: string
                 </div>
               </fieldset>
               <Select
-                label="Type de voyage"
+                label={t("review.travelerType")}
                 value={travelerType}
                 onChange={(event) => setTravelerType(event.target.value)}
                 options={[
-                  { value: "leisure", label: "Loisirs" },
-                  { value: "solo", label: "Solo" },
-                  { value: "couple", label: "Couple" },
-                  { value: "family", label: "Famille" },
-                  { value: "group", label: "Groupe" },
-                  { value: "business", label: "Affaires" },
+                  { value: "leisure", label: t("review.traveler.leisure") },
+                  { value: "solo", label: t("review.traveler.solo") },
+                  { value: "couple", label: t("review.traveler.couple") },
+                  { value: "family", label: t("review.traveler.family") },
+                  { value: "group", label: t("review.traveler.group") },
+                  { value: "business", label: t("review.traveler.business") },
                 ]}
               />
-              <Textarea label="Ce que vous avez aimé" value={positiveComment} onChange={(event) => setPositiveComment(event.target.value)} placeholder="Parlez de votre séjour..." rows={4} />
-              <Textarea label="Ce qui pourrait être amélioré" value={negativeComment} onChange={(event) => setNegativeComment(event.target.value)} placeholder="Facultatif" rows={3} />
-              <Button type="submit" loading={loading} className="w-full">Publier mon avis</Button>
+              <Textarea label={t("review.positiveLabel")} value={positiveComment} onChange={(event) => setPositiveComment(event.target.value)} placeholder={t("review.positivePlaceholder")} rows={4} />
+              <Textarea label={t("review.negativeLabel")} value={negativeComment} onChange={(event) => setNegativeComment(event.target.value)} placeholder={t("review.negativePlaceholder")} rows={3} />
+              <Button type="submit" loading={loading} className="w-full">{t("review.publish")}</Button>
             </form>
           </CardContent>
         </Card>

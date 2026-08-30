@@ -50,6 +50,15 @@ export const RATES_FROM_EUR: Record<string, number> = {
 export const DISPLAY_CURRENCIES = Object.keys(RATES_FROM_EUR) as string[];
 export type DisplayCurrency = (typeof DISPLAY_CURRENCIES)[number];
 
+/**
+ * T-158 (audit n°29) — options exposées par le sélecteur de devise
+ * publique (recherche/fiche). Sous-ensemble de DISPLAY_CURRENCIES : le
+ * sélecteur n'offre que les devises affichées par la plateforme
+ * (CHF/MAD restent convertibles mais non proposées, conformément au
+ * panneau admin `supportedCurrencies`).
+ */
+export const UI_CURRENCY_OPTIONS = ["EUR", "USD", "GBP", "XAF"] as const;
+
 /** Type-guard : une devise d'affichage est-elle connue/convertible ? */
 export function isDisplayCurrency(cur: string | null | undefined): cur is DisplayCurrency {
   return typeof cur === "string" && cur.toUpperCase() in RATES_FROM_EUR;

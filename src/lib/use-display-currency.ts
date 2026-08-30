@@ -25,6 +25,9 @@ import { isUiLocale } from "@/lib/ui-strings";
 /** T-152 (D) : clé de persistance locale du sélecteur de langue (anonyme). */
 export const UI_LANGUAGE_STORAGE_KEY = "mybb:ui-language";
 
+/** T-158 (audit n°29) : clé de persistance locale du sélecteur de devise. */
+export const UI_CURRENCY_STORAGE_KEY = "mybb:ui-currency";
+
 export interface DisplayPreferences {
   /** Devise d'affichage (ex. "XAF"). Jamais null une fois prêt. */
   currency: string | null;
@@ -64,12 +67,16 @@ function load(): Promise<Resolved> {
       //    données ou d'un appel direct à l'API) ne casse pas l'affichage :
       //    devise inconnue → devise plateforme/XAF, langue non traduite → « fr ».
       let userLanguage: string | null = null;
+      let hasUserCurrency = false;
       try {
         const me = await fetch("/api/auth/me", { cache: "no-store" });
         if (me.ok) {
           const data = await me.json();
           const u = data?.user;
-          if (typeof u?.currency === "string" && u.currency) platformCurrency = u.currency.toUpperCase();
+          if (typeof u?.currency === "string" && u.currency) {
+            platformCurrency = u.currency.toUpperCase();
+            hasUserCurrency = true;
+          }
           if (typeof u?.language === "string" && u.language && isUiLocale(u.language)) {
             userLanguage = u.language;
           }
@@ -86,6 +93,17 @@ function load(): Promise<Resolved> {
         try {
           const stored = window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
           if (stored && isUiLocale(stored)) platformLanguage = stored;
+        } catch {
+          // localStorage indisponible : défaut plateforme
+        }
+      }
+      // T-158 : même priorité pour la devise — le sélecteur public de la
+      // recherche (anonyme) persiste en localStorage ; un compte connecté
+      // reste maître (préférence profil), jamais écrasée.
+      if (!hasUserCurrency) {
+        try {
+          const stored = window.localStorage.getItem(UI_CURRENCY_STORAGE_KEY);
+          if (stored) platformCurrency = stored.toUpperCase();
         } catch {
           // localStorage indisponible : défaut plateforme
         }

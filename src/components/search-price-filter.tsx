@@ -2,6 +2,7 @@
 
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT } from "@/lib/ui-strings";
+import { CurrencySelector } from "@/components/currency-selector";
 
 /**
  * T-133 (A1) / T-134 — Champs de filtre de prix de la recherche.
@@ -29,6 +30,11 @@ export function SearchPriceFilter({
   return (
     <>
       <input type="hidden" name="displayCurrency" value={cur} />
+      {/* T-158 : sélecteur de devise d'affichage — le champ caché ci-dessus
+          porte la valeur soumise ; la conversion serveur est inchangée. */}
+      <div className="w-[130px]">
+        <CurrencySelector />
+      </div>
       <div className="w-[120px]">
         <label className="block text-xs font-medium text-gray-500 mb-1">Prix min. ({suffix})</label>
         <input

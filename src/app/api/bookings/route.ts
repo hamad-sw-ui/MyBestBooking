@@ -16,6 +16,7 @@ import {
 import { ipFromRequest, rateLimit } from "@/lib/rate-limit";
 import { frenchZodMessage } from "@/lib/http";
 import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules";
+import { bookingGuestIdentity } from "@/lib/booking-identity";
 import { createPaymentIntentForBooking } from "@/lib/payment-intents";
 import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
@@ -55,6 +56,14 @@ class BookingRuleError extends Error {}
 /** T-155 (audit n°27, P2) : code promo inconnu = entrée invalide → 400
  *  (les conflits d'état — expiré, épuisé, règles dispo, wallet — restent 409). */
 class PromoCodeNotFoundError extends Error {}
+
+/**
+ * T-157 (audit n°29) : entrée invalide (capacité, séjour min, dates,
+ * tarif corrompu) → 400 — distincte des conflits d'état (409) : une
+ * demande qui ne peut JAMAIS aboutir (chambre de 2 adultes, 5 demandés)
+ * n'est pas un conflit, elle doit être corrigée par le client.
+ */
+class BookingInputError extends Error {}
 
 export async function GET(request: NextRequest) {
   try {
@@ -124,6 +133,12 @@ export async function POST(request: NextRequest) {
     if (!user && !isGuestBooking) {
       return NextResponse.json({ error: "Veuillez vous connecter pour réserver" }, { status: 401 });
     }
+
+    // T-157 (audit n°29) : un compte connecté réserve sous SON identité. Les
+    // champs invité du payload sont ignorés (le serveur est l'autorité) :
+    // une confirmation ne peut jamais partir vers un email tiers saisi à la
+    // main. Le guest mode (anonyme + isGuestBooking) garde son contrat.
+    const guestIdentity = bookingGuestIdentity(user);
 
     await assertNotMaintenance(user);
     const today = new Date().toISOString().slice(0, 10);
@@ -217,7 +232,14 @@ export async function POST(request: NextRequest) {
           availability,
           overlappingBookings: overlaps,
         });
-        if (!rules.ok) throw new BookingRuleError(rules.error);
+        if (!rules.ok) {
+          // T-157 : entrée invalide → 400 (capacité, séjour min, dates, tarif) ;
+          // stop-sell / chambre complète → 409 (état concurrent).
+          if (rules.code && ["dates", "capacity", "min_stay", "bad_price"].includes(rules.code)) {
+            throw new BookingInputError(rules.error);
+          }
+          throw new BookingRuleError(rules.error);
+        }
 
         let selectedRatePlan: typeof ratePlans.$inferSelect | null = null;
         if (data.ratePlanId) {
@@ -327,11 +349,13 @@ export async function POST(request: NextRequest) {
             numNights: rules.nights.length,
             numAdults: data.numAdults,
             numChildren: data.numChildren ?? 0,
-            guestFirstName: data.guestFirstName,
-            guestLastName: data.guestLastName,
-            guestEmail: data.guestEmail,
-            guestPhone: data.guestPhone,
-            guestCountry: data.guestCountry,
+            // T-157 : identité du compte pour un user connecté, sinon le
+            // payload invité (guest mode, inchangé).
+            guestFirstName: guestIdentity?.firstName ?? data.guestFirstName,
+            guestLastName: guestIdentity?.lastName ?? data.guestLastName,
+            guestEmail: guestIdentity?.email ?? data.guestEmail,
+            guestPhone: guestIdentity?.phone ?? data.guestPhone,
+            guestCountry: guestIdentity?.country ?? data.guestCountry,
             tripPurpose: data.tripPurpose,
             specialRequests: data.specialRequests,
             estimatedArrival: data.estimatedArrival,
@@ -383,6 +407,10 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       if (error instanceof PromoCodeNotFoundError) {
         // T-155 (audit n°27) : 400 — entrée invalide (code inexistant).
+        return NextResponse.json({ error: error.message }, { status: 400 });
+      }
+      if (error instanceof BookingInputError) {
+        // T-157 (audit n°29) : 400 — entrée invalide (capacité, dates…).
         return NextResponse.json({ error: error.message }, { status: 400 });
       }
       if (error instanceof BookingRuleError) {

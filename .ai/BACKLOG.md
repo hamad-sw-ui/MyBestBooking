@@ -321,3 +321,19 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
   simulation (`--dry-run`) ; PATCH settings par section (merge additif) +
   suppression des `issues` dans la réponse d'erreur ; alignement 409→400
   sur « capacité dépassée » (à décider).
+
+### Audit 29 (2026-08-30) — `.ai/REPORTS/audit_fonctionnel_profond29_2026-08-30.md` (implémenté + validé)
+
+- T-156 **CORRIGÉ (VALIDÉ)** — acteur sur `cancelBooking` (host/admin → fee 0,
+  refund intégral, motif forcé, mail plateforme) ; quote hôte du bien/admin ;
+  UI hôte dédiée. Voyageur inchangé. Preuves : probes 30/30 + 8 tests.
+- T-157 **CORRIGÉ (VALIDÉ)** — `bookingGuestIdentity()` : identité du compte
+  (payload invité ignoré) ; UI lecture seule + encart. Guest mode inchangé.
+- T-158 **CORRIGÉ (VALIDÉ)** — i18n vague 1 fiche propriété (boutons,
+  formulaire d'avis, métadonnées via cookie langue) + sélecteur de devise
+  publique EUR/USD/GBP/XAF (priorité compte > localStorage > plateforme).
+- T-159 **CORRIGÉ (VALIDÉ)** — `purge-sim-data.mjs` (dry-run) ; PATCH settings
+  merge + erreurs sans `issues` ; 400 vs 409 par code de règle ; 2 tests de
+  validation corrigés (property BR/non-BR, mocks auth complets).
+- Preuves : 🔨 tsc 0 · 🧪 vitest **57 fichiers / 390 tests** · ▶️ sims
+  **5/5 · 396 OK · 0 KO** · ▶️ probes **30/30** · ✅ ai:check.

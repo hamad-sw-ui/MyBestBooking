@@ -245,7 +245,17 @@ dbTest("GET /api/bookings — champs avis additifs (T-152, finding E)", () => {
     schema = await import("@/db/schema");
     const authMod = await import("@/lib/auth");
     getCurrentUser = authMod.getCurrentUser as unknown as ReturnType<typeof vi.fn>;
-    getCurrentUser.mockResolvedValue({ id: userId, role: "customer" } as never);
+    getCurrentUser.mockResolvedValue({
+      id: userId,
+      role: "customer",
+      // T-157 : le serveur utilise l'identité du compte (le mock doit
+      // refléter le user complet renvoyé par @/lib/auth).
+      firstName: "Test",
+      lastName: "Customer",
+      email: "customer@mybestbooking.com",
+      phone: null,
+      country: "FR",
+    } as never);
 
     const { eq } = await import("drizzle-orm");
     const [customer] = await db
@@ -255,7 +265,17 @@ dbTest("GET /api/bookings — champs avis additifs (T-152, finding E)", () => {
       .limit(1);
     if (!customer) throw new Error("Seed non appliqué (customer introuvable)");
     userId = customer.id;
-    getCurrentUser.mockResolvedValue({ id: userId, role: "customer" } as never);
+    getCurrentUser.mockResolvedValue({
+      id: userId,
+      role: "customer",
+      // T-157 : le serveur utilise l'identité du compte (le mock doit
+      // refléter le user complet renvoyé par @/lib/auth).
+      firstName: "Test",
+      lastName: "Customer",
+      email: "customer@mybestbooking.com",
+      phone: null,
+      country: "FR",
+    } as never);
 
     const [host] = await db
       .select()
@@ -420,7 +440,17 @@ dbTest("POST /api/bookings — wallet EUR × total USD + promo (T-153, findings 
       })
       .returning();
     userId = u.id;
-    getCurrentUser.mockResolvedValue({ id: userId, role: "customer" } as never);
+    getCurrentUser.mockResolvedValue({
+      id: userId,
+      role: "customer",
+      // T-157 : le serveur utilise l'identité du compte (le mock doit
+      // refléter le user complet renvoyé par @/lib/auth).
+      firstName: "Test",
+      lastName: "Customer",
+      email: "customer@mybestbooking.com",
+      phone: null,
+      country: "FR",
+    } as never);
 
     const { generateSlug } = await import("@/lib/utils");
     const [prop] = await db

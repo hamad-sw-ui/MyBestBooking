@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 /**
  * T-154d (audit n°26, P2-4) — GET /api/properties/[id] expose en lecture
@@ -44,6 +44,8 @@ dbTest("GET /api/properties/[id] — champs pricing additifs (T-154d)", () => {
   let getCurrentUser: ReturnType<typeof vi.fn>;
   let customerId = "";
   let propertyId = "";
+  let hostId = "";
+  let createdPropertyId = "";
 
   beforeAll(async () => {
     const routeMod = await import("./route");
@@ -63,13 +65,39 @@ dbTest("GET /api/properties/[id] — champs pricing additifs (T-154d)", () => {
       .limit(1);
     if (!customer) throw new Error("Seed non appliqué (customer introuvable)");
     customerId = customer.id;
-    const [property] = await db
+    const [host] = await db
       .select()
-      .from(schema.properties)
-      .where(eq(schema.properties.slug, "hotel-le-magnifique"))
+      .from(schema.users)
+      .where(eq(schema.users.email, "host@mybestbooking.com"))
       .limit(1);
-    if (!property) throw new Error("Seed non appliqué (property introuvable)");
-    propertyId = property.id;
+    if (!host) throw new Error("Seed non appliqué (host introuvable)");
+    hostId = host.id;
+    // T-159 (audit n°29) : propriété dédiée NON-BestRewards pour rendre le
+    // test indépendant du seed (« hotel-le-magnifique » est BR → 15+2=17) :
+    // l'assertion « non-BR → 15 » testait en réalité un cas BR.
+    const { generateSlug } = await import("@/lib/utils");
+    const [prop] = await db
+      .insert(schema.properties)
+      .values({
+        hostId: host.id,
+        name: "T-159 Non-BR Test Property",
+        slug: generateSlug(`t159-nonbr-${Date.now()}`),
+        type: "hotel",
+        city: "TestCity",
+        country: "FR",
+        status: "active",
+        isBestrewards: false,
+      })
+      .returning();
+    createdPropertyId = prop.id;
+    propertyId = prop.id;
+  });
+
+  afterAll(async () => {
+    const { eq: eqOp } = await import("drizzle-orm");
+    if (createdPropertyId) {
+      await db.delete(schema.properties).where(eqOp(schema.properties.id, createdPropertyId));
+    }
   });
 
   it("anon → taxRate 0.1, bestrewardsDiscountPercent null (inchangé côté public)", async () => {
@@ -95,13 +123,37 @@ dbTest("GET /api/properties/[id] — champs pricing additifs (T-154d)", () => {
     expect(body.property.bestrewardsDiscountPercent).toBe(15);
   });
 
-  it("le contrat existant reste présent (champs publics intacts)", async () => {
-    getCurrentUser.mockResolvedValue(null);
+  it("propriété seed BestRewards (level 2) → 15 + bonus 2 = 17", async () => {
+    getCurrentUser.mockResolvedValue({ id: customerId, role: "customer" });
+    const { eq: eqOp } = await import("drizzle-orm");
+    const [seed] = await db
+      .select()
+      .from(schema.properties)
+      .where(eqOp(schema.properties.slug, "hotel-le-magnifique"))
+      .limit(1);
     const res = await GET(new Request("http://localhost/api/properties") as never, {
-      params: Promise.resolve({ id: propertyId }),
+      params: Promise.resolve({ id: seed!.id }),
     } as never);
     const body = await res.json();
-    expect(body.property.id).toBe(propertyId);
+    expect(res.status).toBe(200);
+    expect(body.property.bestrewardsDiscountPercent).toBe(17);
+  });
+
+  it("le contrat existant reste présent (champs publics intacts)", async () => {
+    // Contrat vérifié sur la propriété du seed (« hotel-le-magnifique »),
+    // riche (rooms/ratePlans) — comme à l'origine du test.
+    const { eq: eqOp } = await import("drizzle-orm");
+    const [seed] = await db
+      .select()
+      .from(schema.properties)
+      .where(eqOp(schema.properties.slug, "hotel-le-magnifique"))
+      .limit(1);
+    getCurrentUser.mockResolvedValue(null);
+    const res = await GET(new Request("http://localhost/api/properties") as never, {
+      params: Promise.resolve({ id: seed!.id }),
+    } as never);
+    const body = await res.json();
+    expect(body.property.id).toBe(seed!.id);
     expect(body.property.name).toBeTruthy();
     expect(body.property.slug).toBe("hotel-le-magnifique");
     expect(body.rooms).toBeTruthy();

@@ -11,6 +11,10 @@ import { refundLateCapturedPayment } from "@/lib/payment-events";
 
 export class BookingCancellationError extends Error {}
 
+/** T-156 (audit n°29) : qui annule — le voyageur paie la politique ; un
+ *  hébergeur/admin annule sans frais (remboursement intégral). */
+export type CancellationActor = "customer" | "host" | "admin" | "system";
+
 export type CancellationOutcome = {
   booking: typeof bookings.$inferSelect;
   propertyName: string;
@@ -22,7 +26,21 @@ export type CancellationOutcome = {
  * appel PSP : un crash est repris par le cron au lieu de laisser un refund sans
  * trace. La clé provider universelle est `booking-refund:<bookingId>`.
  */
-export async function cancelBooking(bookingId: string, reason: string): Promise<CancellationOutcome> {
+export async function cancelBooking(
+  bookingId: string,
+  reason: string,
+  actor: CancellationActor = "customer",
+): Promise<CancellationOutcome> {
+  // T-156 : une annulation par l'hébergeur ou l'administrateur n'est JAMAIS
+  // facturée au voyageur — le motif est forcé par le serveur (le libellé
+  // « Annulation demandée par le voyageur » en dur depuis l'UI hôte ne doit
+  // pas être persisté). Seule l'annulation du voyageur applique la grille.
+  const byOperator = actor === "host" || actor === "admin";
+  const effectiveReason = byOperator
+    ? actor === "host"
+      ? "Annulée par l'hébergeur"
+      : "Annulée par l'administrateur"
+    : reason;
   const [existing] = await db.select({ booking: bookings, property: properties })
     .from(bookings).leftJoin(properties, eq(bookings.propertyId, properties.id))
     .where(eq(bookings.id, bookingId));
@@ -32,9 +50,11 @@ export async function cancelBooking(bookingId: string, reason: string): Promise<
   const snapshot = existing.booking.ratePlanSnapshot as { cancellationPolicy?: string; cancellationFreeDays?: number | null } | null;
   const grid = await getSetting("cancellation");
   const policy = (snapshot?.cancellationPolicy ?? existing.property?.cancellationPolicy ?? "flexible") as CancellationPolicy;
-  const cancellationFee = (snapshot?.cancellationFreeDays ?? 0) > 0 && daysUntil(existing.booking.checkIn) >= (snapshot?.cancellationFreeDays ?? 0)
+  const cancellationFee = byOperator
     ? 0
-    : computeCancellationFeeWithGrid(policy, Number(existing.booking.total), daysUntil(existing.booking.checkIn), grid);
+    : (snapshot?.cancellationFreeDays ?? 0) > 0 && daysUntil(existing.booking.checkIn) >= (snapshot?.cancellationFreeDays ?? 0)
+      ? 0
+      : computeCancellationFeeWithGrid(policy, Number(existing.booking.total), daysUntil(existing.booking.checkIn), grid);
   const refundAmount = Math.max(0, Number(existing.booking.total) - cancellationFee);
 
   const prepared = await db.transaction(async (tx) => {
@@ -43,7 +63,7 @@ export async function cancelBooking(bookingId: string, reason: string): Promise<
     const needsRefund = locked.paymentStatus === "paid" && refundAmount > 0;
     const [updated] = await tx.update(bookings).set({
       status: "cancelled",
-      cancellationReason: reason,
+      cancellationReason: effectiveReason,
       cancelledAt: new Date(),
       cancellationFee: cancellationFee.toFixed(2),
       refundAmount: refundAmount.toFixed(2),
@@ -73,19 +93,35 @@ export async function cancelBooking(bookingId: string, reason: string): Promise<
   return { booking, propertyName: existing.property?.name ?? "", cancellationFee };
 }
 
-export async function notifyBookingCancellation(outcome: CancellationOutcome): Promise<void> {
+export async function notifyBookingCancellation(
+  outcome: CancellationOutcome,
+  actor: CancellationActor = "customer",
+): Promise<void> {
   // Langue du voyageur destinataire.
   const [guest] = outcome.booking.userId
     ? await db.select({ language: users.language }).from(users).where(eq(users.id, outcome.booking.userId))
     : [];
-  const mail = await templates.bookingCancellation({
-    firstName: outcome.booking.guestFirstName,
-    bookingReference: outcome.booking.bookingReference,
-    propertyName: outcome.propertyName,
-    cancellationFee: outcome.cancellationFee.toFixed(2),
-    currency: outcome.booking.currency ?? "EUR",
-    language: guest?.language ?? null,
-  });
+  // T-156 : annulation par l'hébergeur/admin → e-mail plateforme
+  // « remboursement intégral » (jamais « frais appliqués ») ; annulation
+  // voyageur → template admin historique (inchangé).
+  const mail = actor === "host" || actor === "admin"
+    ? await templates.bookingCancelledByOperator({
+        firstName: outcome.booking.guestFirstName,
+        bookingReference: outcome.booking.bookingReference,
+        propertyName: outcome.propertyName,
+        refundAmount: outcome.booking.refundAmount ?? outcome.booking.total,
+        currency: outcome.booking.currency ?? "EUR",
+        actor,
+        language: guest?.language ?? null,
+      })
+    : await templates.bookingCancellation({
+        firstName: outcome.booking.guestFirstName,
+        bookingReference: outcome.booking.bookingReference,
+        propertyName: outcome.propertyName,
+        cancellationFee: outcome.cancellationFee.toFixed(2),
+        currency: outcome.booking.currency ?? "EUR",
+        language: guest?.language ?? null,
+      });
   const eventKey = `booking-cancellation:${outcome.booking.id}`;
   await enqueueEmail({ eventKey, to: outcome.booking.guestEmail, ...mail });
   await deliverEmail(eventKey);

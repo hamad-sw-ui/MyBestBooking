@@ -48,6 +48,30 @@ export function BookingRowActions({
   async function cancel() {
     setError(null);
     try {
+      // T-156 (audit n°29) : vue hôte/admin → l'annulation est sans frais
+      // pour le voyageur (remboursement intégral) et la raison est forcée
+      // par le serveur ; la vue voyageur garde le devis + politique.
+      if (canManageStay) {
+        const confirmMsg = "Annuler la réservation du voyageur ?\n\nLe voyageur sera remboursé intégralement (aucun frais d'annulation).";
+        if (!confirm(confirmMsg)) return;
+        startTransition(async () => {
+          try {
+            const r = await fetch(`/api/bookings/${bookingId}`, {
+              method: "PUT",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ status: "cancelled" }),
+            });
+            if (!r.ok) {
+              const j = await r.json().catch(() => ({}));
+              throw new Error(j.error ?? "Erreur");
+            }
+            router.refresh();
+          } catch (e) {
+            setError(e instanceof Error ? e.message : "Erreur");
+          }
+        });
+        return;
+      }
       const quoteResponse = await fetch(`/api/bookings/${bookingId}/cancellation`, { cache: "no-store" });
       const quote = await quoteResponse.json().catch(() => ({}));
       if (!quoteResponse.ok) throw new Error(quote.error ?? "Impossible de calculer l'annulation");

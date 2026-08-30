@@ -162,6 +162,40 @@ export const templates = {
   },
 
   /**
+   * T-156 (audit n°29) — annulation par l'HÉBERGEUR ou l'ADMINISTRATEUR.
+   * Contenu entièrement géré par la plateforme (comme `bookingHostCancellation`)
+   * et localisé fr/en : le voyageur n'est jamais pénalisé — remboursement
+   * intégral annoncé explicitement. Le template admin `bookingCancellation`
+   * (frais variables) reste utilisé pour les annulations par le voyageur.
+   */
+  async bookingCancelledByOperator({
+    firstName, bookingReference, propertyName, refundAmount, currency, actor, language,
+  }: {
+    firstName: string; bookingReference: string; propertyName: string;
+    refundAmount: string; currency: string; actor: "host" | "admin";
+    language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { firstName, bookingReference, propertyName, refundAmount, currency };
+    const subject = actor === "admin"
+      ? renderTemplate(s.operatorCancelAdminSubject, vars)
+      : renderTemplate(s.operatorCancelHostSubject, vars);
+    const body = actor === "admin"
+      ? renderTemplate(bodyToHtml(s.operatorCancelAdminBody), vars)
+      : renderTemplate(bodyToHtml(s.operatorCancelHostBody), vars);
+    const html = layout(`
+      ${body}
+      <p style="margin:16px 0 4px;font-size:13px;color:#666;">${s.lblFullRefund} — ${escapeHtml(refundAmount)} ${escapeHtml(currency)}</p>
+      <table style="width:100%;margin:16px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+      </table>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
    * T-150 — Annulation notifiée à l'hôte (langue de l'hôte). Nouvel
    * événement, jamais édité par l'admin → contenu entièrement géré par la
    * plateforme et localisé fr/en (même approche que `priceAlert`).
