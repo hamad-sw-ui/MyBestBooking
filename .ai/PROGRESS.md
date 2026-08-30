@@ -7,6 +7,58 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 44 — 2026-08-30 : audit fonctionnel n°26 (à l'exécution) — 14 findings, rapport seul
+
+- 🔍 **Audit fonctionnel profond n°26** : crawls réels (38 pages × 4 rôles =
+  152 vérifications, 0 marqueur d'erreur ; 60 routes API = 120 vérifications,
+  zéro ERR/500) + parcours E2E (réservation→paiement→annulation, promos
+  cross-devises, wallet, messagerie, favoris, alertes) + re-production du SQL
+  exact de la recherche. **Aucun code modifié** (rapport seul, cycle n°25 :
+  rapport puis implémentation).
+- 📄 Rapport : `REPORTS/audit_fonctionnel_profond26_2026-08-30.md`.
+- **Findings P1 (3)** :
+  - **Recherche : prix jamais affiché** — sous-requêtes corrélées
+    `eligiblePrice`/`eligibleCurrency` en **SELECT** rendues par Drizzle sans
+    qualificatif (`r2.property_id = "id"` → se lie à `r2.id` → NULL partout)
+    alors que la même expression en WHERE/ORDER BY est qualifiée
+    (`"properties"."id"`) → tri OK, filtrage max OK, affichage cassé
+    (8/8 cartes « Prix indisponible », RSC `minPrice:null`).
+  - **Filtre prix min sémantique faux** : `EXISTS (∃ chambre ≥ min)` au lieu
+    du min de la propriété → `minPrice=107` renvoie 8/8 (dont biens 89 €),
+    `maxPrice=91` renvoie 3 (max OK car `∃ ≤ max ⟺ min ≤ max`).
+  - **Cashback « Terminer le séjour » sans conversion devise** : le caller
+    `PUT /api/bookings/[id]` (`status:"completed"`) n'a **pas** le 4ᵉ argument
+    `currency` ajouté par T-153 C (seul le cron l'a) → chemin utilisé par
+    l'UI hôte surcrédite/sous-crédite le wallet EUR (500 $US → 25,00 € au lieu
+    de 23,15 €).
+- **Findings P2 (5)** : récap réservation (TVA `0.1` dur vs `billing.taxRate`
+  éditable ; réduction BestRewards 15 % jamais affichée — aperçu 261,07 €,
+  facturé 221,91 €) ; « Annulation gratuite » en dur (l.851) vs politique
+  réelle `strict`/`non_refundable` ; favoris add-only (`wishlists[0]`,
+  aucun retrait unitaire dans l'UI, DELETE `?propertyId` jamais appelé) ;
+  alerte prix morte si aucune chambre active dans la devise de l'alerte ;
+  `useToast` monté (layout.tsx:94) jamais appelé.
+- **Findings P3 (6)** : montants sans devise (`rate-plans-section` l.115,
+  `price-alerts-section` l.116), promo « € » durs, **XAF zéro-décimal Stripe
+  → ×100** (`payment-intents.ts`/`payment-events.ts`), dark mode partiel
+  (13 règles). dark + toggle absent dashboard mobile, calendrier (valeurs
+  par défaut non persistées), amenities 3 listes (5/12/12 vs 27 en base),
+  help center phrase Stripe.
+- **Écarts invalidés (documentés)** : `GET /api/users/me` 405 = normal
+  (front lit `/api/auth/me` qui expose bien currency/language/emailVerified) ;
+  perf 35,6 s = cold start Next dev (re-test 24–77 ms) ; ids amenities
+  cohérents ; messagerie/alertes/promos cross-devises/flux annulation sains.
+- **Preuves** : 🔍 SQL re-produit (`repro-search*.ts` dans `.data/a26/`) ·
+  🧠 analyse contrats · ▶️ runtime : booking E2E (221,91 € annulé/remboursé),
+  promos (20 € → 21,60 $, 13 119,14 FCFA), messagerie (conversation + message
+  lus), 307 RBAC re-vérifiés. Nettoyage DB restauré : bookings 31,
+  conversations 0, messages 0, alertes 1, wishlist_items 1 (seuls artefacts
+  antérieurs conservés).
+- Étape suivante : sur validation → implémentation proposée en 4 lots
+  (P1 recherche ; P1 lignes cashback ; P2 5-7 ; P2 4+8), puis P3. Aucune
+  implémentation dans cette session.
+
+
 ---
 
 ## Session 43 — 2026-08-30 : audit fonctionnel n°25 (à l'exécution) — 7 findings, rapport seul

@@ -8,14 +8,32 @@
   `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
 - **PR ouverte** : historique (PR #2) — session T-153 en cours sur
   `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
-- **HEAD Git** : T-153 sur `arena/01a052ed-mybestbooking`
-  (base `135544c` = audit n°25). Le hash exact du HEAD courant est **à mettre à jour en fin de session**
-  : un commit de doc ne peut pas contenir son propre hash, et R7 le tolère
-  explicitement (motif « à mettre à jour en fin de session »). Le workflow
+- **HEAD Git** : **audit fonctionnel n°26 (rapport seul, aucun code)** sur
+  `arena/01a052ed-mybestbooking` (base `ed19ac3` = T-153 validé). Le hash
+  exact du HEAD courant est **à mettre à jour en fin de session** : un commit
+  de doc ne peut pas contenir son propre hash, et R7 le tolère explicitement
+  (motif « à mettre à jour en fin de session »). Le workflow
   `.github/workflows/ci.yml` (T-113) reste hors suivi
   git de ces push car le jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1
-- **Dernière activité (2026-08-30)** : **T-153 (S, implémenté et validé)**
+- **Dernière activité (2026-08-30)** : **Audit fonctionnel n°26 (🔍 analyse
+  seule, aucun code)** — 14 findings (3 P1 / 5 P2 / 6 P3) à l'exécution :
+  recherche prix jamais affiché (sous-requêtes corrélées en SELECT non
+  qualifiées par Drizzle) + filtre prix min sémantique faux + cashback
+  « Terminer le séjour » sans conversion devise (caller PUT de T-153 C
+  oublié) ; P2 récap réservation (TVA 0,1 dur, BestRewards invisible),
+  « Annulation gratuite » en dur, favoris add-only, alerte prix morte, toasts
+  jamais utilisés ; P3 devises/XAF zéro-décimal Stripe ×100, dark mode
+  partiel, calendrier, amenities, help center. Rapport :
+  `REPORTS/audit_fonctionnel_profond26_2026-08-30.md`. Crawls : 152
+  vérifications pages (0 erreur) + 120 APIs (0 ERR/500) ; E2E
+  réservation→paiement→annulation, promos cross-devises, messagerie ;
+  écarts invalidés documentés (users/me 405 attendu — front lit
+  `/api/auth/me` ; perf 35,6 s = cold start, re-test 24-77 ms ; RBAC 307).
+  **Aucune implémentation** (cycle audit n°25 : rapport puis implémentation
+  sur demande). Nettoyage DB vérifié (bookings 31, conversations 0,
+  messages 0).
+- **Dernière tâche implémentée** : **T-153 (S, implémenté et validé)**
   — implémentation des 7 findings de l'audit n°25 (rapport
   `audit_fonctionnel_profond25_2026-08-30.md`) : **A** wallet EUR appliqué
   à un total devise chambre (`applyWalletToTotal`, `wallet_credits_used`
