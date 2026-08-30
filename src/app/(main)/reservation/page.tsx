@@ -5,6 +5,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT, isUiLocale } from "@/lib/ui-strings";
+// T-154c (audit n°26, P2-5) : libellé d'annulation dérivé de la politique
+// réelle du bien (+ grille serveur), plus jamais « gratuit » en dur.
+import { cancellationPolicyLabel } from "@/lib/cancellation-label";
 import { formatPrice } from "@/lib/utils";
 import { applyWalletToTotal } from "@/lib/wallet-currency";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
@@ -28,6 +31,9 @@ interface PropertyData {
   mainImage: string | null;
   starRating: number | null;
   averageRating: string | null;
+  // T-154c (audit n°26, P2-5) : politique d'annulation réelle du bien
+  // (retournée par GET /api/properties/[id]) pour le libellé exact.
+  cancellationPolicy: string | null;
   totalReviews: number | null;
   checkInFrom: string | null;
   checkOutUntil: string | null;
@@ -848,7 +854,7 @@ function ReservationPageInner() {
                   )}
 
                   <div className="mt-4 space-y-2 text-xs text-gray-500">
-                    <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Annulation gratuite</p>
+                    <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> {cancellationPolicyLabel(property?.cancellationPolicy, t)}</p>
                     <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Prix confirmé avant paiement</p>
                     <p className="flex items-center gap-1"><Check className="w-3 h-3 text-green-500" /> Paiement sécurisé</p>
                   </div>

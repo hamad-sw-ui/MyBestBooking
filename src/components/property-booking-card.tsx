@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { convertAmount, formatMoney } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { uiStrings } from "@/lib/ui-strings";
+// T-154c (audit n°26, P2-5) : libellé d'annulation dérivé de la politique.
+import { cancellationPolicyLabel } from "@/lib/cancellation-label";
 
 interface Props {
   propertyId: string;
@@ -27,6 +29,9 @@ interface Props {
   initialCheckOut?: string;
   initialAdults?: number;
   initialChildren?: number;
+  /** T-154c (audit n°26, P2-5) : politique d'annulation du bien pour le
+   *  libellé exact (au lieu du texte générique « conditions affichées »). */
+  cancellationPolicy?: string | null;
 }
 
 /**
@@ -40,6 +45,7 @@ export function PropertyBookingCard({
   initialCheckOut = "",
   initialAdults = 2,
   initialChildren = 0,
+  cancellationPolicy = null,
 }: Props) {
   const [checkIn, setCheckIn] = useState(initialCheckIn);
   const [checkOut, setCheckOut] = useState(initialCheckOut);
@@ -128,7 +134,9 @@ export function PropertyBookingCard({
             {t["book.noRoom"]}
           </button>
         )}
-        <p className="text-xs text-center text-gray-500 mt-3">{t["book.cancelShown"]}</p>
+        <p className="text-xs text-center text-gray-500 mt-3">
+          {cancellationPolicyLabel(cancellationPolicy, (key) => t[key])}
+        </p>
       </CardContent>
     </Card>
   );

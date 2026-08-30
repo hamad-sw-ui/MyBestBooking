@@ -1,17 +1,17 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-154b (audit n°26, P1-3) — cashback « Terminer le séjour » sans
-conversion de devise
+**ID** : T-154d (audit n°26, P2-4+P2-8) — récap réservation (TVA/BestRewards
+réels) + toasts
 
-**Niveau de proportionnalité** : L (1 ligne + tests route)
+**Niveau de proportionnalité** : M (2 chantiers UI, additif)
 
-**Titre** : Implémentation des findings de l'audit n°26, lot 2/4 — le caller
-`PUT /api/bookings/[id]` (`status:"completed"`) doit passer la devise de la
-réservation à `calculateLoyaltyAward` (T-153 C incomplet).
+**Titre** : Implémentation des findings de l'audit n°26, lot 4/4 — l'aperçu
+de réservation doit refléter la TVA configurée et la réduction BestRewards,
+et les erreurs/confirmations doivent passer par le ToastProvider monté.
 
-**Statut** : EN COURS — T-154a (P1 1+2, recherche) **LIVRÉ (VALIDÉ)** :
-tsc 0 · vitest 352/352 · smoke 94/94 · `minPrice=107` → 4, `maxPrice=91` → 3,
-0 « Prix indisponible » (voir TRACEABILITY, session 45).
+**Statut** : EN COURS — T-154a/b/c **LIVRÉS (VALIDÉS)** (recherche, cashback,
+annulation/favoris/alertes) : tsc 0 · lint 0 · vitest 365/365 · smoke 94/94
+(voir TRACEABILITY, session 45).
 
 Rapport : `REPORTS/audit_fonctionnel_profond26_2026-08-30.md` (source).
 

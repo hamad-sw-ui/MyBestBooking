@@ -27,8 +27,24 @@
   désormais `lockedBooking.currency ?? "EUR"` à `calculateLoyaltyAward`
   (comme le cron, T-153 C) ; nouveau test route (2 cas) : 200,00 $US →
   **9,26 €** (au lieu de 10,00 € 1:1), 200,00 € → **10,00 €** inchangé.
-- **Étape suivante** : T-154c (P2-5 grille annulation, P2-6 favoris DELETE,
-  P2-7 alerte devise).
+- **T-154c (P2-5/6/7)** :
+  - **P2-5** : libellé d'annulation dérivé de `cancellationPolicy`
+    (`cancellation-label.ts`, grille serveur) — réservation, carte de
+    réservation et badge fiche (fini « Annulation gratuite » / « voir le
+    tarif » en dur) ; test unitaire 6 cas ; ▶️ `strict` → « Annulation
+    gratuite jusqu'à 30 jours avant, puis 50 % (100 % à moins de 7 jours) ».
+  - **P2-6** : hook `use-wishlist-toggle` (état réel lu au chargement,
+    bascule ajout → DELETE `?wishlistId&propertyId`), cœur de la fiche +
+    cartes recherche à bascule ; `/mes-favoris` : cœur « Retirer des
+    favoris » par carte (DELETE unitaire) ; ▶️ /mes-favoris rend le bouton,
+    API DELETE vérifiée (item supprimé puis restauré).
+  - **P2-7** : `quotePriceAlert` retente sans filtre devise et convertit le
+    meilleur prix (min EUR) vers la devise de l'alerte — 92,59 € EUR pour
+    100 $US, 60 736,76 XAF ; test 5 cas ; alerte plus jamais silencieusement
+    morte.
+- 🧪 vitest **365/365** (51 fichiers) · lint 0 erreur · smoke **94/94**.
+- **Étape suivante** : T-154d (P2-4 récap réservation taxes/BestRewards,
+  P2-8 toasts).
 
 ## Session 44 — 2026-08-30 : audit fonctionnel n°26 (à l'exécution) — 14 findings, rapport seul
 

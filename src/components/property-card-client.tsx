@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Star, MapPin, Heart, Loader2 } from "lucide-react";
 import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import type { PublicPropertyCard } from "@/lib/public-property";
 import { convertAmount, formatMoney } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
 import { uiStrings } from "@/lib/ui-strings";
 
 interface PropertyCardProps {
@@ -16,11 +18,16 @@ interface PropertyCardProps {
   showFavorite?: boolean;
   /** Critères de séjour à préserver entre résultat de recherche et fiche. */
   searchQuery?: string;
+  /** T-154c (audit n°26, P2-6) : carte affichée dans une liste de favoris —
+   *  le cœur devient un retrait unitaire via DELETE ?wishlistId&propertyId. */
+  removeFavoriteFrom?: { wishlistId: string };
 }
 
-export function PropertyCardClient({ property, showFavorite = true, searchQuery }: PropertyCardProps) {
-  const [favoriteState, setFavoriteState] = useState<"idle" | "loading" | "saved">("idle");
-  const [favoriteError, setFavoriteError] = useState<string | null>(null);
+export function PropertyCardClient({ property, showFavorite = true, searchQuery, removeFavoriteFrom }: PropertyCardProps) {
+  const router = useRouter();
+  const favorite = useWishlistToggle(property.id);
+  const [removing, setRemoving] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating) : null;
 
@@ -46,43 +53,30 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
   async function addToFavorites(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
     event.stopPropagation();
-    if (favoriteState === "loading" || favoriteState === "saved") return;
+    if (favorite.busy) return;
+    const outcome = await favorite.toggle();
+    if (outcome === "unauthenticated") {
+      window.location.href = "/connexion?next=%2Frecherche";
+    }
+  }
 
-    setFavoriteState("loading");
-    setFavoriteError(null);
+  async function removeFromFavorites(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!removeFavoriteFrom || removing) return;
+    setRemoving(true);
+    setRemoveError(null);
     try {
-      const listsResponse = await fetch("/api/wishlists");
-      if (listsResponse.status === 401) {
-        window.location.href = "/connexion?next=%2Frecherche";
-        return;
-      }
-      if (!listsResponse.ok) throw new Error("Impossible de charger vos favoris");
-      const listsData = await listsResponse.json();
-      let wishlist = listsData.wishlists?.[0];
-
-      if (!wishlist) {
-        const createResponse = await fetch("/api/wishlists", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: "Mes favoris" }),
-        });
-        if (!createResponse.ok) throw new Error("Impossible de créer votre liste");
-        wishlist = (await createResponse.json()).wishlist;
-      }
-
-      const addResponse = await fetch("/api/wishlists", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wishlistId: wishlist.id, propertyId: property.id }),
-      });
-      if (!addResponse.ok) {
-        const data = await addResponse.json().catch(() => ({}));
-        if (!String(data.error).includes("déjà")) throw new Error(data.error ?? "Impossible d'ajouter le favori");
-      }
-      setFavoriteState("saved");
-    } catch (error) {
-      setFavoriteState("idle");
-      setFavoriteError(error instanceof Error ? error.message : "Erreur");
+      const res = await fetch(
+        `/api/wishlists?wishlistId=${encodeURIComponent(removeFavoriteFrom.wishlistId)}&propertyId=${encodeURIComponent(property.id)}`,
+        { method: "DELETE" },
+      );
+      if (!res.ok) throw new Error("Impossible de retirer le favori");
+      router.refresh();
+    } catch (e) {
+      setRemoveError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setRemoving(false);
     }
   }
 
@@ -100,16 +94,25 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery 
           sizes="(max-width: 768px) 100vw, 25vw"
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
-        {showFavorite && (
+        {removeFavoriteFrom ? (
           <button
-            onClick={addToFavorites}
-            aria-label={favoriteState === "saved" ? t["fav.added"] : t["fav.add"]}
-            title={favoriteError ?? (favoriteState === "saved" ? t["fav.added"] : t["fav.add"])}
+            onClick={removeFromFavorites}
+            aria-label={t["fav.remove"] ?? "Retirer des favoris"}
+            title={removeError ?? (t["fav.remove"] ?? "Retirer des favoris")}
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
           >
-            {favoriteState === "loading" ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className={`w-5 h-5 ${favoriteState === "saved" ? "fill-[#FF5A5F] text-[#FF5A5F]" : "text-gray-600"}`} aria-hidden="true" />}
+            {removing ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className="w-5 h-5 fill-[#FF5A5F] text-[#FF5A5F]" aria-hidden="true" />}
           </button>
-        )}
+        ) : showFavorite ? (
+          <button
+            onClick={addToFavorites}
+            aria-label={favorite.saved ? t["fav.added"] : t["fav.add"]}
+            title={favorite.error ?? (favorite.saved ? t["fav.added"] : t["fav.add"])}
+            className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+          >
+            {favorite.busy ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className={`w-5 h-5 ${favorite.saved ? "fill-[#FF5A5F] text-[#FF5A5F]" : "text-gray-600"}`} aria-hidden="true" />}
+          </button>
+        ) : null}
         {property.isBestrewards && (
           <div className="absolute top-3 left-3">
             <Badge variant="bestrewards">💎 BestRewards</Badge>

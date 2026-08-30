@@ -41,6 +41,9 @@ import { LocalizedDescription } from "@/components/localized-description";
 import { ContactHostButton } from "@/components/contact-host-button";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+// T-154c (audit n°26, P2-5) : politique d'annulation réelle (au lieu du
+// badge « voir le tarif » qui ne disait rien).
+import { cancellationPolicyLabel } from "@/lib/cancellation-label";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import {
   Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
@@ -338,7 +341,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                             {room.sizeSqm && <span>{room.sizeSqm} m²</span>}
                           </div>
                           <div className="flex items-center gap-2 mt-2">
-                            <Badge variant="info">{property.cancellationPolicy === "free" ? t("property.cancellationFree") : property.cancellationPolicy === "non_refundable" ? t("property.cancellationNonRefundable") : property.cancellationPolicy ?? t("property.cancellationSeeRate")}</Badge>
+                            <Badge variant="info">{cancellationPolicyLabel(property.cancellationPolicy, t)}</Badge>
                             {room.amenities && (room.amenities as string[]).includes("wifi") && (
                               <Badge variant="info">WiFi</Badge>
                             )}
@@ -461,6 +464,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 initialCheckOut={query.checkOut}
                 initialAdults={Number(query.adults ?? "2") || 2}
                 initialChildren={Number(query.children ?? "0") || 0}
+                cancellationPolicy={property.cancellationPolicy}
               />
 
               {/* T-133 (A3) : contacter l'hôte avant réservation. Masqué pour

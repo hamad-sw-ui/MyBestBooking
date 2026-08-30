@@ -139,7 +139,14 @@ export default async function FavoritesPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                     {wishlist.items.map((property) => (
-                      property && <PropertyCard key={property.id} property={property} />
+                      property && (
+                        <PropertyCard
+                          key={property.id}
+                          property={property}
+                          showFavorite={false}
+                          removeFavoriteFrom={{ wishlistId: wishlist.id }}
+                        />
+                      )
                     ))}
                   </div>
                 )}

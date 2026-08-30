@@ -2,6 +2,7 @@ import { and, eq, gte, gt, lt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { bookings, roomAvailability, rooms } from "@/db/schema";
 import { evaluateBookingRules } from "@/lib/booking-rules";
+import { convertAmount, RATES_FROM_EUR } from "@/lib/i18n";
 
 export interface PriceAlertStayContext {
   checkIn: string;
@@ -35,17 +36,44 @@ export async function quotePriceAlert(input: {
   currency: string | null;
   context: Partial<PriceAlertStayContext>;
 }): Promise<PriceAlertQuote | null> {
-  const activeRooms = await db.select().from(rooms).where(and(
+  const targetCurrency = input.currency ? input.currency.toUpperCase() : null;
+  let activeRooms = await db.select().from(rooms).where(and(
     eq(rooms.propertyId, input.propertyId),
     eq(rooms.isActive, true),
-    ...(input.currency ? [eq(rooms.currency, input.currency)] : []),
+    ...(targetCurrency ? [eq(rooms.currency, targetCurrency)] : []),
   ));
+  // T-154c (audit n°26, P2-7) : si aucune chambre active n'existe dans la
+  // devise de l'alerte (devise d'origine non EUR, chambre désactivée…),
+  // retenter toutes devises et comparer le prix CONVERTI (taux figés
+  // RATES_FROM_EUR). Sans cela l'alerte restait silencieusement morte
+  // (quote null → cron continue sans message).
+  const needsConversion = activeRooms.length === 0 && targetCurrency !== null;
+  if (needsConversion) {
+    activeRooms = await db.select().from(rooms).where(and(
+      eq(rooms.propertyId, input.propertyId),
+      eq(rooms.isActive, true),
+    ));
+  }
   if (!activeRooms.length) return null;
 
   if (!validStayContext(input.context)) {
-    const prices = activeRooms.map((room) => Number(room.basePrice)).filter(Number.isFinite);
+    const prices = activeRooms
+      .map((room) => ({ price: Number(room.basePrice), currency: room.currency ?? "EUR" }))
+      .filter((p) => Number.isFinite(p.price));
     if (!prices.length) return null;
-    return { price: Math.min(...prices), currency: input.currency ?? activeRooms[0]!.currency ?? "EUR", mode: "base" };
+    let best = prices[0]!;
+    if (needsConversion) {
+      // Min réellement le moins cher APRÈS conversion EUR (les devises
+      // peuvent différer dans le fallback) ; sinon comportement historique
+      // (min brut, contrainte devise identique).
+      for (const p of prices) {
+        const eur = p.price / (RATES_FROM_EUR[p.currency] ?? 1);
+        const bestEur = best.price / (RATES_FROM_EUR[best.currency] ?? 1);
+        if (eur < bestEur) best = p;
+      }
+      return { price: convertAmount(best.price, best.currency, targetCurrency!), currency: targetCurrency!, mode: "base" };
+    }
+    return { price: Math.min(...prices.map((p) => p.price)), currency: input.currency ?? activeRooms[0]!.currency ?? "EUR", mode: "base" };
   }
 
   let cheapest: PriceAlertQuote | null = null;
@@ -86,6 +114,13 @@ export async function quotePriceAlert(input: {
     if (!rules.ok) continue;
     const price = rules.nightlyPrices.reduce((total, nightly) => total + nightly, 0);
     if (!cheapest || price < cheapest.price) cheapest = { price, currency: room.currency ?? "EUR", mode: "trip" };
+  }
+  if (cheapest && needsConversion) {
+    return {
+      price: convertAmount(cheapest.price, cheapest.currency, targetCurrency!),
+      currency: targetCurrency!,
+      mode: "trip",
+    };
   }
   return cheapest;
 }

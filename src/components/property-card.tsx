@@ -7,6 +7,8 @@ interface PropertyCardProps {
   property: Property | PublicPropertyCard;
   showFavorite?: boolean;
   searchQuery?: string;
+  /** T-154c (audit n°26, P2-6) : le cœur devient un bouton de retrait unitaire. */
+  removeFavoriteFrom?: { wishlistId: string };
 }
 
 function isPublicCard(property: Property | PublicPropertyCard): property is PublicPropertyCard {
@@ -18,10 +20,17 @@ function isPublicCard(property: Property | PublicPropertyCard): property is Publ
  * DB transmet une Property complète, seules les clés allowlistées atteignent
  * le composant client et le payload RSC du navigateur.
  */
-export function PropertyCard({ property, showFavorite, searchQuery }: PropertyCardProps) {
+export function PropertyCard({ property, showFavorite, searchQuery, removeFavoriteFrom }: PropertyCardProps) {
   const safe = isPublicCard(property) ? property : toPublicPropertyCard(property, {
     minPrice: (property as Property & { minPrice?: number | null }).minPrice,
     minCurrency: (property as Property & { minCurrency?: string | null }).minCurrency,
   });
-  return <PropertyCardClient property={safe} showFavorite={showFavorite} searchQuery={searchQuery} />;
+  return (
+    <PropertyCardClient
+      property={safe}
+      showFavorite={showFavorite}
+      searchQuery={searchQuery}
+      removeFavoriteFrom={removeFavoriteFrom}
+    />
+  );
 }
