@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Bell, X as XIcon, Loader2 } from "lucide-react";
 // T-154e (audit n°26, P3-9/10) : montants localisés, 0 décimale pour XAF/…
 import { formatMoney } from "@/lib/i18n";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Alert {
   id: string;
@@ -34,6 +35,7 @@ interface Props {
  * ci-dessous).
  */
 export function PriceAlertsSection({ properties }: Props) {
+  const t = useT();
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,10 +46,10 @@ export function PriceAlertsSection({ properties }: Props) {
     try {
       const r = await fetch("/api/price-alerts");
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Erreur");
+      if (!r.ok) throw new Error(j.error ?? t("auth.genericError"));
       setAlerts(j.alerts);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("auth.genericError"));
     } finally {
       setLoading(false);
     }
@@ -60,10 +62,10 @@ export function PriceAlertsSection({ properties }: Props) {
       try {
         const r = await fetch("/api/price-alerts");
         const j = await r.json();
-        if (!r.ok) throw new Error(j.error ?? "Erreur");
+        if (!r.ok) throw new Error(j.error ?? t("auth.genericError"));
         if (mounted) setAlerts(j.alerts);
       } catch (e) {
-        if (mounted) setError(e instanceof Error ? e.message : "Erreur");
+        if (mounted) setError(e instanceof Error ? e.message : t("auth.genericError"));
       } finally {
         if (mounted) setLoading(false);
       }
@@ -76,13 +78,13 @@ export function PriceAlertsSection({ properties }: Props) {
   }, []);
 
   async function remove(id: string) {
-    if (!confirm("Supprimer cette alerte ?")) return;
+    if (!confirm(t("priceAlert.confirmRemove"))) return;
     try {
       const r = await fetch(`/api/price-alerts/${id}`, { method: "DELETE" });
-      if (!r.ok) throw new Error("Erreur");
+      if (!r.ok) throw new Error(t("auth.genericError"));
       setAlerts((a) => a.filter((x) => x.id !== id));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("auth.genericError"));
     }
   }
 
@@ -91,18 +93,17 @@ export function PriceAlertsSection({ properties }: Props) {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Bell className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Alertes prix</CardTitle>
+          <CardTitle>{t("priceAlert.title")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="flex items-center gap-2 text-gray-500">
-            <Loader2 className="w-4 h-4 animate-spin" /> Chargement…
+            <Loader2 className="w-4 h-4 animate-spin" /> {t("priceAlert.loading")}
           </div>
         ) : alerts.length === 0 ? (
           <p className="text-sm text-gray-500">
-            Vous n&apos;avez pas encore d&apos;alerte prix. Cliquez sur
-            « Suivre le prix » depuis la fiche d&apos;un hébergement.
+            {t("priceAlert.empty")}
           </p>
         ) : (
           <ul className="divide-y divide-gray-100">
@@ -115,14 +116,14 @@ export function PriceAlertsSection({ properties }: Props) {
                       {p ? `${p.name} — ${p.city}` : a.propertyId.slice(0, 8) + "…"}
                     </p>
                     <p className="text-sm text-gray-500">
-                      Alerte si le prix descend sous {formatMoney(Number(a.maxPrice), a.currency ?? "EUR")}
+                      {t("bulk.alertUnder").replace("{price}", formatMoney(Number(a.maxPrice), a.currency ?? "EUR"))}
                     </p>
                   </div>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => remove(a.id)}
-                    aria-label="Supprimer l'alerte"
+                    aria-label={t("priceAlert.removeLabel")}
                   >
                     <XIcon className="w-4 h-4" />
                   </Button>

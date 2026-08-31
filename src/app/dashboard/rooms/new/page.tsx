@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { properties } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { NewRoomForm } from "@/components/new-room-form";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 /**
  * /dashboard/rooms/new (T-030)
@@ -12,6 +14,7 @@ import { NewRoomForm } from "@/components/new-room-form";
  */
 export default async function NewRoomPage() {
   const user = await getCurrentUser();
+  const t = makeT(await getServerLocale());
   if (!user) redirect("/connexion");
   if (user.role !== "host" && user.role !== "admin") redirect("/dashboard");
 
@@ -26,10 +29,10 @@ export default async function NewRoomPage() {
     <div className="max-w-3xl">
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Nouvelle chambre
+          {t("room.newTitle")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Ajoutez une chambre à l&apos;un de vos hébergements.
+          {t("room.newSubtitle")}
         </p>
       </div>
       <NewRoomForm properties={props} />

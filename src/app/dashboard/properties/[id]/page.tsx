@@ -235,17 +235,17 @@ export default function EditPropertyPage() {
       <div className="text-center py-12">
 <p className="text-gray-500">{t("prop.notFound")}</p>
         <Link href="/dashboard/properties">
-          <Button variant="outline" className="mt-4">Retour</Button>
+          <Button variant="outline" className="mt-4">{t("action.back")}</Button>
         </Link>
       </div>
     );
   }
 
   const tabs = [
-    { id: "general", label: "Informations" },
-    { id: "rooms", label: `Chambres (${rooms.length})` },
-    { id: "photos", label: "Photos" },
-    { id: "policies", label: "Politiques" },
+    { id: "general", label: t("prop.tabInfo") },
+    { id: "rooms", label: t("prop.tabRooms").replace("{n}", String(rooms.length)) },
+    { id: "photos", label: t("prop.tabPhotos") },
+    { id: "policies", label: t("property.policies") },
   ];
 
   return (
@@ -271,9 +271,9 @@ export default function EditPropertyPage() {
                 property.status === "suspended" ? "bg-red-100 text-red-800" :
                 "bg-gray-100 text-gray-800"
               }>
-                {property.status === "active" ? "Actif" :
-                 property.status === "pending" ? "En attente de validation" :
-                 property.status === "suspended" ? "Suspendu" :
+                {property.status === "active" ? t("bulk.activeSingular") :
+                 property.status === "pending" ? t("prop.pendingReview") :
+                 property.status === "suspended" ? t("bulk.suspendedBadge") :
                  property.status === "draft" ? t("prop.draftRejected") :
                  property.status === "archived" ? t("bulk.archived") : property.status}
               </Badge>
@@ -282,7 +282,7 @@ export default function EditPropertyPage() {
               <div className="flex items-center gap-2 mt-2">
                 <Star className="w-4 h-4 text-[#F5A623] fill-current" />
                 <span className="font-medium">{parseFloat(property.averageRating).toFixed(1)}</span>
-                <span className="text-gray-500">({property.totalReviews} avis)</span>
+                <span className="text-gray-500">{t("card.reviewsCount").replace("{n}", String(property.totalReviews))}</span>
               </div>
             )}
           </div>
@@ -290,7 +290,7 @@ export default function EditPropertyPage() {
             <Link href={`/hebergement/${property.slug}`} target="_blank">
               <Button variant="outline">
                 <Eye className="w-4 h-4 mr-2" />
-                Voir la fiche
+                {t("prop.viewListing")}
               </Button>
             </Link>
             <Button onClick={handleSave} loading={saving}>
@@ -385,7 +385,7 @@ export default function EditPropertyPage() {
               </div>
 
               <Textarea
-                label="Description"
+                label={t("prop.description")}
                 rows={4}
                 value={property.description || ""}
                 onChange={(e) => setProperty({ ...property, description: e.target.value })}
@@ -395,28 +395,28 @@ export default function EditPropertyPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Localisation</CardTitle>
+              <CardTitle>{t("prop.location")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Input
-                label="Adresse"
+                label={t("prop.address")}
                 value={property.addressLine || ""}
                 onChange={(e) => setProperty({ ...property, addressLine: e.target.value })}
               />
 
               <div className="grid grid-cols-3 gap-4">
                 <Input
-                  label="Ville"
+                  label={t("prop.city")}
                   value={property.city}
                   onChange={(e) => setProperty({ ...property, city: e.target.value })}
                 />
                 <Input
-                  label="Code postal"
+                  label={t("prop.postal")}
                   value={property.postalCode || ""}
                   onChange={(e) => setProperty({ ...property, postalCode: e.target.value })}
                 />
                 <Select
-                  label="Pays"
+                  label={t("prop.country")}
                   options={[
                     { value: "FR", label: "France" },
                     { value: "MA", label: "Maroc" },
@@ -464,12 +464,12 @@ export default function EditPropertyPage() {
           {isAdmin && (
             <Card>
               <CardHeader>
-                <CardTitle>Commission plateforme</CardTitle>
+                <CardTitle>{t("prop.platformCommission")}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
                 <div className="max-w-xs">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Taux de commission (%)
+                    {t("prop.commissionRate")}
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -497,11 +497,11 @@ export default function EditPropertyPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Chambres</CardTitle>
+              <CardTitle>{t("dash.rooms")}</CardTitle>
               <Link href="/dashboard/rooms/new">
                 <Button size="sm">
                   <Plus className="w-4 h-4 mr-2" />
-                  Ajouter une chambre
+                  {t("prop.addRoom")}
                 </Button>
               </Link>
             </div>
@@ -513,7 +513,7 @@ export default function EditPropertyPage() {
                 <Link href="/dashboard/rooms/new">
                   <Button variant="outline" className="mt-4">
                     <Plus className="w-4 h-4 mr-2" />
-                    Ajouter une chambre
+                    {t("prop.addRoom")}
                   </Button>
                 </Link>
               </div>
@@ -534,7 +534,7 @@ export default function EditPropertyPage() {
                       <p className="font-bold">{formatPrice(parseFloat(room.basePrice), room.currency ?? "EUR")}/nuit</p>
                       <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
                         <Button variant="ghost" size="sm">
-                          Calendrier
+                          {t("bulk.calendar")}
                         </Button>
                       </Link>
                     </div>
@@ -549,14 +549,14 @@ export default function EditPropertyPage() {
       {activeTab === "photos" && (
         <Card>
           <CardHeader>
-            <CardTitle>Photos</CardTitle>
+            <CardTitle>{t("prop.photos")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-6">
             {/* Import d'une photo depuis le gestionnaire de fichiers de la
                 machine (même mécanisme d'upload qu'à la création, T-113). */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ajouter une photo
+                {t("prop.addPhoto")}
               </label>
               <PhotoUploadButton
                 onFile={(file) => uploadPhoto(file)}
@@ -576,11 +576,11 @@ export default function EditPropertyPage() {
             {/* Galerie */}
             <div>
               <p className="text-sm font-medium text-gray-700 mb-2">
-                Galerie ({property.images.length} photo{property.images.length > 1 ? "s" : ""})
+                {(property.images.length > 1 ? t("prop.galleryCountMany") : t("prop.galleryCount")).replace("{n}", String(property.images.length))}
               </p>
               {property.images.length === 0 ? (
                 <p className="text-sm text-gray-500">
-                  Aucune photo. Uploadez une image ci-dessus ou ajoutez une URL plus bas.
+                  {t("prop.noPhotosHint")}
                 </p>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -608,8 +608,8 @@ export default function EditPropertyPage() {
                               loading={uploading}
                               onFile={(file) => uploadPhoto(file, url)}
                               className="text-white hover:bg-white/10 hover:text-white p-1.5"
-                              title="Changer cette image"
-                              ariaLabel={`Changer l'image de la position ${property.images.indexOf(url) + 1}`}
+                              title={t("prop.changeThisImage")}
+                              ariaLabel={t("prop.changeImagePos").replace("{n}", String(property.images.indexOf(url) + 1))}
                             >
                               <RefreshCw className="w-4 h-4" />
                             </PhotoUploadButton>
@@ -617,7 +617,7 @@ export default function EditPropertyPage() {
                               type="button"
                               onClick={() => removeGalleryImage(url)}
                               className="text-white hover:text-red-300 p-1.5"
-                              aria-label="Supprimer cette photo"
+                              aria-label={t("prop.deletePhoto")}
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>
@@ -633,7 +633,7 @@ export default function EditPropertyPage() {
             {/* URL alternative */}
             <details className="text-sm">
               <summary className="cursor-pointer text-gray-600 hover:text-[#1B3A6B]">
-                Ou ajouter une photo par URL
+                {t("prop.addByUrl")}
               </summary>
               <div className="flex gap-2 mt-3">
                 <input
@@ -657,7 +657,7 @@ export default function EditPropertyPage() {
                     input.value = "";
                   }}
                 >
-                  Ajouter
+                  {t("prop.add")}
                 </Button>
               </div>
             </details>

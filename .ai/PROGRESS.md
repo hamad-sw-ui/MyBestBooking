@@ -7,6 +7,19 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-08-31 — T-167 libellés sans accent (édition / bulk / favoris)
+
+- **Demande** : aller encore plus loin après garde-fou = 0 (accents).
+- 🔨 Branché : `properties/[id]` (onglets, fiche, localisation, photos,
+  commission), bulk rooms/properties/reviews/promotions, rooms/new +
+  calendrier, promotions/new, messages dashboard `[id]`, politiques fiche
+  publique, mes-favoris, price-alerts, promo-code, toast, validate-actions,
+  Nom/Retour réservation. `UiLocaleProvider` enveloppe `ToastProvider`.
+- 🔨 Catalogue **1304** clés FR=EN. Interpolation `.replace` uniquement.
+- 🔨 tsc **0** · 🧪 ui-strings **4/4** · 🔍 i18n:check **0**.
+- ❓ T-167 **non VALIDÉ** : SSR cookie `en` non rejoué ; restes possibles
+  (pays, No-show, quelques lignes tunnel).
+
 ## Session 2026-08-31 — T-167 widgets restants (garde-fou → 0)
 
 - **Demande** : aller plus loin sur les 55 hits i18n.

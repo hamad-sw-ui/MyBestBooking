@@ -44,9 +44,11 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   invalide toutes les sessions actives (30 jours par défaut).
 - **i18n UI partielle (T-167).** Le garde-fou `i18n:check` (accents FR) est
   à **0 candidat** sur `(main)`/`(auth)`/`dashboard`/`src/components`.
-  Restent possibles : libellés **sans accent** encore en dur, et le SSR
-  cookie `en` n'a pas été rejoué ici. Pages légales / centre d'aide déjà
-  bilingues. Le sélecteur FR/EN (T-152) n'agit que via `useT`/`makeT`.
+  Une vague **sans accent** a branché édition propriété, bulk, favoris,
+  politiques fiche, promo/toast. Restent possibles : noms de pays, « No-show »,
+  quelques lignes du tunnel. Le SSR cookie `en` n'a pas été rejoué ici.
+  Pages légales / centre d'aide déjà bilingues. Le sélecteur FR/EN (T-152)
+  n'agit que via `useT`/`makeT`.
 - **Devise multi : tunnel et totaux gérés, affichages secondaires non.** La
   table `bookings.currency` est multi-devises : le tunnel de réservation
   (T-152) et les totaux analytics/billing (T-152, `sumByCurrency` — jamais

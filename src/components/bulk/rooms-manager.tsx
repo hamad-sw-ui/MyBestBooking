@@ -37,15 +37,6 @@ export interface RoomRow {
   createdAt: string;
 }
 
-const ROOM_TYPE_LABELS: Record<string, string> = {
-  single: "Simple",
-  double: "Double",
-  twin: "Twin",
-  suite: "Suite",
-  studio: "Studio",
-  dormitory: "Dortoir",
-  family: "Familiale",
-};
 
 interface Props {
   rooms: RoomRow[];
@@ -54,6 +45,18 @@ interface Props {
 
 export function RoomsManager({ rooms, isAdmin }: Props) {
   const t = useT();
+  function roomTypeLabel(type: string): string {
+    switch (type) {
+      case "single": return t("room.type.single");
+      case "double": return t("room.type.double");
+      case "twin": return t("room.type.twin");
+      case "suite": return t("room.type.suite");
+      case "studio": return t("room.type.studio");
+      case "dormitory": return t("room.type.dormitory");
+      case "family": return t("room.type.family");
+      default: return type;
+    }
+  }
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -74,7 +77,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
       return (
         r.name.toLowerCase().includes(ql) ||
         (r.propertyName ?? "").toLowerCase().includes(ql) ||
-        (ROOM_TYPE_LABELS[r.roomType] ?? r.roomType).toLowerCase().includes(ql)
+        (roomTypeLabel(r.roomType)).toLowerCase().includes(ql)
       );
     });
   }, [rooms, q, statusFilter, typeFilter]);
@@ -114,7 +117,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
     ? [
         {
           key: "activate",
-          label: "Activer",
+          label: t("bulk.activate"),
           icon: BulkIcons.approve,
           variant: "primary" as const,
         },
@@ -126,7 +129,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         },
         {
           key: "delete",
-          label: "Supprimer",
+          label: t("bulk.delete"),
           icon: BulkIcons.delete,
           variant: "danger" as const,
           confirmMessage: t("bulk.confirmDeleteRooms").replace("{n}", String(selected.size)),
@@ -143,7 +146,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
             className="text-2xl font-bold text-gray-900"
             style={{ fontFamily: "'Poppins', sans-serif" }}
           >
-            Chambres
+            {t("dash.rooms")}
           </h1>
           <p className="text-gray-600 mt-1">
 {t("bulk.manageRooms")}
@@ -152,7 +155,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         <Link href="/dashboard/rooms/new">
           <Button>
             <Plus className="w-4 h-4 mr-2" />
-            Ajouter une chambre
+            {t("prop.addRoom")}
           </Button>
         </Link>
       </div>
@@ -160,11 +163,11 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total", value: stats.total, color: "text-gray-900" },
-          { label: "Actives", value: stats.active, color: "text-green-600" },
+          { label: t("bulk.total"), value: stats.total, color: "text-gray-900" },
+          { label: t("bulk.activeFeminine"), value: stats.active, color: "text-green-600" },
           { label: t("bulk.units"), value: stats.units, color: "text-blue-600" },
           {
-            label: "Prix moyen",
+            label: t("bulk.avgPrice"),
             value: stats.avgPrice > 0 ? formatPrice(stats.avgPrice) : "—",
             color: "text-[#1B3A6B]",
           },
@@ -188,9 +191,9 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         onSearchChange={setQ}
         searchPlaceholder={t("bulk.searchRooms")}
         statusOptions={[
-          { value: "all", label: "Toutes" },
-          { value: "active", label: "Actives" },
-          { value: "inactive", label: "Inactives" },
+          { value: "all", label: t("bulk.allFeminine") },
+          { value: "active", label: t("bulk.activeFeminine") },
+          { value: "inactive", label: t("bulk.inactiveFeminine") },
         ]}
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
@@ -209,20 +212,20 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                 : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
             }`}
           >
-            Tous types
+            {t("bulk.allTypes")}
           </button>
-          {types.map((t) => (
+          {types.map((ty) => (
             <button
-              key={t}
+              key={ty}
               type="button"
-              onClick={() => setTypeFilter(t)}
+              onClick={() => setTypeFilter(ty)}
               className={`px-3 py-1 text-sm rounded-full border transition ${
-                typeFilter === t
+                typeFilter === ty
                   ? "bg-[#1B3A6B] text-white border-[#1B3A6B]"
                   : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
               }`}
             >
-              {ROOM_TYPE_LABELS[t] ?? t}
+              {roomTypeLabel(ty)}
             </button>
           ))}
         </div>
@@ -253,7 +256,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         <Card>
           <EmptyState
             icon={<BedDouble className="w-8 h-8" />}
-            title="Aucune chambre"
+            title={t("bulk.noRoomsTitle")}
             description={t("bulk.noRoomsDesc")}
             className="py-16"
           />
@@ -288,20 +291,20 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                       </p>
                     </div>
                   </div>
-                  {!room.isActive && <Badge variant="default">Inactive</Badge>}
+                  {!room.isActive && <Badge variant="default">{t("bulk.inactiveBadge")}</Badge>}
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-4">
                   <div className="text-center p-2 bg-gray-50 rounded">
                     <BedDouble className="w-4 h-4 mx-auto text-gray-400 mb-1" />
                     <p className="text-xs text-gray-500">
-                      {ROOM_TYPE_LABELS[room.roomType] || room.roomType}
+                      {roomTypeLabel(room.roomType)}
                     </p>
                   </div>
                   <div className="text-center p-2 bg-gray-50 rounded">
                     <Users className="w-4 h-4 mx-auto text-gray-400 mb-1" />
                     <p className="text-xs text-gray-500">
-                      {room.maxOccupancy} pers.
+                      {t("bulk.persShort").replace("{n}", String(room.maxOccupancy))}
                     </p>
                   </div>
                   <div className="text-center p-2 bg-gray-50 rounded">
@@ -327,7 +330,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                       className="px-3 py-1.5 text-xs bg-[#1B3A6B] text-white rounded-lg hover:bg-[#0f2444]"
                       title={t("bulk.editCalendar")}
                     >
-                      Calendrier
+                      {t("bulk.calendar")}
                     </Link>
                     {isAdmin && (
                       <RowDeleteButton

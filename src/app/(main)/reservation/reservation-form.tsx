@@ -551,7 +551,7 @@ function ReservationPageInner() {
                 </CardContent>
                 <CardFooter className="flex justify-end">
                   <Button onClick={() => setStep(2)} disabled={!formData.checkIn || !formData.checkOut || numNights <= 0}>
-                    Continuer <ArrowRight className="w-4 h-4 ml-2" />
+                    {t("reservation.continue")} <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </CardFooter>
               </Card>
@@ -582,7 +582,7 @@ function ReservationPageInner() {
                       disabled={isAuthed}
                     />
                     <Input
-                      label="Nom"
+                      label={t("reservation.lastName")}
                       value={formData.guestLastName}
                       onChange={(e) => setFormData({ ...formData, guestLastName: e.target.value })}
                       required
@@ -592,7 +592,7 @@ function ReservationPageInner() {
                   </div>
                   <Input
                     type="email"
-                    label="Email"
+                    label={t("reservation.email")}
                     value={formData.guestEmail}
                     onChange={(e) => setFormData({ ...formData, guestEmail: e.target.value })}
                     required
@@ -650,13 +650,13 @@ function ReservationPageInner() {
                 </CardContent>
                 <CardFooter className="flex justify-between">
                   <Button variant="ghost" onClick={() => setStep(1)}>
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+                    <ArrowLeft className="w-4 h-4 mr-2" /> {t("action.back")}
                   </Button>
                   <Button
                     onClick={() => setStep(3)}
                     disabled={!formData.guestFirstName || !formData.guestLastName || !formData.guestEmail}
                   >
-                    Continuer <ArrowRight className="w-4 h-4 ml-2" />
+                    {t("reservation.continue")} <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 </CardFooter>
               </Card>
@@ -668,7 +668,7 @@ function ReservationPageInner() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Lock className="w-5 h-5 text-[#00A699]" />
-                    Paiement sécurisé
+                    {t("reservation.securePayment")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -695,7 +695,7 @@ function ReservationPageInner() {
                 {!pendingStripePayment && (
                   <CardFooter className="flex justify-between">
                     <Button variant="ghost" onClick={() => setStep(2)}>
-                      <ArrowLeft className="w-4 h-4 mr-2" /> Retour
+                      <ArrowLeft className="w-4 h-4 mr-2" /> {t("action.back")}
                     </Button>
                     <Button onClick={handleSubmit} loading={submitting} size="lg" variant="secondary">
                       <Lock className="w-4 h-4 mr-2" />
@@ -787,7 +787,7 @@ function ReservationPageInner() {
                     <div className="flex items-center gap-1 mt-2">
                       <Star className="w-4 h-4 text-[#F5A623] fill-current" />
                       <span className="text-sm font-medium">{parseFloat(property.averageRating).toFixed(1)}</span>
-                      <span className="text-xs text-gray-500">({property.totalReviews} avis)</span>
+                      <span className="text-xs text-gray-500">{t("card.reviewsCount").replace("{n}", String(property.totalReviews ?? 0))}</span>
                     </div>
                   )}
 

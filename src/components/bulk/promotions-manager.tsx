@@ -37,18 +37,17 @@ export interface PromoRow {
   createdAt: string;
 }
 
-const typeLabels: Record<string, string> = {
-  percentage: "Pourcentage",
-  fixed_amount: "Montant fixe",
-  free_night: "Nuit gratuite",
-};
-
 interface Props {
   promotions: PromoRow[];
 }
 
 export function PromotionsManager({ promotions }: Props) {
   const t = useT();
+  const typeLabels: Record<string, string> = {
+    percentage: t("bulk.percentage"),
+    fixed_amount: t("bulk.fixedAmount"),
+    free_night: t("bulk.freeNight"),
+  };
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -105,7 +104,7 @@ export function PromotionsManager({ promotions }: Props) {
   const bulkActions = [
     {
       key: "activate",
-      label: "Activer",
+      label: t("bulk.activate"),
       icon: BulkIcons.approve,
       variant: "primary" as const,
     },
@@ -117,7 +116,7 @@ export function PromotionsManager({ promotions }: Props) {
     },
     {
       key: "delete",
-      label: "Supprimer",
+      label: t("bulk.delete"),
       icon: BulkIcons.delete,
       variant: "danger" as const,
       confirmMessage: t("bulk.confirmDeletePromos").replace("{n}", String(selected.size)),
@@ -141,7 +140,7 @@ export function PromotionsManager({ promotions }: Props) {
             className="text-2xl font-bold text-gray-900"
             style={{ fontFamily: "'Poppins', sans-serif" }}
           >
-            Promotions
+            {t("dash.promotions")}
           </h1>
           <p className="text-gray-600 mt-1">
 {t("bulk.managePromos")}
@@ -150,7 +149,7 @@ export function PromotionsManager({ promotions }: Props) {
         <Link href="/dashboard/promotions/new">
           <Button>
             <Plus className="w-4 h-4 mr-2" />
-            Nouvelle promotion
+            {t("bulk.newPromo")}
           </Button>
         </Link>
       </div>
@@ -158,9 +157,9 @@ export function PromotionsManager({ promotions }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total", value: stats.total, color: "text-gray-900" },
-          { label: "Actives", value: stats.active, color: "text-green-600" },
-          { label: "Utilisations", value: stats.uses, color: "text-blue-600" },
+          { label: t("bulk.total"), value: stats.total, color: "text-gray-900" },
+          { label: t("bulk.activeFeminine"), value: stats.active, color: "text-green-600" },
+          { label: t("bulk.uses"), value: stats.uses, color: "text-blue-600" },
           { label: t("bulk.expiredMany"), value: stats.expired, color: "text-gray-400" },
         ].map((s) => (
           <Card key={s.label} padding="sm">
@@ -180,11 +179,11 @@ export function PromotionsManager({ promotions }: Props) {
         onDeselectAll={() => setSelected(new Set())}
         searchValue={q}
         onSearchChange={setQ}
-        searchPlaceholder="Code, nom…"
+        searchPlaceholder={t("bulk.searchPromos")}
         statusOptions={[
-          { value: "all", label: "Tous statuts" },
-          { value: "active", label: "Actives" },
-          { value: "inactive", label: "Inactives" },
+          { value: "all", label: t("bulk.allStatusesShort") },
+          { value: "active", label: t("bulk.activeFeminine") },
+          { value: "inactive", label: t("bulk.inactiveFeminine") },
           { value: "expired", label: t("bulk.expiredMany") },
         ]}
         statusValue={statusFilter}
@@ -194,26 +193,25 @@ export function PromotionsManager({ promotions }: Props) {
 
       {/* Filtre type secondaire */}
       <div className="flex gap-2 mb-4 flex-wrap">
-        {["all", "percentage", "fixed_amount", "free_night"].map((t) => (
+        {["all", "percentage", "fixed_amount", "free_night"].map((ty) => (
           <button
-            key={t}
+            key={ty}
             type="button"
-            onClick={() => setTypeFilter(t)}
+            onClick={() => setTypeFilter(ty)}
             className={`px-3 py-1 text-sm rounded-full border transition ${
-              typeFilter === t
+              typeFilter === ty
                 ? "bg-[#1B3A6B] text-white border-[#1B3A6B]"
                 : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
             }`}
           >
-            {t === "all" ? "Tous types" : typeLabels[t] ?? t}
+            {ty === "all" ? t("bulk.allTypes") : typeLabels[ty] ?? ty}
           </button>
         ))}
       </div>
 
       <p className="text-sm text-gray-600 mb-3">
         {(filtered.length > 1 ? t("bulk.promosShownMany") : t("bulk.promosShown")).replace("{n}", String(filtered.length))}
-        {filtered.length > 1 ? "s" : ""}
-        {filtered.length !== promotions.length && ` sur ${promotions.length}`}
+        {filtered.length !== promotions.length && ` ${t("bulk.ofTotal").replace("{n}", String(promotions.length))}`}
         {selected.size > 0 && t("bulk.selectedSuffix").replace("{n}", String(selected.size))}
       </p>
 
@@ -221,7 +219,7 @@ export function PromotionsManager({ promotions }: Props) {
         {filtered.length === 0 ? (
           <EmptyState
             icon={<Tag className="w-8 h-8" />}
-            title="Aucune promotion"
+            title={t("bulk.noPromosTitle")}
             description={t("bulk.noPromosDesc")}
             action={
               <Link href="/dashboard/promotions/new">
@@ -247,14 +245,14 @@ export function PromotionsManager({ promotions }: Props) {
                       className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
                     />
                   </th>
-                  <th className="px-4 py-4 font-medium">Code</th>
-                  <th className="px-4 py-4 font-medium">Nom</th>
-                  <th className="px-4 py-4 font-medium">Type</th>
-                  <th className="px-4 py-4 font-medium">Valeur</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colCode")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colName")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colType")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colValue")}</th>
                   <th className="px-4 py-4 font-medium">{t("bulk.colValidity")}</th>
-                  <th className="px-4 py-4 font-medium">Utilisations</th>
-                  <th className="px-4 py-4 font-medium">Statut</th>
-                  <th className="px-4 py-4 font-medium text-right">Actions</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colUses")}</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colStatus")}</th>
+                  <th className="px-4 py-4 font-medium text-right">{t("bulk.colActions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -289,8 +287,8 @@ export function PromotionsManager({ promotions }: Props) {
                             type="button"
                             onClick={() => copyCode(promo.code)}
                             className="p-1 hover:bg-gray-200 rounded"
-                            title="Copier"
-                            aria-label={`Copier ${promo.code}`}
+                            title={t("bulk.copy")}
+                            aria-label={t("bulk.copyNamed").replace("{code}", promo.code)}
                           >
                             <Copy className="w-4 h-4 text-gray-400" />
                           </button>
@@ -317,7 +315,7 @@ export function PromotionsManager({ promotions }: Props) {
                             ? `-${promo.value}%`
                             : promo.type === "fixed_amount"
                             ? `-${formatPrice(promo.value)}`
-                            : "1 nuit offerte"}
+                            : t("bulk.oneNightFree")}
                         </span>
                       </td>
                       <td className="px-4 py-4">
@@ -359,9 +357,9 @@ export function PromotionsManager({ promotions }: Props) {
                         {isExpired ? (
                           <Badge variant="default">{t("bulk.expired")}</Badge>
                         ) : isActive ? (
-                          <Badge variant="success">Active</Badge>
+                          <Badge variant="success">{t("bulk.activeFeminineSingular")}</Badge>
                         ) : (
-                          <Badge variant="warning">Inactive</Badge>
+                          <Badge variant="warning">{t("bulk.inactiveBadge")}</Badge>
                         )}
                       </td>
                       <td className="px-4 py-4">

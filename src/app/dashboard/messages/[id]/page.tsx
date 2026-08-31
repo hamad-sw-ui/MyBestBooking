@@ -9,6 +9,8 @@ import { MessageComposer } from "@/components/message-composer";
 import { MessageAttachment } from "@/components/message-attachment";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft } from "lucide-react";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +20,7 @@ export default async function DashboardConversationPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await getCurrentUser();
+  const t = makeT(await getServerLocale());
   if (!user) redirect("/connexion");
   if (user.role !== "host" && user.role !== "admin") redirect("/dashboard");
 
@@ -64,21 +67,21 @@ export default async function DashboardConversationPage({
         className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-[#1B3A6B] mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        Retour aux conversations
+        {t("dash.backConversations")}
       </Link>
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          Conversation avec {row.guest?.firstName} {row.guest?.lastName}
+          {t("dash.convWith").replace("{name}", `${row.guest?.firstName ?? ""} ${row.guest?.lastName ?? ""}`.trim())}
         </h1>
         <p className="text-sm text-gray-500">
-          À propos de : {row.property?.name}
+          {t("dash.aboutOf").replace("{name}", row.property?.name ?? "")}
         </p>
       </div>
 
       <div className="space-y-3 mb-6 min-h-[200px]">
         {msgs.length === 0 && (
-          <p className="text-center text-gray-500 py-12">Pas encore de message.</p>
+          <p className="text-center text-gray-500 py-12">{t("messages.noMessageYet")}</p>
         )}
         {msgs.map((m) => {
           const mine = m.senderType === "host";

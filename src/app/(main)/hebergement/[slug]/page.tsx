@@ -216,7 +216,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                     {rating.toFixed(1)}
                   </div>
                   <span>{ratingInfo?.label}</span>
-                  <span className="text-gray-400">({property.totalReviews} avis)</span>
+                  <span className="text-gray-400">{t("card.reviewsCount").replace("{n}", String(property.totalReviews ?? 0))}</span>
                 </span>
               )}
             </div>
@@ -327,7 +327,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                           <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
                             <span className="flex items-center gap-1">
                               <Users className="w-4 h-4" />
-                              {room.maxOccupancy} pers. max
+                              {t("prop.persMax").replace("{n}", String(room.maxOccupancy))}
                             </span>
                             {room.sizeSqm && <span>{room.sizeSqm} m²</span>}
                           </div>
@@ -483,21 +483,21 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 </CardHeader>
                 <CardContent className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Check-in</span>
+                    <span className="text-gray-600">{t("book.checkIn")}</span>
                     <span className="font-medium">{property.checkInFrom || "14:00"} - {property.checkInUntil || "23:00"}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Check-out</span>
-                    <span className="font-medium">Avant {property.checkOutUntil || "11:00"}</span>
+                    <span className="text-gray-600">{t("book.checkOut")}</span>
+                    <span className="font-medium">{t("prop.checkoutBefore").replace("{time}", property.checkOutUntil || "11:00")}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Animaux</span>
+                    <span className="text-gray-600">{t("prop.petsShort")}</span>
                     <span className={property.petsAllowed ? "text-green-600" : "text-gray-500"}>
                       {property.petsAllowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                     </span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Fumeurs</span>
+                    <span className="text-gray-600">{t("prop.smokingShort")}</span>
                     <span className={property.smokingAllowed ? "text-green-600" : "text-gray-500"}>
                       {property.smokingAllowed ? <Check className="w-4 h-4" /> : <X className="w-4 h-4" />}
                     </span>

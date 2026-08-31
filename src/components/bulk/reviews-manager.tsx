@@ -38,12 +38,12 @@ export interface ReviewRow {
   } | null;
 }
 
-function ratingInfo(v: number, great: string, poor: string): { emoji: string; label: string } {
-  if (v >= 9) return { emoji: "🌟", label: "Excellent" };
-  if (v >= 8) return { emoji: "😊", label: great };
-  if (v >= 7) return { emoji: "🙂", label: "Bien" };
-  if (v >= 5) return { emoji: "😐", label: "Correct" };
-  return { emoji: "😞", label: poor };
+function ratingInfo(v: number, labels: { excellent: string; great: string; good: string; ok: string; poor: string }): { emoji: string; label: string } {
+  if (v >= 9) return { emoji: "🌟", label: labels.excellent };
+  if (v >= 8) return { emoji: "😊", label: labels.great };
+  if (v >= 7) return { emoji: "🙂", label: labels.good };
+  if (v >= 5) return { emoji: "😐", label: labels.ok };
+  return { emoji: "😞", label: labels.poor };
 }
 
 interface Props {
@@ -111,14 +111,14 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
 
   const bulkActions = isAdmin
     ? [
-        { key: "approve", label: "Approuver", icon: BulkIcons.approve, variant: "primary" as const },
-        { key: "hide", label: "Masquer", icon: BulkIcons.hide, variant: "secondary" as const },
+        { key: "approve", label: t("mod.approve"), icon: BulkIcons.approve, variant: "primary" as const },
+        { key: "hide", label: t("mod.hide"), icon: BulkIcons.hide, variant: "secondary" as const },
         {
           key: "reject",
-          label: "Rejeter",
+          label: t("mod.reject"),
           icon: BulkIcons.reject,
           variant: "danger" as const,
-          confirmMessage: `Rejeter ${selected.size} avis ?`,
+          confirmMessage: t("bulk.confirmRejectReviews").replace("{n}", String(selected.size)),
         },
       ]
     : [];
@@ -129,13 +129,13 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         <Card padding="sm">
           <div className="p-4">
-            <p className="text-sm text-gray-500">Total avis</p>
+            <p className="text-sm text-gray-500">{t("bulk.totalReviews")}</p>
             <p className="text-2xl font-bold">{stats.total}</p>
           </div>
         </Card>
         <Card padding="sm">
           <div className="p-4">
-            <p className="text-sm text-gray-500">Moyenne</p>
+            <p className="text-sm text-gray-500">{t("bulk.average")}</p>
             <p className="text-2xl font-bold text-[#F5A623]">
               {stats.avg.toFixed(1)}/10
             </p>
@@ -143,7 +143,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
         </Card>
         <Card padding="sm">
           <div className="p-4">
-            <p className="text-sm text-gray-500">En attente</p>
+            <p className="text-sm text-gray-500">{t("status.pending")}</p>
             <p className="text-2xl font-bold text-orange-600">{stats.pending}</p>
           </div>
         </Card>
@@ -165,8 +165,8 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
         onSearchChange={setQ}
         searchPlaceholder={t("bulk.searchReviews")}
         statusOptions={[
-          { value: "all", label: "Tous statuts" },
-          { value: "pending", label: "En attente" },
+          { value: "all", label: t("bulk.allStatusesShort") },
+          { value: "pending", label: t("status.pending") },
           { value: "approved", label: t("bulk.approved") },
           { value: "hidden", label: t("bulk.hidden") },
           { value: "rejected", label: t("bulk.rejected") },
@@ -202,14 +202,20 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
         {filtered.length === 0 ? (
           <EmptyState
             icon={<MessageSquare className="w-12 h-12 text-gray-300" />}
-            title="Aucun avis"
+            title={t("bulk.noReviewsTitle")}
             description={t("bulk.noReviewsDesc")}
           />
         ) : (
           <div className="divide-y divide-gray-100">
             {filtered.map((r) => {
               const rating = parseFloat(r.review.overallRating);
-              const info = ratingInfo(rating, t("bulk.ratingGreat"), t("bulk.ratingPoor"));
+              const info = ratingInfo(rating, {
+                excellent: t("bulk.ratingExcellent"),
+                great: t("bulk.ratingGreat"),
+                good: t("bulk.ratingGood"),
+                ok: t("bulk.ratingOk"),
+                poor: t("bulk.ratingPoor"),
+              });
               const st = r.review.status ?? "pending";
               const isSelected = selected.has(r.review.id);
               return (
@@ -279,7 +285,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                       {r.review.positiveComment && (
                         <div className="mb-2 p-3 bg-green-50 rounded-lg">
                           <p className="text-sm text-gray-700">
-                            <span className="text-green-600 font-medium">👍 Ce qui a plu :</span>{" "}
+                            <span className="text-green-600 font-medium">{t("bulk.liked")}</span>{" "}
                             {r.review.positiveComment}
                           </p>
                         </div>
@@ -319,7 +325,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                           <RowDeleteButton
                             entity="reviews"
                             id={r.review.id}
-                            label={`l'avis de ${r.user?.firstName ?? "l'utilisateur"} ${r.user?.lastName ?? ""}`.trim()}
+                            label={t("bulk.reviewLabel").replace("{name}", `${r.user?.firstName ?? t("bulk.userFallback")} ${r.user?.lastName ?? ""}`.trim())}
                           />
                         </div>
                       )}

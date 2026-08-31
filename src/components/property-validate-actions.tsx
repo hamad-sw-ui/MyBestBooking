@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X, Ban } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   propertyId: string;
@@ -15,6 +16,7 @@ interface Props {
  */
 export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
   const router = useRouter();
+  const t = useT();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,10 +30,10 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
         body: JSON.stringify({ action }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Erreur");
+      if (!res.ok) throw new Error(data.error ?? t("auth.genericError"));
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("auth.genericError"));
     } finally {
       setLoading(null);
     }
@@ -46,7 +48,7 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
           className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-green-600 text-white rounded hover:bg-green-700 disabled:opacity-50"
         >
           <Check className="w-3 h-3" />
-          {loading === "approve" ? "…" : "Approuver"}
+          {loading === "approve" ? "…" : t("mod.approve")}
         </button>
       )}
       {currentStatus !== "draft" && (
@@ -56,7 +58,7 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
           className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-yellow-600 text-white rounded hover:bg-yellow-700 disabled:opacity-50"
         >
           <X className="w-3 h-3" />
-          {loading === "reject" ? "…" : "Rejeter"}
+          {loading === "reject" ? "…" : t("mod.reject")}
         </button>
       )}
       {currentStatus !== "suspended" && (
@@ -66,7 +68,7 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
           className="inline-flex items-center gap-1 px-3 py-1.5 text-xs bg-red-600 text-white rounded hover:bg-red-700 disabled:opacity-50"
         >
           <Ban className="w-3 h-3" />
-          {loading === "suspend" ? "…" : "Suspendre"}
+          {loading === "suspend" ? "…" : t("bulk.suspend")}
         </button>
       )}
       {error && <span className="text-xs text-red-600">{error}</span>}

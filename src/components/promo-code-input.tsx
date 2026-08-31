@@ -6,6 +6,7 @@ import { formatPrice } from "@/lib/utils";
 // T-154d (audit n°26, P2-8) : confirmation/échec globaux via le ToastProvider
 // (monté dans layout mais jamais utilisé).
 import { useToast } from "@/components/ui/toast";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Applied {
   code: string;
@@ -28,6 +29,7 @@ interface Props {
  */
 export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
   const { addToast } = useToast();
+  const t = useT();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
       const url = `/api/promotions/apply?code=${encodeURIComponent(code)}&amount=${amount}&currency=${encodeURIComponent(currency)}`;
       const res = await fetch(url);
       const data = await res.json().catch(() => ({}));
-      if (!res.ok || !data.ok) throw new Error(data.error ?? "Code invalide");
+      if (!res.ok || !data.ok) throw new Error(data.error ?? t("promo.invalid"));
       const a: Applied = {
         code: data.promotion.code,
         discount: data.discount,
@@ -49,12 +51,12 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
       };
       setApplied(a);
       onApplied?.(a);
-      addToast("success", `Code ${a.code} appliqué : −${formatPrice(a.discount, a.currency)}`);
+      addToast("success", t("promo.appliedLine").replace("{code}", a.code).replace("{amount}", formatPrice(a.discount, a.currency)));
     } catch (e) {
       setApplied(null);
       onApplied?.(null);
-      setError(e instanceof Error ? e.message : "Erreur");
-      addToast("error", e instanceof Error ? e.message : "Impossible d'appliquer le code");
+      setError(e instanceof Error ? e.message : t("auth.genericError"));
+      addToast("error", e instanceof Error ? e.message : t("promo.applyFail"));
     } finally {
       setLoading(false);
     }
@@ -72,12 +74,12 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
       <div className="flex items-center justify-between gap-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
         <div className="flex items-center gap-2 text-green-800">
           <Check className="w-4 h-4" />
-          Code <strong>{applied.code}</strong> appliqué : −{formatPrice(applied.discount, applied.currency)}
+          {t("promo.appliedLine").replace("{code}", applied.code).replace("{amount}", formatPrice(applied.discount, applied.currency))}
         </div>
         <button
           type="button"
           onClick={reset}
-          aria-label="Retirer le code promo"
+          aria-label={t("promo.removeAria")}
           className="p-1 rounded hover:bg-green-100"
         >
           <X className="w-4 h-4 text-green-700" />
@@ -90,7 +92,7 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
     <div className="flex items-end gap-2">
       <div className="flex-1">
         <label htmlFor="promo-code" className="block text-xs text-gray-500 mb-1">
-          Code promo
+          {t("promo.codeLabel")}
         </label>
         <div className="relative">
           <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -111,7 +113,7 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
         disabled={loading || !code.trim()}
         className="px-4 py-2 text-sm bg-[#1B3A6B] text-white rounded-lg hover:bg-[#0f2444] disabled:opacity-50"
       >
-        {loading ? "…" : "Appliquer"}
+        {loading ? "…" : t("promo.apply")}
       </button>
     </div>
   );

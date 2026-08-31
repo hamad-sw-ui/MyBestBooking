@@ -126,7 +126,7 @@ export default async function FavoritesPage() {
                       {wishlist.name}
                     </h2>
                     <p className="text-sm text-gray-500">
-                      {wishlist.itemCount} hébergement{wishlist.itemCount !== 1 ? "s" : ""}
+                      {(wishlist.itemCount === 1 ? t("fav.staysCount") : t("fav.staysCountMany")).replace("{n}", String(wishlist.itemCount))}
                     </p>
                   </div>
                   <WishlistActions
@@ -140,10 +140,10 @@ export default async function FavoritesPage() {
                   <Card className="bg-gray-50">
                     <CardContent className="text-center py-8">
                       <Heart className="w-8 h-8 mx-auto mb-2 text-gray-300" />
-                      <p className="text-gray-500">Cette liste est vide</p>
+                      <p className="text-gray-500">{t("fav.emptyList")}</p>
                       <Link href="/recherche">
                         <Button variant="outline" className="mt-4" size="sm">
-                          Ajouter des hébergements
+                          {t("fav.addStays")}
                         </Button>
                       </Link>
                     </CardContent>
@@ -169,7 +169,7 @@ export default async function FavoritesPage() {
             {userWishlists.length === 0 && allFavoriteProperties.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Tous les favoris
+                  {t("fav.allFavorites")}
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                   {allFavoriteProperties.map((property) => (
@@ -190,8 +190,8 @@ export default async function FavoritesPage() {
             <div>
               <h3 className="font-semibold text-blue-900">{t("fav.priceAlertsTitle")}</h3>
               <p className="text-sm text-blue-700 mt-1">
-                {t("fav.priceAlertsDesc")}
-                Vous recevrez un email dès qu&apos;une bonne affaire se présente !
+                {t("fav.priceAlertsDesc")}{" "}
+                {t("fav.dealEmail")}
               </p>
             </div>
           </CardContent>

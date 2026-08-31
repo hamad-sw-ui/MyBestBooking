@@ -40,7 +40,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
   const statusLabels: Record<string, string> = {
     active: t("bulk.active"),
     pending: t("status.pending"),
-    draft: "Draft",
+    draft: t("bulk.draft"),
     suspended: t("bulk.suspendedBadge"),
     archived: t("bulk.archived"),
     rejected: t("bulk.rejectedOne"),
@@ -103,21 +103,21 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
     ? [
         {
           key: "approve",
-          label: "Approuver",
+          label: t("mod.approve"),
           icon: BulkIcons.approve,
           variant: "primary" as const,
           confirmMessage: t("bulk.confirmApprove").replace("{n}", String(selected.size)),
         },
         {
           key: "reject",
-          label: "Rejeter",
+          label: t("mod.reject"),
           icon: BulkIcons.reject,
           variant: "secondary" as const,
           confirmMessage: t("bulk.confirmRejectProps").replace("{n}", String(selected.size)),
         },
         {
           key: "suspend",
-          label: "Suspendre",
+          label: t("bulk.suspend"),
           icon: BulkIcons.suspend,
           variant: "danger" as const,
           confirmMessage: t("bulk.confirmSuspendProps").replace("{n}", String(selected.size)),
@@ -130,10 +130,10 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total", value: stats.total, color: "text-gray-900" },
-          { label: "Actifs", value: stats.active, color: "text-green-600" },
-          { label: "En attente", value: stats.pending, color: "text-orange-600" },
-          { label: "Brouillons", value: stats.draft, color: "text-gray-500" },
+          { label: t("bulk.total"), value: stats.total, color: "text-gray-900" },
+          { label: t("bulk.active"), value: stats.active, color: "text-green-600" },
+          { label: t("status.pending"), value: stats.pending, color: "text-orange-600" },
+          { label: t("bulk.drafts"), value: stats.draft, color: "text-gray-500" },
         ].map((s) => (
           <Card key={s.label} padding="sm">
             <div className="p-4">
@@ -152,13 +152,13 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
         onDeselectAll={() => setSelected(new Set())}
         searchValue={q}
         onSearchChange={setQ}
-        searchPlaceholder="Nom, ville, pays, slug…"
+        searchPlaceholder={t("bulk.searchProperties")}
         statusOptions={[
-          { value: "all", label: "Tous les statuts" },
-          { value: "active", label: "Actif" },
-          { value: "pending", label: "En attente" },
-          { value: "draft", label: "Brouillon" },
-          { value: "suspended", label: "Suspendu" },
+          { value: "all", label: t("bulk.allStatuses") },
+          { value: "active", label: t("bulk.activeSingular") },
+          { value: "pending", label: t("status.pending") },
+          { value: "draft", label: t("bulk.draft") },
+          { value: "suspended", label: t("bulk.suspendedBadge") },
           { value: "rejected", label: t("bulk.rejectedOne") },
         ]}
         statusValue={statusFilter}
@@ -178,20 +178,20 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                 : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
             }`}
           >
-            Tous types
+            {t("bulk.allTypes")}
           </button>
-          {types.map((t) => (
+          {types.map((ty) => (
             <button
-              key={t}
+              key={ty}
               type="button"
-              onClick={() => setTypeFilter(t)}
+              onClick={() => setTypeFilter(ty)}
               className={`px-3 py-1 text-sm rounded-full border transition ${
-                typeFilter === t
+                typeFilter === ty
                   ? "bg-[#1B3A6B] text-white border-[#1B3A6B]"
                   : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
               }`}
             >
-              {getPropertyTypeLabel(t)}
+              {getPropertyTypeLabel(ty)}
             </button>
           ))}
         </div>
@@ -199,8 +199,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
 
       <p className="text-sm text-gray-600 mb-3">
         {(filtered.length > 1 ? t("bulk.propertiesShownMany") : t("bulk.propertiesShown")).replace("{n}", String(filtered.length))}
-        {filtered.length > 1 ? "s" : ""}
-        {filtered.length !== properties.length && ` sur ${properties.length}`}
+        {filtered.length !== properties.length && ` ${t("bulk.ofTotal").replace("{n}", String(properties.length))}`}
         {selected.size > 0 && t("bulk.selectedSuffix").replace("{n}", String(selected.size))}
       </p>
 
@@ -228,11 +227,11 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                     </th>
                   )}
                   <th className="px-4 py-4 font-medium">{t("dash.colProperty")}</th>
-                  <th className="px-4 py-4 font-medium">Type</th>
-                  <th className="px-4 py-4 font-medium">Localisation</th>
-                  <th className="px-4 py-4 font-medium">Note</th>
-                  <th className="px-4 py-4 font-medium">Statut</th>
-                  <th className="px-4 py-4 font-medium">Actions</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colType")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colLocation")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colRating")}</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colStatus")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colActions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -316,14 +315,14 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                         <Link
                           href={`/hebergement/${property.slug}`}
                           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                          title="Voir"
+                          title={t("dash.view")}
                         >
                           <Eye className="w-4 h-4 text-gray-500" />
                         </Link>
                         <Link
                           href={`/dashboard/properties/${property.id}`}
                           className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                          title="Modifier"
+                          title={t("rate.edit")}
                         >
                           <Pencil className="w-4 h-4 text-gray-500" />
                         </Link>

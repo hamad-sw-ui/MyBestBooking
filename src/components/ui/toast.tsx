@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 import { CheckCircle, XCircle, AlertCircle, X } from "lucide-react";
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { useT } from "@/components/ui-locale-provider";
 
 type ToastType = "success" | "error" | "info";
 
@@ -64,6 +65,7 @@ function ToastContainer({ toasts, removeToast }: { toasts: Toast[]; removeToast:
 }
 
 function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) {
+  const t = useT();
   const icons = {
     success: <CheckCircle className="w-5 h-5 text-green-500" />,
     error: <XCircle className="w-5 h-5 text-red-500" />,
@@ -88,7 +90,7 @@ function ToastItem({ toast, onRemove }: { toast: Toast; onRemove: () => void }) 
       <button
         type="button"
         onClick={onRemove}
-        aria-label="Fermer la notification"
+        aria-label={t("toast.close")}
         className="ml-2 p-1 hover:bg-black/5 rounded"
       >
         <X className="w-4 h-4 text-gray-400" aria-hidden="true" />

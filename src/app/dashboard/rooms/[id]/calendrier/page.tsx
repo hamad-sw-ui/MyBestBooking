@@ -9,6 +9,8 @@ import { AvailabilityCalendar } from "@/components/availability-calendar";
 import { RatePlansSection } from "@/components/rate-plans-section";
 import { RoomEditSection } from "@/components/room-edit-section";
 import { formatPrice } from "@/lib/utils";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 import { ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +21,7 @@ export default async function RoomCalendarPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await getCurrentUser();
+  const t = makeT(await getServerLocale());
   if (!user) redirect("/connexion");
   if (user.role !== "host" && user.role !== "admin") redirect("/dashboard");
 
@@ -58,15 +61,17 @@ export default async function RoomCalendarPage({
         className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-[#1B3A6B] mb-4"
       >
         <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-        Retour aux chambres
+        {t("cal.backRooms")}
       </Link>
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          Calendrier — {row.room.name}
+          {t("cal.titlePrefix").replace("{name}", row.room.name)}
         </h1>
         <p className="text-sm text-gray-500 mt-1">
-          {row.property?.name} — capacité : {row.room.quantity} unité
-          {(row.room.quantity ?? 1) > 1 ? "s" : ""} — prix de base : {formatPrice(row.room.basePrice, row.room.currency ?? "EUR")}
+          {t("cal.meta")
+            .replace("{property}", row.property?.name ?? "")
+            .replace("{units}", String(row.room.quantity ?? 1))
+            .replace("{price}", formatPrice(row.room.basePrice, row.room.currency ?? "EUR"))}
         </p>
       </div>
 

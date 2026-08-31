@@ -97,9 +97,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               "}catch(e){}",
           }}
         />
-        <ToastProvider>
-          <UiLocaleProvider initialLanguage={locale}>{children}</UiLocaleProvider>
-        </ToastProvider>
+        <UiLocaleProvider initialLanguage={locale}>
+          <ToastProvider>{children}</ToastProvider>
+        </UiLocaleProvider>
       </body>
     </html>
   );
