@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   reviewId: string;
@@ -13,6 +14,7 @@ interface Props {
  * POST /api/reviews/[id]/reply
  */
 export function HostReplyForm({ reviewId, initialReply }: Props) {
+  const t = useT();
   const router = useRouter();
   const [reply, setReply] = useState(initialReply ?? "");
   const [loading, setLoading] = useState(false);
@@ -30,11 +32,11 @@ export function HostReplyForm({ reviewId, initialReply }: Props) {
         body: JSON.stringify({ reply: reply.trim() }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Erreur");
+      if (!res.ok) throw new Error(data.error ?? t("settings.error"));
       setSaved(true);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("settings.error"));
     } finally {
       setLoading(false);
     }
@@ -42,7 +44,7 @@ export function HostReplyForm({ reviewId, initialReply }: Props) {
 
   return (
     <form onSubmit={handleSubmit} className="mt-3 space-y-2">
-      <label className="sr-only" htmlFor={`reply-${reviewId}`}>Votre réponse</label>
+<label className="sr-only" htmlFor={`reply-${reviewId}`}>{t("reply.your")}</label>
       <textarea
         id={`reply-${reviewId}`}
         value={reply}
@@ -50,20 +52,20 @@ export function HostReplyForm({ reviewId, initialReply }: Props) {
         rows={3}
         maxLength={2000}
         required
-        placeholder="Rédigez votre réponse publique à cet avis…"
+placeholder={t("reply.placeholder")}
         className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
       />
       <div className="flex items-center justify-between gap-3">
         <div className="text-xs text-gray-500">{reply.length} / 2000</div>
         <div className="flex items-center gap-2">
-          {saved && <span className="text-xs text-green-600">Publiée ✓</span>}
+{saved && <span className="text-xs text-green-600">{t("reply.published")}</span>}
           {error && <span className="text-xs text-red-600">{error}</span>}
           <button
             type="submit"
             disabled={loading || reply.trim().length === 0}
             className="px-4 py-2 text-sm bg-[#1B3A6B] text-white rounded-lg hover:bg-[#0f2444] disabled:opacity-50"
           >
-            {loading ? "Envoi…" : "Répondre"}
+{loading ? t("auth.sending") : t("action.send")}
           </button>
         </div>
       </div>

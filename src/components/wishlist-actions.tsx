@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Share2, Trash2, Check, Loader2 } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   wishlistId: string;
@@ -18,6 +19,7 @@ interface Props {
  * - Supprimer la liste entière (DELETE /api/wishlists?wishlistId=)
  */
 export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
+  const t = useT();
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -48,19 +50,19 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
         body: JSON.stringify({ wishlistId, isPublic: nextPublic, rotateShareToken }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? "Impossible de modifier le partage");
+      if (!response.ok) throw new Error(data.error ?? t("wish.shareFail"));
       setIsPublicState(Boolean(data.wishlist?.isPublic));
       setShareTokenState(data.wishlist?.shareToken ?? null);
       router.refresh();
     } catch (updateError) {
-      setError(updateError instanceof Error ? updateError.message : "Erreur");
+      setError(updateError instanceof Error ? updateError.message : t("settings.error"));
     } finally {
       setUpdatingShare(false);
     }
   }
 
   function del() {
-    if (!confirm("Supprimer cette liste et tous ses favoris ?")) return;
+    if (!confirm(t("wish.deleteConfirm"))) return;
     setError(null);
     startTransition(async () => {
       try {
@@ -69,11 +71,11 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
         });
         if (!r.ok) {
           const j = await r.json().catch(() => ({}));
-          throw new Error(j.error ?? "Erreur");
+          throw new Error(j.error ?? t("settings.error"));
         }
         router.refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
@@ -82,19 +84,19 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
     <div className="flex items-center gap-2">
       {isPublicState && shareTokenState ? (
         <>
-          <Button variant="ghost" size="sm" onClick={share} aria-label="Copier le lien de partage">
-            {copied ? <><Check className="w-4 h-4 mr-2" /> Copié !</> : <><Share2 className="w-4 h-4 mr-2" /> Partager</>}
+<Button variant="ghost" size="sm" onClick={share} aria-label={t("wish.shareAria")}>
+{copied ? <><Check className="w-4 h-4 mr-2" /> {t("wishlist.copy")}</> : <><Share2 className="w-4 h-4 mr-2" /> {t("wishlist.share")}</>}
           </Button>
           <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(true, true)}>
-            Nouveau lien
+{t("wish.newLink")}
           </Button>
           <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(false)}>
-            Rendre privée
+{t("wish.makePrivate")}
           </Button>
         </>
       ) : (
         <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(true)}>
-          <Share2 className="w-4 h-4 mr-2" /> Rendre publique
+<Share2 className="w-4 h-4 mr-2" /> {t("wish.makePublic")}
         </Button>
       )}
       <Button
@@ -102,7 +104,7 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
         size="sm"
         onClick={del}
         disabled={isPending}
-        aria-label="Supprimer la liste"
+aria-label={t("wish.deleteAria")}
         className="text-red-600 hover:text-red-700 hover:bg-red-50"
       >
         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}

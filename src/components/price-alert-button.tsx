@@ -39,7 +39,7 @@ export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 10
   async function save() {
     const n = parseFloat(maxPrice);
     if (!Number.isFinite(n) || n <= 0) {
-      setError("Prix invalide");
+setError(t("room.invalidPrice"));
       return;
     }
     setError(null);
@@ -56,17 +56,17 @@ export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 10
         }),
       });
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Erreur");
+if (!r.ok) throw new Error(j.error ?? t("settings.error"));
       setStatus("saved");
-      addToast("success", `Alerte créée ✓ (max ${n} ${currency})`);
+      addToast("success", t("alert.createdMax").replace("{n}", String(n)).replace("{currency}", currency));
       setTimeout(() => {
         setOpen(false);
         setStatus("idle");
       }, 1500);
     } catch (e) {
       setStatus("error");
-      setError(e instanceof Error ? e.message : "Erreur");
-      addToast("error", e instanceof Error ? e.message : "Impossible de créer l'alerte");
+      setError(e instanceof Error ? e.message : t("settings.error"));
+      addToast("error", e instanceof Error ? e.message : t("alert.createFail"));
     } finally {
       setBusy(false);
     }
@@ -91,19 +91,19 @@ export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 10
           min={1}
           value={maxPrice}
           onChange={(e) => setMaxPrice(e.target.value)}
-          aria-label="Prix maximum"
+aria-label={t("alert.maxPriceAria")}
           className="w-32"
         />
         <span className="text-sm text-gray-600 pb-2">{currency}</span>
         <Button size="sm" onClick={save} disabled={busy}>
-          {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enregistrer"}
+{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : t("action.save")}
         </Button>
         <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>
-          Annuler
+{t("action.cancel")}
         </Button>
       </div>
-      {contextual && <p className="text-xs text-gray-500">Dates, voyageurs, stock et prix journalier seront vérifiés au moment de l&apos;alerte.</p>}
-      {status === "saved" && <p className="text-xs text-green-600">Alerte créée ✓</p>}
+{contextual && <p className="text-xs text-gray-500">{t("alert.contextHint")}</p>}
+{status === "saved" && <p className="text-xs text-green-600">{t("alert.created")}</p>}
       {status === "error" && error && <p className="text-xs text-red-600">{error}</p>}
     </div>
   );

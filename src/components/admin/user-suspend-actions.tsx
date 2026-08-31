@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   userId: string;
@@ -16,14 +17,15 @@ interface Props {
  * n'était branché à aucune UI. On complète.
  */
 export function UserSuspendActions({ userId, suspended, disabled }: Props) {
+  const t = useT();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function toggle() {
     setError(null);
-    const label = suspended ? "réactiver" : "suspendre";
-    if (!confirm(`Confirmer ${label} cet utilisateur ?`)) return;
+    const label = suspended ? t("user.verbReactivate") : t("user.verbSuspend");
+    if (!confirm(t("user.confirmToggle").replace("{verb}", label))) return;
     startTransition(async () => {
       try {
         const res = await fetch(`/api/users/${userId}/suspend`, {
@@ -32,12 +34,12 @@ export function UserSuspendActions({ userId, suspended, disabled }: Props) {
           body: JSON.stringify({ suspended: !suspended }),
         });
         if (!res.ok) {
-          const j = await res.json().catch(() => ({ error: "Erreur" }));
-          throw new Error(j.error || "Erreur");
+          const j = await res.json().catch(() => ({ error: t("settings.error") }));
+          throw new Error(j.error || t("settings.error"));
         }
         router.refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
@@ -50,7 +52,7 @@ export function UserSuspendActions({ userId, suspended, disabled }: Props) {
         onClick={toggle}
         disabled={disabled || isPending}
       >
-        {isPending ? "…" : suspended ? "Réactiver" : "Suspendre"}
+{isPending ? "…" : suspended ? t("bulk.reactivate") : t("bulk.suspend")}
       </Button>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>

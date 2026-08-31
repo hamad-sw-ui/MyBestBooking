@@ -303,9 +303,8 @@ export default function EditPropertyPage() {
         </div>
       </div>
 
-      {/* T-137 (A2) : explique à l'hôte pourquoi son annonce n'est pas publique
-          et comment la re-soumettre (auparavant, une annonce rejetée restait
-          bloquée en brouillon sans action possible). */}
+      {/* T-137 (A2): explain why the listing is not public and how to
+          resubmit (rejected listings used to stay stuck in draft). */}
       {(property.status === "draft" || property.status === "suspended") && (
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
           {property.status === "draft"

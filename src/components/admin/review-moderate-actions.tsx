@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, EyeOff, Ban, Clock } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 type Status = "approved" | "pending" | "hidden" | "rejected";
 
@@ -12,13 +13,6 @@ interface Props {
   reviewId: string;
   currentStatus: string | null;
 }
-
-const STATUS_LABELS: Record<Status, string> = {
-  approved: "Approuvé",
-  pending: "En attente",
-  hidden: "Masqué",
-  rejected: "Rejeté",
-};
 
 const STATUS_VARIANTS: Record<Status, "success" | "warning" | "danger" | "info"> = {
   approved: "success",
@@ -34,6 +28,7 @@ const STATUS_VARIANTS: Record<Status, "success" | "warning" | "danger" | "info">
  * puis `router.refresh()` pour recharger le RSC.
  */
 export function ReviewModerateActions({ reviewId, currentStatus }: Props) {
+  const t = useT();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +36,7 @@ export function ReviewModerateActions({ reviewId, currentStatus }: Props) {
 
   function moderate(next: Status, verb: string) {
     setError(null);
-    if (!confirm(`Confirmer : ${verb} cet avis ?`)) return;
+    if (!confirm(t("mod.confirm").replace("{verb}", verb))) return;
     startTransition(async () => {
       try {
         const res = await fetch(`/api/reviews/${reviewId}/moderate`, {
@@ -50,59 +45,59 @@ export function ReviewModerateActions({ reviewId, currentStatus }: Props) {
           body: JSON.stringify({ status: next }),
         });
         if (!res.ok) {
-          const j = await res.json().catch(() => ({ error: "Erreur" }));
-          throw new Error(j.error || "Erreur");
+          const j = await res.json().catch(() => ({ error: t("settings.error") }));
+          throw new Error(j.error || t("settings.error"));
         }
         router.refresh();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
 
   return (
     <div className="mt-3 flex flex-wrap items-center gap-2 pt-3 border-t border-gray-100">
-      <span className="text-xs text-gray-500 mr-1">Modération :</span>
-      <Badge variant={STATUS_VARIANTS[status]}>{STATUS_LABELS[status]}</Badge>
+      <span className="text-xs text-gray-500 mr-1">{t("mod.label")}</span>
+      <Badge variant={STATUS_VARIANTS[status]}>{t(status === "approved" ? "mod.approved" : status === "pending" ? "mod.pending" : status === "hidden" ? "mod.hidden" : "mod.rejected")}</Badge>
 
       {status !== "approved" && (
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => moderate("approved", "approuver")}
+          onClick={() => moderate("approved", t("mod.verbApprove"))}
           disabled={isPending}
         >
-          <CheckCircle2 className="w-4 h-4 mr-1" /> Approuver
+          <CheckCircle2 className="w-4 h-4 mr-1" /> {t("mod.approve")}
         </Button>
       )}
       {status !== "hidden" && (
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => moderate("hidden", "masquer")}
+          onClick={() => moderate("hidden", t("mod.verbHide"))}
           disabled={isPending}
         >
-          <EyeOff className="w-4 h-4 mr-1" /> Masquer
+          <EyeOff className="w-4 h-4 mr-1" /> {t("mod.hide")}
         </Button>
       )}
       {status !== "pending" && (
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => moderate("pending", "remettre en attente")}
+          onClick={() => moderate("pending", t("mod.verbHold"))}
           disabled={isPending}
         >
-          <Clock className="w-4 h-4 mr-1" /> En attente
+          <Clock className="w-4 h-4 mr-1" /> {t("mod.hold")}
         </Button>
       )}
       {status !== "rejected" && (
         <Button
           size="sm"
           variant="ghost"
-          onClick={() => moderate("rejected", "rejeter (contenu inapproprié)")}
+          onClick={() => moderate("rejected", t("mod.verbReject"))}
           disabled={isPending}
         >
-          <Ban className="w-4 h-4 mr-1" /> Rejeter
+          <Ban className="w-4 h-4 mr-1" /> {t("mod.reject")}
         </Button>
       )}
 

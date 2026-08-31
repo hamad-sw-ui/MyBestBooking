@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   propertyId: string;
@@ -23,6 +24,7 @@ interface Props {
  * ne s'affiche que dans les états qui autorisent une (re)soumission.
  */
 export function PropertySubmitButton({ propertyId, currentStatus }: Props) {
+  const t = useT();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,11 +43,11 @@ export function PropertySubmitButton({ propertyId, currentStatus }: Props) {
         headers: { "content-type": "application/json" },
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Impossible de soumettre l'annonce");
+      if (!res.ok) throw new Error(data.error ?? t("prop.submitFail"));
       setDone(true);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("settings.error"));
       setLoading(false);
     }
   }
@@ -54,7 +56,7 @@ export function PropertySubmitButton({ propertyId, currentStatus }: Props) {
     <div className="flex items-center gap-2">
       <Button onClick={submit} loading={loading} disabled={done}>
         {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
-        {done ? "Envoyée pour validation" : "Soumettre pour validation"}
+{done ? t("prop.submitted") : t("prop.submit")}
       </Button>
       {error && <span className="text-xs text-red-600">{error}</span>}
     </div>

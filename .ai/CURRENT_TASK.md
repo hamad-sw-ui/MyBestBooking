@@ -4,17 +4,18 @@
 
 **Niveau de proportionnalité** : S (additif — dictionnaire + wiring UI, aucun contrat API cassé)
 
-**Titre** : i18n vague 3 — restes FR en dur (auth, compte, messages, chrome) puis dashboard privé (settings, bulk, formulaires).
+**Titre** : i18n vague 3 — restes FR en dur (auth → dashboard → widgets).
 
-**Statut** : **EN COURS** — pas CORRIGÉ. 🔨 `npx tsc --noEmit` 0. 🧪 `ui-strings` FR/EN 1087/1087. 🔍 `i18n:check` 55 lignes / 19 fichiers (warn-only). ❓ SSR cookie `en` non rejoué (serveur non lancé).
+**Statut** : **EN COURS** (inspection). 🔨 `npx tsc --noEmit` 0. 🧪 ui-strings 4/4 (1213 FR=EN). 🔍 `i18n:check` **0 candidat**. ❓ SSR cookie `en` non rejoué.
 
-**Activité** : extraction vers `ui-strings.ts` + `useT` / `makeT(await getServerLocale())` + `UiLocaleProvider`. Interpolation via `.replace("{n}", …)` (ne pas changer `makeT`).
+**Activité** : extraction vers `ui-strings.ts` + `useT` / `makeT`. Interpolation `.replace` / `.replaceAll` (ne pas changer `makeT`).
 
-## Périmètre branché cette vague
+## Branché
 
-- Auth, compte, messages, chrome dashboard (déjà HEAD `57a30fd` + working tree)
-- `settings-panel`, managers bulk, analytics, billing, bookings `[id]`, properties `new`/`[id]`, `rate-plans-section`, `availability-calendar`
+- Auth, compte, messages, chrome dashboard
+- settings-panel, bulk, analytics/billing, bookings `[id]`, properties new/`[id]`, rate-plans, calendrier
+- Widgets restants du garde-fou : new-room, room-edit, promo-form, booking-row-actions, review-moderate, user-suspend, stripe-payment, host-reply, wishlists, price-alert, property-card, submit-button, bestrewards-status, attachments, descriptions
 
-## Restes FR (hors clôture)
+## Restes possibles
 
-Garde-fou encore : `new-room-form`, `booking-row-actions`, `review-moderate-actions`, `property-card-client`, `user-suspend-actions`, `property-submit-button`, `price-alert` UI, etc. Quelques libellés sans accent restent en dur (ex. « Voir la fiche », titres bulk « Chambres »).
+Libellés **sans accent** encore en dur (non vus par le garde-fou) : ex. « Voir la fiche », « Chambres », « No-show ». Pas de preuve runtime EN sur cookie.

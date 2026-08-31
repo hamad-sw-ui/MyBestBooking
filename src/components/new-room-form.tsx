@@ -6,6 +6,7 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   properties: { id: string; name: string }[];
@@ -17,6 +18,7 @@ interface Props {
  * roomType, maxOccupancy, maxAdults, basePrice, quantity.
  */
 export function NewRoomForm({ properties }: Props) {
+  const t = useT();
   const router = useRouter();
   const [form, setForm] = useState({
     propertyId: properties[0]?.id ?? "",
@@ -41,15 +43,15 @@ export function NewRoomForm({ properties }: Props) {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    if (!form.propertyId) { setError("Sélectionnez un hébergement"); return; }
-    if (!form.name.trim()) { setError("Le nom est requis"); return; }
-    if (!form.basePrice || parseFloat(form.basePrice) <= 0) { setError("Prix invalide"); return; }
+    if (!form.propertyId) { setError(t("room.needProperty")); return; }
+    if (!form.name.trim()) { setError(t("room.nameRequired")); return; }
+    if (!form.basePrice || parseFloat(form.basePrice) <= 0) { setError(t("room.invalidPrice")); return; }
     // T-129 : cohérence des capacités (même règle que l'API, retour immédiat).
     if (form.maxAdults > form.maxOccupancy) {
-      setError("Le nombre d'adultes ne peut pas dépasser la capacité maximale"); return;
+      setError(t("room.adultsExceed")); return;
     }
     if (form.maxAdults + form.maxChildren > form.maxOccupancy) {
-      setError("Adultes + enfants ne peuvent pas dépasser la capacité maximale"); return;
+      setError(t("room.occupancyExceed")); return;
     }
     setBusy(true);
     try {
@@ -71,11 +73,11 @@ export function NewRoomForm({ properties }: Props) {
         }),
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error ?? "Erreur");
+      if (!r.ok) throw new Error(j.error ?? t("settings.error"));
       router.push("/dashboard/rooms");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("settings.error"));
     } finally {
       setBusy(false);
     }
@@ -86,7 +88,7 @@ export function NewRoomForm({ properties }: Props) {
       <Card>
         <CardContent>
           <p className="text-gray-700">
-            Vous devez d&apos;abord ajouter un hébergement avant de créer une chambre.
+{t("room.needPropertyFirst")}
           </p>
         </CardContent>
       </Card>
@@ -95,11 +97,11 @@ export function NewRoomForm({ properties }: Props) {
 
   return (
     <Card>
-      <CardHeader><CardTitle>Détails de la chambre</CardTitle></CardHeader>
+<CardHeader><CardTitle>{t("room.details")}</CardTitle></CardHeader>
       <form onSubmit={submit}>
         <CardContent className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Hébergement</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">{t("room.property")}</label>
             <select
               value={form.propertyId}
               onChange={(e) => set("propertyId", e.target.value)}
@@ -111,14 +113,14 @@ export function NewRoomForm({ properties }: Props) {
             </select>
           </div>
           <Input
-            label="Nom de la chambre"
+            label={t("room.name")}
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
-            placeholder="ex. Chambre Deluxe vue mer"
+            placeholder={t("room.namePlaceholder")}
             required
           />
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description (optionnel)</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">{t("room.descOptional")}</label>
             <textarea
               value={form.description}
               onChange={(e) => set("description", e.target.value)}
@@ -128,54 +130,54 @@ export function NewRoomForm({ properties }: Props) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Type</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">{t("room.type")}</label>
               <select
                 value={form.roomType}
                 onChange={(e) => set("roomType", e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
               >
-                <option value="single">Simple</option>
+<option value="single">{t("room.type.single")}</option>
                 <option value="double">Double</option>
                 <option value="twin">Twin</option>
                 <option value="suite">Suite</option>
                 <option value="studio">Studio</option>
-                <option value="family">Familiale</option>
-                <option value="dormitory">Dortoir</option>
+<option value="family">{t("room.type.family")}</option>
+<option value="dormitory">{t("room.type.dormitory")}</option>
               </select>
             </div>
-            <Input label="Capacité (personnes)" type="number" min={1} max={20}
+<Input label={t("room.capacity")} type="number" min={1} max={20}
               value={form.maxOccupancy}
               onChange={(e) => set("maxOccupancy", parseInt(e.target.value, 10) || 1)}
             />
-            <Input label="Superficie (m²)" type="number" min={0}
+<Input label={t("room.size")} type="number" min={0}
               value={form.sizeSqm}
               onChange={(e) => set("sizeSqm", e.target.value)}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input label="Adultes max" type="number" min={1}
+<Input label={t("room.maxAdults")} type="number" min={1}
               value={form.maxAdults}
               onChange={(e) => set("maxAdults", parseInt(e.target.value, 10) || 1)}
             />
-            <Input label="Enfants max" type="number" min={0}
+<Input label={t("room.maxChildren")} type="number" min={0}
               value={form.maxChildren}
               onChange={(e) => set("maxChildren", parseInt(e.target.value, 10) || 0)}
             />
-            <Input label="Nombre d'unités" type="number" min={1}
+<Input label={t("room.units")} type="number" min={1}
               value={form.quantity}
               onChange={(e) => set("quantity", parseInt(e.target.value, 10) || 1)}
             />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="md:col-span-2">
-              <Input label="Prix / nuit" type="number" min={0.01} step={0.01}
+<Input label={t("room.pricePerNight")} type="number" min={0.01} step={0.01}
                 value={form.basePrice}
                 onChange={(e) => set("basePrice", e.target.value)}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Devise</label>
+<label className="block text-sm font-medium text-gray-700 mb-1">{t("room.currency")}</label>
               <select
                 value={form.currency}
                 onChange={(e) => set("currency", e.target.value)}
@@ -194,10 +196,10 @@ export function NewRoomForm({ properties }: Props) {
         <CardFooter className="flex gap-3">
           <Button type="submit" disabled={busy}>
             {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-            Créer la chambre
+{t("room.create")}
           </Button>
           <Button type="button" variant="ghost" onClick={() => router.push("/dashboard/rooms")}>
-            Annuler
+{t("action.cancel")}
           </Button>
         </CardFooter>
       </form>

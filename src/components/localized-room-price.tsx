@@ -36,7 +36,7 @@ export function LocalizedRoomPrice({
       </p>
       <p className="text-sm text-gray-500">{t["price.perNightLong"]}</p>
       {converted && (
-        <p className="text-[10px] text-gray-400" title="Conversion indicative, taux figés. Le paiement reste en devise de l'hébergement.">
+        <p className="text-[10px] text-gray-400" title={t["bookingCard.conversionTooltip"]}>
           {t["price.convertedNote"]} {sourceCurrency}
         </p>
       )}

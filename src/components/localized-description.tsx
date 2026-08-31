@@ -1,6 +1,7 @@
 "use client";
 
 import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { makeT } from "@/lib/ui-strings";
 
 /**
  * T-132 — Description d'hébergement localisée.
@@ -20,7 +21,7 @@ export function LocalizedDescription({
   className?: string;
 }) {
   const { language } = useDisplayPreferences();
-  const fallback = "Découvrez cet hébergement exceptionnel et profitez d'un séjour inoubliable.";
+  const fallback = makeT(language)("prop.descFallback");
   const useEn = language === "en" && Boolean(descriptionEn);
   const text = useEn ? descriptionEn : description;
 

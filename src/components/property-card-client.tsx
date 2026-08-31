@@ -63,7 +63,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
       window.location.href = "/connexion?next=%2Frecherche";
       return;
     }
-    addToast(wasSaved ? "info" : "success", wasSaved ? "Retiré de vos favoris" : "Ajouté à vos favoris");
+    addToast(wasSaved ? "info" : "success", wasSaved ? t["headerActions.favoriteRemoved"] : t["headerActions.favoriteAdded"]);
   }
 
   async function removeFromFavorites(event: React.MouseEvent<HTMLButtonElement>) {
@@ -77,12 +77,12 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
         `/api/wishlists?wishlistId=${encodeURIComponent(removeFavoriteFrom.wishlistId)}&propertyId=${encodeURIComponent(property.id)}`,
         { method: "DELETE" },
       );
-      if (!res.ok) throw new Error("Impossible de retirer le favori");
-      addToast("info", "Retiré de vos favoris");
+      if (!res.ok) throw new Error(t["fav.removeFail"]);
+      addToast("info", t["headerActions.favoriteRemoved"]);
       router.refresh();
     } catch (e) {
-      setRemoveError(e instanceof Error ? e.message : "Erreur");
-      addToast("error", e instanceof Error ? e.message : "Impossible de retirer le favori");
+      setRemoveError(e instanceof Error ? e.message : t["settings.error"]);
+      addToast("error", e instanceof Error ? e.message : t["fav.removeFail"]);
     } finally {
       setRemoving(false);
     }
@@ -165,7 +165,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
           </span>
           {property.isEcoCertified && (
             <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
-              🌱 Éco
+              {t["badge.eco"]}
             </span>
           )}
         </div>
@@ -177,7 +177,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
                 <span className="text-lg font-bold text-gray-900">{t["price.from"]} {priceText}</span>
                 <span className="text-sm text-gray-500">{t["price.perNight"]}</span>
                 {isConverted && (
-                  <span className="block text-[10px] text-gray-400" title="Conversion indicative, taux figés. Le paiement reste en devise de l'hébergement.">
+                  <span className="block text-[10px] text-gray-400" title={t["bookingCard.conversionTooltip"]}>
                     {t["price.convertedNote"]} {sourceCurrency}
                   </span>
                 )}

@@ -7,6 +7,16 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-08-31 — T-167 widgets restants (garde-fou → 0)
+
+- **Demande** : aller plus loin sur les 55 hits i18n.
+- 🔨 Branché : new-room, room-edit, promo-form, booking-row-actions,
+  review-moderate, user-suspend, stripe-payment, host-reply, wishlists,
+  price-alert, property-card, submit-button, bestrewards-status,
+  attachments, descriptions.
+- 🔨 tsc **0** · 🧪 ui-strings **4/4** (1213 clés) · 🔍 i18n:check **0**.
+- ❓ T-167 non VALIDÉ : SSR cookie `en` non rejoué ; FR sans accent possible.
+
 ## Session 2026-08-31 — T-167 suite (settings / bulk / formulaires hôtes)
 
 - **Demande** : extraire le FR restant via `makeT`/`useT` (pas de changement

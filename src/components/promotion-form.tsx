@@ -4,12 +4,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
+import { useT } from "@/components/ui-locale-provider";
 
 /**
  * Formulaire création d'un code promo (T-016).
  * POST /api/promotions
  */
 export function PromotionForm() {
+  const t = useT();
   const router = useRouter();
   const { addToast } = useToast();
   // Lazy initializer pour éviter Date.now() à chaque render (rule react-hooks/purity).
@@ -39,11 +41,11 @@ export function PromotionForm() {
     // vérité via les .refine() Zod) pour éviter un aller-retour inutile.
     const valueNum = parseFloat(form.value);
     if (form.type === "percentage" && (!Number.isFinite(valueNum) || valueNum <= 0 || valueNum > 100)) {
-      setError("Une remise en pourcentage doit être comprise entre 0 et 100.");
+      setError(t("promo.pctRange"));
       return;
     }
     if (form.validFrom && form.validUntil && new Date(form.validUntil) <= new Date(form.validFrom)) {
-      setError("La date de fin doit être postérieure à la date de début.");
+      setError(t("promo.endAfterStart"));
       return;
     }
 
@@ -66,13 +68,13 @@ export function PromotionForm() {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Erreur");
-      addToast("success", `Code ${form.code.toUpperCase()} créé`);
+      if (!res.ok) throw new Error(data.error ?? t("settings.error"));
+      addToast("success", t("promo.created").replace("{code}", form.code.toUpperCase()));
       router.push("/dashboard/promotions");
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-      addToast("error", e instanceof Error ? e.message : "Impossible de créer la promotion");
+      setError(e instanceof Error ? e.message : t("settings.error"));
+      addToast("error", e instanceof Error ? e.message : t("promo.createFail"));
     } finally {
       setLoading(false);
     }
@@ -97,7 +99,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-name" className="block text-sm font-medium text-gray-700 mb-1">
-            Nom interne
+{t("promo.internalName")}
           </label>
           <input
             id="promo-name"
@@ -105,7 +107,7 @@ export function PromotionForm() {
             value={form.name}
             onChange={(e) => set("name", e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-            placeholder="Été 2026"
+placeholder={t("promo.namePlaceholder")}
           />
         </div>
         <div>
@@ -118,13 +120,13 @@ export function PromotionForm() {
             onChange={(e) => set("type", e.target.value)}
             className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
           >
-            <option value="percentage">Pourcentage (%)</option>
-            <option value="fixed_amount">Montant fixe (EUR)</option>
+<option value="percentage">{t("promo.pctType")}</option>
+<option value="fixed_amount">{t("promo.fixedType")}</option>
           </select>
         </div>
         <div>
           <label htmlFor="promo-value" className="block text-sm font-medium text-gray-700 mb-1">
-            Valeur
+{t("promo.value")}
           </label>
           <input
             id="promo-value"
@@ -139,7 +141,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-min" className="block text-sm font-medium text-gray-700 mb-1">
-            Montant minimum (EUR — devise de facturation)
+{t("promo.minAmount")}
           </label>
           <input
             id="promo-min"
@@ -153,7 +155,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-maxd" className="block text-sm font-medium text-gray-700 mb-1">
-            Remise max (optionnel, EUR)
+{t("promo.maxDiscount")}
           </label>
           <input
             id="promo-maxd"
@@ -167,7 +169,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-from" className="block text-sm font-medium text-gray-700 mb-1">
-            Valide du
+{t("promo.validFrom")}
           </label>
           <input
             id="promo-from"
@@ -180,7 +182,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-until" className="block text-sm font-medium text-gray-700 mb-1">
-            Valide jusqu&apos;au
+{t("promo.validUntil")}
           </label>
           <input
             id="promo-until"
@@ -193,7 +195,7 @@ export function PromotionForm() {
         </div>
         <div>
           <label htmlFor="promo-maxuses" className="block text-sm font-medium text-gray-700 mb-1">
-            Nombre max d&apos;utilisations (optionnel)
+{t("promo.maxUses")}
           </label>
           <input
             id="promo-maxuses"
@@ -209,18 +211,14 @@ export function PromotionForm() {
       {/* T-154e (audit n°26, P3-9) : devise de facturation explicite (les
           montants fixes/seuils sont libellés EUR et convertis au taux
           plateforme vers la devise de la chambre — T-153 B). */}
-      <p className="text-xs text-gray-500 -mt-2">
-        Les montants fixes et seuils sont libellés en EUR (devise de
-        facturation) ; ils sont convertis au taux plateforme vers la devise de
-        la chambre au moment de l&apos;application.
-      </p>
+      <p className="text-xs text-gray-500 -mt-2">{t("promo.eurNote")}</p>
       {error && <p className="text-sm text-red-600">{error}</p>}
       <button
         type="submit"
         disabled={loading}
         className="px-6 py-3 bg-[#FF5A5F] text-white font-semibold rounded-lg hover:bg-[#e54a4f] disabled:opacity-50"
       >
-        {loading ? "Création…" : "Créer le code"}
+{loading ? t("promo.creating") : t("promo.createCta")}
       </button>
     </form>
   );

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, CreditCard } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   bookingId: string;
@@ -40,6 +41,7 @@ export function BookingRowActions({
   messageArea = "traveler",
   canManageStay = false,
 }: Props) {
+  const t = useT();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [busyAction, setBusyAction] = useState<string | null>(null);
@@ -52,7 +54,7 @@ export function BookingRowActions({
       // pour le voyageur (remboursement intégral) et la raison est forcée
       // par le serveur ; la vue voyageur garde le devis + politique.
       if (canManageStay) {
-        const confirmMsg = "Annuler la réservation du voyageur ?\n\nLe voyageur sera remboursé intégralement (aucun frais d'annulation).";
+        const confirmMsg = t("book.cancelGuestConfirm");
         if (!confirm(confirmMsg)) return;
         startTransition(async () => {
           try {
@@ -63,26 +65,26 @@ export function BookingRowActions({
             });
             if (!r.ok) {
               const j = await r.json().catch(() => ({}));
-              throw new Error(j.error ?? "Erreur");
+              throw new Error(j.error ?? t("settings.error"));
             }
             router.refresh();
           } catch (e) {
-            setError(e instanceof Error ? e.message : "Erreur");
+            setError(e instanceof Error ? e.message : t("settings.error"));
           }
         });
         return;
       }
       const quoteResponse = await fetch(`/api/bookings/${bookingId}/cancellation`, { cache: "no-store" });
       const quote = await quoteResponse.json().catch(() => ({}));
-      if (!quoteResponse.ok) throw new Error(quote.error ?? "Impossible de calculer l'annulation");
-      const message = `Annuler cette réservation ?\n\nFrais estimés : ${quote.cancellationFee} ${quote.currency}\nRemboursement estimé : ${quote.estimatedRefund} ${quote.currency}`;
+      if (!quoteResponse.ok) throw new Error(quote.error ?? t("book.cancelQuoteFail"));
+      const message = t("book.cancelQuote").replace("{fee}", String(quote.cancellationFee)).replace("{refund}", String(quote.estimatedRefund)).replaceAll("{currency}", String(quote.currency));
       if (!confirm(message)) return;
       startTransition(async () => {
         try {
           const r = await fetch(`/api/bookings/${bookingId}`, {
             method: "PUT",
             headers: { "content-type": "application/json" },
-            body: JSON.stringify({ status: "cancelled", cancellationReason: "Annulation demandée par le voyageur" }),
+            body: JSON.stringify({ status: "cancelled", cancellationReason: t("book.cancelReasonGuest") }),
           });
           if (!r.ok) {
             const j = await r.json().catch(() => ({}));
@@ -90,11 +92,11 @@ export function BookingRowActions({
           }
           router.refresh();
         } catch (e) {
-          setError(e instanceof Error ? e.message : "Erreur");
+          setError(e instanceof Error ? e.message : t("settings.error"));
         }
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("settings.error"));
     }
   }
 
@@ -107,10 +109,10 @@ export function BookingRowActions({
         body: JSON.stringify({ propertyId, bookingId }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? "Impossible d'ouvrir la conversation");
+      if (!response.ok) throw new Error(data.error ?? t("book.openConvFail"));
       router.push(messageArea === "dashboard" ? `/dashboard/messages/${data.conversation.id}` : `/messages/${data.conversation.id}`);
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Erreur");
+      setError(error instanceof Error ? error.message : t("settings.error"));
     }
   }
 
@@ -119,10 +121,10 @@ export function BookingRowActions({
   // message explicite ; on ne fait que relayer.
   async function setStayStatus(next: "completed" | "no_show") {
     setError(null);
-    const label = next === "completed" ? "Terminer le séjour" : "Marquer comme non-présentation";
+    const label = next === "completed" ? t("book.completeStay") : "No-show";
     const confirmMsg = next === "completed"
-      ? "Confirmer que ce séjour est terminé ? La récompense BestRewards du voyageur sera alors créditée."
-      : "Marquer cette réservation comme non-présentation (no-show) ? Aucune récompense ne sera versée.";
+      ? t("book.completeStayConfirm")
+      : t("book.noShowConfirm");
     if (!confirm(confirmMsg)) return;
     setBusyAction(next);
     try {
@@ -132,10 +134,10 @@ export function BookingRowActions({
         body: JSON.stringify({ status: next }),
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(j.error ?? "Erreur");
+      if (!r.ok) throw new Error(j.error ?? t("settings.error"));
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : `Erreur lors de : ${label}`);
+      setError(e instanceof Error ? e.message : t("book.actionError").replace("{label}", label));
     } finally {
       setBusyAction(null);
     }
@@ -145,7 +147,7 @@ export function BookingRowActions({
     <>
       <Button variant="ghost" size="sm" onClick={contactHost}>
         <MessageSquare className="w-4 h-4 mr-2" />
-        Écrire à l&apos;hébergeur
+{t("book.writeHost")}
       </Button>
       {canManageStay && status === "confirmed" && (
         <>
@@ -161,7 +163,7 @@ export function BookingRowActions({
             ) : (
               <CheckCircle2 className="w-4 h-4 mr-2" />
             )}
-            Terminer le séjour
+{t("book.completeStay")}
           </Button>
           <Button
             variant="ghost"
@@ -183,11 +185,11 @@ export function BookingRowActions({
         href={`/api/bookings/${bookingId}/invoice`}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label={`Voir la facture ou le reçu de la réservation ${bookingReference}`}
+        aria-label={t("book.invoiceAria").replace("{ref}", bookingReference)}
         className="inline-flex items-center text-sm px-3 py-1.5 rounded-lg bg-transparent hover:bg-gray-100 text-gray-700 transition-all duration-200"
       >
         <FileText className="w-4 h-4 mr-2" />
-        Facture / Reçu
+{t("book.invoiceReceipt")}
       </a>
       {/* T-152 (audit n°24, A) : une réservation pending (paiement non
           finalisé, intent expiré, checkout abandonné) doit rester actionnable.
@@ -199,13 +201,13 @@ export function BookingRowActions({
           className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#1B3A6B] text-white text-sm font-medium hover:bg-[#152d54] transition"
         >
           <CreditCard className="w-4 h-4 mr-2" />
-          Payer maintenant
+{t("bookings.payNow")}
         </Link>
       )}
       {status === "pending" && paymentStatus !== "pending" && (
         <span className="inline-flex items-center text-sm px-3 py-1.5 text-amber-700 bg-amber-50 rounded-lg">
           <Loader2 className="w-4 h-4 mr-2" />
-          Paiement en cours de confirmation
+{t("reservation.paymentConfirming")}
         </span>
       )}
       {(status === "confirmed" || status === "pending") && (
@@ -221,7 +223,7 @@ export function BookingRowActions({
           ) : (
             <XCircle className="w-4 h-4 mr-2" />
           )}
-          Annuler
+{t("action.cancel")}
         </Button>
       )}
       {error && <span className="text-xs text-red-600 ml-2">{error}</span>}

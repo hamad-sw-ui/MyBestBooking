@@ -458,8 +458,8 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 cancellationPolicy={property.cancellationPolicy}
               />
 
-              {/* T-133 (A3) : contacter l'hôte avant réservation. Masqué pour
-                  l'hôte sur sa propre propriété (l'API refuse déjà ce cas). */}
+              {/* T-133 (A3): contact host before booking. Hidden for the
+                  listing host (API already refuses that case). */}
               {property.hostId !== viewer?.id && (
                 <ContactHostButton propertyId={property.id} />
               )}

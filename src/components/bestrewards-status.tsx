@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Wallet, Award, Gift, Copy, Check } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { useT } from "@/components/ui-locale-provider";
 
 /**
  * Statut BestRewards PERSONNALISÉ (T-114). Affiche le niveau réel, le
@@ -13,6 +14,7 @@ import { formatPrice } from "@/lib/utils";
  * statique dans la page ; ce composant montre l'état réel du compte.
  */
 export function BestRewardsStatus({ thresholds }: { thresholds: [number, number] }) {
+  const t = useT();
   const [state, setState] = useState<"loading" | "anon" | "ready">("loading");
   const [level, setLevel] = useState(1);
   const [bookings, setBookings] = useState(0);
@@ -53,7 +55,7 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
   if (state === "loading") {
     return (
       <div className="bg-white rounded-2xl shadow-sm p-6 text-center text-gray-400" aria-busy="true">
-        Chargement de votre statut…
+{t("br.loadingStatus")}
       </div>
     );
   }
@@ -61,15 +63,13 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
   if (state === "anon") {
     return (
       <div className="bg-white rounded-2xl shadow-sm p-8 text-center">
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Votre programme BestRewards</h2>
-        <p className="text-gray-600 mb-5">
-          Connectez-vous ou créez un compte pour suivre votre niveau, votre cagnotte et votre code de parrainage.
-        </p>
+<h2 className="text-xl font-bold text-gray-900 mb-2">{t("br.yourProgram")}</h2>
+        <p className="text-gray-600 mb-5">{t("br.anonBody")}</p>
         <Link
           href="/inscription"
           className="inline-block px-6 py-3 bg-[#FF5A5F] text-white font-semibold rounded-lg hover:bg-[#e54a4f]"
         >
-          Créer mon compte
+{t("auth.createAccountCta")}
         </Link>
       </div>
     );
@@ -102,10 +102,10 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
         </div>
         <div>
           <h2 className="text-xl font-bold text-gray-900">
-            Niveau {level} — {levelNames[level]}
+            {t("br.levelTitle").replace("{n}", String(level)).replace("{name}", levelNames[level])}
           </h2>
           <p className="text-sm text-gray-500">
-            {bookings} séjour{bookings !== 1 ? "s" : ""} terminé{bookings !== 1 ? "s" : ""}
+            {(bookings !== 1 ? t("br.staysMany") : t("br.staysOne")).replace("{n}", String(bookings))}
           </p>
         </div>
       </div>
@@ -114,7 +114,7 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
         <div className="rounded-xl border border-gray-200 p-4 flex items-center gap-3">
           <Wallet className="w-5 h-5 text-[#00A699]" aria-hidden="true" />
           <div>
-            <p className="text-xs text-gray-500">Cagnotte wallet</p>
+<p className="text-xs text-gray-500">{t("br.wallet")}</p>
             <p className="text-lg font-bold text-gray-900">{fmtWallet}</p>
           </div>
         </div>
@@ -122,13 +122,13 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
           <div className="rounded-xl border border-gray-200 p-4 flex items-center gap-3">
             <Gift className="w-5 h-5 text-[#F5A623]" aria-hidden="true" />
             <div className="flex-1">
-              <p className="text-xs text-gray-500">Code de parrainage</p>
+<p className="text-xs text-gray-500">{t("br.referral")}</p>
               <p className="text-lg font-bold tracking-wider text-gray-900">{referral}</p>
             </div>
             <button
               type="button"
               onClick={copyReferral}
-              aria-label="Copier le code de parrainage"
+aria-label={t("referral.copyAria")}
               className="p-2 rounded-lg hover:bg-gray-100"
             >
               {copied ? (
@@ -142,15 +142,13 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
       </div>
 
       {nextThreshold === null ? (
-        <p className="text-sm text-[#00A699] font-medium">
-          🎉 Vous avez atteint le plus haut niveau : vous cumulez 5% de cashback sur chaque séjour.
-        </p>
+        <p className="text-sm text-[#00A699] font-medium">{t("br.maxLevel")}</p>
       ) : (
         <div>
           <div className="flex justify-between text-sm text-gray-600 mb-1">
-            <span>Progression vers le niveau {level + 1}</span>
+<span>{t("br.progressTo").replace("{n}", String(level + 1))}</span>
             <span>
-              {bookings}/{nextThreshold} séjours
+              {t("br.staysProgress").replace("{a}", String(bookings)).replace("{b}", String(nextThreshold))}
             </span>
           </div>
           <div className="h-2 rounded-full bg-gray-100 overflow-hidden" role="progressbar"
@@ -161,7 +159,7 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
             />
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Encore {remaining} séjour{remaining !== 1 ? "s" : ""} pour passer au niveau supérieur.
+            {(remaining !== 1 ? t("br.stillMany") : t("br.stillOne")).replace("{n}", String(remaining))}
           </p>
         </div>
       )}
