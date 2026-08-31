@@ -64,8 +64,8 @@ export function hasMixedCurrencies(map: Record<string, number>): boolean {
  * par « + », chaque groupe formaté dans sa propre devise. Aucune somme
  * inter-devises n'est jamais affichée.
  */
-export function formatCurrencyBreakdown(map: Record<string, number>): string {
+export function formatCurrencyBreakdown(map: Record<string, number>, locale: string = "fr-FR"): string {
   const currencies = currenciesOf(map);
-  if (currencies.length === 0) return formatPrice(0, "EUR");
-  return currencies.map((currency) => formatPrice(map[currency], currency)).join(" + ");
+  if (currencies.length === 0) return formatPrice(0, "EUR", locale);
+  return currencies.map((currency) => formatPrice(map[currency], currency, locale)).join(" + ");
 }

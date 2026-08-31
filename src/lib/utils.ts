@@ -5,9 +5,13 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatPrice(amount: number | string, currency: string = "EUR"): string {
+export function formatPrice(
+  amount: number | string,
+  currency: string = "EUR",
+  locale: string = "fr-FR",
+): string {
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat("fr-FR", {
+  return new Intl.NumberFormat(intlLocale(locale), {
     style: "currency",
     currency,
   }).format(numAmount);

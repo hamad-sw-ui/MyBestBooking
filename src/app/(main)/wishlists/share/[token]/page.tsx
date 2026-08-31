@@ -9,6 +9,7 @@ import { MapPin, Star } from "lucide-react";
 // un statut HTTP 404 au lieu du 200 de flux streaming).
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { countryLabel } from "@/lib/country-label";
 
 interface SharedItem {
   property: {

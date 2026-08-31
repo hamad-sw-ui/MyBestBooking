@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { MapPin, Heart, Loader2 } from "lucide-react";
-import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
+import { formatPrice, getPropertyTypeLabel, intlLocale } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { Badge } from "@/components/ui/badge";
 import type { PublicPropertyCard } from "@/lib/public-property";
 import { convertAmount, formatMoney } from "@/lib/i18n";
@@ -46,10 +47,10 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
     if (!showPrice) return null;
     const numeric = typeof rawPrice === "number" ? rawPrice : parseFloat(rawPrice);
     if (!displayCurrency || displayCurrency === sourceCurrency.toUpperCase()) {
-      return formatPrice(numeric, sourceCurrency);
+      return formatPrice(numeric, sourceCurrency, locale);
     }
     // Taux figés V1 (i18n RATES_FROM_EUR) : indique une conversion approximative.
-    return formatMoney(convertAmount(numeric, sourceCurrency, displayCurrency), displayCurrency);
+    return formatMoney(convertAmount(numeric, sourceCurrency, displayCurrency), displayCurrency, intlLocale(locale));
   })();
   const isConverted = showPrice && Boolean(displayCurrency) && displayCurrency !== sourceCurrency.toUpperCase();
 

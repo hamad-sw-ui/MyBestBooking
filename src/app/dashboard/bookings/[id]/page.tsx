@@ -8,6 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { 
   ArrowLeft, Calendar, User, Mail, Phone, MapPin, 
   CreditCard, MessageSquare, Download, Clock, Star,
@@ -174,7 +175,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                   <h3 className="font-semibold text-gray-900">{property?.name}</h3>
                   <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                     <MapPin className="w-4 h-4" />
-                    {property?.city}, {property?.country}
+                    {property?.city}, {countryLabel(property?.country, t)}
                   </p>
                   <div className="mt-2">
                     <Badge variant="info">{room?.name}</Badge>
@@ -303,22 +304,22 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">{t("host.roomNights").replace("{n}", String(booking.numNights))}</span>
-                <span>{formatPrice(booking.subtotal, booking.currency)}</span>
+                <span>{formatPrice(booking.subtotal, booking.currency, locale)}</span>
               </div>
               <div className="flex justify-between text-sm">
 <span className="text-gray-600">{t("reservation.taxesFees")}</span>
-                <span>{formatPrice(booking.taxes || "0", booking.currency)}</span>
+                <span>{formatPrice(booking.taxes || "0", booking.currency, locale)}</span>
               </div>
               {parseFloat(booking.discount || "0") > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
 <span>{t("host.discount")}</span>
-                  <span>-{formatPrice(booking.discount || "0", booking.currency)}</span>
+                  <span>-{formatPrice(booking.discount || "0", booking.currency, locale)}</span>
                 </div>
               )}
               <hr />
               <div className="flex justify-between font-bold text-lg">
 <span>{t("bookings.total")}</span>
-                <span className="text-[#1B3A6B]">{formatPrice(booking.total, booking.currency)}</span>
+                <span className="text-[#1B3A6B]">{formatPrice(booking.total, booking.currency, locale)}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <CreditCard className="w-4 h-4 text-gray-400" />
@@ -334,12 +335,12 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                   <div className="flex justify-between">
                     <span className="text-gray-600">{t("host.commission").replace("{pct}", String(booking.commissionRate))}</span>
                     <span className="text-green-600 font-medium">
-                      {formatPrice(booking.commissionAmount, booking.currency)}
+                      {formatPrice(booking.commissionAmount, booking.currency, locale)}
                     </span>
                   </div>
                   <div className="flex justify-between">
 <span className="text-gray-600">{t("host.netHost")}</span>
-                    <span>{formatPrice(booking.netToHost, booking.currency)}</span>
+                    <span>{formatPrice(booking.netToHost, booking.currency, locale)}</span>
                   </div>
                 </div>
               </CardFooter>

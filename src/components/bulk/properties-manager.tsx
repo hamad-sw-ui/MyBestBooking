@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { getPropertyTypeLabel, getStatusBadgeColor } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { Building2, MapPin, Star, Pencil, Eye } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
@@ -288,7 +289,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-1 text-sm text-gray-600">
                         <MapPin className="w-4 h-4" />
-                        {property.city}, {property.country}
+                        {property.city}, {countryLabel(property.country, t)}
                       </div>
                     </td>
                     <td className="px-4 py-4">

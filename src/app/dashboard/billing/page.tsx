@@ -162,7 +162,7 @@ export default async function BillingPage() {
 <Badge className="bg-white/20 text-white">{t("billing.thisMonth")}</Badge>
             </div>
 <p className="text-white/70 text-sm">{t("billing.netRevenue")}</p>
-            <p className="text-3xl font-bold mt-1">{formatCurrencyBreakdown(billing.thisMonth.netByCurrency)}</p>
+            <p className="text-3xl font-bold mt-1">{formatCurrencyBreakdown(billing.thisMonth.netByCurrency, locale)}</p>
             <p className="text-white/60 text-sm mt-2">
 {(billing.thisMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.thisMonth.bookings))}
             </p>
@@ -176,7 +176,7 @@ export default async function BillingPage() {
 <span className="text-sm text-gray-500">{t("billing.lastMonth")}</span>
             </div>
 <p className="text-gray-500 text-sm">{t("billing.netRevenue")}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.lastMonth.netByCurrency)}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.lastMonth.netByCurrency, locale)}</p>
             <p className="text-gray-500 text-sm mt-2">
 {(billing.lastMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.lastMonth.bookings))}
             </p>
@@ -187,10 +187,10 @@ export default async function BillingPage() {
           <CardContent>
             <div className="flex items-center justify-between mb-4">
               <Calendar className="w-8 h-8 text-[#F5A623]" />
-              <span className="text-sm text-gray-500">Total</span>
+              <span className="text-sm text-gray-500">{t("bookings.total")}</span>
             </div>
 <p className="text-gray-500 text-sm">{t("billing.cumulated")}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.total.netByCurrency)}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.total.netByCurrency, locale)}</p>
             <p className="text-gray-500 text-sm mt-2">
 {(billing.total.bookings !== 1 ? t("billing.bookingsTotalMany") : t("billing.bookingsTotal")).replace("{n}", String(billing.total.bookings))}
             </p>
@@ -234,7 +234,7 @@ export default async function BillingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">{formatPrice(invoice.net, "EUR")}</p>
+                      <p className="font-bold text-gray-900">{formatPrice(invoice.net, "EUR", locale)}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {invoice.status === "paid" ? (
                           <Badge variant="success">
@@ -283,9 +283,9 @@ export default async function BillingPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-600">+{formatPrice(booking.netToHost, booking.currency)}</p>
+                      <p className="font-bold text-green-600">+{formatPrice(booking.netToHost, booking.currency, locale)}</p>
                       <p className="text-xs text-gray-400">
-{t("billing.commission").replace("{amount}", formatPrice(booking.commissionAmount, booking.currency))}
+{t("billing.commission").replace("{amount}", formatPrice(booking.commissionAmount, booking.currency, locale))}
                       </p>
                     </div>
                   </div>

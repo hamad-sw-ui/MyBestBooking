@@ -316,7 +316,7 @@ export default async function AnalyticsPage() {
                     key={i}
                     className="flex-1 bg-[#1B3A6B] rounded-t transition-all hover:bg-[#152d54]"
                     style={{ height: `${Math.max(height, 2)}%` }}
-                    title={`${new Date(day.date).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR")}: ${formatPrice(day.revenue, day.currency)}`}
+                    title={`${new Date(day.date).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR")}: ${formatPrice(day.revenue, day.currency, locale)}`}
                   />
                 );
               })}

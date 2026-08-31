@@ -28,14 +28,14 @@ export function RowDeleteButton(props: {
   disabled?: boolean;
   onDeleted?: () => void;
   /** Une property conserve son historique : l’action est un archivage. */
-  verb?: "delete" | "archive" | "Supprimer" | "Archiver";
+  verb?: "delete" | "archive";
 }) {
   const { entity, id, label, disabled, onDeleted, verb = "delete" } = props;
   const t = useT();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const isArchive = verb === "archive" || verb === "Archiver";
+  const isArchive = verb === "archive";
   const verbLabel = isArchive ? t("bulk.archive") : t("bulk.delete");
 
   async function handleClick() {

@@ -38,6 +38,10 @@ describe("formatPrice", () => {
     expect(eur).toMatch(/€/);
     expect(usd).not.toBe(eur);
   });
+  it("respecte la locale EN (point décimal)", () => {
+    expect(formatPrice("49.99", "EUR", "en")).toMatch(/49\.99/);
+    expect(formatPrice("49.99", "EUR", "en")).not.toMatch(/49,99/);
+  });
 });
 
 describe("formatDate / formatDateShort", () => {

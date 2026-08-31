@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { normalizeDisplayCurrency } from "@/lib/i18n";
 import { isUiLocale } from "@/lib/ui-strings";
-import { UI_LANGUAGE_STORAGE_KEY } from "@/lib/ui-language";
+import { UI_LANGUAGE_STORAGE_KEY, readUiLanguageCookie } from "@/lib/ui-language";
 
 export { UI_LANGUAGE_STORAGE_KEY };
 
@@ -90,12 +90,20 @@ function load(): Promise<Resolved> {
       if (userLanguage) {
         platformLanguage = userLanguage;
       } else {
+        let stored: string | null = null;
         try {
-          const stored = window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
-          if (stored && isUiLocale(stored)) platformLanguage = stored;
+          stored = window.localStorage.getItem(UI_LANGUAGE_STORAGE_KEY);
         } catch {
-          // localStorage indisponible : défaut plateforme
+          // localStorage indisponible
         }
+        if (!stored) {
+          try {
+            stored = readUiLanguageCookie(document.cookie);
+          } catch {
+            // document.cookie indisponible
+          }
+        }
+        if (stored && isUiLocale(stored)) platformLanguage = stored;
       }
       // T-158 : même priorité pour la devise — le sélecteur public de la
       // recherche (anonyme) persiste en localStorage ; un compte connecté

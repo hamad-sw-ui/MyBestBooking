@@ -173,8 +173,8 @@ export default async function DashboardPage() {
     },
     {
       title: t("dash.revenue"),
-      value: formatPrice(stats.revenue.total),
-      subValue: t("dash.revenueMonth").replace("{amount}", formatPrice(stats.revenue.recent)),
+      value: formatPrice(stats.revenue.total, "EUR", locale),
+      subValue: t("dash.revenueMonth").replace("{amount}", formatPrice(stats.revenue.recent, "EUR", locale)),
       icon: DollarSign,
       color: "bg-[#F5A623]",
       href: "/dashboard/billing",
@@ -273,7 +273,7 @@ export default async function DashboardPage() {
                         {formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)} → {formatDate(booking.checkOut, { day: "numeric", month: "short" }, locale)}
                       </td>
                       <td className="py-3 font-medium">
-                        {formatPrice(booking.total, booking.currency)}
+                        {formatPrice(booking.total, booking.currency, locale)}
                       </td>
                       <td className="py-3">
                         <Badge className={getStatusBadgeColor(booking.status)}>

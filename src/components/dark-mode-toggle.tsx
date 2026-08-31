@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
-import { makeT } from "@/lib/ui-strings";
+import { useT } from "@/components/ui-locale-provider";
 
 /**
  * <DarkModeToggle /> (T-029) — bascule .dark sur <html>, persistée
@@ -17,7 +17,7 @@ export function DarkModeToggle({
   initialLanguage?: string | null;
 }) {
   const [isDark, setIsDark] = useState(false);
-  const t = makeT(initialLanguage);
+  const t = useT();
 
   useEffect(() => {
     // Défère le setState pour éviter le cascading render warning.

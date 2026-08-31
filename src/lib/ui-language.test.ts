@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { langInitInlineScript, UI_LANGUAGE_COOKIE } from "./ui-language";
+import {
+  langInitInlineScript,
+  readUiLanguageCookie,
+  UI_LANGUAGE_COOKIE,
+  UI_LANGUAGE_COOKIE_ALT,
+} from "./ui-language";
 
 describe("langInitInlineScript", () => {
   it("produit du JS parseable (accolades équilibrées)", () => {
@@ -13,10 +18,24 @@ describe("langInitInlineScript", () => {
     expect(src).toContain("if(!hasAccount)");
   });
 
-  it("recopie localStorage → cookie pour un visiteur anonyme", () => {
+  it("recopie localStorage → cookies (historique + RFC) pour un visiteur anonyme", () => {
     const src = langInitInlineScript(false);
     expect(src).toContain("hasAccount=false");
     expect(src).toContain(`document.cookie='${UI_LANGUAGE_COOKIE}='`);
+    expect(src).toContain(`document.cookie='${UI_LANGUAGE_COOKIE_ALT}='`);
     expect(src).toContain('localStorage.getItem("mybb:ui-language")');
+    expect(src).toContain("SameSite=");
+  });
+});
+
+describe("readUiLanguageCookie", () => {
+  it("lit le cookie RFC sans deux-points", () => {
+    expect(readUiLanguageCookie("foo=1; mybb-ui-language=en; bar=2")).toBe("en");
+  });
+  it("lit le cookie historique avec deux-points", () => {
+    expect(readUiLanguageCookie("mybb:ui-language=fr")).toBe("fr");
+  });
+  it("ignore une valeur inconnue", () => {
+    expect(readUiLanguageCookie("mybb-ui-language=de")).toBeNull();
   });
 });

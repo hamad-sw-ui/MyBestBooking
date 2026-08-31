@@ -258,7 +258,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {walletAmount !== null && (
         <div className="bg-amber-50 border-b border-amber-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-sm text-amber-900">
-            💰 {t("search.walletBanner").replace("{amount}", formatPrice(walletAmount, "EUR"))}
+            💰 {t("search.walletBanner").replace("{amount}", formatPrice(walletAmount, "EUR", locale))}
           </div>
         </div>
       )}

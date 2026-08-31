@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { Calendar, MapPin, Star, Clock } from "lucide-react";
 import Link from "next/link";
 import { BookingRowActions } from "@/components/booking-row-actions";
@@ -129,7 +130,7 @@ export default async function MyBookingsPage() {
                               </h3>
                               <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                                 <MapPin className="w-4 h-4" />
-                                {property?.city}, {property?.country}
+                                {property?.city}, {countryLabel(property?.country, t)}
                               </p>
                             </div>
                             <div className="text-right">
@@ -155,7 +156,7 @@ export default async function MyBookingsPage() {
                             </div>
                             <div>
                               <p className="text-xs text-gray-500">{t("bookings.total")}</p>
-                              <p className="font-bold text-[#1B3A6B]">{formatPrice(booking.total, booking.currency)}</p>
+                              <p className="font-bold text-[#1B3A6B]">{formatPrice(booking.total, booking.currency, locale)}</p>
                             </div>
                           </div>
 
@@ -214,14 +215,14 @@ export default async function MyBookingsPage() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="font-medium">{formatPrice(booking.total, booking.currency)}</p>
+                              <p className="font-medium">{formatPrice(booking.total, booking.currency, locale)}</p>
                               <p className="text-sm text-gray-500">{booking.numNights} {booking.numNights === 1 ? t("bookings.nights") : t("bookings.nightsPlural")}</p>
                             </div>
                           </div>
                           
                           {booking.status === "cancelled" && (
                             <div className="mt-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-900">
-                              {t("bookings.fee")} : {formatPrice(booking.cancellationFee ?? "0", booking.currency)} · {t("bookings.refund")} : {formatPrice(booking.refundAmount ?? "0", booking.currency)} ({booking.refundStatus === "refunded" ? t("bookings.refundDone") : booking.refundStatus === "pending" ? t("bookings.refundPending") : t("bookings.refundNone")})
+                              {t("bookings.fee")} : {formatPrice(booking.cancellationFee ?? "0", booking.currency, locale)} · {t("bookings.refund")} : {formatPrice(booking.refundAmount ?? "0", booking.currency, locale)} ({booking.refundStatus === "refunded" ? t("bookings.refundDone") : booking.refundStatus === "pending" ? t("bookings.refundPending") : t("bookings.refundNone")})
                             </div>
                           )}
                           {/* T-153 (audit n°25, G) : séjour passé mais non

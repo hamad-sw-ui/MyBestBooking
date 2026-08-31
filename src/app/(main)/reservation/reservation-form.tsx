@@ -4,12 +4,13 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT, isUiLocale } from "@/lib/ui-strings";
+import { isUiLocale } from "@/lib/ui-strings";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 // T-154c (audit n°26, P2-5) : libellé d'annulation dérivé de la politique
 // réelle du bien (+ grille serveur), plus jamais « gratuit » en dur.
 import { cancellationPolicyLabel } from "@/lib/cancellation-label";
 import { formatPrice } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { applyWalletToTotal } from "@/lib/wallet-currency";
 import { StripePaymentForm } from "@/components/stripe-payment-form";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
@@ -701,7 +702,7 @@ function ReservationPageInner() {
                     </Button>
                     <Button onClick={handleSubmit} loading={submitting} size="lg" variant="secondary">
                       <Lock className="w-4 h-4 mr-2" />
-                      {t("reservation.continuePayment")} {total > 0 ? formatPrice(total, roomCurrency) : ""}
+                      {t("reservation.continuePayment")} {total > 0 ? formatPrice(total, roomCurrency, uiLocale) : ""}
                     </Button>
                   </CardFooter>
                 )}
@@ -730,7 +731,7 @@ function ReservationPageInner() {
                     <div className="mt-4 space-y-1 text-sm text-gray-600">
                       <p>🏨 {property?.name}, {property?.city}</p>
                       <p>📅 {formData.checkIn} → {formData.checkOut}</p>
-                      <p>💰 {confirmation.paymentPending ? t("reservation.amountToConfirm") : t("reservation.totalPaid")} : {formatPrice(confirmation.total, roomCurrency)} {t("reservation.allInclusive")}</p>
+                      <p>💰 {confirmation.paymentPending ? t("reservation.amountToConfirm") : t("reservation.totalPaid")} : {formatPrice(confirmation.total, roomCurrency, uiLocale)} {t("reservation.allInclusive")}</p>
                     </div>
                   </div>
 
@@ -783,7 +784,7 @@ function ReservationPageInner() {
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                     <MapPin className="w-3.5 h-3.5" />
-                    {property?.city}, {property?.country}
+                    {property?.city}, {countryLabel(property?.country, t)}
                   </p>
                   {property?.averageRating && (
                     <div className="flex items-center gap-1 mt-2">
@@ -814,29 +815,29 @@ function ReservationPageInner() {
                           {t("reservation.nightsLine")
                             .replace("{n}", String(numNights))
                             .replace("{unit}", t(numNights > 1 ? "reservation.nightsPlural" : "reservation.nights"))
-                            .replace("{price}", formatPrice(pricePerNight, roomCurrency))}
+                            .replace("{price}", formatPrice(pricePerNight, roomCurrency, uiLocale))}
                         </span>
                         {/* T-146 : on affiche ici le sous-total de BASE (nuits × tarif),
                             puis la remise du tarif choisi sur la ligne verte. Auparavant
                             on affichait `subtotal` (déjà remisé) : la remise était alors
                             comptée deux fois dans le détail, même si le Total final et le
                             calcul serveur restaient justes. */}
-                        <span>{formatPrice(baseSubtotal, roomCurrency)}</span>
+                        <span>{formatPrice(baseSubtotal, roomCurrency, uiLocale)}</span>
                       </div>
                       {selectedRatePlan && (
                         <div className="flex justify-between text-sm mb-2 text-green-700">
                           <span>{selectedRatePlan.name}</span>
-                          <span>−{formatPrice(ratePlanDiscount, roomCurrency)}</span>
+                          <span>−{formatPrice(ratePlanDiscount, roomCurrency, uiLocale)}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-600">{t("reservation.taxesFees")}</span>
-                        <span>{formatPrice(taxes, roomCurrency)}</span>
+                        <span>{formatPrice(taxes, roomCurrency, uiLocale)}</span>
                       </div>
                       {promo && (
                         <div className="flex justify-between text-sm mb-2 text-green-700">
                           <span>{t("reservation.promoCode").replace("{code}", promo.code)}</span>
-                          <span>−{formatPrice(promo.discount, roomCurrency)}</span>
+                          <span>−{formatPrice(promo.discount, roomCurrency, uiLocale)}</span>
                         </div>
                       )}
                       <div className="my-3">
@@ -849,7 +850,7 @@ function ReservationPageInner() {
                       {bestrewardsAmount > 0 && (
                         <div className="flex justify-between text-sm mb-2 text-emerald-700">
                           <span>💎 BestRewards ({bestrewardsPercent} %)</span>
-                          <span>−{formatPrice(bestrewardsAmount, roomCurrency)}</span>
+                          <span>−{formatPrice(bestrewardsAmount, roomCurrency, uiLocale)}</span>
                         </div>
                       )}
                       {/* T-030 : wallet BestRewards utilisable au checkout */}
@@ -863,7 +864,7 @@ function ReservationPageInner() {
                           />
                           <div className="text-xs">
                             <p className="font-medium text-amber-900">
-                              💰 {t("reservation.walletAvailable")} ({formatPrice(walletBalance, "EUR")} {t("reservation.walletAvail")})
+                              💰 {t("reservation.walletAvailable")} ({formatPrice(walletBalance, "EUR", uiLocale)} {t("reservation.walletAvail")})
                             </p>
                             <p className="text-amber-700">
                               {t("reservation.walletReductionNote")}
@@ -874,14 +875,14 @@ function ReservationPageInner() {
                       {promo && useWalletCredits && walletBalance > 0 && (
                         <div className="flex justify-between text-sm mb-2 text-amber-800">
                           <span>{t("reservation.walletLabel")}</span>
-                          <span>−{formatPrice(walletDisplay.walletUsed, roomCurrency)}</span>
+                          <span>−{formatPrice(walletDisplay.walletUsed, roomCurrency, uiLocale)}</span>
                         </div>
                       )}
                       <hr className="my-3" />
                       <div className="flex justify-between font-bold text-lg">
                         <span>{t("reservation.totalLabel")}</span>
                         <span className="text-[#1B3A6B]">
-                          {formatPrice(walletDisplay.totalAfter, roomCurrency)}
+                          {formatPrice(walletDisplay.totalAfter, roomCurrency, uiLocale)}
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
@@ -916,8 +917,7 @@ function ReservationPageInner() {
 // T-005 (BUG-007) : useSearchParams doit être enveloppé dans <Suspense>
 // depuis Next.js 15/16 pour permettre le rendu statique / streaming.
 export function ReservationView({ initialLanguage = null }: { initialLanguage?: string | null }) {
-  // T-162 : langue SSR pour le fallback (serveur → pas de flash FR en EN).
-  const t = makeT(initialLanguage === "en" ? "en" : "fr");
+  const t = useT();
   return (
     <Suspense fallback={<div className="p-8 text-center text-gray-500">{t("reservation.loading")}</div>}>
       <ReservationPageInner />

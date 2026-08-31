@@ -5,17 +5,20 @@ import { db } from "@/db";
 import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
-import { formatPrice, formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+import { formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { safeJsonForScript } from "@/lib/safe-json-ld";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   // T-158 (audit n°29) : métadonnées localisées (le <title> restait FR pour
   // un visiteur anonyme en EN — le SSR ne connaissait pas sa langue).
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   const [p] = await db.select().from(properties).where(and(eq(properties.slug, slug), eq(properties.status, "active"))).limit(1);
   if (!p) return { title: t("meta.notFound") };
-  const desc = `${p.name} à ${p.city}, ${p.country}. ${p.description ? p.description.slice(0, 140) : t("meta.bookBestPrice")}`;
+  const place = `${p.city}, ${countryLabel(p.country, t)}`;
+  const desc = `${p.name} — ${place}. ${p.description ? p.description.slice(0, 140) : t("meta.bookBestPrice")}`;
   return {
     title: p.name,
     description: desc,
@@ -207,7 +210,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
             <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
               <span className="flex items-center gap-1">
                 <MapPin className="w-4 h-4" />
-                {property.addressLine && `${property.addressLine}, `}{property.city}, {property.country}
+                {property.addressLine && `${property.addressLine}, `}{property.city}, {countryLabel(property.country, t)}
               </span>
               {rating && (
                 <span className="flex items-center gap-1">
