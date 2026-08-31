@@ -1,8 +1,7 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useEffect, useState } from "react";
-import { makeT } from "@/lib/ui-strings";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
 
 /**
  * <UnreadMessagesBadge /> (T-130) — pastille « messages non lus » pour la
@@ -14,8 +13,7 @@ import { useDisplayPreferences } from "@/lib/use-display-currency";
  */
 export function UnreadMessagesBadge({ viewerRole, userId }: { viewerRole?: string; userId?: string }) {
   const [count, setCount] = useState(0);
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
 
   useEffect(() => {
     let cancelled = false;

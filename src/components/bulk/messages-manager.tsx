@@ -1,6 +1,6 @@
 "use client";
 
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { useMemo, useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -43,6 +43,7 @@ interface Props {
 
 export function MessagesManager({ conversations }: Props) {
   const t = useT();
+  const locale = useUiLocale();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const searchRef = useRef<HTMLInputElement>(null);
@@ -107,9 +108,9 @@ export function MessagesManager({ conversations }: Props) {
             className="text-2xl font-bold text-gray-900"
             style={{ fontFamily: "'Poppins', sans-serif" }}
           >
-            Messages
+            {t("dash.messages")}
           </h1>
-          <p className="text-gray-600 mt-1">Communiquez avec vos voyageurs</p>
+          <p className="text-gray-600 mt-1">{t("bulk.talkTravelers")}</p>
         </div>
       </div>
 
@@ -133,7 +134,7 @@ export function MessagesManager({ conversations }: Props) {
               <button
                 type="button"
                 onClick={() => setQ("")}
-                aria-label="Effacer la recherche"
+                aria-label={t("bulk.clearSearch")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
               >
                 <X className="w-4 h-4 text-gray-500" />
@@ -143,16 +144,16 @@ export function MessagesManager({ conversations }: Props) {
         </div>
         <div className="min-w-[160px]">
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Filtrer
+            {t("bulk.filter")}
           </label>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
             className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A6B] focus:border-transparent outline-none bg-white"
           >
-            <option value="all">Toutes</option>
-            <option value="unread">Non lues</option>
-            <option value="read">Lues</option>
+            <option value="all">{t("bulk.allFeminine")}</option>
+            <option value="unread">{t("bulk.unreadFeminine")}</option>
+            <option value="read">{t("bulk.readFeminine")}</option>
           </select>
         </div>
       </div>
@@ -161,13 +162,13 @@ export function MessagesManager({ conversations }: Props) {
       <div className="grid grid-cols-3 gap-4 mb-6">
         <Card padding="sm">
           <div className="p-4">
-            <p className="text-sm text-gray-500">Non lus</p>
+            <p className="text-sm text-gray-500">{t("bulk.unreadMasculine")}</p>
             <p className="text-2xl font-bold text-[#FF5A5F]">{stats.unread}</p>
           </div>
         </Card>
         <Card padding="sm">
           <div className="p-4">
-            <p className="text-sm text-gray-500">Total conversations</p>
+            <p className="text-sm text-gray-500">{t("bulk.totalConversations")}</p>
             <p className="text-2xl font-bold">{stats.total}</p>
           </div>
         </Card>
@@ -189,7 +190,7 @@ export function MessagesManager({ conversations }: Props) {
         {filtered.length === 0 ? (
           <EmptyState
             icon={<MessageSquare className="w-8 h-8" />}
-            title="Aucune conversation"
+            title={t("bulk.noConversations")}
             description={t("bulk.noMessagesDesc")}
             className="py-16"
           />
@@ -204,7 +205,7 @@ export function MessagesManager({ conversations }: Props) {
                   className={`flex items-center gap-4 p-4 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-[#1B3A6B] ${
                     unread ? "bg-blue-50/50" : ""
                   }`}
-                  aria-label={`Ouvrir la conversation avec ${guest?.firstName ?? "le voyageur"}`}
+                  aria-label={t("bulk.openConvWith").replace("{name}", guest?.firstName ?? t("bulk.travelerFallback"))}
                 >
                   <div className="w-10 h-10 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white font-medium flex-shrink-0">
                     {guest?.firstName?.charAt(0) ?? "?"}
@@ -236,7 +237,7 @@ export function MessagesManager({ conversations }: Props) {
                         formatDate(conversation.lastMessageAt, {
                           day: "numeric",
                           month: "short",
-                        })}
+                        }, locale)}
                     </p>
                   </div>
                 </Link>

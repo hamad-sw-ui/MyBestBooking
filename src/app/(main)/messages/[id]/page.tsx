@@ -41,7 +41,8 @@ export default async function ConversationPage({
   const isGuest = row.conv.userId === user.id;
   const isHost = row.property?.hostId === user.id;
   if (!isGuest && !isHost) redirect("/messages");
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
 
   const msgs = await db
     .select()
@@ -99,7 +100,7 @@ export default async function ConversationPage({
                 <p className="whitespace-pre-wrap text-sm">{m.content}</p>
                 {(m.attachmentKey || m.attachmentUrl) && <MessageAttachment messageId={m.id} legacyUrl={m.attachmentUrl} />}
                 <p className={`text-[10px] mt-1 ${mine ? "text-white/70" : "text-gray-500"}`}>
-                  {formatDate(m.createdAt)}
+                  {formatDate(m.createdAt, undefined, locale)}
                 </p>
               </div>
             </div>

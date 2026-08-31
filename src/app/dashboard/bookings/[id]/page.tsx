@@ -78,7 +78,8 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   }
 
   const { booking, property, room, guest, review } = data;
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
 
   // T-130 : l'hôte du bien (ou l'admin) peut clôturer un séjour / marquer un
   // no-show. Le voyageur propriétaire ne voit pas ces actions.
@@ -113,7 +114,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
       completed: booking.paymentStatus === "paid" 
     },
     { 
-      label: "Check-in", 
+      label: t("book.checkIn"), 
       date: new Date(booking.checkIn), 
       icon: CheckCircle, 
       completed: booking.status === "completed" || new Date(booking.checkIn) < new Date()
@@ -143,7 +144,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
 {t("host.bookingTitle").replace("{ref}", booking.bookingReference)}
             </h1>
             <p className="text-gray-600 mt-1">
-{t("host.createdOn").replace("{date}", formatDate(booking.createdAt))}
+{t("host.createdOn").replace("{date}", formatDate(booking.createdAt, undefined, locale))}
             </p>
           </div>
           <Badge className={`${getStatusBadgeColor(booking.status)} text-base px-4 py-1`}>
@@ -192,7 +193,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
 <p className="text-sm text-gray-500">{t("book.checkIn")}</p>
-                  <p className="text-lg font-bold">{formatDate(booking.checkIn, { day: "numeric", month: "short" })}</p>
+                  <p className="text-lg font-bold">{formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)}</p>
                   <p className="text-sm text-gray-500">{t("host.fromTime").replace("{time}", property?.checkInFrom || "14:00")}</p>
                 </div>
                 <div className="text-center p-4 bg-[#1B3A6B] text-white rounded-lg">
@@ -202,7 +203,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
 <p className="text-sm text-gray-500">{t("book.checkOut")}</p>
-                  <p className="text-lg font-bold">{formatDate(booking.checkOut, { day: "numeric", month: "short" })}</p>
+                  <p className="text-lg font-bold">{formatDate(booking.checkOut, { day: "numeric", month: "short" }, locale)}</p>
                   <p className="text-sm text-gray-500">{t("host.beforeTime").replace("{time}", property?.checkOutUntil || "11:00")}</p>
                 </div>
               </div>
@@ -274,7 +275,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                     {parseFloat(review.overallRating).toFixed(1)}
                   </div>
                   <span className="text-gray-600">
-{t("host.publishedOn").replace("{date}", formatDate(review.createdAt))}
+{t("host.publishedOn").replace("{date}", formatDate(review.createdAt, undefined, locale))}
                   </span>
                 </div>
                 {review.positiveComment && (
@@ -366,7 +367,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                         {item.label}
                       </p>
                       <p className="text-xs text-gray-500">
-                        {formatDate(item.date, { day: "numeric", month: "short", year: "numeric" })}
+                        {formatDate(item.date, { day: "numeric", month: "short", year: "numeric" }, locale)}
                       </p>
                     </div>
                   </div>

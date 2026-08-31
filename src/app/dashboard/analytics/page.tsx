@@ -200,7 +200,8 @@ export default async function AnalyticsPage() {
 
   const isAdmin = user.role === "admin";
   const analytics = await getAnalytics(user.id, isAdmin);
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
 
   if (!analytics) {
     return (

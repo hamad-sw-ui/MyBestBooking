@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,8 +8,6 @@ import { Bell, BellRing, Loader2 } from "lucide-react";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
 // T-158 (audit n°29) : libellés localisés (fiche publique).
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
 
 interface Props {
   propertyId: string;
@@ -27,8 +26,7 @@ interface Props {
  */
 export function PriceAlertButton({ propertyId, currency = "EUR", defaultMax = 100, checkIn, checkOut, numAdults, numChildren }: Props) {
   const { addToast } = useToast();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
   const [open, setOpen] = useState(false);
   const contextual = Boolean(checkIn && checkOut && Number.isInteger(numAdults) && Number.isInteger(numChildren));
   const [maxPrice, setMaxPrice] = useState(String(defaultMax));

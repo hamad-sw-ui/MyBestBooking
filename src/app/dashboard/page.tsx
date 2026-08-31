@@ -151,7 +151,8 @@ export default async function DashboardPage() {
   const isAdmin = user.role === "admin";
   const stats = await getDashboardStats(user.id, isAdmin);
   const recentBookings = await getRecentBookings(user.id, isAdmin);
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
 
   const statCards = [
     {
@@ -269,7 +270,7 @@ export default async function DashboardPage() {
                         </div>
                       </td>
                       <td className="py-3 text-sm">
-                        {formatDate(booking.checkIn, { day: "numeric", month: "short" })} → {formatDate(booking.checkOut, { day: "numeric", month: "short" })}
+                        {formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)} → {formatDate(booking.checkOut, { day: "numeric", month: "short" }, locale)}
                       </td>
                       <td className="py-3 font-medium">
                         {formatPrice(booking.total, booking.currency)}

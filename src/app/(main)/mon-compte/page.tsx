@@ -12,8 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
+import { useT } from "@/components/ui-locale-provider";
 import { formatPrice } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { ChangePasswordForm } from "@/components/change-password-form";
@@ -42,8 +41,7 @@ interface UserData {
 
 export default function MyAccountPage() {
   const router = useRouter();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

@@ -1,9 +1,8 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useState } from "react";
 import { ThumbsUp } from "lucide-react";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
 
 export function ReviewHelpfulButton({
   reviewId,
@@ -18,8 +17,7 @@ export function ReviewHelpfulButton({
   const [count, setCount] = useState(initialCount ?? 0);
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   // T-158 (audit n°29) : libellés localisés (la fiche est publique).
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
 
   async function vote() {
     if (state !== "idle") return;
@@ -27,7 +25,7 @@ export function ReviewHelpfulButton({
     try {
       const response = await fetch(`/api/reviews/${reviewId}/helpful`, { method: "POST" });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? "Erreur");
+      if (!response.ok) throw new Error(body.error ?? t("settings.error"));
       setCount(body.review?.helpfulCount ?? count + 1);
       setState("done");
     } catch {

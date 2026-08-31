@@ -1,6 +1,6 @@
 "use client";
 
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -53,6 +53,7 @@ interface Props {
 
 export function ReviewsManager({ reviews, isAdmin }: Props) {
   const t = useT();
+  const locale = useUiLocale();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -250,7 +251,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                               )}
                               {r.user?.country && ` · ${r.user.country}`}
                               {` · ${new Date(r.review.createdAt).toLocaleDateString(
-                                "fr-FR",
+                                locale === "en" ? "en-GB" : "fr-FR",
                                 { day: "numeric", month: "short", year: "numeric" },
                               )}`}
                               {st !== "approved" && (

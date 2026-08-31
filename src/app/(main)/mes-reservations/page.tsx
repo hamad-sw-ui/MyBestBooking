@@ -48,7 +48,8 @@ async function getMyBookings(userId: string) {
 
 export default async function MyBookingsPage() {
   const user = await getCurrentUser();
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
 
   if (!user) {
     redirect("/connexion");
@@ -142,11 +143,11 @@ export default async function MyBookingsPage() {
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-100">
                             <div>
                               <p className="text-xs text-gray-500">{t("book.checkIn")}</p>
-                              <p className="font-medium">{formatDate(booking.checkIn, { day: "numeric", month: "short" })}</p>
+                              <p className="font-medium">{formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)}</p>
                             </div>
                             <div>
                               <p className="text-xs text-gray-500">{t("book.checkOut")}</p>
-                              <p className="font-medium">{formatDate(booking.checkOut, { day: "numeric", month: "short" })}</p>
+                              <p className="font-medium">{formatDate(booking.checkOut, { day: "numeric", month: "short" }, locale)}</p>
                             </div>
                             <div>
                               <p className="text-xs text-gray-500">{t("bookings.room")}</p>
@@ -184,7 +185,7 @@ export default async function MyBookingsPage() {
             {pastBookings.length > 0 && (
               <div>
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  Passées ({pastBookings.length})
+                  {t("bookings.pastCount").replace("{n}", String(pastBookings.length))}
                 </h2>
                 <div className="space-y-4">
                   {pastBookings.map(({ booking, property, room, review }) => (
@@ -209,7 +210,7 @@ export default async function MyBookingsPage() {
                                 {property?.name}
                               </h3>
                               <p className="text-sm text-gray-500">
-                                {formatDate(booking.checkIn, { day: "numeric", month: "short" })} - {formatDate(booking.checkOut, { day: "numeric", month: "short", year: "numeric" })}
+                                {formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)} - {formatDate(booking.checkOut, { day: "numeric", month: "short", year: "numeric" }, locale)}
                               </p>
                             </div>
                             <div className="text-right">

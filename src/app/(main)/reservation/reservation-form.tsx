@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { makeT, isUiLocale } from "@/lib/ui-strings";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 // T-154c (audit n°26, P2-5) : libellé d'annulation dérivé de la politique
 // réelle du bien (+ grille serveur), plus jamais « gratuit » en dur.
 import { cancellationPolicyLabel } from "@/lib/cancellation-label";
@@ -86,7 +87,8 @@ function ReservationPageInner() {
 
   const [step, setStep] = useState(1);
   const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const uiLocale = useUiLocale();
+  const t = useT();
   // Refs pour garder des valeurs récentes dans les effets sans les
   // re-déclencher (pas de dépendance instable dans les deps). Mises à jour
   // dans un effet (jamais pendant le rendu — règle react-hooks/refs).
@@ -313,7 +315,7 @@ function ReservationPageInner() {
           isGuestBooking: guestMode || undefined,
           // T-151 : langue de l'invité → l'e-mail de réclamation de compte
           // est localisé pour lui (le profil invité la persiste).
-          ...(language && isUiLocale(language) ? { language } : {}),
+          language: language && isUiLocale(language) ? language : uiLocale,
         }),
       });
 
@@ -351,7 +353,7 @@ function ReservationPageInner() {
       });
       setStep(4);
     } catch {
-      setError("Une erreur est survenue");
+      setError(t("error.title"));
     }
     setSubmitting(false);
   };
@@ -363,7 +365,7 @@ function ReservationPageInner() {
     try {
       const response = await fetch(`/api/bookings/${bookingId}/payment`, { method: "POST", headers: { "content-type": "application/json" } });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error ?? "Impossible de reprendre le paiement");
+      if (!response.ok) throw new Error(data.error ?? t("reservation.resumePayFail"));
       if (data.payment?.requiresConfirmation && data.payment.clientSecret) {
         setPendingStripePayment({ bookingId: data.booking.id, bookingReference: data.booking.bookingReference, total: data.booking.total, clientSecret: data.payment.clientSecret });
         setResumeBookingId(null); setStep(3); return;
@@ -373,7 +375,7 @@ function ReservationPageInner() {
         setResumeBookingId(null); return;
       }
       throw new Error(t("reservation.paymentPendingRetry"));
-    } catch (reason) { setError(reason instanceof Error ? reason.message : "Erreur"); }
+    } catch (reason) { setError(reason instanceof Error ? reason.message : t("settings.error")); }
     finally { setSubmitting(false); }
   }
 
@@ -611,14 +613,14 @@ function ReservationPageInner() {
                     <Select
                       label={t("reservation.residenceCountry")}
                       options={[
-                        { value: "FR", label: "France" },
-                        { value: "MA", label: "Maroc" },
-                        { value: "TN", label: "Tunisie" },
-                        { value: "ES", label: "Espagne" },
-                        { value: "IT", label: "Italie" },
-                        { value: "DE", label: "Allemagne" },
-                        { value: "GB", label: "Royaume-Uni" },
-                        { value: "US", label: t("reservation.unitedStates") },
+                        { value: "FR", label: t("prop.country.FR") },
+                        { value: "MA", label: t("prop.country.MA") },
+                        { value: "TN", label: t("prop.country.TN") },
+                        { value: "ES", label: t("prop.country.ES") },
+                        { value: "IT", label: t("prop.country.IT") },
+                        { value: "DE", label: t("prop.country.DE") },
+                        { value: "GB", label: t("prop.country.GB") },
+                        { value: "US", label: t("prop.country.US") },
                       ]}
                       value={formData.guestCountry}
                       onChange={(e) => setFormData({ ...formData, guestCountry: e.target.value })}
@@ -675,7 +677,7 @@ function ReservationPageInner() {
                   {pendingStripePayment ? (
                     <>
                       <p className="text-sm text-gray-600">
-                        Finalisez le paiement auprès de Stripe. Les moyens proposés sont ceux réellement activés pour cet établissement.
+                        {t("reservation.finalizeStripe")}
                       </p>
                       <StripePaymentForm clientSecret={pendingStripePayment.clientSecret} onSubmitted={waitForStripeConfirmation} />
                     </>
@@ -719,7 +721,7 @@ function ReservationPageInner() {
                   <p className="text-gray-600 mb-6">
                     {confirmation.paymentPending
                       ? t("reservation.paymentTransmitted")
-                      : `Merci ${formData.guestFirstName} ! Votre réservation est confirmée.`}
+                      : t("reservation.thanks").replace("{name}", formData.guestFirstName)}
                   </p>
 
                   <div className="inline-block p-6 bg-gray-50 rounded-xl mb-6">
@@ -735,7 +737,7 @@ function ReservationPageInner() {
                   <p className="text-sm text-gray-500 mb-3">
                     {confirmation.paymentPending
                       ? t("reservation.confirmationEmail")
-                      : `📧 Confirmation envoyée à ${formData.guestEmail}`}
+                      : t("reservation.emailSentTo").replace("{email}", formData.guestEmail)}
                   </p>
                   {confirmation.mockPayment && (
                     <p className="text-xs text-amber-800 mb-6 p-3 rounded-lg bg-amber-50">{t("reservation.demoMode")}</p>
@@ -798,7 +800,7 @@ function ReservationPageInner() {
                   <p className="font-medium">{room?.name}</p>
                   <p className="text-sm text-gray-500 mt-1">
                     <Users className="w-3.5 h-3.5 inline mr-1" />
-                    {room?.maxOccupancy} pers. max
+                    {t("prop.persMax").replace("{n}", String(room?.maxOccupancy ?? ""))}
                     {room?.sizeSqm && ` • ${room.sizeSqm} m²`}
                   </p>
 
@@ -809,7 +811,10 @@ function ReservationPageInner() {
                     <>
                       <div className="flex justify-between text-sm mb-2">
                         <span className="text-gray-600">
-                          {numNights} nuit{numNights > 1 ? "s" : ""} × {formatPrice(pricePerNight, roomCurrency)}
+                          {t("reservation.nightsLine")
+                            .replace("{n}", String(numNights))
+                            .replace("{unit}", t(numNights > 1 ? "reservation.nightsPlural" : "reservation.nights"))
+                            .replace("{price}", formatPrice(pricePerNight, roomCurrency))}
                         </span>
                         {/* T-146 : on affiche ici le sous-total de BASE (nuits × tarif),
                             puis la remise du tarif choisi sur la ligne verte. Auparavant
@@ -880,7 +885,7 @@ function ReservationPageInner() {
                         </span>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
-                        ✅ Aucun frais supplémentaire
+                        {t("reservation.noExtraFees")}
                       </p>
                       {/* T-030 : bannière mode invité */}
                       {!isAuthed && guestMode && (

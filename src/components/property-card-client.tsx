@@ -4,14 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Star, MapPin, Heart, Loader2 } from "lucide-react";
-import { formatPrice, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+import { MapPin, Heart, Loader2 } from "lucide-react";
+import { formatPrice, getPropertyTypeLabel } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import type { PublicPropertyCard } from "@/lib/public-property";
 import { convertAmount, formatMoney } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
-import { uiStrings } from "@/lib/ui-strings";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 // T-154d (audit n°26, P2-8) : confirmation favori via ToastProvider.
 import { useToast } from "@/components/ui/toast";
 
@@ -32,13 +32,13 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
-  const ratingInfo = rating ? getRatingLabel(rating) : null;
 
   // T-131/T-132 : préférences d'affichage (devise = XAF par défaut plateforme,
   // langue). L'aperçu des prix est converti dans la devise d'affichage ; les
   // paiements restent dans la devise de la chambre.
-  const { currency: displayCurrency, language } = useDisplayPreferences();
-  const t = uiStrings(language);
+  const { currency: displayCurrency } = useDisplayPreferences();
+  const locale = useUiLocale();
+  const t = useT();
   const sourceCurrency = property.minCurrency ?? "EUR";
   const rawPrice = property.minPrice;
   const showPrice = rawPrice !== null && rawPrice !== undefined;
@@ -63,7 +63,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
       window.location.href = "/connexion?next=%2Frecherche";
       return;
     }
-    addToast(wasSaved ? "info" : "success", wasSaved ? t["headerActions.favoriteRemoved"] : t["headerActions.favoriteAdded"]);
+    addToast(wasSaved ? "info" : "success", wasSaved ? t("headerActions.favoriteRemoved") : t("headerActions.favoriteAdded"));
   }
 
   async function removeFromFavorites(event: React.MouseEvent<HTMLButtonElement>) {
@@ -77,12 +77,12 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
         `/api/wishlists?wishlistId=${encodeURIComponent(removeFavoriteFrom.wishlistId)}&propertyId=${encodeURIComponent(property.id)}`,
         { method: "DELETE" },
       );
-      if (!res.ok) throw new Error(t["fav.removeFail"]);
-      addToast("info", t["headerActions.favoriteRemoved"]);
+      if (!res.ok) throw new Error(t("fav.removeFail"));
+      addToast("info", t("headerActions.favoriteRemoved"));
       router.refresh();
     } catch (e) {
-      setRemoveError(e instanceof Error ? e.message : t["settings.error"]);
-      addToast("error", e instanceof Error ? e.message : t["fav.removeFail"]);
+      setRemoveError(e instanceof Error ? e.message : t("settings.error"));
+      addToast("error", e instanceof Error ? e.message : t("fav.removeFail"));
     } finally {
       setRemoving(false);
     }
@@ -105,8 +105,8 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
         {removeFavoriteFrom ? (
           <button
             onClick={removeFromFavorites}
-            aria-label={t["fav.remove"] ?? "Retirer des favoris"}
-            title={removeError ?? (t["fav.remove"] ?? "Retirer des favoris")}
+            aria-label={t("fav.remove")}
+            title={removeError ?? (t("fav.remove"))}
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
           >
             {removing ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className="w-5 h-5 fill-[#FF5A5F] text-[#FF5A5F]" aria-hidden="true" />}
@@ -114,8 +114,8 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
         ) : showFavorite ? (
           <button
             onClick={addToFavorites}
-            aria-label={favorite.saved ? t["fav.added"] : t["fav.add"]}
-            title={favorite.error ?? (favorite.saved ? t["fav.added"] : t["fav.add"])}
+            aria-label={favorite.saved ? t("fav.added") : t("fav.add")}
+            title={favorite.error ?? (favorite.saved ? t("fav.added") : t("fav.add"))}
             className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
           >
             {favorite.busy ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className={`w-5 h-5 ${favorite.saved ? "fill-[#FF5A5F] text-[#FF5A5F]" : "text-gray-600"}`} aria-hidden="true" />}
@@ -152,7 +152,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
               </div>
               {property.totalReviews && property.totalReviews > 0 && (
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {property.totalReviews} {t["card.reviews"]}
+                  {property.totalReviews} {t("card.reviews")}
                 </p>
               )}
             </div>
@@ -161,11 +161,11 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
 
         <div className="flex items-center gap-2 text-xs text-gray-600 mb-3">
           <span className="px-2 py-0.5 bg-gray-100 rounded">
-            {getPropertyTypeLabel(property.type)}
+            {getPropertyTypeLabel(property.type, locale)}
           </span>
           {property.isEcoCertified && (
             <span className="px-2 py-0.5 bg-green-100 text-green-700 rounded">
-              {t["badge.eco"]}
+              {t("badge.eco")}
             </span>
           )}
         </div>
@@ -174,20 +174,20 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
           <div>
             {priceText ? (
               <>
-                <span className="text-lg font-bold text-gray-900">{t["price.from"]} {priceText}</span>
-                <span className="text-sm text-gray-500">{t["price.perNight"]}</span>
+                <span className="text-lg font-bold text-gray-900">{t("price.from")} {priceText}</span>
+                <span className="text-sm text-gray-500">{t("price.perNight")}</span>
                 {isConverted && (
-                  <span className="block text-[10px] text-gray-400" title={t["bookingCard.conversionTooltip"]}>
-                    {t["price.convertedNote"]} {sourceCurrency}
+                  <span className="block text-[10px] text-gray-400" title={t("bookingCard.conversionTooltip")}>
+                    {t("price.convertedNote")} {sourceCurrency}
                   </span>
                 )}
               </>
             ) : (
-              <span className="text-sm text-gray-500">{t["price.unavailable"]}</span>
+              <span className="text-sm text-gray-500">{t("price.unavailable")}</span>
             )}
           </div>
           <span className="text-sm text-[#1B3A6B] font-medium group-hover:underline">
-            {t["card.viewRooms"]}
+            {t("card.viewRooms")}
           </span>
         </div>
       </div>

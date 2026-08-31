@@ -88,7 +88,7 @@ export function BookingRowActions({
           });
           if (!r.ok) {
             const j = await r.json().catch(() => ({}));
-            throw new Error(j.error ?? "Erreur");
+              throw new Error(j.error ?? t("settings.error"));
           }
           router.refresh();
         } catch (e) {
@@ -121,7 +121,7 @@ export function BookingRowActions({
   // message explicite ; on ne fait que relayer.
   async function setStayStatus(next: "completed" | "no_show") {
     setError(null);
-    const label = next === "completed" ? t("book.completeStay") : "No-show";
+    const label = next === "completed" ? t("book.completeStay") : t("book.noShow");
     const confirmMsg = next === "completed"
       ? t("book.completeStayConfirm")
       : t("book.noShowConfirm");
@@ -177,7 +177,7 @@ export function BookingRowActions({
             ) : (
               <UserX className="w-4 h-4 mr-2" />
             )}
-            No-show
+            {t("book.noShow")}
           </Button>
         </>
       )}

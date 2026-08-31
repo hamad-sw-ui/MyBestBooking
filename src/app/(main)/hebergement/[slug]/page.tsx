@@ -126,7 +126,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
     ? [...propertyRooms].sort((a, b) => parseFloat(a.basePrice) - parseFloat(b.basePrice))[0]
     : null;
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
-  const ratingInfo = rating ? getRatingLabel(rating) : null;
+  const ratingInfo = rating ? getRatingLabel(rating, locale) : null;
   const amenities = (property.amenities as string[]) || [];
   const images = (property.images as string[]) || [];
 
@@ -190,7 +190,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
         <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4 mb-6">
           <div>
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-gray-500">{getPropertyTypeLabel(property.type)}</span>
+              <span className="text-sm text-gray-500">{getPropertyTypeLabel(property.type, locale)}</span>
               {property.starRating && (
                 <span className="text-[#F5A623]">{"★".repeat(property.starRating)}</span>
               )}
@@ -334,7 +334,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                           <div className="flex items-center gap-2 mt-2">
                             <Badge variant="info">{cancellationPolicyLabel(property.cancellationPolicy, t)}</Badge>
                             {room.amenities && (room.amenities as string[]).includes("wifi") && (
-                              <Badge variant="info">WiFi</Badge>
+                              <Badge variant="info">{t("card.wifi")}</Badge>
                             )}
                           </div>
                         </div>
@@ -427,7 +427,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                           </div>
                         )}
                         <p className="text-xs text-gray-400 mt-2">
-                          {formatDate(review.createdAt)}
+                          {formatDate(review.createdAt, undefined, locale)}
                         </p>
                         <ReviewHelpfulButton reviewId={review.id} initialCount={review.helpfulCount} isOwn={review.userId === viewer?.id} />
                       </div>

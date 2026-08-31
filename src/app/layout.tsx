@@ -25,12 +25,12 @@ export async function generateMetadata(): Promise<Metadata> {
   },
   description: t("meta.appDescription"),
   keywords: [
-    "réservation",
-    "hôtel",
-    "hébergement",
-    "voyage",
+    t("meta.kw.booking"),
+    t("meta.kw.hotel"),
+    t("meta.kw.stay"),
+    t("meta.kw.travel"),
     "booking",
-    "vacances",
+    t("meta.kw.vacations"),
   ],
   openGraph: {
     type: "website",

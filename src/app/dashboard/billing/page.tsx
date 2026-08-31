@@ -115,7 +115,8 @@ async function getBillingData(userId: string, isAdmin: boolean) {
 }
 
 export default async function BillingPage() {
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -278,7 +279,7 @@ export default async function BillingPage() {
                       <p className="font-medium text-gray-900">{booking.bookingReference}</p>
                       <p className="text-sm text-gray-500">{property?.name}</p>
                       <p className="text-xs text-gray-400">
-                        {formatDate(booking.createdAt, { day: "numeric", month: "short", year: "numeric" })}
+                        {formatDate(booking.createdAt, { day: "numeric", month: "short", year: "numeric" }, locale)}
                       </p>
                     </div>
                     <div className="text-right">

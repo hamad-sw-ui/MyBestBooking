@@ -1,10 +1,9 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, Loader2 } from "lucide-react";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
 
 /**
  * T-133 (A3) — « Contacter l'hôte » avant réservation.
@@ -18,8 +17,7 @@ import { makeT } from "@/lib/ui-strings";
  */
 export function ContactHostButton({ propertyId, className }: { propertyId: string; className?: string }) {
   const router = useRouter();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,7 +40,7 @@ export function ContactHostButton({ propertyId, className }: { propertyId: strin
       if (data.conversation?.id) router.push(`/messages/${data.conversation.id}`);
       else throw new Error(t("contact.notFound"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      setError(e instanceof Error ? e.message : t("settings.error"));
       setBusy(false);
     }
   }

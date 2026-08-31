@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -11,8 +12,6 @@ import { Textarea, Select } from "@/components/ui/input";
 import { useToast } from "@/components/ui/toast";
 // T-158 (audit n°29) : formulaire d'avis de la fiche propriété localisé
 // (un compte EN ne doit plus voir de libellés FR).
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
 
 /**
  * <ReviewForm /> (T-125, P4)
@@ -23,8 +22,7 @@ import { makeT } from "@/lib/ui-strings";
 export function ReviewForm({ bookingId, requireModeration }: { bookingId: string; requireModeration: boolean }) {
   const router = useRouter();
   const { addToast } = useToast();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
   const [rating, setRating] = useState(8);
   const [travelerType, setTravelerType] = useState("leisure");
   const [positiveComment, setPositiveComment] = useState("");

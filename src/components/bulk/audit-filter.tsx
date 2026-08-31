@@ -1,6 +1,6 @@
 "use client";
 
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -35,6 +35,7 @@ interface Props {
 
 export function AuditFilter({ entries }: Props) {
   const t = useT();
+  const locale = useUiLocale();
   const ACTION_LABELS: Record<string, ActionInfo> = {
     "setting.update": { label: t("bulk.actionSetting"), variant: "info" },
     "review.moderate": { label: t("bulk.actionReview"), variant: "warning" },
@@ -107,7 +108,7 @@ export function AuditFilter({ entries }: Props) {
           className="text-2xl font-bold text-gray-900"
           style={{ fontFamily: "'Poppins', sans-serif" }}
         >
-          Journal d&apos;audit
+          {t("dash.audit")}
         </h1>
         <p className="text-gray-600 mt-1">
 {t("bulk.auditIntro")}
@@ -134,7 +135,7 @@ export function AuditFilter({ entries }: Props) {
               <button
                 type="button"
                 onClick={() => setQ("")}
-                aria-label="Effacer la recherche"
+                aria-label={t("bulk.clearSearch")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
               >
                 <X className="w-4 h-4 text-gray-500" />
@@ -144,14 +145,14 @@ export function AuditFilter({ entries }: Props) {
         </div>
         <div className="min-w-[180px]">
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Action
+            {t("bulk.action")}
           </label>
           <select
             value={actionFilter}
             onChange={(e) => setActionFilter(e.target.value)}
             className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A6B] focus:border-transparent outline-none bg-white"
           >
-            <option value="all">Toutes actions</option>
+            <option value="all">{t("bulk.allActions")}</option>
             {actions.map((a) => (
               <option key={a} value={a}>
                 {ACTION_LABELS[a]?.label ?? a}
@@ -180,8 +181,7 @@ export function AuditFilter({ entries }: Props) {
 
       <p className="text-sm text-gray-600 mb-3">
 {(filtered.length > 1 ? t("bulk.entriesShownMany") : t("bulk.entriesShown")).replace("{n}", String(filtered.length))}
-        {filtered.length > 1 ? "s" : ""}
-        {filtered.length !== entries.length && ` sur ${entries.length}`}
+        {filtered.length !== entries.length && ` ${t("bulk.ofTotal").replace("{n}", String(entries.length))}`}
       </p>
 
       <Card padding="none">
@@ -197,9 +197,9 @@ export function AuditFilter({ entries }: Props) {
             <table className="w-full">
               <thead>
                 <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                  <th className="px-6 py-4 font-medium">Date</th>
-                  <th className="px-6 py-4 font-medium">Acteur</th>
-                  <th className="px-6 py-4 font-medium">Action</th>
+                  <th className="px-6 py-4 font-medium">{t("bulk.colDate")}</th>
+                  <th className="px-6 py-4 font-medium">{t("bulk.colActor")}</th>
+                  <th className="px-6 py-4 font-medium">{t("bulk.action")}</th>
                   <th className="px-6 py-4 font-medium">{t("bulk.colEntity")}</th>
                   <th className="px-6 py-4 font-medium">{t("bulk.colDetails")}</th>
                 </tr>
@@ -221,7 +221,7 @@ export function AuditFilter({ entries }: Props) {
                           year: "numeric",
                           hour: "2-digit",
                           minute: "2-digit",
-                        })}
+                        }, locale)}
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {e.actorEmail ?? (

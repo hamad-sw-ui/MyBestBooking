@@ -46,11 +46,11 @@ export default async function HomePage() {
   const featuredProperties = await getFeaturedProperties();
   
   const destinations = [
-    { name: "Paris", country: "France", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400" },
-    { name: "Marrakech", country: "Maroc", image: "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400" },
-    { name: "Barcelone", country: "Espagne", image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400" },
-    { name: "Rome", country: "Italie", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400" },
-    { name: "Tunis", country: "Tunisie", image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400" },
+    { name: "Paris", country: t("prop.country.FR"), image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400" },
+    { name: "Marrakech", country: t("prop.country.MA"), image: "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400" },
+    { name: "Barcelone", country: t("prop.country.ES"), image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400" },
+    { name: "Rome", country: t("prop.country.IT"), image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400" },
+    { name: "Tunis", country: t("prop.country.TN"), image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400" },
   ];
 
   return (
@@ -78,7 +78,7 @@ export default async function HomePage() {
             <div className="bg-white rounded-2xl p-4 md:p-6 shadow-xl">
               <form action="/recherche" className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
-                  <label className="block text-xs font-medium text-gray-500 mb-1">Destination</label>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.destination")}</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                     <input

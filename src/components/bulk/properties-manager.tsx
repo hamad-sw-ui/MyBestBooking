@@ -1,6 +1,6 @@
 "use client";
 
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -37,6 +37,7 @@ interface Props {
 
 export function PropertiesManager({ properties, isAdmin }: Props) {
   const t = useT();
+  const locale = useUiLocale();
   const statusLabels: Record<string, string> = {
     active: t("bulk.active"),
     pending: t("status.pending"),
@@ -191,7 +192,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                   : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
               }`}
             >
-              {getPropertyTypeLabel(ty)}
+              {getPropertyTypeLabel(ty, locale)}
             </button>
           ))}
         </div>
@@ -281,7 +282,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                     </td>
                     <td className="px-4 py-4">
                       <span className="px-2 py-1 text-xs bg-gray-100 rounded">
-                        {getPropertyTypeLabel(property.type)}
+                        {getPropertyTypeLabel(property.type, locale)}
                       </span>
                     </td>
                     <td className="px-4 py-4">

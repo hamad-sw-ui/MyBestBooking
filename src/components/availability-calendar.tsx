@@ -151,7 +151,7 @@ export function AvailabilityCalendar({
           body: JSON.stringify({ days: chunk }),
         });
         const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error ?? "Erreur");
+        if (!res.ok) throw new Error(data.error ?? t("settings.error"));
       }
       setSaved(true);
       addToast("success", t("cal.savedToast"));

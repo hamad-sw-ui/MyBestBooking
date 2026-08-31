@@ -81,7 +81,8 @@ export default async function MessagesPage({
 
   const { search = "" } = await searchParams;
   const userConversations = await getConversations(user.id, search);
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -167,7 +168,7 @@ export default async function MessagesPage({
                           <div className="text-right flex-shrink-0">
                             {lastMessage && (
                               <p className="text-xs text-gray-400">
-                                {formatDate(lastMessage.createdAt, { day: "numeric", month: "short" })}
+                                {formatDate(lastMessage.createdAt, { day: "numeric", month: "short" }, locale)}
                               </p>
                             )}
                             {unreadCount && unreadCount > 0 && (
@@ -185,7 +186,7 @@ export default async function MessagesPage({
                             <span>{t("bookings.ref")} {booking.bookingReference}</span>
                             <span>•</span>
                             <span>
-                              {formatDate(booking.checkIn, { day: "numeric", month: "short" })} - {formatDate(booking.checkOut, { day: "numeric", month: "short" })}
+                              {formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)} - {formatDate(booking.checkOut, { day: "numeric", month: "short" }, locale)}
                             </span>
                           </div>
                         )}

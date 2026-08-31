@@ -1,6 +1,6 @@
 "use client";
 
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +43,7 @@ interface Props {
 
 export function PromotionsManager({ promotions }: Props) {
   const t = useT();
+  const locale = useUiLocale();
   const typeLabels: Record<string, string> = {
     percentage: t("bulk.percentage"),
     fixed_amount: t("bulk.fixedAmount"),
@@ -324,14 +325,14 @@ export function PromotionsManager({ promotions }: Props) {
                             {formatDate(promo.validFrom, {
                               day: "numeric",
                               month: "short",
-                            })}
+                            }, locale)}
                           </p>
                           <p className="text-gray-500">
                             →{" "}
                             {formatDate(promo.validUntil, {
                               day: "numeric",
                               month: "short",
-                            })}
+                            }, locale)}
                           </p>
                         </div>
                       </td>

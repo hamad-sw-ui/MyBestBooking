@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Heart, Loader2, Share2 } from "lucide-react";
@@ -8,8 +9,6 @@ import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
 import { useToast } from "@/components/ui/toast";
 // T-158 (audit n°29) : actions de la fiche publique localisées (favori,
 // partage) — un visiteur en compte EN ne doit plus voir de libellés FR.
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
 
 /** Actions réelles de fiche : favori API (ajout + retrait, T-154c/P2-6)
  * et partage Web Share/clipboard. */
@@ -17,8 +16,7 @@ export function PropertyHeaderActions({ propertyId, propertyName }: { propertyId
   const favorite = useWishlistToggle(propertyId);
   const router = useRouter();
   const { addToast } = useToast();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
   const [message, setMessage] = useState<string | null>(null);
 
   async function toggleFavorite() {

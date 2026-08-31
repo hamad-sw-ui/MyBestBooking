@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Upload } from "lucide-react";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
+import { useT } from "@/components/ui-locale-provider";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
@@ -30,8 +29,7 @@ interface Props {
 export function ProfileForm({ initial }: Props) {
   const { addToast } = useToast();
   const router = useRouter();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = useT();
   const [form, setForm] = useState({
     firstName: initial.firstName,
     lastName: initial.lastName,

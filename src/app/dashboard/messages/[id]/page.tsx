@@ -20,7 +20,8 @@ export default async function DashboardConversationPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await getCurrentUser();
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   if (!user) redirect("/connexion");
   if (user.role !== "host" && user.role !== "admin") redirect("/dashboard");
 
@@ -95,7 +96,7 @@ export default async function DashboardConversationPage({
                 <p className="whitespace-pre-wrap text-sm">{m.content}</p>
                 {(m.attachmentKey || m.attachmentUrl) && <MessageAttachment messageId={m.id} legacyUrl={m.attachmentUrl} />}
                 <p className={`text-[10px] mt-1 ${mine ? "text-white/70" : "text-gray-500"}`}>
-                  {formatDate(m.createdAt)}
+                  {formatDate(m.createdAt, undefined, locale)}
                 </p>
               </div>
             </div>
