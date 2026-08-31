@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Mail, Lock, Eye, EyeOff } from "lucide-react";
 import { safeNextPath } from "@/lib/safe-next";
+import { useT } from "@/components/ui-locale-provider";
 
 export default function LoginPage() {
+  const t = useT();
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -40,19 +42,17 @@ export default function LoginPage() {
         if (data.twoFactorRequired) {
           setRequiresTwoFactor(true);
         }
-        setError(data.error || "Une erreur est survenue");
+        setError(data.error || t("auth.genericError"));
         setLoading(false);
         return;
       }
 
-      // Le proxy conserve la destination initiale. Refuser toute URL externe
-      // pour éviter une redirection ouverte après authentification.
       const requested = new URLSearchParams(window.location.search).get("next");
       const safeNext = safeNextPath(requested);
       router.push(safeNext ?? (data.user.role === "admin" || data.user.role === "host" ? "/dashboard" : "/"));
       router.refresh();
     } catch {
-      setError("Une erreur est survenue");
+      setError(t("auth.genericError"));
       setLoading(false);
     }
   };
@@ -61,10 +61,10 @@ export default function LoginPage() {
     <Card className="w-full max-w-md">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Connexion
+          {t("auth.login")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Bienvenue sur MyBestBooking
+          {t("auth.welcome")}
         </p>
       </div>
 
@@ -77,8 +77,8 @@ export default function LoginPage() {
 
         <Input
           type="email"
-          label="Email"
-          placeholder="votre@email.com"
+          label={t("auth.email")}
+          placeholder={t("auth.emailPlaceholder")}
           icon={<Mail className="w-5 h-5" />}
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -88,7 +88,7 @@ export default function LoginPage() {
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
-            label="Mot de passe"
+            label={t("auth.password")}
             placeholder="••••••••"
             icon={<Lock className="w-5 h-5" />}
             value={formData.password}
@@ -109,7 +109,7 @@ export default function LoginPage() {
             type="text"
             inputMode="numeric"
             autoComplete="one-time-code"
-            label="Code de vérification"
+            label={t("auth.twoFactorCode")}
             placeholder="123456"
             value={formData.totpCode}
             onChange={(e) => setFormData({ ...formData, totpCode: e.target.value })}
@@ -126,32 +126,31 @@ export default function LoginPage() {
               checked={rememberMe}
               onChange={(e) => setRememberMe(e.target.checked)}
             />
-            <span className="text-gray-600">Se souvenir de moi</span>
+            <span className="text-gray-600">{t("auth.rememberMe")}</span>
           </label>
           <Link href="/mot-de-passe-oublie" className="text-[#1B3A6B] hover:underline">
-            Mot de passe oublié ?
+            {t("auth.forgotPassword")}
           </Link>
         </div>
 
         <Button type="submit" loading={loading} className="w-full" size="lg">
-          Se connecter
+          {t("auth.loginButton")}
         </Button>
       </form>
 
       <div className="mt-6 text-center text-sm text-gray-600">
-        Pas encore de compte ?{" "}
+        {t("auth.noAccount")}{" "}
         <Link href="/inscription" className="text-[#1B3A6B] font-medium hover:underline">
-          Créer un compte
+          {t("auth.createAccountCta")}
         </Link>
       </div>
 
-      {/* Demo accounts */}
       <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <p className="text-xs font-medium text-gray-500 mb-2">Comptes de démonstration :</p>
+        <p className="text-xs font-medium text-gray-500 mb-2">{t("auth.demoAccounts")}</p>
         <div className="space-y-1 text-xs text-gray-600">
-          <p><strong>Admin :</strong> admin@mybestbooking.com / Admin123!</p>
-          <p><strong>Hébergeur :</strong> host@mybestbooking.com / Host123!</p>
-          <p><strong>Client :</strong> customer@mybestbooking.com / Customer123!</p>
+          <p><strong>{t("auth.roleAdmin")} :</strong> admin@mybestbooking.com / Admin123!</p>
+          <p><strong>{t("auth.roleHost")} :</strong> host@mybestbooking.com / Host123!</p>
+          <p><strong>{t("auth.roleCustomer")} :</strong> customer@mybestbooking.com / Customer123!</p>
         </div>
       </div>
     </Card>

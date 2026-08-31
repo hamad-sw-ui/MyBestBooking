@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card, CardContent } from "@/components/ui/card";
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export function PromotionsManager({ promotions }: Props) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -109,7 +111,7 @@ export function PromotionsManager({ promotions }: Props) {
     },
     {
       key: "deactivate",
-      label: "Désactiver",
+      label: t("bulk.deactivate"),
       icon: BulkIcons.hide,
       variant: "secondary" as const,
     },
@@ -118,7 +120,7 @@ export function PromotionsManager({ promotions }: Props) {
       label: "Supprimer",
       icon: BulkIcons.delete,
       variant: "danger" as const,
-      confirmMessage: `Supprimer ${selected.size} promotion(s) ? Refusé si déjà utilisée.`,
+      confirmMessage: t("bulk.confirmDeletePromos").replace("{n}", String(selected.size)),
     },
   ];
 
@@ -142,7 +144,7 @@ export function PromotionsManager({ promotions }: Props) {
             Promotions
           </h1>
           <p className="text-gray-600 mt-1">
-            Gérez les codes promo et offres spéciales
+{t("bulk.managePromos")}
           </p>
         </div>
         <Link href="/dashboard/promotions/new">
@@ -159,7 +161,7 @@ export function PromotionsManager({ promotions }: Props) {
           { label: "Total", value: stats.total, color: "text-gray-900" },
           { label: "Actives", value: stats.active, color: "text-green-600" },
           { label: "Utilisations", value: stats.uses, color: "text-blue-600" },
-          { label: "Expirées", value: stats.expired, color: "text-gray-400" },
+          { label: t("bulk.expiredMany"), value: stats.expired, color: "text-gray-400" },
         ].map((s) => (
           <Card key={s.label} padding="sm">
             <div className="p-4">
@@ -183,7 +185,7 @@ export function PromotionsManager({ promotions }: Props) {
           { value: "all", label: "Tous statuts" },
           { value: "active", label: "Actives" },
           { value: "inactive", label: "Inactives" },
-          { value: "expired", label: "Expirées" },
+          { value: "expired", label: t("bulk.expiredMany") },
         ]}
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
@@ -209,10 +211,10 @@ export function PromotionsManager({ promotions }: Props) {
       </div>
 
       <p className="text-sm text-gray-600 mb-3">
-        {filtered.length} promotion{filtered.length > 1 ? "s" : ""} affichée
+        {(filtered.length > 1 ? t("bulk.promosShownMany") : t("bulk.promosShown")).replace("{n}", String(filtered.length))}
         {filtered.length > 1 ? "s" : ""}
         {filtered.length !== promotions.length && ` sur ${promotions.length}`}
-        {selected.size > 0 && ` · ${selected.size} sélectionnée(s)`}
+        {selected.size > 0 && t("bulk.selectedSuffix").replace("{n}", String(selected.size))}
       </p>
 
       <Card padding="none">
@@ -220,12 +222,12 @@ export function PromotionsManager({ promotions }: Props) {
           <EmptyState
             icon={<Tag className="w-8 h-8" />}
             title="Aucune promotion"
-            description="Aucune promotion ne correspond à vos filtres."
+            description={t("bulk.noPromosDesc")}
             action={
               <Link href="/dashboard/promotions/new">
                 <Button>
                   <Plus className="w-4 h-4 mr-2" />
-                  Créer une promotion
+{t("bulk.createPromo")}
                 </Button>
               </Link>
             }
@@ -239,7 +241,7 @@ export function PromotionsManager({ promotions }: Props) {
                   <th className="px-4 py-4 w-10">
                     <input
                       type="checkbox"
-                      aria-label="Sélectionner toutes les promotions visibles"
+                      aria-label={t("bulk.selectAllPromos")}
                       checked={allSelected}
                       onChange={toggleAll}
                       className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
@@ -249,7 +251,7 @@ export function PromotionsManager({ promotions }: Props) {
                   <th className="px-4 py-4 font-medium">Nom</th>
                   <th className="px-4 py-4 font-medium">Type</th>
                   <th className="px-4 py-4 font-medium">Valeur</th>
-                  <th className="px-4 py-4 font-medium">Validité</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colValidity")}</th>
                   <th className="px-4 py-4 font-medium">Utilisations</th>
                   <th className="px-4 py-4 font-medium">Statut</th>
                   <th className="px-4 py-4 font-medium text-right">Actions</th>
@@ -272,7 +274,7 @@ export function PromotionsManager({ promotions }: Props) {
                       <td className="px-4 py-4">
                         <input
                           type="checkbox"
-                          aria-label={`Sélectionner ${promo.code}`}
+                          aria-label={t("bulk.selectNamed").replace("{name}", promo.code)}
                           checked={selected.has(promo.id)}
                           onChange={() => toggle(promo.id)}
                           className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
@@ -355,7 +357,7 @@ export function PromotionsManager({ promotions }: Props) {
                       </td>
                       <td className="px-4 py-4">
                         {isExpired ? (
-                          <Badge variant="default">Expirée</Badge>
+                          <Badge variant="default">{t("bulk.expired")}</Badge>
                         ) : isActive ? (
                           <Badge variant="success">Active</Badge>
                         ) : (
@@ -367,7 +369,7 @@ export function PromotionsManager({ promotions }: Props) {
                           <RowDeleteButton
                             entity="promotions"
                             id={promo.id}
-                            label={`la promotion « ${promo.code} »`}
+                            label={t("bulk.promoLabel").replace("{code}", promo.code)}
                           />
                         </div>
                       </td>
@@ -381,9 +383,9 @@ export function PromotionsManager({ promotions }: Props) {
       </Card>
 
       <p className="text-xs text-gray-400 mt-3">
-        Raccourcis : <kbd className="px-1 bg-gray-100 rounded">/</kbd> chercher ·{" "}
-        <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> tout sélectionner ·{" "}
-        <kbd className="px-1 bg-gray-100 rounded">Échap</kbd> vider
+{t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")} ·{" "}
+        <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> {t("bulk.shortcutSelectAll")} ·{" "}
+        <kbd className="px-1 bg-gray-100 rounded">Esc</kbd> {t("bulk.shortcutClear")}
       </p>
     </div>
   );

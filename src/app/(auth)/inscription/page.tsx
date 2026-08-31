@@ -10,21 +10,17 @@ import { Mail, Lock, User, Eye, EyeOff, Building2, Gift } from "lucide-react";
 import { safeNextPath } from "@/lib/safe-next";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { isUiLocale } from "@/lib/ui-strings";
+import { useT } from "@/components/ui-locale-provider";
 
 export default function RegisterPage() {
+  const t = useT();
   const router = useRouter();
-  // T-151 : la langue d'interface courante (préférence plateforme ou
-  // utilisateur) est envoyée à l'inscription → l'e-mail de vérification
-  // est localisé pour le destinataire dès le premier e-mail reçu.
   const { language } = useDisplayPreferences();
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [isHost, setIsHost] = useState(false);
-  // T-120 (E1) : confirmation du mot de passe (validation purement client,
-  // le backend ne reçoit que `password`).
   const [confirmPassword, setConfirmPassword] = useState("");
-  // T-125 (P2) : code de parrainage, pré-rempli depuis ?ref= / ?referral=.
   const [referralCode, setReferralCode] = useState(() => {
     if (typeof window === "undefined") return "";
     const params = new URLSearchParams(window.location.search);
@@ -42,9 +38,8 @@ export default function RegisterPage() {
     setLoading(true);
     setError("");
 
-    // T-120 (E1) : les deux saisies doivent correspondre avant l'appel API.
     if (formData.password !== confirmPassword) {
-      setError("Les mots de passe ne correspondent pas.");
+      setError(t("auth.passwordMismatch"));
       setLoading(false);
       return;
     }
@@ -56,11 +51,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           ...formData,
           role: isHost ? "host" : "customer",
-          // T-151 : langue d'interface résolue (fr/en). Le serveur valide
-          // et persiste ; un défaut fr est appliqué si elle est absente.
           ...(language && isUiLocale(language) ? { language } : {}),
-          // T-125 (P2) : code de parrainage optionnel (ignoré côté serveur
-          // s'il est vide ou inconnu — jamais bloquant).
           ...(referralCode.trim() ? { referralCode: referralCode.trim() } : {}),
         }),
       });
@@ -68,7 +59,7 @@ export default function RegisterPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Une erreur est survenue");
+        setError(data.error || t("auth.genericError"));
         setLoading(false);
         return;
       }
@@ -78,7 +69,7 @@ export default function RegisterPage() {
       router.push(safeNext ?? (isHost ? "/dashboard" : "/"));
       router.refresh();
     } catch {
-      setError("Une erreur est survenue");
+      setError(t("auth.genericError"));
       setLoading(false);
     }
   };
@@ -87,14 +78,13 @@ export default function RegisterPage() {
     <Card className="w-full max-w-md">
       <div className="text-center mb-6">
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Créer un compte
+          {t("auth.createTitle")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Rejoignez MyBestBooking gratuitement
+          {t("auth.createSubtitle")}
         </p>
       </div>
 
-      {/* Account type selector */}
       <div className="flex gap-2 mb-6">
         <button
           type="button"
@@ -107,7 +97,7 @@ export default function RegisterPage() {
         >
           <User className={`w-5 h-5 mx-auto mb-1 ${!isHost ? "text-[#1B3A6B]" : "text-gray-400"}`} />
           <span className={`text-sm font-medium ${!isHost ? "text-[#1B3A6B]" : "text-gray-600"}`}>
-            Voyageur
+            {t("auth.traveler")}
           </span>
         </button>
         <button
@@ -121,7 +111,7 @@ export default function RegisterPage() {
         >
           <Building2 className={`w-5 h-5 mx-auto mb-1 ${isHost ? "text-[#1B3A6B]" : "text-gray-400"}`} />
           <span className={`text-sm font-medium ${isHost ? "text-[#1B3A6B]" : "text-gray-600"}`}>
-            Hébergeur
+            {t("auth.host")}
           </span>
         </button>
       </div>
@@ -136,7 +126,7 @@ export default function RegisterPage() {
         <div className="grid grid-cols-2 gap-4">
           <Input
             type="text"
-            label="Prénom"
+            label={t("auth.firstName")}
             placeholder="Jean"
             value={formData.firstName}
             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
@@ -144,7 +134,7 @@ export default function RegisterPage() {
           />
           <Input
             type="text"
-            label="Nom"
+            label={t("auth.lastName")}
             placeholder="Dupont"
             value={formData.lastName}
             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -154,8 +144,8 @@ export default function RegisterPage() {
 
         <Input
           type="email"
-          label="Email"
-          placeholder="votre@email.com"
+          label={t("auth.email")}
+          placeholder={t("auth.emailPlaceholder")}
           icon={<Mail className="w-5 h-5" />}
           value={formData.email}
           onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -165,8 +155,8 @@ export default function RegisterPage() {
         <div className="relative">
           <Input
             type={showPassword ? "text" : "password"}
-            label="Mot de passe"
-            placeholder="Min. 8 caractères"
+            label={t("auth.password")}
+            placeholder={t("auth.passwordMinPlaceholder")}
             icon={<Lock className="w-5 h-5" />}
             value={formData.password}
             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
@@ -181,25 +171,22 @@ export default function RegisterPage() {
           </button>
         </div>
 
-        {/* T-120 (E1) : confirmation du mot de passe */}
         <Input
           type={showPassword ? "text" : "password"}
-          label="Confirmer le mot de passe"
-          placeholder="Ressaisissez votre mot de passe"
+          label={t("auth.confirmPassword")}
+          placeholder={t("auth.confirmPasswordPlaceholder")}
           icon={<Lock className="w-5 h-5" />}
           value={confirmPassword}
           onChange={(e) => setConfirmPassword(e.target.value)}
           required
           minLength={8}
-          // Le navigateur signale l'incohérence avant même la soumission.
           pattern={formData.password ? formData.password.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") : undefined}
-          title="Les mots de passe doivent correspondre"
+          title={t("auth.passwordMatchTitle")}
         />
 
-        {/* T-125 (P2) : code de parrainage optionnel. */}
         <Input
           type="text"
-          label="Code de parrainage (facultatif)"
+          label={t("auth.referralOptional")}
           placeholder="Ex : 4WHABQ4M"
           icon={<Gift className="w-5 h-5" />}
           value={referralCode}
@@ -209,26 +196,26 @@ export default function RegisterPage() {
         />
 
         <p className="text-xs text-gray-500">
-          En créant un compte, vous acceptez nos{" "}
-          <Link href="/mentions-legales" className="text-[#1B3A6B] hover:underline">Mentions légales &amp; CGU</Link> et notre{" "}
-          <Link href="/confidentialite" className="text-[#1B3A6B] hover:underline">Politique de confidentialité</Link>.
+          {t("auth.termsPrefix")}{" "}
+          <Link href="/mentions-legales" className="text-[#1B3A6B] hover:underline">{t("auth.legalCgu")}</Link> {t("auth.termsAnd")}{" "}
+          <Link href="/confidentialite" className="text-[#1B3A6B] hover:underline">{t("privacy.meta.title")}</Link>.
         </p>
 
         <Button type="submit" loading={loading} className="w-full" size="lg">
-          {isHost ? "Créer mon compte hébergeur" : "Créer mon compte"}
+          {isHost ? t("auth.createHostAccount") : t("auth.registerButton")}
         </Button>
       </form>
 
       <div className="mt-6 text-center text-sm text-gray-600">
-        Déjà un compte ?{" "}
+        {t("auth.hasAccount")}{" "}
         <Link href="/connexion" className="text-[#1B3A6B] font-medium hover:underline">
-          Se connecter
+          {t("auth.loginButton")}
         </Link>
       </div>
 
       {isHost && (
         <div className="mt-4 p-4 bg-blue-50 rounded-lg text-sm text-blue-800">
-          <strong>Hébergeurs :</strong> Après inscription, vous pourrez ajouter vos hébergements et gérer vos réservations depuis votre tableau de bord.
+          {t("auth.hostHint")}
         </div>
       )}
     </Card>

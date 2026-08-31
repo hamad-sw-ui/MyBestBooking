@@ -4,6 +4,8 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { desc } from "drizzle-orm";
 import { UsersManager, type UserRow } from "@/components/bulk/users-manager";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 /**
  * /dashboard/users (admin) — T-033 Session 12
@@ -21,6 +23,7 @@ export default async function UsersPage() {
   if (!user || user.role !== "admin") {
     redirect("/dashboard");
   }
+  const t = makeT(await getServerLocale());
   const rows = await getUsers();
 
   // Sérialiser pour le composant client (dates → ISO string)
@@ -55,10 +58,10 @@ export default async function UsersPage() {
           className="text-2xl font-bold text-gray-900"
           style={{ fontFamily: "'Poppins', sans-serif" }}
         >
-          Utilisateurs
+          {t("dash.users")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Gérez les utilisateurs de la plateforme — filtres, recherche, actions groupées
+          {t("dash.usersSub")}
         </p>
       </div>
       <UsersManager users={serialized} currentUserId={user.id} />

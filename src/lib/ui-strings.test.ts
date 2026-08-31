@@ -13,6 +13,7 @@ describe("uiStrings (T-132)", () => {
     expect(uiStrings("en")["price.perNight"]).toBe("/night");
     expect(uiStrings("en")["book.seeAvailability"]).toBe("See availability");
     expect(uiStrings("en")["fav.add"]).toBe("Add to favorites");
+    expect(uiStrings("en")["home.whyReviewTitle"]).toBe("100% verified reviews");
   });
 
   it("isUiLocale n'accepte que fr/en", () => {

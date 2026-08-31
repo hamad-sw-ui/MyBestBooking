@@ -6,6 +6,8 @@ import {
   BookingsManager,
   type BookingRow,
 } from "@/components/bulk/bookings-manager";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getBookings(userId: string, isAdmin: boolean) {
   if (isAdmin) {
@@ -73,6 +75,7 @@ export default async function BookingsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const isAdmin = user.role === "admin";
+  const t = makeT(await getServerLocale());
   const rows = await getBookings(user.id, isAdmin);
 
   const serialized: BookingRow[] = rows.map((r) => ({
@@ -107,12 +110,10 @@ export default async function BookingsPage() {
           className="text-2xl font-bold text-gray-900"
           style={{ fontFamily: "'Poppins', sans-serif" }}
         >
-          Réservations
+          {t("dash.bookings")}
         </h1>
         <p className="text-gray-600 mt-1">
-          {isAdmin
-            ? "Toutes les réservations — filtres, dates, sélection, annulation groupée."
-            : "Réservations de vos hébergements — filtres et recherche."}
+          {isAdmin ? t("dash.bookingsAdminSub") : t("dash.bookingsHostSub")}
         </p>
       </div>
       <BookingsManager bookings={serialized} isAdmin={isAdmin} />

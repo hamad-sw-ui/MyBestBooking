@@ -2,6 +2,8 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getAllSettings, getProviderStatus } from "@/lib/settings";
 import { SettingsPanel } from "@/components/admin/settings-panel";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 /**
  * /dashboard/settings (T-021, ADR-007)
@@ -19,6 +21,7 @@ export default async function SettingsPage() {
     redirect("/dashboard");
   }
 
+  const t = makeT(await getServerLocale());
   const settings = await getAllSettings();
   const providers = getProviderStatus();
 
@@ -29,12 +32,10 @@ export default async function SettingsPage() {
           className="text-2xl font-bold text-gray-900"
           style={{ fontFamily: "'Poppins', sans-serif" }}
         >
-          Paramètres
+          {t("dash.settings")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Configuration runtime de la plateforme MyBestBooking. Les
-          modifications prennent effet immédiatement (jusqu&apos;à 60 s de
-          cache par instance).
+          {t("dash.settingsSub")}
         </p>
       </div>
 

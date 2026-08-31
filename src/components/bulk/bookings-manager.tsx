@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Calendar, Eye } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 export interface BookingRow {
   booking: {
@@ -43,13 +44,7 @@ export interface BookingRow {
   } | null;
 }
 
-const statusLabels: Record<string, string> = {
-  pending: "En attente",
-  confirmed: "Confirmée",
-  cancelled: "Annulée",
-  completed: "Terminée",
-  no_show: "No-show",
-};
+
 const statusBadgeColor: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-800",
   confirmed: "bg-green-100 text-green-800",
@@ -58,9 +53,9 @@ const statusBadgeColor: Record<string, string> = {
   no_show: "bg-gray-100 text-gray-800",
 };
 
-function fmt(d: string): string {
+function fmt(d: string, locale: string): string {
   try {
-    return new Date(d).toLocaleDateString("fr-FR", {
+    return new Date(d).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -69,10 +64,10 @@ function fmt(d: string): string {
     return d;
   }
 }
-function money(v: string, cur: string | null): string {
+function money(v: string, cur: string | null, locale: string): string {
   const n = parseFloat(v);
   try {
-    return new Intl.NumberFormat("fr-FR", {
+    return new Intl.NumberFormat(locale === "en" ? "en-GB" : "fr-FR", {
       style: "currency",
       currency: cur ?? "EUR",
     }).format(n);
@@ -87,6 +82,15 @@ interface Props {
 }
 
 export function BookingsManager({ bookings, isAdmin }: Props) {
+  const t = useT();
+  const locale = useUiLocale();
+  const statusLabels: Record<string, string> = {
+    pending: t("status.pending"),
+    confirmed: t("status.confirmed"),
+    cancelled: t("status.cancelled"),
+    completed: t("status.completed"),
+    no_show: t("status.no_show"),
+  };
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState<string>("");
@@ -152,10 +156,10 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
     ? [
         {
           key: "cancel",
-          label: "Annuler",
+          label: t("bulk.cancel"),
           icon: BulkIcons.reject,
           variant: "danger" as const,
-          confirmMessage: `Annuler ${selected.size} réservation(s) ? Cette action est irréversible (BUG-022 machine à états).`,
+          confirmMessage: t("bulk.confirmCancelBookings").replace("{n}", String(selected.size)),
         },
       ]
     : [];
@@ -165,12 +169,12 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total", value: stats.total, color: "text-gray-900" },
-          { label: "Confirmées", value: stats.confirmed, color: "text-green-600" },
-          { label: "En attente", value: stats.pending, color: "text-yellow-600" },
+          { label: t("bulk.total"), value: stats.total, color: "text-gray-900" },
+          { label: t("bulk.confirmedMany"), value: stats.confirmed, color: "text-green-600" },
+          { label: t("status.pending"), value: stats.pending, color: "text-yellow-600" },
           {
-            label: "Revenus",
-            value: new Intl.NumberFormat("fr-FR", {
+            label: t("dash.revenue"),
+            value: new Intl.NumberFormat(locale === "en" ? "en-GB" : "fr-FR", {
               style: "currency",
               currency: "EUR",
               maximumFractionDigits: 0,
@@ -197,14 +201,14 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
         onDeselectAll={() => setSelected(new Set())}
         searchValue={q}
         onSearchChange={setQ}
-        searchPlaceholder="Référence, client, hébergement, ville…"
+        searchPlaceholder={t("bulk.searchBookings")}
         statusOptions={[
-          { value: "all", label: "Tous statuts" },
-          { value: "pending", label: "En attente" },
-          { value: "confirmed", label: "Confirmée" },
-          { value: "cancelled", label: "Annulée" },
-          { value: "completed", label: "Terminée" },
-          { value: "no_show", label: "No-show" },
+          { value: "all", label: t("bulk.allStatusesShort") },
+          { value: "pending", label: t("status.pending") },
+          { value: "confirmed", label: t("status.confirmed") },
+          { value: "cancelled", label: t("status.cancelled") },
+          { value: "completed", label: t("status.completed") },
+          { value: "no_show", label: t("status.no_show") },
         ]}
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
@@ -215,7 +219,7 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <label className="block">
           <span className="block text-xs font-medium text-gray-600 mb-1">
-            Check-in à partir de
+            {t("bulk.checkInFrom")}
           </span>
           <input
             type="date"
@@ -226,7 +230,7 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
         </label>
         <label className="block">
           <span className="block text-xs font-medium text-gray-600 mb-1">
-            Check-out jusqu&apos;à
+            {t("bulk.checkOutUntil")}
           </span>
           <input
             type="date"
@@ -238,18 +242,17 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
       </div>
 
       <p className="text-sm text-gray-600 mb-3">
-        {filtered.length} réservation{filtered.length > 1 ? "s" : ""} affichée
-        {filtered.length > 1 ? "s" : ""}
-        {filtered.length !== bookings.length && ` sur ${bookings.length}`}
-        {selected.size > 0 && ` · ${selected.size} sélectionnée(s) annulable(s)`}
+        {(filtered.length > 1 ? t("bulk.bookingsShownMany") : t("bulk.bookingsShown")).replace("{n}", String(filtered.length))}
+        {filtered.length !== bookings.length && ` ${t("bulk.ofTotal").replace("{n}", String(bookings.length))}`}
+        {selected.size > 0 && t("bulk.selectedCancellable").replace("{n}", String(selected.size))}
       </p>
 
       <Card padding="none">
         {filtered.length === 0 ? (
           <EmptyState
             icon={<Calendar className="w-8 h-8" />}
-            title="Aucune réservation"
-            description="Aucune réservation ne correspond à vos filtres."
+            title={t("bulk.noBookingsTitle")}
+            description={t("bulk.noBookingsDesc")}
             className="py-16"
           />
         ) : (
@@ -261,7 +264,7 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                     <th className="px-4 py-4 w-10">
                       <input
                         type="checkbox"
-                        aria-label="Sélectionner toutes les réservations annulables visibles"
+                        aria-label={t("bulk.selectCancellable")}
                         checked={allSelected}
                         onChange={toggleAll}
                         disabled={cancellable.length === 0}
@@ -269,13 +272,13 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                       />
                     </th>
                   )}
-                  <th className="px-4 py-4 font-medium">Référence</th>
-                  <th className="px-4 py-4 font-medium">Client</th>
-                  <th className="px-4 py-4 font-medium">Hébergement</th>
-                  <th className="px-4 py-4 font-medium">Dates</th>
-                  <th className="px-4 py-4 font-medium">Montant</th>
-                  <th className="px-4 py-4 font-medium">Statut</th>
-                  <th className="px-4 py-4 font-medium">Actions</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colRef")}</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colGuest")}</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colProperty")}</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colDates")}</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colAmount")}</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colStatus")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colActions")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -293,11 +296,11 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                         <td className="px-4 py-4">
                           <input
                             type="checkbox"
-                            aria-label={`Sélectionner ${booking.bookingReference}`}
+                            aria-label={t("bulk.selectNamed").replace("{name}", booking.bookingReference)}
                             checked={selected.has(booking.id)}
                             onChange={() => toggle(booking.id)}
                             disabled={!canCancel}
-                            title={!canCancel ? `Statut '${booking.status}' non annulable` : undefined}
+                            title={!canCancel ? t("bulk.statusNotCancellable").replace("{status}", booking.status) : undefined}
                             className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B] disabled:opacity-30"
                           />
                         </td>
@@ -326,13 +329,13 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm text-gray-600">
-                        <div>{fmt(booking.checkIn)}</div>
+                        <div>{fmt(booking.checkIn, locale)}</div>
                         <div className="text-xs text-gray-400">
-                          → {fmt(booking.checkOut)}
+                          → {fmt(booking.checkOut, locale)}
                         </div>
                       </td>
                       <td className="px-4 py-4 text-sm font-medium">
-                        {money(booking.total, booking.currency)}
+                        {money(booking.total, booking.currency, locale)}
                         {booking.paymentStatus === "paid" && (
                           <span className="ml-1 text-xs text-green-600">✓</span>
                         )}
@@ -351,7 +354,7 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                         <Link
                           href={`/dashboard/bookings/${booking.id}`}
                           className="p-2 rounded-lg hover:bg-gray-100 transition-colors inline-flex"
-                          title="Voir détails"
+                          title={t("bulk.viewDetails")}
                         >
                           <Eye className="w-4 h-4 text-gray-500" />
                         </Link>
@@ -366,13 +369,13 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
       </Card>
 
       <p className="text-xs text-gray-400 mt-3">
-        Raccourcis : <kbd className="px-1 bg-gray-100 rounded">/</kbd> chercher ·{" "}
+        {t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")} ·{" "}
         {isAdmin && (
           <>
-            <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> tout sélectionner ·{" "}
+            <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> {t("bulk.shortcutSelectAll")} ·{" "}
           </>
         )}
-        <kbd className="px-1 bg-gray-100 rounded">Échap</kbd> vider
+        <kbd className="px-1 bg-gray-100 rounded">Esc</kbd> {t("bulk.shortcutClear")}
       </p>
     </div>
   );

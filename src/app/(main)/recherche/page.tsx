@@ -2,11 +2,6 @@ import type { Metadata } from "next";
 import { db } from "@/db";
 import { bookings, properties, rooms } from "@/db/schema";
 import { asc, count, eq, and, ilike, inArray, or, desc, sql, type SQL } from "drizzle-orm";
-
-export const metadata: Metadata = {
-  title: "Recherche d'hébergements",
-  description: "Trouvez le meilleur hébergement pour votre séjour : hôtel, riad, villa, appartement, camping.",
-};
 import { PropertyCard } from "@/components/property-card";
 import { toPublicPropertyCard } from "@/lib/public-property";
 import { EmptyState } from "@/components/ui/empty-state";

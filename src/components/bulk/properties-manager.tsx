@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -27,14 +28,7 @@ export interface PropertyRow {
   createdAt: string;
 }
 
-const statusLabels: Record<string, string> = {
-  active: "Actif",
-  pending: "En attente",
-  draft: "Brouillon",
-  suspended: "Suspendu",
-  archived: "Archivé",
-  rejected: "Rejeté",
-};
+
 
 interface Props {
   properties: PropertyRow[];
@@ -42,6 +36,15 @@ interface Props {
 }
 
 export function PropertiesManager({ properties, isAdmin }: Props) {
+  const t = useT();
+  const statusLabels: Record<string, string> = {
+    active: t("bulk.active"),
+    pending: t("status.pending"),
+    draft: "Draft",
+    suspended: t("bulk.suspendedBadge"),
+    archived: t("bulk.archived"),
+    rejected: t("bulk.rejectedOne"),
+  };
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -103,21 +106,21 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
           label: "Approuver",
           icon: BulkIcons.approve,
           variant: "primary" as const,
-          confirmMessage: `Approuver ${selected.size} hébergement(s) ? Ils seront visibles publiquement.`,
+          confirmMessage: t("bulk.confirmApprove").replace("{n}", String(selected.size)),
         },
         {
           key: "reject",
           label: "Rejeter",
           icon: BulkIcons.reject,
           variant: "secondary" as const,
-          confirmMessage: `Rejeter ${selected.size} hébergement(s) ? Ils repasseront en brouillon.`,
+          confirmMessage: t("bulk.confirmRejectProps").replace("{n}", String(selected.size)),
         },
         {
           key: "suspend",
           label: "Suspendre",
           icon: BulkIcons.suspend,
           variant: "danger" as const,
-          confirmMessage: `Suspendre ${selected.size} hébergement(s) ?`,
+          confirmMessage: t("bulk.confirmSuspendProps").replace("{n}", String(selected.size)),
         },
       ]
     : [];
@@ -156,7 +159,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
           { value: "pending", label: "En attente" },
           { value: "draft", label: "Brouillon" },
           { value: "suspended", label: "Suspendu" },
-          { value: "rejected", label: "Rejeté" },
+          { value: "rejected", label: t("bulk.rejectedOne") },
         ]}
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
@@ -195,18 +198,18 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
       )}
 
       <p className="text-sm text-gray-600 mb-3">
-        {filtered.length} hébergement{filtered.length > 1 ? "s" : ""} affiché
+        {(filtered.length > 1 ? t("bulk.propertiesShownMany") : t("bulk.propertiesShown")).replace("{n}", String(filtered.length))}
         {filtered.length > 1 ? "s" : ""}
         {filtered.length !== properties.length && ` sur ${properties.length}`}
-        {selected.size > 0 && ` · ${selected.size} sélectionné(s)`}
+        {selected.size > 0 && t("bulk.selectedSuffix").replace("{n}", String(selected.size))}
       </p>
 
       <Card padding="none">
         {filtered.length === 0 ? (
           <EmptyState
             icon={<Building2 className="w-12 h-12 text-gray-300" />}
-            title="Aucun hébergement"
-            description="Aucun hébergement ne correspond à vos filtres."
+            title={t("bulk.noPropertiesTitle")}
+            description={t("bulk.noPropertiesDesc")}
           />
         ) : (
           <div className="overflow-x-auto">
@@ -217,14 +220,14 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                     <th className="px-4 py-4 w-10">
                       <input
                         type="checkbox"
-                        aria-label="Sélectionner tous les hébergements visibles"
+                        aria-label={t("bulk.selectAllProperties")}
                         checked={allSelected}
                         onChange={toggleAll}
                         className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
                       />
                     </th>
                   )}
-                  <th className="px-4 py-4 font-medium">Hébergement</th>
+                  <th className="px-4 py-4 font-medium">{t("dash.colProperty")}</th>
                   <th className="px-4 py-4 font-medium">Type</th>
                   <th className="px-4 py-4 font-medium">Localisation</th>
                   <th className="px-4 py-4 font-medium">Note</th>
@@ -244,7 +247,7 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                       <td className="px-4 py-4">
                         <input
                           type="checkbox"
-                          aria-label={`Sélectionner ${property.name}`}
+                          aria-label={t("bulk.selectNamed").replace("{name}", property.name)}
                           checked={selected.has(property.id)}
                           onChange={() => toggle(property.id)}
                           className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
@@ -333,8 +336,8 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                             <RowDeleteButton
                               entity="properties"
                               id={property.id}
-                              label={`l'hébergement « ${property.name} »`}
-                              verb="Archiver"
+                              label={t("bulk.propertyLabel").replace("{name}", property.name)}
+                              verb="archive"
                             />
                           </>
                         )}
@@ -349,13 +352,13 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
       </Card>
 
       <p className="text-xs text-gray-400 mt-3">
-        Raccourcis : <kbd className="px-1 bg-gray-100 rounded">/</kbd> chercher ·{" "}
+{t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")} ·{" "}
         {isAdmin && (
           <>
-            <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> tout sélectionner ·{" "}
+            <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> {t("bulk.shortcutSelectAll")} ·{" "}
           </>
         )}
-        <kbd className="px-1 bg-gray-100 rounded">Échap</kbd> vider
+        <kbd className="px-1 bg-gray-100 rounded">Esc</kbd> {t("bulk.shortcutClear")}
       </p>
     </div>
   );

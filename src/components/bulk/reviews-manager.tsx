@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -37,12 +38,12 @@ export interface ReviewRow {
   } | null;
 }
 
-function ratingInfo(v: number): { emoji: string; label: string } {
+function ratingInfo(v: number, great: string, poor: string): { emoji: string; label: string } {
   if (v >= 9) return { emoji: "🌟", label: "Excellent" };
-  if (v >= 8) return { emoji: "😊", label: "Très bien" };
+  if (v >= 8) return { emoji: "😊", label: great };
   if (v >= 7) return { emoji: "🙂", label: "Bien" };
   if (v >= 5) return { emoji: "😐", label: "Correct" };
-  return { emoji: "😞", label: "Décevant" };
+  return { emoji: "😞", label: poor };
 }
 
 interface Props {
@@ -51,6 +52,7 @@ interface Props {
 }
 
 export function ReviewsManager({ reviews, isAdmin }: Props) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -147,7 +149,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
         </Card>
         <Card padding="sm">
           <div className="p-4">
-            <p className="text-sm text-gray-500">Approuvés</p>
+            <p className="text-sm text-gray-500">{t("bulk.approved")}</p>
             <p className="text-2xl font-bold text-green-600">{stats.approved}</p>
           </div>
         </Card>
@@ -161,13 +163,13 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
         onDeselectAll={() => setSelected(new Set())}
         searchValue={q}
         onSearchChange={setQ}
-        searchPlaceholder="Hébergement, ville, auteur, contenu…"
+        searchPlaceholder={t("bulk.searchReviews")}
         statusOptions={[
           { value: "all", label: "Tous statuts" },
           { value: "pending", label: "En attente" },
-          { value: "approved", label: "Approuvés" },
-          { value: "hidden", label: "Masqués" },
-          { value: "rejected", label: "Rejetés" },
+          { value: "approved", label: t("bulk.approved") },
+          { value: "hidden", label: t("bulk.hidden") },
+          { value: "rejected", label: t("bulk.rejected") },
         ]}
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
@@ -175,9 +177,9 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
       />
 
       <p className="text-sm text-gray-600 mb-3">
-        {filtered.length} avis affiché{filtered.length > 1 ? "s" : ""}
-        {filtered.length !== reviews.length && ` sur ${reviews.length}`}
-        {selected.size > 0 && ` · ${selected.size} sélectionné(s)`}
+        {(filtered.length > 1 ? t("bulk.reviewsShownMany") : t("bulk.reviewsShown")).replace("{n}", String(filtered.length))}
+        {filtered.length !== reviews.length && ` ${t("bulk.ofTotal").replace("{n}", String(reviews.length))}`}
+        {selected.size > 0 && t("bulk.selectedSuffix").replace("{n}", String(selected.size))}
       </p>
 
       {/* Sélection globale (top de liste) */}
@@ -191,7 +193,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
             className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
           />
           <label htmlFor="reviews-select-all" className="text-sm text-gray-600">
-            Tout sélectionner sur cette vue
+{t("bulk.selectAllVisible")}
           </label>
         </div>
       )}
@@ -201,13 +203,13 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
           <EmptyState
             icon={<MessageSquare className="w-12 h-12 text-gray-300" />}
             title="Aucun avis"
-            description="Aucun avis ne correspond à vos filtres."
+            description={t("bulk.noReviewsDesc")}
           />
         ) : (
           <div className="divide-y divide-gray-100">
             {filtered.map((r) => {
               const rating = parseFloat(r.review.overallRating);
-              const info = ratingInfo(rating);
+              const info = ratingInfo(rating, t("bulk.ratingGreat"), t("bulk.ratingPoor"));
               const st = r.review.status ?? "pending";
               const isSelected = selected.has(r.review.id);
               return (
@@ -219,7 +221,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                     {isAdmin && (
                       <input
                         type="checkbox"
-                        aria-label={`Sélectionner avis ${r.review.id}`}
+                        aria-label={t("bulk.selectNamed").replace("{name}", r.review.id)}
                         checked={isSelected}
                         onChange={() => toggle(r.review.id)}
                         className="mt-2 w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
@@ -266,7 +268,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
 
                       <div className="mb-3">
                         <p className="text-sm text-gray-500">
-                          Hébergement :{" "}
+                          {t("dash.colProperty")} :{" "}
                           <span className="font-medium text-gray-900">
                             {r.property?.name}
                           </span>{" "}
@@ -285,7 +287,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                       {r.review.negativeComment && (
                         <div className="mb-2 p-3 bg-red-50 rounded-lg">
                           <p className="text-sm text-gray-700">
-                            <span className="text-red-600 font-medium">👎 À améliorer :</span>{" "}
+                            <span className="text-red-600 font-medium">{t("bulk.toImprove")}</span>{" "}
                             {r.review.negativeComment}
                           </p>
                         </div>
@@ -294,7 +296,7 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                       {r.review.hostReply && (
                         <div className="mt-4 ml-6 p-3 bg-gray-50 border-l-4 border-[#1B3A6B] rounded-r-lg">
                           <p className="text-sm font-medium text-gray-700 mb-1">
-                            Réponse de l&apos;hébergeur
+                            {t("bulk.hostReply")}
                           </p>
                           <p className="text-sm text-gray-600">{r.review.hostReply}</p>
                         </div>
@@ -331,13 +333,13 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
       </Card>
 
       <p className="text-xs text-gray-400 mt-3">
-        Raccourcis : <kbd className="px-1 bg-gray-100 rounded">/</kbd> chercher ·{" "}
+{t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")} ·{" "}
         {isAdmin && (
           <>
-            <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> tout sélectionner ·{" "}
+            <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> {t("bulk.shortcutSelectAll")} ·{" "}
           </>
         )}
-        <kbd className="px-1 bg-gray-100 rounded">Échap</kbd> vider
+        <kbd className="px-1 bg-gray-100 rounded">Esc</kbd> {t("bulk.shortcutClear")}
       </p>
     </div>
   );

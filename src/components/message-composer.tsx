@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, Paperclip, X as XIcon } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   conversationId: string;
@@ -14,6 +15,7 @@ interface Props {
  * POST /api/messages { conversationId, content, attachmentKey?, attachmentMimeType? }
  */
 export function MessageComposer({ conversationId }: Props) {
+  const t = useT();
   const router = useRouter();
   const [content, setContent] = useState("");
   const [attachment, setAttachment] = useState<{ key: string; mimeType: string } | null>(null);
@@ -32,10 +34,10 @@ export function MessageComposer({ conversationId }: Props) {
       fd.append("file", file);
       const r = await fetch("/api/uploads", { method: "POST", body: fd });
       const j = await r.json();
-      if (!r.ok) throw new Error(j.error ?? "Erreur");
+      if (!r.ok) throw new Error(j.error ?? t("auth.error"));
       setAttachment({ key: j.key, mimeType: j.mimeType });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("auth.error"));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -48,7 +50,7 @@ export function MessageComposer({ conversationId }: Props) {
     setError(null);
     setLoading(true);
     try {
-      const body: Record<string, unknown> = { conversationId, content: content.trim() || "(pièce jointe)" };
+      const body: Record<string, unknown> = { conversationId, content: content.trim() || t("messages.attachFallback") };
       if (attachment) {
         body.attachmentKey = attachment.key;
         body.attachmentMimeType = attachment.mimeType;
@@ -59,12 +61,12 @@ export function MessageComposer({ conversationId }: Props) {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Erreur");
+      if (!res.ok) throw new Error(data.error ?? t("auth.error"));
       setContent("");
       setAttachment(null);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("auth.error"));
     } finally {
       setLoading(false);
     }
@@ -74,7 +76,7 @@ export function MessageComposer({ conversationId }: Props) {
     <form onSubmit={handleSubmit} className="flex gap-2 items-end">
       <div className="flex-1">
         <label htmlFor="msg-content" className="sr-only">
-          Votre message
+          {t("messages.yourMessage")}
         </label>
         <textarea
           id="msg-content"
@@ -82,17 +84,17 @@ export function MessageComposer({ conversationId }: Props) {
           onChange={(e) => setContent(e.target.value)}
           rows={2}
           maxLength={4000}
-          placeholder="Écrivez votre message…"
+          placeholder={t("messages.placeholder")}
           className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm resize-none focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
         />
         {attachment && (
           <div className="mt-2 flex items-center gap-2 text-xs text-gray-600">
             <Paperclip className="w-3 h-3" />
-            <span>Pièce jointe privée prête à envoyer</span>
+            <span>{t("messages.attachReady")}</span>
             <button
               type="button"
               onClick={() => setAttachment(null)}
-              aria-label="Retirer la pièce jointe"
+              aria-label={t("messages.removeAttach")}
               className="text-gray-400 hover:text-red-600"
             >
               <XIcon className="w-3 h-3" />
@@ -111,16 +113,16 @@ export function MessageComposer({ conversationId }: Props) {
       />
       <label
         htmlFor="msg-attach"
-        aria-label="Ajouter une pièce jointe"
+        aria-label={t("messages.addAttach")}
         className="p-3 bg-gray-100 rounded-lg hover:bg-gray-200 cursor-pointer"
-        title="Ajouter une pièce jointe"
+        title={t("messages.addAttach")}
       >
         <Paperclip className="w-5 h-5 text-gray-600" />
       </label>
       <button
         type="submit"
         disabled={loading || uploading || (content.trim().length === 0 && !attachment)}
-        aria-label="Envoyer le message"
+        aria-label={t("messages.sendAria")}
         className="p-3 bg-[#FF5A5F] text-white rounded-lg hover:bg-[#e54a4f] disabled:opacity-50"
       >
         <Send className="w-5 h-5" />

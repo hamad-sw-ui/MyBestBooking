@@ -7,6 +7,30 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-08-31 — T-167 suite (settings / bulk / formulaires hôtes)
+
+- **Demande** : extraire le FR restant via `makeT`/`useT` (pas de changement
+  `makeT` : interpolation `.replace("{n}", …)`).
+- 🔨 Branché : `settings-panel`, 8 managers bulk, analytics, billing,
+  `bookings/[id]`, `properties/new`+`[id]`, `rate-plans-section`,
+  `availability-calendar`. Catalogue 1087 clés FR=EN.
+- 🔨 tsc **0** · 🧪 ui-strings **4/4** · 🔍 `i18n:check` **55/19** (warn).
+- ❓ T-167 **non clôturé** : restes `new-room-form`, `booking-row-actions`,
+  `review-moderate-actions`, etc. SSR cookie `en` non rejoué.
+
+## Session 2026-08-31 — T-167 i18n restes public + chrome privé
+
+- **Demande** : analyse en profondeur du contenu encore inscrit en dur
+  (interfaces publiques **et** privées) après le correctif navbar SSR.
+- 🔍 Inventaire : garde-fou 424 lignes / 60 fichiers ; scan élargi ~1070
+  hits (accents + mots FR). Faux positifs : pages légales / help-center
+  **déjà bilingues**. Vrais restes : auth (7 pages), compte, messages,
+  error/maintenance, chrome dashboard, bulk/admin.
+- 🔨 Vague 3 : `UiLocaleProvider` (locale serveur → pas de flash FR) ;
+  auth + compte + messages + chrome dashboard branchés.
+- Hors vague à l'époque : settings-panel, bulk, formulaires dashboard
+  (repris dans la session suivante).
+
 ## Session 49 — 2026-08-30 : audit n°30 implémenté (T-160→T-166, sans régression)
 
 - **Demande** : « conformément aux règles du framework `.ai/`, mettez en

@@ -19,6 +19,8 @@ import type {
   SettingValue,
   SettingKey,
 } from "@/lib/settings";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
+import type { UiStringKey } from "@/lib/ui-strings";
 
 type AllSettings = { [K in SettingKey]: SettingValue<K> };
 type Providers = { stripe: boolean; resend: boolean; s3: boolean };
@@ -30,23 +32,28 @@ interface Props {
 
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-async function saveSection<K extends SettingKey>(key: K, value: SettingValue<K>) {
+async function saveSection<K extends SettingKey>(
+  key: K,
+  value: SettingValue<K>,
+  fallback: string,
+) {
   const res = await fetch(`/api/admin/settings/${key}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(value),
   });
   if (!res.ok) {
-    const j = await res.json().catch(() => ({ error: "Erreur inconnue" }));
-    throw new Error(j.error || "Erreur d'enregistrement");
+    const j = await res.json().catch(() => ({ error: fallback }));
+    throw new Error(j.error || fallback);
   }
   return (await res.json()) as { key: K; value: SettingValue<K> };
 }
 
 function StatusPill({ status, error }: { status: SaveStatus; error?: string | null }) {
-  if (status === "saving") return <Badge variant="info">Enregistrement…</Badge>;
-  if (status === "saved") return <Badge variant="success">Enregistré ✓</Badge>;
-  if (status === "error") return <Badge variant="danger">{error || "Erreur"}</Badge>;
+  const t = useT();
+  if (status === "saving") return <Badge variant="info">{t("settings.saving")}</Badge>;
+  if (status === "saved") return <Badge variant="success">{t("settings.saved")}</Badge>;
+  if (status === "error") return <Badge variant="danger">{error || t("settings.error")}</Badge>;
   return null;
 }
 
@@ -67,6 +74,7 @@ export function SettingsPanel({ initial, providers }: Props) {
 /* ─────────────────────────── GENERAL ─────────────────────────── */
 
 function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
+  const t = useT();
   const [v, setV] = useState(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -77,11 +85,11 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
     setStatus("saving");
     startTransition(async () => {
       try {
-        await saveSection("general", v);
+        await saveSection("general", v, t("settings.saveError"));
         setStatus("saved");
       } catch (e) {
         setStatus("error");
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
@@ -91,24 +99,24 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
       <CardHeader>
         <div className="flex items-center gap-3">
           <Globe className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Paramètres généraux</CardTitle>
+          <CardTitle>{t("settings.general")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <Input
-          label="Nom de la plateforme"
+          label={t("settings.siteName")}
           value={v.siteName}
           onChange={(e) => setV({ ...v, siteName: e.target.value })}
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Email de support"
+            label={t("settings.supportEmail")}
             type="email"
             value={v.supportEmail}
             onChange={(e) => setV({ ...v, supportEmail: e.target.value })}
           />
           <Input
-            label="Email partenaires"
+            label={t("settings.partnersEmail")}
             type="email"
             value={v.partnersEmail}
             onChange={(e) => setV({ ...v, partnersEmail: e.target.value })}
@@ -116,13 +124,13 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
         </div>
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Langue par défaut</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("settings.defaultLanguage")}</label>
             <select
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
               value={v.defaultLanguage}
               onChange={(e) => setV({ ...v, defaultLanguage: e.target.value as typeof v.defaultLanguage })}
             >
-              <option value="fr">🇫🇷 Français</option>
+              <option value="fr">🇫🇷 {t("account.langFr")}</option>
               <option value="en">🇬🇧 English</option>
               {/* T-145 : l'arabe n'est pas une locale UI supportée (UiLocale
                   = "fr" | "en") ; le proposer faisait retomber l'affichage en
@@ -130,7 +138,7 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Devise par défaut</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("settings.defaultCurrency")}</label>
             <select
               className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
               value={v.defaultCurrency}
@@ -145,7 +153,7 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
         </div>
       </CardContent>
       <CardFooter className="flex items-center gap-3">
-        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
+        <Button onClick={save} disabled={isPending}>{t("action.save")}</Button>
         <StatusPill status={status} error={error} />
       </CardFooter>
     </Card>
@@ -155,6 +163,7 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
 /* ─────────────────────────── BILLING ─────────────────────────── */
 
 function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
+  const t = useT();
   const [v, setV] = useState(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -165,11 +174,11 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
     setStatus("saving");
     startTransition(async () => {
       try {
-        await saveSection("billing", v);
+        await saveSection("billing", v, t("settings.saveError"));
         setStatus("saved");
       } catch (e) {
         setStatus("error");
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
@@ -179,13 +188,13 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
       <CardHeader>
         <div className="flex items-center gap-3">
           <CreditCard className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Fiscalité & commissions</CardTitle>
+          <CardTitle>{t("settings.billing")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Taux de TVA (%)"
+            label={t("settings.taxRate")}
             type="number"
             min={0}
             max={100}
@@ -194,7 +203,7 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
             onChange={(e) => setV({ ...v, taxRate: parseFloat(e.target.value) / 100 })}
           />
           <Input
-            label="Commission par défaut (%)"
+            label={t("settings.commission")}
             type="number"
             min={0}
             max={100}
@@ -204,53 +213,48 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
           />
         </div>
         <p className="text-xs text-gray-500">
-          Ces valeurs s&apos;appliquent aux nouvelles réservations. Les
-          propriétés qui possèdent une commission spécifique gardent leur
-          valeur.
+          {t("settings.billingNote")}
         </p>
 
         <div className="border-t border-gray-100 pt-4 mt-2">
-          <h3 className="text-sm font-semibold text-gray-800 mb-1">Mentions légales des factures</h3>
+          <h3 className="text-sm font-semibold text-gray-800 mb-1">{t("settings.invoiceLegal")}</h3>
           <p className="text-xs text-gray-500 mb-4">
-            Renseigner la société émettrice et ses numéros légaux fait passer
-            les documents de « Reçu » à « Facture » conforme. Tant que ces
-            champs sont vides, le document porte la mention « non conforme
-            facturation légale ».
+            {t("settings.invoiceLegalBody")}
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
-              label="Raison sociale"
+              label={t("settings.legalName")}
               value={v.companyLegalName ?? ""}
               onChange={(e) => setV({ ...v, companyLegalName: e.target.value })}
               placeholder="MyBestBooking SAS"
             />
             <Input
-              label="SIREN / SIRET / RCCM"
+              label={t("settings.legalId")}
               value={v.companyLegalId ?? ""}
               onChange={(e) => setV({ ...v, companyLegalId: e.target.value })}
               placeholder="SIRET 123 456 789 00010"
             />
             <Input
-              label="N° de TVA"
+              label={t("settings.vat")}
               value={v.vatNumber ?? ""}
               onChange={(e) => setV({ ...v, vatNumber: e.target.value })}
               placeholder="FR 12 345678901"
             />
             <Input
-              label="Email de contact facturation"
+              label={t("settings.billingEmail")}
               type="email"
               value={v.companyContactEmail ?? ""}
               onChange={(e) => setV({ ...v, companyContactEmail: e.target.value })}
               placeholder="facturation@exemple.com"
             />
             <Input
-              label="Préfixe des numéros de facture"
+              label={t("settings.invoicePrefix")}
               value={v.invoicePrefix ?? "FAC-"}
               onChange={(e) => setV({ ...v, invoicePrefix: e.target.value })}
             />
           </div>
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Adresse de la société</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("settings.companyAddress")}</label>
             <textarea
               className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900"
               rows={2}
@@ -260,7 +264,7 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
             />
           </div>
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Pied de facture (CGV, pénalités, IBAN…)</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">{t("settings.invoiceFooter")}</label>
             <textarea
               className="block w-full rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-gray-900"
               rows={3}
@@ -271,7 +275,7 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
         </div>
       </CardContent>
       <CardFooter className="flex items-center gap-3">
-        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
+        <Button onClick={save} disabled={isPending}>{t("action.save")}</Button>
         <StatusPill status={status} error={error} />
       </CardFooter>
     </Card>
@@ -281,6 +285,7 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
 /* ─────────────────────────── BESTREWARDS ─────────────────────────── */
 
 function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> }) {
+  const t = useT();
   const [v, setV] = useState(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -291,11 +296,11 @@ function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> 
     setStatus("saving");
     startTransition(async () => {
       try {
-        await saveSection("bestrewards", v);
+        await saveSection("bestrewards", v, t("settings.saveError"));
         setStatus("saved");
       } catch (e) {
         setStatus("error");
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
@@ -305,17 +310,16 @@ function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> 
       <CardHeader>
         <div className="flex items-center gap-3">
           <Award className="w-5 h-5 text-[#F5A623]" />
-          <CardTitle>Programme BestRewards</CardTitle>
+          <CardTitle>{t("settings.bestrewards")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-600">
-          Seuils de passage de niveau (nombre de réservations) et
-          réductions accordées par niveau.
+          {t("settings.bestrewardsBody")}
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input
-            label="Seuil Level 2 (réservations)"
+            label={t("settings.threshold2")}
             type="number"
             min={1}
             step={1}
@@ -326,7 +330,7 @@ function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> 
             })}
           />
           <Input
-            label="Seuil Level 3 (réservations)"
+            label={t("settings.threshold3")}
             type="number"
             min={1}
             step={1}
@@ -338,10 +342,10 @@ function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> 
           />
         </div>
         <div className="grid grid-cols-3 gap-4">
-          {(["Level 1 (Explorer)", "Level 2 (Voyageur)", "Level 3 (Ambassador)"] as const).map((label, idx) => (
+          {([t("settings.level1"), t("settings.level2"), t("settings.level3")] as const).map((label, idx) => (
             <Input
               key={label}
-              label={`${label} — réduction (%)`}
+              label={t("settings.discountPct").replace("{label}", label)}
               type="number"
               min={0}
               max={100}
@@ -357,7 +361,7 @@ function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> 
         </div>
       </CardContent>
       <CardFooter className="flex items-center gap-3">
-        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
+        <Button onClick={save} disabled={isPending}>{t("action.save")}</Button>
         <StatusPill status={status} error={error} />
       </CardFooter>
     </Card>
@@ -366,15 +370,15 @@ function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> 
 
 /* ─────────────────────────── CANCELLATION ─────────────────────────── */
 
-const POLICY_LABELS: Record<keyof SettingValue<"cancellation">, string> = {
-  free: "Gratuite",
-  flexible: "Flexible",
-  moderate: "Modérée",
-  strict: "Stricte",
-  non_refundable: "Non remboursable",
-};
-
 function CancellationSection({ initial }: { initial: SettingValue<"cancellation"> }) {
+  const t = useT();
+  const POLICY_LABELS: Record<keyof SettingValue<"cancellation">, string> = {
+    free: t("settings.policyFree"),
+    flexible: t("settings.policyFlexible"),
+    moderate: t("settings.policyModerate"),
+    strict: t("settings.policyStrict"),
+    non_refundable: t("settings.policyNonRefundable"),
+  };
   const [v, setV] = useState(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -385,11 +389,11 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
     setStatus("saving");
     startTransition(async () => {
       try {
-        await saveSection("cancellation", v);
+        await saveSection("cancellation", v, t("settings.saveError"));
         setStatus("saved");
       } catch (e) {
         setStatus("error");
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
@@ -406,14 +410,12 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
       <CardHeader>
         <div className="flex items-center gap-3">
           <AlertCircle className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Grille d&apos;annulation</CardTitle>
+          <CardTitle>{t("settings.cancellationGrid")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-600">
-          Pour chaque politique, la ligne « à partir de N jours » applique
-          le pourcentage de frais indiqué. Le seuil <code>0</code> capture
-          l&apos;annulation le jour même.
+          {t("settings.cancellationBody")}
         </p>
         {(Object.keys(POLICY_LABELS) as (keyof SettingValue<"cancellation">)[]).map((policy) => (
           <div key={policy} className="border border-gray-200 rounded-lg p-4">
@@ -421,7 +423,7 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
             <div className="space-y-2">
               {v[policy].map((bucket, idx) => (
                 <div key={idx} className="flex items-center gap-3">
-                  <span className="text-sm text-gray-500 w-16">Dès</span>
+                  <span className="text-sm text-gray-500 w-16">{t("settings.from")}</span>
                   <Input
                     type="number"
                     min={0}
@@ -430,7 +432,7 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
                     onChange={(e) => updateBucket(policy, idx, "days", parseInt(e.target.value, 10) || 0)}
                     className="w-24"
                   />
-                  <span className="text-sm text-gray-500">jours →</span>
+                  <span className="text-sm text-gray-500">{t("settings.daysArrow")}</span>
                   <Input
                     type="number"
                     min={0}
@@ -440,7 +442,7 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
                     onChange={(e) => updateBucket(policy, idx, "percent", parseFloat(e.target.value) || 0)}
                     className="w-24"
                   />
-                  <span className="text-sm text-gray-500">% de frais</span>
+                  <span className="text-sm text-gray-500">{t("settings.feePct")}</span>
                 </div>
               ))}
             </div>
@@ -448,7 +450,7 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
         ))}
       </CardContent>
       <CardFooter className="flex items-center gap-3">
-        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
+        <Button onClick={save} disabled={isPending}>{t("action.save")}</Button>
         <StatusPill status={status} error={error} />
       </CardFooter>
     </Card>
@@ -458,6 +460,7 @@ function CancellationSection({ initial }: { initial: SettingValue<"cancellation"
 /* ─────────────────────────── SECURITY ─────────────────────────── */
 
 function SecuritySection({ initial }: { initial: SettingValue<"security"> }) {
+  const t = useT();
   const [maintenanceMode, setMaintenanceMode] = useState(initial.maintenanceMode);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -469,69 +472,69 @@ function SecuritySection({ initial }: { initial: SettingValue<"security"> }) {
       try {
         // Conserve les clés legacy mais n'expose comme toggle que la seule
         // politique effectivement lue par le runtime: maintenanceMode.
-        await saveSection("security", { ...initial, maintenanceMode });
+        await saveSection("security", { ...initial, maintenanceMode }, t("settings.saveError"));
         setStatus("saved");
       } catch (reason) {
-        setStatus("error"); setError(reason instanceof Error ? reason.message : "Erreur");
+        setStatus("error"); setError(reason instanceof Error ? reason.message : t("settings.error"));
       }
     });
   }
 
   return <Card>
-    <CardHeader><div className="flex items-center gap-3"><Shield className="w-5 h-5 text-[#1B3A6B]" /><CardTitle>Sécurité opérationnelle</CardTitle></div></CardHeader>
+    <CardHeader><div className="flex items-center gap-3"><Shield className="w-5 h-5 text-[#1B3A6B]" /><CardTitle>{t("settings.security")}</CardTitle></div></CardHeader>
     <CardContent className="space-y-4">
       <div className="flex items-center justify-between py-2">
-        <div><p className="font-medium text-gray-900">Mode maintenance</p><p className="text-sm text-gray-500">Bloque les parcours métier non admin; les routes administrateur restent accessibles pour éviter un verrouillage.</p></div>
+        <div><p className="font-medium text-gray-900">{t("settings.maintenance")}</p><p className="text-sm text-gray-500">{t("settings.maintenanceBody")}</p></div>
         <label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={maintenanceMode} onChange={(e) => setMaintenanceMode(e.target.checked)} /><div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600" /></label>
       </div>
-      <p className="text-xs text-gray-500 border-t pt-3">Les politiques de mot de passe, durée de session, obligation 2FA hôte et campagnes email ne sont pas encore configurables à chaud. Elles ne sont donc volontairement pas présentées comme des contrôles actifs.</p>
+      <p className="text-xs text-gray-500 border-t pt-3">{t("settings.securityNote")}</p>
     </CardContent>
-    <CardFooter className="flex items-center gap-3"><Button onClick={save} disabled={isPending}>Enregistrer</Button><StatusPill status={status} error={error} /></CardFooter>
+    <CardFooter className="flex items-center gap-3"><Button onClick={save} disabled={isPending}>{t("action.save")}</Button><StatusPill status={status} error={error} /></CardFooter>
   </Card>;
 }
 
 /* ─────────────────────────── EMAIL TEMPLATES (T-025) ─────────────────────────── */
 
-const TEMPLATE_LABELS: Record<keyof SettingValue<"emailTemplates">, { title: string; vars: string }> = {
-  emailVerification: {
-    title: "Vérification email",
-    vars: "{firstName}, {url}",
-  },
-  passwordReset: {
-    title: "Réinitialisation mot de passe",
-    vars: "{firstName}, {url}",
-  },
-  welcomeEmail: {
-    title: "Bienvenue (email vérifié)",
-    vars: "{firstName}, {url}",
-  },
-  bookingConfirmation: {
-    title: "Confirmation de réservation (voyageur)",
-    vars: "{firstName}, {bookingReference}, {propertyName}, {city}, {checkIn}, {checkOut}, {total}, {currency}",
-  },
-  bookingHostNotification: {
-    title: "Nouvelle réservation (hôte)",
-    vars: "{hostFirstName}, {bookingReference}, {propertyName}, {guestName}, {checkIn}, {checkOut}",
-  },
-  bookingCancellation: {
-    title: "Annulation de réservation (voyageur)",
-    vars: "{firstName}, {bookingReference}, {propertyName}, {cancellationFee}, {currency}",
-  },
-  bookingReminder: {
-    title: "Rappel avant séjour (J-3 / J-1)",
-    vars: "{firstName}, {bookingReference}, {propertyName}, {city}, {checkIn}, {checkOut}, {daysLabel}, {url}",
-  },
-  reviewRequest: {
-    title: "Demande d'avis (après séjour)",
-    vars: "{firstName}, {propertyName}, {bookingReference}, {url}",
-  },
-  newMessage: {
-    title: "Nouveau message reçu",
-    vars: "{firstName}, {senderName}, {url}",
-  },
-};
-
 function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTemplates"> }) {
+  const t = useT();
+  const TEMPLATE_LABELS: Record<keyof SettingValue<"emailTemplates">, { title: string; vars: string }> = {
+    emailVerification: {
+      title: t("settings.tplVerify"),
+      vars: "{firstName}, {url}",
+    },
+    passwordReset: {
+      title: t("settings.tplReset"),
+      vars: "{firstName}, {url}",
+    },
+    welcomeEmail: {
+      title: t("settings.tplWelcome"),
+      vars: "{firstName}, {url}",
+    },
+    bookingConfirmation: {
+      title: t("settings.tplBooking"),
+      vars: "{firstName}, {bookingReference}, {propertyName}, {city}, {checkIn}, {checkOut}, {total}, {currency}",
+    },
+    bookingHostNotification: {
+      title: t("settings.tplHost"),
+      vars: "{hostFirstName}, {bookingReference}, {propertyName}, {guestName}, {checkIn}, {checkOut}",
+    },
+    bookingCancellation: {
+      title: t("settings.tplCancel"),
+      vars: "{firstName}, {bookingReference}, {propertyName}, {cancellationFee}, {currency}",
+    },
+    bookingReminder: {
+      title: t("settings.tplReminder"),
+      vars: "{firstName}, {bookingReference}, {propertyName}, {city}, {checkIn}, {checkOut}, {daysLabel}, {url}",
+    },
+    reviewRequest: {
+      title: t("settings.tplReview"),
+      vars: "{firstName}, {propertyName}, {bookingReference}, {url}",
+    },
+    newMessage: {
+      title: t("settings.tplMessage"),
+      vars: "{firstName}, {senderName}, {url}",
+    },
+  };
   const [v, setV] = useState(initial);
   const [status, setStatus] = useState<SaveStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -542,11 +545,11 @@ function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTempla
     setStatus("saving");
     startTransition(async () => {
       try {
-        await saveSection("emailTemplates", v);
+        await saveSection("emailTemplates", v, t("settings.saveError"));
         setStatus("saved");
       } catch (e) {
         setStatus("error");
-        setError(e instanceof Error ? e.message : "Erreur");
+        setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
   }
@@ -564,15 +567,12 @@ function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTempla
       <CardHeader>
         <div className="flex items-center gap-3">
           <Mail className="w-5 h-5 text-[#1B3A6B]" />
-          <CardTitle>Templates emails</CardTitle>
+          <CardTitle>{t("settings.emails")}</CardTitle>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-gray-600">
-          Éditez le sujet et le paragraphe principal de chaque email
-          transactionnel. Les placeholders <code>{"{name}"}</code> sont
-          remplacés automatiquement (variables listées sous chaque template).
-          Le layout HTML (branding, boutons, tableau récap) reste figé.
+          {t("settings.emailsBody")}
         </p>
         {(Object.keys(TEMPLATE_LABELS) as (keyof SettingValue<"emailTemplates">)[]).map((key) => {
           const meta = TEMPLATE_LABELS[key];
@@ -580,13 +580,13 @@ function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTempla
             <div key={key} className="border border-gray-200 rounded-lg p-4 space-y-3">
               <h4 className="font-medium text-gray-900">{meta.title}</h4>
               <Input
-                label="Sujet"
+                label={t("settings.subject")}
                 value={v[key].subject}
                 onChange={(e) => updateTemplate(key, "subject", e.target.value)}
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Corps du message
+                  {t("settings.body")}
                 </label>
                 <textarea
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B] font-mono text-sm"
@@ -595,13 +595,13 @@ function EmailTemplatesSection({ initial }: { initial: SettingValue<"emailTempla
                   onChange={(e) => updateTemplate(key, "body", e.target.value)}
                 />
               </div>
-              <p className="text-xs text-gray-500 font-mono">Variables : {meta.vars}</p>
+              <p className="text-xs text-gray-500 font-mono">{t("settings.variables").replace("{vars}", meta.vars)}</p>
             </div>
           );
         })}
       </CardContent>
       <CardFooter className="flex items-center gap-3">
-        <Button onClick={save} disabled={isPending}>Enregistrer</Button>
+        <Button onClick={save} disabled={isPending}>{t("action.save")}</Button>
         <StatusPill status={status} error={error} />
       </CardFooter>
     </Card>
@@ -621,36 +621,41 @@ type ProviderMetadata = {
   lastTest: { status: string; message: string | null; createdAt: string } | null;
 };
 
-const PROVIDER_UI: Record<ProviderKey, { name: string; fields: { key: string; label: string; secret?: boolean }[] }> = {
-  stripe: {
-    name: "Stripe",
-    fields: [
-      { key: "secretKey", label: "Clé secrète Stripe", secret: true },
-      { key: "webhookSecret", label: "Secret webhook Stripe", secret: true },
-      { key: "publishableKey", label: "Clé publique Stripe" },
-    ],
-  },
-  resend: {
-    name: "Resend (emails)",
-    fields: [
-      { key: "apiKey", label: "Clé API Resend", secret: true },
-      { key: "mailFrom", label: "Expéditeur (MAIL_FROM)" },
-    ],
-  },
-  s3: {
-    name: "S3 / R2 (uploads)",
-    fields: [
-      { key: "endpoint", label: "Endpoint" },
-      { key: "region", label: "Région" },
-      { key: "bucket", label: "Bucket" },
-      { key: "accessKey", label: "Access key", secret: true },
-      { key: "secretKey", label: "Secret key", secret: true },
-      { key: "publicBaseUrl", label: "Base URL publique" },
-    ],
-  },
-};
+function providerUi(t: (key: UiStringKey) => string): Record<ProviderKey, { name: string; fields: { key: string; label: string; secret?: boolean }[] }> {
+  return {
+    stripe: {
+      name: "Stripe",
+      fields: [
+        { key: "secretKey", label: t("settings.stripeSecret"), secret: true },
+        { key: "webhookSecret", label: t("settings.stripeWebhook"), secret: true },
+        { key: "publishableKey", label: t("settings.stripePk") },
+      ],
+    },
+    resend: {
+      name: t("settings.resendName"),
+      fields: [
+        { key: "apiKey", label: t("settings.resendKey"), secret: true },
+        { key: "mailFrom", label: t("settings.mailFrom") },
+      ],
+    },
+    s3: {
+      name: t("settings.s3Name"),
+      fields: [
+        { key: "endpoint", label: t("settings.endpoint") },
+        { key: "region", label: t("settings.region") },
+        { key: "bucket", label: t("settings.bucket") },
+        { key: "accessKey", label: t("settings.accessKey"), secret: true },
+        { key: "secretKey", label: t("settings.secretKey"), secret: true },
+        { key: "publicBaseUrl", label: t("settings.publicBase") },
+      ],
+    },
+  };
+}
 
 function ProvidersSection({ providers }: { providers: Providers }) {
+  const t = useT();
+  const locale = useUiLocale();
+  const PROVIDER_UI = providerUi(t);
   const [metadata, setMetadata] = useState<ProviderMetadata[] | null>(null);
   const [values, setValues] = useState<Record<ProviderKey, Record<string, string>>>({ stripe: {}, resend: {}, s3: {} });
   const [busy, setBusy] = useState<ProviderKey | "rotation" | null>(null);
@@ -660,7 +665,7 @@ function ProvidersSection({ providers }: { providers: Providers }) {
   async function refresh() {
     const response = await fetch("/api/admin/providers", { cache: "no-store" });
     const body = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(body.error ?? "Impossible de lire les providers");
+    if (!response.ok) throw new Error(body.error ?? t("settings.readProvidersFail"));
     setMetadata(body.providers);
   }
 
@@ -670,10 +675,10 @@ function ProvidersSection({ providers }: { providers: Providers }) {
       try {
         const response = await fetch("/api/admin/providers", { cache: "no-store" });
         const body = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(body.error ?? "Impossible de lire les providers");
+        if (!response.ok) throw new Error(body.error ?? t("settings.readProvidersFail"));
         if (active) setMetadata(body.providers);
       } catch (reason) {
-        if (active) setError(reason instanceof Error ? reason.message : "Erreur");
+        if (active) setError(reason instanceof Error ? reason.message : t("settings.error"));
       }
     }
     void loadMetadata();
@@ -683,7 +688,7 @@ function ProvidersSection({ providers }: { providers: Providers }) {
   async function save(provider: ProviderKey) {
     const nonEmpty = Object.fromEntries(Object.entries(values[provider]).filter(([, value]) => value.trim()));
     if (!Object.keys(nonEmpty).length) {
-      setError("Saisissez au moins une valeur à mettre à jour. Les champs vides ne remplacent jamais une clé existante.");
+      setError(t("settings.needValue"));
       return;
     }
     setBusy(provider); setError(null); setSuccess(null);
@@ -692,12 +697,12 @@ function ProvidersSection({ providers }: { providers: Providers }) {
         method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ values: nonEmpty }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? "Impossible d'enregistrer le provider");
+      if (!response.ok) throw new Error(body.error ?? t("settings.providerSaveFail"));
       setValues((current) => ({ ...current, [provider]: {} }));
-      setSuccess(`${PROVIDER_UI[provider].name} enregistré. Les valeurs ne sont jamais réaffichées.`);
+      setSuccess(t("settings.providerSaved").replace("{name}", PROVIDER_UI[provider].name));
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Erreur");
+      setError(reason instanceof Error ? reason.message : t("settings.error"));
     } finally { setBusy(null); }
   }
 
@@ -706,57 +711,57 @@ function ProvidersSection({ providers }: { providers: Providers }) {
     try {
       const response = await fetch(`/api/admin/providers/${provider}`, { method: "POST" });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? "Test provider échoué");
-      setSuccess(`${PROVIDER_UI[provider].name} : connexion validée.`);
+      if (!response.ok) throw new Error(body.error ?? t("settings.providerTestFail"));
+      setSuccess(t("settings.providerTestOk").replace("{name}", PROVIDER_UI[provider].name));
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Erreur");
+      setError(reason instanceof Error ? reason.message : t("settings.error"));
     } finally { setBusy(null); }
   }
 
   async function rotateCredentials() {
-    if (!window.confirm("Réchiffrer tous les overrides avec la nouvelle clé maître ? Vérifiez que CREDENTIALS_ENCRYPTION_KEY est la nouvelle clé et CREDENTIALS_ENCRYPTION_KEY_PREVIOUS l’ancienne.")) return;
+    if (!window.confirm(t("settings.rotateConfirm"))) return;
     setBusy("rotation"); setError(null); setSuccess(null);
     try {
       const response = await fetch("/api/admin/providers/rotation", {
         method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ confirm: "ROTATE_CREDENTIALS" }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? "Impossible de réchiffrer le coffre");
-      setSuccess(`Coffre réchiffré : ${body.reencrypted} valeur(s). Vérifiez les providers puis retirez CREDENTIALS_ENCRYPTION_KEY_PREVIOUS.`);
+      if (!response.ok) throw new Error(body.error ?? t("settings.rotateFail"));
+      setSuccess(t("settings.rotateOk").replace("{n}", String(body.reencrypted)));
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Erreur");
+      setError(reason instanceof Error ? reason.message : t("settings.error"));
     } finally { setBusy(null); }
   }
 
   async function reset(provider: ProviderKey) {
-    if (!window.confirm(`Retirer les overrides chiffrés ${PROVIDER_UI[provider].name} et revenir aux variables d’environnement ?`)) return;
+    if (!window.confirm(t("settings.resetConfirm").replace("{name}", PROVIDER_UI[provider].name))) return;
     setBusy(provider); setError(null); setSuccess(null);
     try {
       const response = await fetch(`/api/admin/providers/${provider}`, {
         method: "DELETE", headers: { "content-type": "application/json" }, body: JSON.stringify({ confirmProvider: provider }),
       });
       const body = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(body.error ?? "Impossible de réinitialiser le provider");
-      setSuccess(`${PROVIDER_UI[provider].name} revient aux variables d’environnement.`);
+      if (!response.ok) throw new Error(body.error ?? t("settings.resetFail"));
+      setSuccess(t("settings.resetOk").replace("{name}", PROVIDER_UI[provider].name));
       await refresh();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : "Erreur");
+      setError(reason instanceof Error ? reason.message : t("settings.error"));
     } finally { setBusy(null); }
   }
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center gap-3"><Package className="w-5 h-5 text-[#1B3A6B]" /><CardTitle>Providers externes sécurisés</CardTitle></div>
+        <div className="flex items-center gap-3"><Package className="w-5 h-5 text-[#1B3A6B]" /><CardTitle>{t("settings.providers")}</CardTitle></div>
       </CardHeader>
       <CardContent className="space-y-6">
-        <p className="text-sm text-gray-600">Les valeurs saisies sont chiffrées côté serveur avec une clé maître hors base de données. Elles ne sont jamais affichées, même à un administrateur. Les champs vides conservent la valeur actuelle.</p>
+        <p className="text-sm text-gray-600">{t("settings.providersBody")}</p>
         {metadata?.some((provider) => provider.previousKeyConfigured) && (
           <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-            <p className="font-medium">Rotation de clé prête</p>
-            <p className="mt-1">La clé précédente est détectée côté serveur. Après sauvegarde de la nouvelle clé primaire, réchiffrez le coffre, testez les providers, puis retirez la variable précédente.</p>
-            <Button size="sm" className="mt-3" variant="outline" onClick={rotateCredentials} disabled={busy !== null}>{busy === "rotation" ? "Réchiffrement…" : "Réchiffrer le coffre"}</Button>
+            <p className="font-medium">{t("settings.rotationReady")}</p>
+            <p className="mt-1">{t("settings.rotationBody")}</p>
+            <Button size="sm" className="mt-3" variant="outline" onClick={rotateCredentials} disabled={busy !== null}>{busy === "rotation" ? t("settings.reencrypting") : t("settings.reencrypt")}</Button>
           </div>
         )}
         {(Object.keys(PROVIDER_UI) as ProviderKey[]).map((provider) => {
@@ -765,21 +770,21 @@ function ProvidersSection({ providers }: { providers: Providers }) {
           return (
             <section key={provider} className="border border-gray-200 rounded-lg p-4 space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div><h4 className="font-semibold text-gray-900">{PROVIDER_UI[provider].name}</h4><p className="text-xs text-gray-500">Source : {meta?.source ?? "chargement…"}</p></div>
-                {(meta?.configured ?? fallbackConfigured) ? <Badge variant="success"><CheckCircle2 className="w-3 h-3 mr-1" /> Configuré</Badge> : <Badge variant="warning"><XCircle className="w-3 h-3 mr-1" /> Non configuré</Badge>}
+                <div><h4 className="font-semibold text-gray-900">{PROVIDER_UI[provider].name}</h4><p className="text-xs text-gray-500">{t("settings.source").replace("{src}", meta?.source ?? t("settings.loading"))}</p></div>
+                {(meta?.configured ?? fallbackConfigured) ? <Badge variant="success"><CheckCircle2 className="w-3 h-3 mr-1" /> {t("settings.configured")}</Badge> : <Badge variant="warning"><XCircle className="w-3 h-3 mr-1" /> {t("settings.notConfigured")}</Badge>}
               </div>
-              {meta && !meta.encryptionReady && <p className="text-xs text-amber-800 bg-amber-50 p-2 rounded">Ajoutez `CREDENTIALS_ENCRYPTION_KEY` dans l’environnement du serveur pour autoriser l’enregistrement web chiffré.</p>}
-              {meta?.lastTest && <p className={`text-xs p-2 rounded ${meta.lastTest.status === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>Dernier test : {new Date(meta.lastTest.createdAt).toLocaleString("fr-FR")} — {meta.lastTest.status === "success" ? "réussi" : "échec"}{meta.lastTest.message ? ` (${meta.lastTest.message})` : ""}</p>}
+              {meta && !meta.encryptionReady && <p className="text-xs text-amber-800 bg-amber-50 p-2 rounded">{t("settings.needKey")}</p>}
+              {meta?.lastTest && <p className={`text-xs p-2 rounded ${meta.lastTest.status === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>{t("settings.lastTest").replace("{when}", new Date(meta.lastTest.createdAt).toLocaleString(locale === "en" ? "en-GB" : "fr-FR")).replace("{status}", meta.lastTest.status === "success" ? t("settings.testOk") : t("settings.testFail"))}{meta.lastTest.message ? ` (${meta.lastTest.message})` : ""}</p>}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {PROVIDER_UI[provider].fields.map((field) => {
                   const status = meta?.fields.find((item) => item.name === field.key);
                   return <label key={field.key} className="block text-sm font-medium text-gray-700">{field.label}
-                    <input type={field.secret ? "password" : "text"} autoComplete="off" value={values[provider][field.key] ?? ""} onChange={(event) => setValues((current) => ({ ...current, [provider]: { ...current[provider], [field.key]: event.target.value } }))} placeholder={status?.stored ? "Valeur chiffrée enregistrée — saisir pour remplacer" : status?.environment ? "Fourni par l’environnement — saisir pour remplacer" : "Non configuré"} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm" />
-                    <span className="mt-1 block text-xs text-gray-500">{status?.stored ? "Override chiffré en base" : status?.environment ? "Fallback environnement" : "Aucune valeur"}</span>
+                    <input type={field.secret ? "password" : "text"} autoComplete="off" value={values[provider][field.key] ?? ""} onChange={(event) => setValues((current) => ({ ...current, [provider]: { ...current[provider], [field.key]: event.target.value } }))} placeholder={status?.stored ? t("settings.storedReplace") : status?.environment ? t("settings.envReplace") : t("settings.notSet")} className="mt-1 w-full px-3 py-2 border border-gray-300 rounded-lg font-mono text-sm" />
+                    <span className="mt-1 block text-xs text-gray-500">{status?.stored ? t("settings.overrideDb") : status?.environment ? t("settings.envFallback") : t("settings.noValue")}</span>
                   </label>;
                 })}
               </div>
-              <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => save(provider)} disabled={busy === provider || meta?.encryptionReady === false}>{busy === provider ? "Enregistrement…" : "Enregistrer les champs saisis"}</Button><Button size="sm" variant="outline" onClick={() => testConnection(provider)} disabled={busy === provider || !(meta?.configured ?? fallbackConfigured)}>Tester la connexion</Button><Button size="sm" variant="ghost" onClick={() => reset(provider)} disabled={busy === provider}>Revenir à l’environnement</Button></div>
+              <div className="flex flex-wrap gap-2"><Button size="sm" onClick={() => save(provider)} disabled={busy === provider || meta?.encryptionReady === false}>{busy === provider ? t("settings.saving") : t("settings.saveFields")}</Button><Button size="sm" variant="outline" onClick={() => testConnection(provider)} disabled={busy === provider || !(meta?.configured ?? fallbackConfigured)}>{t("settings.testConn")}</Button><Button size="sm" variant="ghost" onClick={() => reset(provider)} disabled={busy === provider}>{t("settings.resetEnv")}</Button></div>
             </section>
           );
         })}

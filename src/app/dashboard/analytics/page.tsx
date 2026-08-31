@@ -4,6 +4,8 @@ import { bookings, properties, reviews, rooms, users } from "@/db/schema";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 import {
   sumByCurrency,
   topCurrency,
@@ -198,18 +200,19 @@ export default async function AnalyticsPage() {
 
   const isAdmin = user.role === "admin";
   const analytics = await getAnalytics(user.id, isAdmin);
+  const t = makeT(await getServerLocale());
 
   if (!analytics) {
     return (
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-8" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Statistiques
+          {t("dash.analytics")}
         </h1>
         <Card>
           <CardContent className="text-center py-12">
             <BarChart3 className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p className="text-gray-500">Aucune donnée disponible</p>
-            <p className="text-sm text-gray-400 mt-1">Ajoutez des hébergements pour voir vos statistiques</p>
+            <p className="text-gray-500">{t("analytics.noData")}</p>
+            <p className="text-sm text-gray-400 mt-1">{t("analytics.noDataHint")}</p>
           </CardContent>
         </Card>
       </div>
@@ -218,21 +221,21 @@ export default async function AnalyticsPage() {
 
   const metrics = [
     {
-      title: "Revenus (30j)",
+      title: t("analytics.revenue30"),
       value: formatCurrencyBreakdown(analytics.currentRevenueByCurrency),
       change: analytics.revenueChange,
       icon: DollarSign,
       color: "bg-green-500",
     },
     {
-      title: "Réservations (30j)",
+      title: t("analytics.bookings30"),
       value: analytics.currentBookingsCount.toString(),
       change: analytics.bookingsChange,
       icon: Calendar,
       color: "bg-blue-500",
     },
     {
-      title: "Panier moyen",
+      title: t("analytics.avgBasket"),
       value: formatCurrencyBreakdown(analytics.avgBookingValueByCurrency),
       change: analytics.previousAvgBookingValue > 0 
         ? ((analytics.avgBookingValue - analytics.previousAvgBookingValue) / analytics.previousAvgBookingValue) * 100 
@@ -241,7 +244,7 @@ export default async function AnalyticsPage() {
       color: "bg-purple-500",
     },
     {
-      title: "Note moyenne",
+      title: t("analytics.avgRating"),
       value: analytics.avgRating.toFixed(1) + "/10",
       icon: Star,
       color: "bg-[#F5A623]",
@@ -253,10 +256,10 @@ export default async function AnalyticsPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Statistiques
+          {t("dash.analytics")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Aperçu de vos performances sur les 30 derniers jours
+          {t("analytics.subtitle")}
         </p>
       </div>
 
@@ -293,13 +296,14 @@ export default async function AnalyticsPage() {
         {/* Revenue Chart (simplified bar representation) */}
         <Card>
           <CardHeader>
-            <CardTitle>Revenus par jour ({analytics.chartCurrency})</CardTitle>
+            <CardTitle>{t("analytics.revenuePerDay").replace("{currency}", analytics.chartCurrency)}</CardTitle>
           </CardHeader>
           <CardContent>
             {analytics.otherCurrencies.length > 0 && (
               <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-3">
-                Devises non mélangées : les réservations en {analytics.otherCurrencies.join(", ")} sont
-                comptabilisées à part (série affichée en {analytics.chartCurrency}).
+                {t("analytics.otherCurrenciesNote")
+                  .replace("{list}", analytics.otherCurrencies.join(", "))
+                  .replace("{currency}", analytics.chartCurrency)}
               </p>
             )}
             <div className="h-48 flex items-end gap-1">
@@ -317,8 +321,8 @@ export default async function AnalyticsPage() {
               })}
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-2">
-              <span>Il y a 14j</span>
-              <span>Aujourd&apos;hui</span>
+              <span>{t("analytics.daysAgo14")}</span>
+              <span>{t("analytics.today")}</span>
             </div>
           </CardContent>
         </Card>
@@ -326,11 +330,11 @@ export default async function AnalyticsPage() {
         {/* Top Properties */}
         <Card>
           <CardHeader>
-            <CardTitle>Top hébergements</CardTitle>
+            <CardTitle>{t("analytics.topProperties")}</CardTitle>
           </CardHeader>
           <CardContent>
             {analytics.topProperties.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Aucune donnée</p>
+              <p className="text-center text-gray-500 py-8">{t("analytics.none")}</p>
             ) : (
               <div className="space-y-4">
                 {analytics.topProperties.map((prop, i) => (
@@ -340,7 +344,7 @@ export default async function AnalyticsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-gray-900 truncate">{prop.name}</p>
-                      <p className="text-sm text-gray-500">{prop.bookings} réservations</p>
+                      <p className="text-sm text-gray-500">{t("analytics.nBookings").replace("{n}", String(prop.bookings))}</p>
                     </div>
                     <p className="font-bold text-[#1B3A6B]">{formatCurrencyBreakdown(prop.revenueByCurrency)}</p>
                   </div>
@@ -353,35 +357,35 @@ export default async function AnalyticsPage() {
         {/* Quick Stats */}
         <Card>
           <CardHeader>
-            <CardTitle>Vue d&apos;ensemble</CardTitle>
+            <CardTitle>{t("analytics.overview")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Building2 className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-500">Hébergements</span>
+                  <span className="text-sm text-gray-500">{t("analytics.properties")}</span>
                 </div>
                 <p className="text-2xl font-bold">{analytics.totalProperties}</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Calendar className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-500">Total réservations</span>
+                  <span className="text-sm text-gray-500">{t("analytics.totalBookings")}</span>
                 </div>
                 <p className="text-2xl font-bold">{analytics.totalBookings}</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Star className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-500">Avis collectés</span>
+                  <span className="text-sm text-gray-500">{t("analytics.reviewsCollected")}</span>
                 </div>
                 <p className="text-2xl font-bold">{analytics.totalReviews}</p>
               </div>
               <div className="p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-2 mb-2">
                   <Eye className="w-5 h-5 text-gray-400" />
-                  <span className="text-sm text-gray-500">Taux occupation</span>
+                  <span className="text-sm text-gray-500">{t("analytics.occupancy")}</span>
                 </div>
                 <p className="text-2xl font-bold">{analytics.occupancyRate.toFixed(0)}%</p>
               </div>
@@ -392,10 +396,10 @@ export default async function AnalyticsPage() {
         {/* Sources */}
         <Card>
           <CardHeader>
-            <CardTitle>Sources des réservations</CardTitle>
+            <CardTitle>{t("analytics.sources")}</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-gray-500">La source d&apos;acquisition n&apos;est pas encore collectée de manière fiable. Aucun pourcentage estimatif n&apos;est affiché.</p>
+            <p className="text-sm text-gray-500">{t("analytics.sourcesNote")}</p>
           </CardContent>
         </Card>
 

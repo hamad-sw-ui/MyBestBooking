@@ -68,14 +68,14 @@ export function ProfileForm({ initial }: Props) {
       fd.append("file", file);
       const res = await fetch("/api/users/me/avatar", { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      if (!res.ok) throw new Error(data.error ?? t("account.uploadFail"));
       setForm((f) => ({ ...f, avatarUrl: data.url ?? "" }));
       setSaved(true);
-      addToast("success", "Photo de profil mise à jour");
+      addToast("success", t("account.avatarUpdated"));
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec de l'upload");
-      addToast("error", e instanceof Error ? e.message : "Échec de l'upload");
+      setError(e instanceof Error ? e.message : t("account.uploadFail"));
+      addToast("error", e instanceof Error ? e.message : t("account.uploadFail"));
     } finally {
       setAvatarUploading(false);
     }
@@ -105,13 +105,13 @@ export function ProfileForm({ initial }: Props) {
         body: JSON.stringify(body),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Erreur");
+      if (!res.ok) throw new Error(data.error ?? t("auth.error"));
       setSaved(true);
-      addToast("success", "Profil enregistré");
+      addToast("success", t("account.profileSaved"));
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
-      addToast("error", e instanceof Error ? e.message : "Erreur lors de l'enregistrement");
+      setError(e instanceof Error ? e.message : t("auth.error"));
+      addToast("error", e instanceof Error ? e.message : t("auth.error"));
     } finally {
       setLoading(false);
     }
@@ -144,28 +144,28 @@ export function ProfileForm({ initial }: Props) {
               size="sm"
               loading={avatarUploading}
               onFile={handleAvatarFile}
-              ariaLabel="Importer une photo de profil depuis l'ordinateur"
+              ariaLabel={t("account.importAria")}
             >
               <Upload className="w-4 h-4 mr-2" />
-              {avatarUploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+              {avatarUploading ? t("account.uploading") : t("account.importFromComputer")}
             </PhotoUploadButton>
             {form.avatarUrl && (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.avatarUrl} alt="Aperçu de la photo de profil" className="w-12 h-12 rounded-full object-cover border border-gray-200" />
+              <img src={form.avatarUrl} alt={t("account.avatarPreview")} className="w-12 h-12 rounded-full object-cover border border-gray-200" />
             )}
           </div>
           <input id="pf-avatar" type="url" value={form.avatarUrl} onChange={(e) => set("avatarUrl", e.target.value)} placeholder="https://…/photo.jpg" className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
-          <p className="mt-1 text-xs text-gray-400">Importez une image (JPEG, PNG, WebP ou GIF, 5 Mo max) ou collez une URL. {t("account.avatarHint")}</p>
+          <p className="mt-1 text-xs text-gray-400">{t("account.importOrUrl")} {t("account.avatarHint")}</p>
         </div>
         <div>
           <label htmlFor="pf-lang" className="block text-sm font-medium text-gray-700 mb-1">{t("account.language")}</label>
           <select id="pf-lang" value={form.language} onChange={(e) => set("language", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]">
-            <option value="fr">Français</option>
+            <option value="fr">{t("account.langFr")}</option>
             <option value="en">English</option>
           </select>
           {/* T-132/T-145 : seuls le français et l'anglais sont des langues
               d'interface traduites (UiLocale = fr|en). */}
-          <p className="mt-1 text-xs text-gray-400">Applique les libellés traduits et les descriptions en anglais.</p>
+          <p className="mt-1 text-xs text-gray-400">{t("account.languageHint")}</p>
         </div>
         <div>
           <label htmlFor="pf-currency" className="block text-sm font-medium text-gray-700 mb-1">{t("account.currency")}</label>
@@ -179,7 +179,7 @@ export function ProfileForm({ initial }: Props) {
           </select>
           {/* T-131 : les prix d'aperçu sont convertis (taux figés indicatifs) ;
               le paiement reste en devise de l'hébergement. */}
-          <p className="mt-1 text-xs text-gray-400">Aperçu des prix converti (taux indicatifs) ; paiement en devise de l&apos;hébergement.</p>
+          <p className="mt-1 text-xs text-gray-400">{t("account.currencyHint")}</p>
         </div>
         <div>
           <label htmlFor="pf-tz" className="block text-sm font-medium text-gray-700 mb-1">{t("account.timezone")}</label>
@@ -187,7 +187,7 @@ export function ProfileForm({ initial }: Props) {
             <option value="UTC">UTC</option>
             <option value="Europe/Paris">Europe/Paris</option>
             <option value="Europe/London">Europe/London</option>
-            <option value="Africa/Douala">Africa/Douala (Yaoundé)</option>
+            <option value="Africa/Douala">{t("account.tzDouala")}</option>
             <option value="Africa/Casablanca">Africa/Casablanca</option>
             <option value="Africa/Tunis">Africa/Tunis</option>
             <option value="Africa/Dakar">Africa/Dakar</option>
@@ -201,7 +201,7 @@ export function ProfileForm({ initial }: Props) {
         <button type="submit" disabled={loading} className="px-6 py-2 bg-[#FF5A5F] text-white font-medium rounded-lg hover:bg-[#e54a4f] disabled:opacity-50">
           {loading ? t("action.loading") : t("action.save")}
         </button>
-        {saved && <span className="text-sm text-green-600">Modifications enregistrées ✓</span>}
+        {saved && <span className="text-sm text-green-600">{t("action.saved")} ✓</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}
       </div>
     </form>

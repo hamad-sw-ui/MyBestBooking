@@ -13,6 +13,7 @@ import { PhotoUploadButton } from "@/components/photo-upload-button";
 import { formatPrice } from "@/lib/utils";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
 import { AMENITIES } from "@/lib/amenities";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Property {
   id: string;
@@ -50,21 +51,21 @@ interface Room {
   isActive: boolean;
 }
 
-const PROPERTY_TYPES = [
-  { value: "hotel", label: "Hôtel" },
-  { value: "apartment", label: "Appartement" },
-  { value: "house", label: "Maison" },
-  { value: "villa", label: "Villa" },
-  { value: "hostel", label: "Auberge" },
-  { value: "resort", label: "Resort" },
-  { value: "bnb", label: "B&B" },
-  { value: "guesthouse", label: "Maison d'hôtes" },
-  { value: "riad", label: "Riad" },
-  { value: "camping", label: "Camping" },
-];
-
 export default function EditPropertyPage() {
+  const t = useT();
   const router = useRouter();
+  const PROPERTY_TYPES = [
+    { value: "hotel", label: t("search.type.hotel") },
+    { value: "apartment", label: t("search.type.apartment") },
+    { value: "house", label: t("prop.type.house") },
+    { value: "villa", label: t("search.type.villa") },
+    { value: "hostel", label: t("search.type.hostel") },
+    { value: "resort", label: t("search.type.resort") },
+    { value: "bnb", label: t("prop.type.bnb") },
+    { value: "guesthouse", label: t("search.type.guesthouse") },
+    { value: "riad", label: t("search.type.riad") },
+    { value: "camping", label: t("prop.type.camping") },
+  ];
   const params = useParams();
   const propertyId = params.id as string;
 
@@ -103,7 +104,7 @@ export default function EditPropertyPage() {
         setLoading(false);
       })
       .catch(() => {
-        setError("Erreur lors du chargement");
+        setError(t("auth.genericError"));
         setLoading(false);
       });
   }, [propertyId]);
@@ -142,13 +143,13 @@ export default function EditPropertyPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Erreur lors de la sauvegarde");
+        setError(data.error || t("settings.saveError"));
       } else {
-        setSuccess("Modifications enregistrées");
+        setSuccess(t("action.saved"));
         setProperty(data.property);
       }
     } catch {
-      setError("Erreur lors de la sauvegarde");
+      setError(t("settings.saveError"));
     }
 
     setSaving(false);
@@ -176,7 +177,7 @@ export default function EditPropertyPage() {
       fd.append("file", file);
       const res = await fetch("/api/properties/upload", { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      if (!res.ok) throw new Error(data.error ?? t("account.uploadFail"));
       setProperty((prev) => {
         if (!prev) return prev;
         if (replaceUrl) {
@@ -193,7 +194,7 @@ export default function EditPropertyPage() {
         return { ...prev, mainImage: prev.mainImage ?? data.url, images };
       });
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
+      setUploadError(err instanceof Error ? err.message : t("account.uploadFail"));
     } finally {
       setUploading(false);
     }
@@ -232,7 +233,7 @@ export default function EditPropertyPage() {
   if (!property) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Hébergement non trouvé</p>
+<p className="text-gray-500">{t("prop.notFound")}</p>
         <Link href="/dashboard/properties">
           <Button variant="outline" className="mt-4">Retour</Button>
         </Link>
@@ -256,7 +257,7 @@ export default function EditPropertyPage() {
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Retour aux hébergements
+{t("prop.backToList")}
         </Link>
         <div className="flex items-center justify-between">
           <div>
@@ -273,8 +274,8 @@ export default function EditPropertyPage() {
                 {property.status === "active" ? "Actif" :
                  property.status === "pending" ? "En attente de validation" :
                  property.status === "suspended" ? "Suspendu" :
-                 property.status === "draft" ? "Brouillon / rejeté" :
-                 property.status === "archived" ? "Archivé" : property.status}
+                 property.status === "draft" ? t("prop.draftRejected") :
+                 property.status === "archived" ? t("bulk.archived") : property.status}
               </Badge>
             </div>
             {property.averageRating && (
@@ -294,7 +295,7 @@ export default function EditPropertyPage() {
             </Link>
             <Button onClick={handleSave} loading={saving}>
               <Save className="w-4 h-4 mr-2" />
-              Enregistrer
+              {t("action.save")}
             </Button>
             {/* T-137 (A2) : re-soumission après rejet (draft) ou suspension. */}
             <PropertySubmitButton propertyId={property.id} currentStatus={property.status} />
@@ -308,8 +309,8 @@ export default function EditPropertyPage() {
       {(property.status === "draft" || property.status === "suspended") && (
         <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
           {property.status === "draft"
-            ? "Votre annonce a été rejetée ou est en brouillon : elle n'est pas visible du public. Corrigez les informations puis « Soumettre pour validation »."
-            : "Votre annonce est suspendue et n'est plus visible du public. Corrigez les points demandés puis « Soumettre pour validation »."}
+            ? t("prop.rejectedBanner")
+            : t("prop.suspendedBanner")}
         </div>
       )}
 
@@ -347,25 +348,25 @@ export default function EditPropertyPage() {
         <div className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Informations générales</CardTitle>
+<CardTitle>{t("prop.generalInfo")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <Input
-                label="Nom de l'hébergement"
+                label={t("prop.name")}
                 value={property.name}
                 onChange={(e) => setProperty({ ...property, name: e.target.value })}
               />
 
               <div className="grid grid-cols-2 gap-4">
                 <Select
-                  label="Type d'hébergement"
+                  label={t("prop.type")}
                   options={PROPERTY_TYPES}
                   value={property.type}
                   onChange={(e) => setProperty({ ...property, type: e.target.value })}
                 />
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Classement (étoiles)
+{t("prop.stars")}
                   </label>
                   <div className="flex items-center gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
@@ -433,7 +434,7 @@ export default function EditPropertyPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Équipements</CardTitle>
+<CardTitle>{t("prop.amenities")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -484,9 +485,7 @@ export default function EditPropertyPage() {
                     <span className="text-gray-500">%</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    Prélevé sur chaque réservation. Par défaut : le taux global
-                    défini dans les réglages admin. Le net versé à l&apos;hôte =
-                    total − commission.
+                    {t("prop.commissionHint")} total − commission.
                   </p>
                 </div>
               </CardContent>
@@ -511,7 +510,7 @@ export default function EditPropertyPage() {
           <CardContent>
             {rooms.length === 0 ? (
               <div className="text-center py-8 text-gray-500">
-                <p>Aucune chambre configurée</p>
+<p>{t("prop.noRooms")}</p>
                 <Link href="/dashboard/rooms/new">
                   <Button variant="outline" className="mt-4">
                     <Plus className="w-4 h-4 mr-2" />
@@ -529,7 +528,7 @@ export default function EditPropertyPage() {
                     <div>
                       <p className="font-medium">{room.name}</p>
                       <p className="text-sm text-gray-500">
-                        {room.maxOccupancy} pers. max • {room.quantity} unité{room.quantity > 1 ? "s" : ""}
+                        {t("prop.persMax").replace("{n}", String(room.maxOccupancy))} • {(room.quantity > 1 ? t("prop.unitsCountMany") : t("prop.unitsCount")).replace("{n}", String(room.quantity))}
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
@@ -565,12 +564,12 @@ export default function EditPropertyPage() {
                 loading={uploading}
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {uploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+{uploading ? t("account.uploading") : t("account.importFromComputer")}
               </PhotoUploadButton>
               <p className="text-xs text-gray-500 mt-1">
                 {uploading
-                  ? "Téléversement en cours…"
-                  : "JPEG, PNG, WebP ou GIF — 5 Mo max. La nouvelle photo est enregistrée quand vous cliquez sur « Enregistrer »."}
+                  ? t("prop.uploadingHint")
+                  : t("prop.uploadSaveHint")}
               </p>
               {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
             </div>
@@ -599,7 +598,7 @@ export default function EditPropertyPage() {
                             disabled={isMain}
                             className={`text-xs font-medium ${isMain ? "text-[#F5A623]" : "text-white hover:underline"}`}
                           >
-                            {isMain ? "★ Principale" : "Définir principale"}
+{isMain ? t("prop.mainPhoto") : t("prop.setMain")}
                           </button>
                           <div className="flex items-center gap-1">
                             {/* T-141 : remplacer directement cette photo depuis
@@ -670,17 +669,17 @@ export default function EditPropertyPage() {
       {activeTab === "policies" && (
         <Card>
           <CardHeader>
-            <CardTitle>Politiques</CardTitle>
+<CardTitle>{t("property.policies")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Select
-              label="Politique d'annulation"
+              label={t("prop.cancelPolicy")}
               options={[
-                { value: "free", label: "Annulation gratuite" },
-                { value: "flexible", label: "Flexible (24h avant)" },
-                { value: "moderate", label: "Modérée (5 jours avant)" },
-                { value: "strict", label: "Stricte (14 jours avant)" },
-                { value: "non_refundable", label: "Non remboursable" },
+{ value: "free", label: t("prop.policyFree") },
+{ value: "flexible", label: t("prop.policyFlexible") },
+{ value: "moderate", label: t("prop.policyModerate") },
+{ value: "strict", label: t("prop.policyStrict") },
+{ value: "non_refundable", label: t("prop.policyNonRefundable") },
               ]}
               value={property.cancellationPolicy || "flexible"}
               onChange={(e) => setProperty({ ...property, cancellationPolicy: e.target.value })}
@@ -694,7 +693,7 @@ export default function EditPropertyPage() {
                   onChange={(e) => setProperty({ ...property, petsAllowed: e.target.checked })}
                   className="rounded border-gray-300"
                 />
-                <span className="text-sm text-gray-700">Animaux acceptés</span>
+<span className="text-sm text-gray-700">{t("prop.pets")}</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -703,7 +702,7 @@ export default function EditPropertyPage() {
                   onChange={(e) => setProperty({ ...property, smokingAllowed: e.target.checked })}
                   className="rounded border-gray-300"
                 />
-                <span className="text-sm text-gray-700">Fumeurs acceptés</span>
+<span className="text-sm text-gray-700">{t("prop.smoking")}</span>
               </label>
             </div>
           </CardContent>

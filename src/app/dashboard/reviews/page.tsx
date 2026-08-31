@@ -3,6 +3,8 @@ import { db } from "@/db";
 import { reviews, properties, users } from "@/db/schema";
 import { eq, desc, or } from "drizzle-orm";
 import { ReviewsManager, type ReviewRow } from "@/components/bulk/reviews-manager";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getReviews(userId: string, isAdmin: boolean) {
   if (isAdmin) {
@@ -56,6 +58,7 @@ export default async function ReviewsPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const isAdmin = user.role === "admin";
+  const t = makeT(await getServerLocale());
   const rows = await getReviews(user.id, isAdmin);
 
   const serialized: ReviewRow[] = rows.map((r) => ({
@@ -88,12 +91,10 @@ export default async function ReviewsPage() {
           className="text-2xl font-bold text-gray-900"
           style={{ fontFamily: "'Poppins', sans-serif" }}
         >
-          Avis {isAdmin && "(modération)"}
+          {isAdmin ? t("dash.reviewsModeration") : t("dash.reviews")}
         </h1>
         <p className="text-gray-600 mt-1">
-          {isAdmin
-            ? "Modérez les avis — filtres, sélection multiple, actions groupées."
-            : "Consultez les avis sur vos hébergements et répondez publiquement."}
+          {isAdmin ? t("dash.reviewsAdminSub") : t("dash.reviewsHostSub")}
         </p>
       </div>
       <ReviewsManager reviews={serialized} isAdmin={isAdmin} />

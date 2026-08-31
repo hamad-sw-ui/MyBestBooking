@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -52,6 +53,7 @@ interface Props {
 }
 
 export function RoomsManager({ rooms, isAdmin }: Props) {
+  const t = useT();
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -118,7 +120,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         },
         {
           key: "deactivate",
-          label: "Désactiver",
+          label: t("bulk.deactivate"),
           icon: BulkIcons.hide,
           variant: "secondary" as const,
         },
@@ -127,7 +129,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
           label: "Supprimer",
           icon: BulkIcons.delete,
           variant: "danger" as const,
-          confirmMessage: `Supprimer ${selected.size} chambre(s) définitivement ? Refusé si réservations futures.`,
+          confirmMessage: t("bulk.confirmDeleteRooms").replace("{n}", String(selected.size)),
         },
       ]
     : [];
@@ -144,7 +146,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
             Chambres
           </h1>
           <p className="text-gray-600 mt-1">
-            Gérez les chambres de vos hébergements
+{t("bulk.manageRooms")}
           </p>
         </div>
         <Link href="/dashboard/rooms/new">
@@ -160,7 +162,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         {[
           { label: "Total", value: stats.total, color: "text-gray-900" },
           { label: "Actives", value: stats.active, color: "text-green-600" },
-          { label: "Unités", value: stats.units, color: "text-blue-600" },
+          { label: t("bulk.units"), value: stats.units, color: "text-blue-600" },
           {
             label: "Prix moyen",
             value: stats.avgPrice > 0 ? formatPrice(stats.avgPrice) : "—",
@@ -184,7 +186,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         onDeselectAll={() => setSelected(new Set())}
         searchValue={q}
         onSearchChange={setQ}
-        searchPlaceholder="Nom de chambre, hébergement…"
+        searchPlaceholder={t("bulk.searchRooms")}
         statusOptions={[
           { value: "all", label: "Toutes" },
           { value: "active", label: "Actives" },
@@ -227,10 +229,9 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
       )}
 
       <p className="text-sm text-gray-600 mb-3">
-        {filtered.length} chambre{filtered.length > 1 ? "s" : ""} affichée
-        {filtered.length > 1 ? "s" : ""}
-        {filtered.length !== rooms.length && ` sur ${rooms.length}`}
-        {selected.size > 0 && ` · ${selected.size} sélectionnée(s)`}
+        {(filtered.length > 1 ? t("bulk.roomsShownMany") : t("bulk.roomsShown")).replace("{n}", String(filtered.length))}
+        {filtered.length !== rooms.length && ` ${t("bulk.ofTotal").replace("{n}", String(rooms.length))}`}
+        {selected.size > 0 && t("bulk.selectedSuffix").replace("{n}", String(selected.size))}
       </p>
 
       {isAdmin && filtered.length > 0 && (
@@ -243,7 +244,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
             className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
           />
           <label htmlFor="rooms-select-all" className="text-sm text-gray-600">
-            Tout sélectionner sur cette vue
+{t("bulk.selectAllVisible")}
           </label>
         </div>
       )}
@@ -253,7 +254,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
           <EmptyState
             icon={<BedDouble className="w-8 h-8" />}
             title="Aucune chambre"
-            description="Aucune chambre ne correspond à vos filtres."
+            description={t("bulk.noRoomsDesc")}
             className="py-16"
           />
         </Card>
@@ -272,7 +273,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                     {isAdmin && (
                       <input
                         type="checkbox"
-                        aria-label={`Sélectionner ${room.name}`}
+                        aria-label={t("bulk.selectNamed").replace("{name}", room.name)}
                         checked={selected.has(room.id)}
                         onChange={() => toggle(room.id)}
                         className="mt-1 w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
@@ -317,15 +318,14 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                       {formatPrice(room.basePrice, room.currency || "EUR")}
                     </p>
                     <p className="text-xs text-gray-500">
-                      par nuit · {room.quantity ?? 0} unité
-                      {(room.quantity ?? 0) > 1 ? "s" : ""}
+                      {((room.quantity ?? 0) > 1 ? t("bulk.perNightUnitsMany") : t("bulk.perNightUnits")).replace("{n}", String(room.quantity ?? 0))}
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
                     <Link
                       href={`/dashboard/rooms/${room.id}/calendrier`}
                       className="px-3 py-1.5 text-xs bg-[#1B3A6B] text-white rounded-lg hover:bg-[#0f2444]"
-                      title="Éditer le calendrier prix/stock"
+                      title={t("bulk.editCalendar")}
                     >
                       Calendrier
                     </Link>
@@ -333,7 +333,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                       <RowDeleteButton
                         entity="rooms"
                         id={room.id}
-                        label={`la chambre « ${room.name} »`}
+                        label={t("bulk.roomLabel").replace("{name}", room.name)}
                       />
                     )}
                   </div>
@@ -345,14 +345,13 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
       )}
 
       <p className="text-xs text-gray-400 mt-4">
-        Raccourcis : <kbd className="px-1 bg-gray-100 rounded">/</kbd> chercher{" "}
+        {t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")}{" "}
         {isAdmin && (
           <>
-            · <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> tout
-            sélectionner
+            · <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> {t("bulk.shortcutSelectAll")}
           </>
         )}
-        · <kbd className="px-1 bg-gray-100 rounded">Échap</kbd> vider
+        · <kbd className="px-1 bg-gray-100 rounded">Esc</kbd> {t("bulk.shortcutClear")}
       </p>
     </div>
   );

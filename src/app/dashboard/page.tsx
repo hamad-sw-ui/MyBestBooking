@@ -10,6 +10,8 @@ import {
   ArrowUpRight, ArrowDownRight, Users, DollarSign 
 } from "lucide-react";
 import Link from "next/link";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getDashboardStats(userId: string, isAdmin: boolean) {
   const thirtyDaysAgo = new Date();
@@ -149,36 +151,37 @@ export default async function DashboardPage() {
   const isAdmin = user.role === "admin";
   const stats = await getDashboardStats(user.id, isAdmin);
   const recentBookings = await getRecentBookings(user.id, isAdmin);
+  const t = makeT(await getServerLocale());
 
   const statCards = [
     {
-      title: "Hébergements",
+      title: t("dash.properties"),
       value: stats.properties.total,
-      subValue: `${stats.properties.active} actifs`,
+      subValue: t("dash.activeCount").replace("{n}", String(stats.properties.active)),
       icon: Building2,
       color: "bg-blue-500",
       href: "/dashboard/properties",
     },
     {
-      title: "Réservations",
+      title: t("dash.bookings"),
       value: stats.bookings.total,
-      subValue: `${stats.bookings.recent} ce mois`,
+      subValue: t("dash.thisMonth").replace("{n}", String(stats.bookings.recent)),
       icon: Calendar,
       color: "bg-green-500",
       href: "/dashboard/bookings",
     },
     {
-      title: "Revenus",
+      title: t("dash.revenue"),
       value: formatPrice(stats.revenue.total),
-      subValue: `${formatPrice(stats.revenue.recent)} ce mois`,
+      subValue: t("dash.revenueMonth").replace("{amount}", formatPrice(stats.revenue.recent)),
       icon: DollarSign,
       color: "bg-[#F5A623]",
       href: "/dashboard/billing",
     },
     {
-      title: isAdmin ? "Utilisateurs" : "Avis",
+      title: isAdmin ? t("dash.users") : t("dash.reviews"),
       value: isAdmin ? stats.users.total : stats.reviews.total,
-      subValue: isAdmin ? "inscrits" : "avis vérifiés",
+      subValue: isAdmin ? t("dash.registered") : t("dash.verifiedReviews"),
       icon: isAdmin ? Users : Star,
       color: "bg-purple-500",
       href: isAdmin ? "/dashboard/users" : "/dashboard/reviews",
@@ -190,10 +193,10 @@ export default async function DashboardPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Bonjour, {user.firstName} 👋
+          {t("dash.hello").replace("{name}", user.firstName)} 👋
         </h1>
         <p className="text-gray-600 mt-1">
-          Voici un aperçu de votre activité sur MyBestBooking
+          {t("dash.overviewSub")}
         </p>
       </div>
 
@@ -223,9 +226,9 @@ export default async function DashboardPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <CardTitle>Réservations récentes</CardTitle>
+            <CardTitle>{t("dash.recentBookings")}</CardTitle>
             <Link href="/dashboard/bookings" className="text-sm text-[#1B3A6B] hover:underline">
-              Voir tout →
+              {t("dash.seeAll")}
             </Link>
           </div>
         </CardHeader>
@@ -233,19 +236,19 @@ export default async function DashboardPage() {
           {recentBookings.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <Calendar className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-              <p>Aucune réservation pour le moment</p>
+              <p>{t("dash.noBookings")}</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="text-left text-sm text-gray-500 border-b border-gray-100">
-                    <th className="pb-3 font-medium">Référence</th>
-                    <th className="pb-3 font-medium">Client</th>
-                    <th className="pb-3 font-medium">Hébergement</th>
-                    <th className="pb-3 font-medium">Dates</th>
-                    <th className="pb-3 font-medium">Montant</th>
-                    <th className="pb-3 font-medium">Statut</th>
+                    <th className="pb-3 font-medium">{t("dash.colRef")}</th>
+                    <th className="pb-3 font-medium">{t("dash.colGuest")}</th>
+                    <th className="pb-3 font-medium">{t("dash.colProperty")}</th>
+                    <th className="pb-3 font-medium">{t("dash.colDates")}</th>
+                    <th className="pb-3 font-medium">{t("dash.colAmount")}</th>
+                    <th className="pb-3 font-medium">{t("dash.colStatus")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -273,10 +276,10 @@ export default async function DashboardPage() {
                       </td>
                       <td className="py-3">
                         <Badge className={getStatusBadgeColor(booking.status)}>
-                          {booking.status === "confirmed" ? "Confirmée" : 
-                           booking.status === "pending" ? "En attente" :
-                           booking.status === "cancelled" ? "Annulée" :
-                           booking.status === "completed" ? "Terminée" : booking.status}
+                          {booking.status === "confirmed" ? t("status.confirmed") :
+                           booking.status === "pending" ? t("status.pending") :
+                           booking.status === "cancelled" ? t("status.cancelled") :
+                           booking.status === "completed" ? t("status.completed") : booking.status}
                         </Badge>
                       </td>
                     </tr>
@@ -298,17 +301,17 @@ export default async function DashboardPage() {
               </div>
               <div className="flex-1">
                 <p className="font-medium text-yellow-800">
-                  {stats.properties.pending} hébergement{stats.properties.pending > 1 ? "s" : ""} en attente de validation
+                  {(stats.properties.pending > 1 ? t("dash.pendingValidationMany") : t("dash.pendingValidationOne")).replace("{n}", String(stats.properties.pending))}
                 </p>
                 <p className="text-sm text-yellow-700">
-                  Vérifiez et validez les nouveaux hébergements
+                  {t("dash.pendingValidationSub")}
                 </p>
               </div>
               <Link
                 href="/dashboard/properties?status=pending"
                 className="px-4 py-2 bg-yellow-200 text-yellow-800 font-medium rounded-lg hover:bg-yellow-300 transition-colors"
               >
-                Voir
+                {t("dash.view")}
               </Link>
             </div>
           </CardContent>

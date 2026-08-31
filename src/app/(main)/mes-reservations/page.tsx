@@ -132,7 +132,7 @@ export default async function MyBookingsPage() {
                               </p>
                             </div>
                             <div className="text-right">
-                              <p className="text-sm text-gray-500">Réf.</p>
+                              <p className="text-sm text-gray-500">{t("bookings.ref")}</p>
                               <p className="font-mono font-medium text-[#1B3A6B]">
                                 {booking.bookingReference}
                               </p>
@@ -141,15 +141,15 @@ export default async function MyBookingsPage() {
 
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 py-4 border-y border-gray-100">
                             <div>
-                              <p className="text-xs text-gray-500">Arrivée</p>
+                              <p className="text-xs text-gray-500">{t("book.checkIn")}</p>
                               <p className="font-medium">{formatDate(booking.checkIn, { day: "numeric", month: "short" })}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Départ</p>
+                              <p className="text-xs text-gray-500">{t("book.checkOut")}</p>
                               <p className="font-medium">{formatDate(booking.checkOut, { day: "numeric", month: "short" })}</p>
                             </div>
                             <div>
-                              <p className="text-xs text-gray-500">Chambre</p>
+                              <p className="text-xs text-gray-500">{t("bookings.room")}</p>
                               <p className="font-medium">{room?.name}</p>
                             </div>
                             <div>
@@ -214,7 +214,7 @@ export default async function MyBookingsPage() {
                             </div>
                             <div className="text-right">
                               <p className="font-medium">{formatPrice(booking.total, booking.currency)}</p>
-                              <p className="text-sm text-gray-500">{booking.numNights} nuits</p>
+                              <p className="text-sm text-gray-500">{booking.numNights} {booking.numNights === 1 ? t("bookings.nights") : t("bookings.nightsPlural")}</p>
                             </div>
                           </div>
                           

@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils";
 import { MessageSquare, Search, Send, Building2, Calendar } from "lucide-react";
 import Link from "next/link";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getConversations(userId: string, search = "") {
   const userConversations = await db
@@ -79,6 +81,7 @@ export default async function MessagesPage({
 
   const { search = "" } = await searchParams;
   const userConversations = await getConversations(user.id, search);
+  const t = makeT(await getServerLocale());
 
   return (
     <div className="bg-gray-50 min-h-screen">
@@ -86,16 +89,16 @@ export default async function MessagesPage({
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            Messages
+            {t("messages.title")}
           </h1>
           <p className="text-gray-600 mt-1">
-            Vos conversations avec les hébergeurs
+            {t("messages.subtitle")}
           </p>
         </div>
 
         {/* Search */}
         <form method="get" action="/messages" className="mb-6">
-          <label className="sr-only" htmlFor="messages-search">Rechercher dans les messages</label>
+          <label className="sr-only" htmlFor="messages-search">{t("messages.searchLabel")}</label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
             <input
@@ -103,7 +106,7 @@ export default async function MessagesPage({
               type="search"
               name="search"
               defaultValue={search}
-              placeholder="Rechercher dans les messages..."
+              placeholder={t("messages.searchPlaceholder")}
               className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
             />
           </div>
@@ -113,11 +116,11 @@ export default async function MessagesPage({
           <Card>
             <EmptyState
               icon={<MessageSquare className="w-8 h-8" />}
-              title="Aucun message"
-              description="Vos conversations avec les hébergeurs apparaîtront ici. Utilisez « Contacter l'hôte » sur une fiche ou depuis une réservation."
+              title={t("messages.emptyTitle")}
+              description={t("messages.empty")}
               action={
                 <Link href="/recherche">
-                  <Button>Trouver un hébergement</Button>
+                  <Button>{t("messages.findProperty")}</Button>
                 </Link>
               }
               className="py-16"
@@ -169,7 +172,7 @@ export default async function MessagesPage({
                             )}
                             {unreadCount && unreadCount > 0 && (
                               <Badge variant="info" className="mt-1">
-                                {unreadCount} nouveau{unreadCount > 1 ? "x" : ""}
+                                {(unreadCount > 1 ? t("messages.unreadMany") : t("messages.unreadOne")).replace("{n}", String(unreadCount))}
                               </Badge>
                             )}
                           </div>
@@ -179,7 +182,7 @@ export default async function MessagesPage({
                         {booking && (
                           <div className="flex items-center gap-2 mt-2 text-xs text-gray-500">
                             <Calendar className="w-3 h-3" />
-                            <span>Réf. {booking.bookingReference}</span>
+                            <span>{t("bookings.ref")} {booking.bookingReference}</span>
                             <span>•</span>
                             <span>
                               {formatDate(booking.checkIn, { day: "numeric", month: "short" })} - {formatDate(booking.checkOut, { day: "numeric", month: "short" })}
@@ -190,8 +193,8 @@ export default async function MessagesPage({
                         {/* Last message preview */}
                         {lastMessage && (
                           <p className="mt-2 text-sm text-gray-600 truncate">
-                            {lastMessage.senderType === "user" && !isHost && "Vous: "}
-                            {lastMessage.senderType === "host" && isHost && "Vous: "}
+                            {lastMessage.senderType === "user" && !isHost && t("messages.youPrefix")}
+                            {lastMessage.senderType === "host" && isHost && t("messages.youPrefix")}
                             {lastMessage.content}
                           </p>
                         )}
@@ -211,15 +214,15 @@ export default async function MessagesPage({
               <MessageSquare className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-semibold text-gray-900">Besoin d&apos;aide ?</h3>
+              <h3 className="font-semibold text-gray-900">{t("messages.needHelp")}</h3>
               <p className="text-sm text-gray-600 mt-1">
-                Notre équipe support répond par email aux demandes envoyées depuis ce lien.
+                {t("messages.needHelpBody")}
               </p>
               <a
                 href="mailto:support@mybestbooking.com?subject=Aide%20MyBestBooking"
                 className="inline-flex items-center mt-3 px-3 py-1.5 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-100 transition"
               >
-                Contacter le support
+                {t("messages.contactSupport")}
               </a>
             </div>
           </CardContent>

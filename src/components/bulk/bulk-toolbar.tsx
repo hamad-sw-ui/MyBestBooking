@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search, X, CheckSquare, Square, Trash2, Check, Eye, EyeOff, XCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useT } from "@/components/ui-locale-provider";
 
 /**
  * <BulkToolbar> (T-033, Session 12) — barre d'outils pour un dashboard
@@ -83,17 +84,19 @@ export function BulkToolbar(props: Props) {
     onDeselectAll,
     searchValue,
     onSearchChange,
-    searchPlaceholder = "Rechercher…",
+    searchPlaceholder,
     statusOptions,
     statusValue,
     onStatusChange,
     onExecuted,
   } = props;
 
+  const t = useT();
   const router = useRouter();
   const searchRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const placeholder = searchPlaceholder ?? t("bulk.searchPlaceholder");
 
   // Raccourcis clavier globaux
   useEffect(() => {
@@ -144,21 +147,28 @@ export function BulkToolbar(props: Props) {
       const body = (await res.json()) as BulkResult | { error: string };
       if (!res.ok) {
         setFeedback(
-          `Erreur : ${"error" in body ? body.error : "réponse inattendue"}`,
+          t("bulk.errorPrefix").replace(
+            "{msg}",
+            "error" in body ? body.error : t("bulk.unexpected"),
+          ),
         );
         return;
       }
       const result = body as BulkResult;
-      const parts = [`${result.succeeded}/${result.requested} traité(s)`];
-      if (result.skipped.length) parts.push(`${result.skipped.length} ignoré(s)`);
-      if (result.failed.length) parts.push(`${result.failed.length} en échec`);
+      const parts = [
+        t("bulk.processed")
+          .replace("{ok}", String(result.succeeded))
+          .replace("{total}", String(result.requested)),
+      ];
+      if (result.skipped.length) parts.push(t("bulk.skippedCount").replace("{n}", String(result.skipped.length)));
+      if (result.failed.length) parts.push(t("bulk.failedCount").replace("{n}", String(result.failed.length)));
       setFeedback(`✅ ${action.label} — ${parts.join(", ")}`);
       onExecuted?.(result);
       onClear();
       router.refresh();
     } catch (e) {
       setFeedback(
-        `Erreur réseau : ${e instanceof Error ? e.message : String(e)}`,
+        t("bulk.networkError").replace("{msg}", e instanceof Error ? e.message : String(e)),
       );
     } finally {
       setBusy(false);
@@ -171,7 +181,7 @@ export function BulkToolbar(props: Props) {
         {/* Recherche */}
         <div className="flex-1 min-w-[240px]">
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Rechercher <span className="text-gray-400">(tapez « / »)</span>
+            {t("bulk.search")} <span className="text-gray-400">{t("bulk.searchHint")}</span>
           </label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -180,14 +190,14 @@ export function BulkToolbar(props: Props) {
               type="text"
               value={searchValue}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={placeholder}
               className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A6B] focus:border-transparent outline-none"
             />
             {searchValue && (
               <button
                 type="button"
                 onClick={() => onSearchChange("")}
-                aria-label="Effacer la recherche"
+                aria-label={t("bulk.clearSearch")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 p-1 rounded hover:bg-gray-100"
               >
                 <X className="w-4 h-4 text-gray-500" />
@@ -200,7 +210,7 @@ export function BulkToolbar(props: Props) {
         {statusOptions && onStatusChange && (
           <div className="min-w-[160px]">
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Filtrer
+              {t("bulk.filter")}
             </label>
             <select
               value={statusValue}
@@ -221,18 +231,18 @@ export function BulkToolbar(props: Props) {
       {selectedIds.length > 0 && (
         <div
           role="toolbar"
-          aria-label="Actions groupées"
+          aria-label={t("bulk.actionsAria")}
           className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg flex flex-wrap gap-2 items-center"
         >
           <span className="text-sm font-medium text-blue-900">
-            {selectedIds.length} sélectionné{selectedIds.length > 1 ? "s" : ""}
+            {(selectedIds.length > 1 ? t("bulk.selectedMany") : t("bulk.selectedOne")).replace("{n}", String(selectedIds.length))}
           </span>
           <button
             type="button"
             onClick={onClear}
             className="text-xs text-blue-700 hover:text-blue-900 underline"
           >
-            (Échap pour vider)
+            {t("bulk.escapeToClear")}
           </button>
           <div className="flex-1" />
           {actions.map((a) => (

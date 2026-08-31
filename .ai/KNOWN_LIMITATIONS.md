@@ -42,13 +42,15 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **i18n UI partielle.** La stratégie « la langue suit `user.language` »
-  (T-132/T-149) couvre ~22/113 fichiers `.tsx` (`makeT`/`ui-strings`) ;
-  le reste est en français dur. **T-152** ajoute le sélecteur FR/EN dans le
-  header (compte → PATCH, anonyme → localStorage, priorité compte >
-  localStorage > plateforme > fr) et un `<html lang>` dynamique — mais le
-  sélecteur n'agit que sur la langue des composants déjà traduits. Migration
-  incrémentale tracée dans `REPORTS/opportunites_T-152_2026-08-30.md`.
+- **i18n UI partielle (T-167).** Auth, chrome public, compte, messages,
+  chrome dashboard, `settings-panel`, managers bulk, analytics/billing,
+  fiche réservation hôte, formulaires properties, plans tarifaires et
+  calendrier passent par `ui-strings` + `useT`/`makeT`. Restent en
+  français dur : `new-room-form`, actions ligne (booking/review/user),
+  cartes publiques secondaires, quelques titres sans accent. Pages légales
+  et centre d'aide sont déjà bilingues. Le sélecteur FR/EN (T-152) n'agit
+  que sur les composants branchés. `i18n:check` : 55 lignes / 19 fichiers
+  (warn-only).
 - **Devise multi : tunnel et totaux gérés, affichages secondaires non.** La
   table `bookings.currency` est multi-devises : le tunnel de réservation
   (T-152) et les totaux analytics/billing (T-152, `sumByCurrency` — jamais

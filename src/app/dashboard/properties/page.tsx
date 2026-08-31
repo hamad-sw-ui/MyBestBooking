@@ -9,6 +9,8 @@ import {
   PropertiesManager,
   type PropertyRow,
 } from "@/components/bulk/properties-manager";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getProperties(userId: string, isAdmin: boolean) {
   if (isAdmin) {
@@ -25,6 +27,7 @@ export default async function PropertiesPage() {
   const user = await getCurrentUser();
   if (!user) return null;
   const isAdmin = user.role === "admin";
+  const t = makeT(await getServerLocale());
   const rows = await getProperties(user.id, isAdmin);
 
   const serialized: PropertyRow[] = rows.map((p) => ({
@@ -52,19 +55,17 @@ export default async function PropertiesPage() {
             className="text-2xl font-bold text-gray-900"
             style={{ fontFamily: "'Poppins', sans-serif" }}
           >
-            Hébergements
+            {t("dash.properties")}
           </h1>
           <p className="text-gray-600 mt-1">
-            {isAdmin
-              ? "Gérez tous les hébergements — filtres, sélection, actions groupées."
-              : "Gérez vos hébergements — filtres et recherche."}
+            {isAdmin ? t("dash.propertiesAdminSub") : t("dash.propertiesHostSub")}
           </p>
         </div>
         {!isAdmin && (
           <Link href="/dashboard/properties/new">
             <Button>
               <Plus className="w-4 h-4 mr-2" />
-              Ajouter un hébergement
+              {t("dash.addProperty")}
             </Button>
           </Link>
         )}

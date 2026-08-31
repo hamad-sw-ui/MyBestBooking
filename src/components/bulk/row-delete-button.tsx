@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2 } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 /**
  * <RowDeleteButton> (T-034) — icône corbeille pour supprimer un item
@@ -27,17 +28,21 @@ export function RowDeleteButton(props: {
   disabled?: boolean;
   onDeleted?: () => void;
   /** Une property conserve son historique : l’action est un archivage. */
-  verb?: "Supprimer" | "Archiver";
+  verb?: "delete" | "archive" | "Supprimer" | "Archiver";
 }) {
-  const { entity, id, label, disabled, onDeleted, verb = "Supprimer" } = props;
+  const { entity, id, label, disabled, onDeleted, verb = "delete" } = props;
+  const t = useT();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isArchive = verb === "archive" || verb === "Archiver";
+  const verbLabel = isArchive ? t("bulk.archive") : t("bulk.delete");
 
   async function handleClick() {
     if (busy || disabled) return;
-    const suffix = verb === "Archiver" ? "L'hébergement ne sera plus public, mais son historique sera conservé." : "Cette action est irréversible.";
-    if (!window.confirm(`${verb} ${label} ? ${suffix}`)) {
+    const suffix = isArchive ? t("bulk.archiveKeepHistory") : t("bulk.deleteIrreversible");
+    const confirmText = `${t("bulk.confirmVerb").replace("{verb}", verbLabel).replace("{label}", label)} ${suffix}`;
+    if (!window.confirm(confirmText)) {
       return;
     }
     setBusy(true);
@@ -59,8 +64,8 @@ export function RowDeleteButton(props: {
       if (!res.ok) {
         setError(
           "error" in body
-            ? `Erreur : ${body.error}`
-            : "Erreur lors de la suppression.",
+            ? t("bulk.errorPrefix").replace("{msg}", body.error)
+            : t("bulk.deleteError"),
         );
         return;
       }
@@ -75,14 +80,14 @@ export function RowDeleteButton(props: {
         return;
       }
       if (result.skipped.length) {
-        setError(`Ignoré : ${result.skipped[0].reason}`);
+        setError(t("bulk.ignored").replace("{msg}", result.skipped[0].reason));
       } else if (result.failed.length) {
-        setError(`Échec : ${result.failed[0].error}`);
+        setError(t("bulk.failedPrefix").replace("{msg}", result.failed[0].error));
       } else {
-        setError("Suppression n'a rien renvoyé.");
+        setError(t("bulk.deleteEmpty"));
       }
     } catch (e) {
-      setError(`Erreur réseau : ${e instanceof Error ? e.message : String(e)}`);
+      setError(t("bulk.networkError").replace("{msg}", e instanceof Error ? e.message : String(e)));
     } finally {
       setBusy(false);
     }
@@ -94,8 +99,8 @@ export function RowDeleteButton(props: {
         type="button"
         onClick={handleClick}
         disabled={busy || disabled}
-        aria-label={`${verb} ${label}`}
-        title={disabled ? `${verb} indisponible` : `${verb} ${label}`}
+        aria-label={`${verbLabel} ${label}`}
+        title={disabled ? t("bulk.unavailable").replace("{verb}", verbLabel) : `${verbLabel} ${label}`}
         className="p-2 rounded-lg hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
         data-testid={`row-delete-${entity}-${id}`}
       >

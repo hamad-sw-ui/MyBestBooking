@@ -1,5 +1,6 @@
 "use client";
 
+import { useT } from "@/components/ui-locale-provider";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,25 +27,24 @@ export interface AuditEntryRow {
   createdAt: string;
 }
 
-const ACTION_LABELS: Record<
-  string,
-  { label: string; variant: "success" | "warning" | "info" | "danger" | "default" }
-> = {
-  "setting.update": { label: "Réglage modifié", variant: "info" },
-  "review.moderate": { label: "Avis modéré", variant: "warning" },
-  "user.suspend": { label: "Utilisateur suspendu", variant: "danger" },
-  "user.reactivate": { label: "Utilisateur réactivé", variant: "success" },
-  "property.validate": { label: "Property validée", variant: "success" },
-  "property.reject": { label: "Property rejetée", variant: "warning" },
-  "property.suspend": { label: "Property suspendue", variant: "danger" },
-  "bulk.action": { label: "Action groupée", variant: "info" },
-};
+type ActionInfo = { label: string; variant: "success" | "warning" | "info" | "danger" | "default" };
 
 interface Props {
   entries: AuditEntryRow[];
 }
 
 export function AuditFilter({ entries }: Props) {
+  const t = useT();
+  const ACTION_LABELS: Record<string, ActionInfo> = {
+    "setting.update": { label: t("bulk.actionSetting"), variant: "info" },
+    "review.moderate": { label: t("bulk.actionReview"), variant: "warning" },
+    "user.suspend": { label: t("bulk.suspend"), variant: "danger" },
+    "user.reactivate": { label: t("bulk.actionReactivate"), variant: "success" },
+    "property.validate": { label: t("bulk.actionValidate"), variant: "success" },
+    "property.reject": { label: t("bulk.actionReject"), variant: "warning" },
+    "property.suspend": { label: t("bulk.suspend"), variant: "danger" },
+    "bulk.action": { label: t("bulk.actionBulk"), variant: "info" },
+  };
   const [q, setQ] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [entityFilter, setEntityFilter] = useState("all");
@@ -110,8 +110,7 @@ export function AuditFilter({ entries }: Props) {
           Journal d&apos;audit
         </h1>
         <p className="text-gray-600 mt-1">
-          100 dernières actions admin sensibles (réglages, modérations,
-          suspensions, validations, actions groupées).
+{t("bulk.auditIntro")}
         </p>
       </div>
 
@@ -119,7 +118,7 @@ export function AuditFilter({ entries }: Props) {
       <div className="mb-4 flex flex-wrap gap-3 items-end">
         <div className="flex-1 min-w-[240px]">
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Rechercher <span className="text-gray-400">(tapez « / »)</span>
+{t("bulk.search")} <span className="text-gray-400">{t("bulk.searchHint")}</span>
           </label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -128,7 +127,7 @@ export function AuditFilter({ entries }: Props) {
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Acteur, action, entité, ID, metadata…"
+              placeholder={t("bulk.searchAudit")}
               className="w-full pl-10 pr-9 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A6B] focus:border-transparent outline-none"
             />
             {q && (
@@ -162,14 +161,14 @@ export function AuditFilter({ entries }: Props) {
         </div>
         <div className="min-w-[160px]">
           <label className="block text-xs font-medium text-gray-600 mb-1">
-            Entité
+            {t("bulk.colEntity")}
           </label>
           <select
             value={entityFilter}
             onChange={(e) => setEntityFilter(e.target.value)}
             className="w-full py-2 px-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#1B3A6B] focus:border-transparent outline-none bg-white"
           >
-            <option value="all">Toutes entités</option>
+            <option value="all">{t("bulk.allEntities")}</option>
             {entities.map((e) => (
               <option key={e} value={e}>
                 {e}
@@ -180,7 +179,7 @@ export function AuditFilter({ entries }: Props) {
       </div>
 
       <p className="text-sm text-gray-600 mb-3">
-        {filtered.length} entrée{filtered.length > 1 ? "s" : ""} affichée
+{(filtered.length > 1 ? t("bulk.entriesShownMany") : t("bulk.entriesShown")).replace("{n}", String(filtered.length))}
         {filtered.length > 1 ? "s" : ""}
         {filtered.length !== entries.length && ` sur ${entries.length}`}
       </p>
@@ -189,8 +188,8 @@ export function AuditFilter({ entries }: Props) {
         {filtered.length === 0 ? (
           <EmptyState
             icon={<ScrollText className="w-8 h-8" />}
-            title="Aucune entrée"
-            description="Aucune entrée ne correspond à vos filtres."
+            title={t("bulk.noEntriesTitle")}
+            description={t("bulk.noEntriesDesc")}
             className="py-16"
           />
         ) : (
@@ -201,8 +200,8 @@ export function AuditFilter({ entries }: Props) {
                   <th className="px-6 py-4 font-medium">Date</th>
                   <th className="px-6 py-4 font-medium">Acteur</th>
                   <th className="px-6 py-4 font-medium">Action</th>
-                  <th className="px-6 py-4 font-medium">Entité</th>
-                  <th className="px-6 py-4 font-medium">Détails</th>
+                  <th className="px-6 py-4 font-medium">{t("bulk.colEntity")}</th>
+                  <th className="px-6 py-4 font-medium">{t("bulk.colDetails")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -226,7 +225,7 @@ export function AuditFilter({ entries }: Props) {
                       </td>
                       <td className="px-6 py-4 text-sm">
                         {e.actorEmail ?? (
-                          <span className="text-gray-400 italic">système</span>
+                          <span className="text-gray-400 italic">{t("bulk.system")}</span>
                         )}
                       </td>
                       <td className="px-6 py-4">
@@ -266,8 +265,8 @@ export function AuditFilter({ entries }: Props) {
       </Card>
 
       <p className="text-xs text-gray-400 mt-3">
-        Raccourcis : <kbd className="px-1 bg-gray-100 rounded">/</kbd> chercher ·{" "}
-        <kbd className="px-1 bg-gray-100 rounded">Échap</kbd> quitter
+{t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")} ·{" "}
+        <kbd className="px-1 bg-gray-100 rounded">Esc</kbd> {t("bulk.shortcutLeave")}
       </p>
     </div>
   );

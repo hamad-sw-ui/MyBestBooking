@@ -102,9 +102,9 @@ export default function MyAccountPage() {
   const [level2Threshold, level3Threshold] = rewardsConfig.thresholds;
   const [level1Discount, level2Discount, level3Discount] = rewardsConfig.discounts;
   const bestrewardsLevels = [
-    { level: 1, name: "Explorer", bookings: 0, benefits: `-${level1Discount}% sur les hébergements BestRewards` },
-    { level: 2, name: "Voyageur", bookings: level2Threshold, benefits: `-${level2Discount}% + tous les avantages Explorer` },
-    { level: 3, name: "Ambassador", bookings: level3Threshold, benefits: `-${level3Discount}% + Cashback 5% en wallet` },
+    { level: 1, name: t("bestrewards.level1Name"), bookings: 0, benefits: t("account.benefitL1").replace("{pct}", String(level1Discount)) },
+    { level: 2, name: t("bestrewards.level2Name"), bookings: level2Threshold, benefits: t("account.benefitL2").replace("{pct}", String(level2Discount)) },
+    { level: 3, name: t("bestrewards.level3Name"), bookings: level3Threshold, benefits: t("account.benefitL3").replace("{pct}", String(level3Discount)) },
   ];
 
   const currentLevel = bestrewardsLevels.find((l) => l.level === user.bestrewardsLevel) || bestrewardsLevels[0];
@@ -112,8 +112,8 @@ export default function MyAccountPage() {
   const bookingsToNextLevel = nextLevel ? nextLevel.bookings - (user.bestrewardsBookingsCount || 0) : 0;
 
   const tabs = [
-    { id: "profile", label: "Profil", icon: User },
-    { id: "bestrewards", label: "BestRewards", icon: Award },
+    { id: "profile", label: t("account.tabProfile"), icon: User },
+    { id: "bestrewards", label: t("nav.bestrewards"), icon: Award },
     { id: "security", label: t("account.security"), icon: Shield },
     { id: "notifications", label: t("account.notifications"), icon: Bell },
   ];
@@ -124,10 +124,10 @@ export default function MyAccountPage() {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-            Mon compte
+            {t("account.title")}
           </h1>
           <p className="text-gray-600 mt-1">
-            Gérez vos informations personnelles et préférences
+            {t("account.subtitle")}
           </p>
         </div>
 
@@ -157,7 +157,7 @@ export default function MyAccountPage() {
                     className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                   >
                     <LogOut className="w-4 h-4" />
-                    Déconnexion
+                    {t("nav.logout")}
                   </button>
                 </form>
               </CardContent>
@@ -189,9 +189,9 @@ export default function MyAccountPage() {
                     </div>
 
                     <div className="mb-2 text-sm text-gray-600">
-                      Email : <strong>{user.email}</strong>{" "}
+                      {t("account.emailLabel")} : <strong>{user.email}</strong>{" "}
                       <span className="text-xs text-gray-500">
-                        (non modifiable ici — contact support si besoin)
+                        {t("account.emailReadonly")}
                       </span>
                     </div>
                     <ProfileForm initial={{
@@ -220,11 +220,11 @@ export default function MyAccountPage() {
                     </div>
                     <div className="flex items-end justify-between mb-4">
                       <div>
-                        <p className="text-white/70 text-sm">Votre niveau</p>
+                        <p className="text-white/70 text-sm">{t("account.yourLevel")}</p>
                         <p className="text-3xl font-bold">{currentLevel.name}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-white/70 text-sm">Réservations</p>
+                        <p className="text-white/70 text-sm">{t("account.bookingsCount")}</p>
                         <p className="text-3xl font-bold">{user.bestrewardsBookingsCount || 0}</p>
                       </div>
                     </div>
@@ -232,7 +232,7 @@ export default function MyAccountPage() {
                     {nextLevel && (
                       <div>
                         <div className="flex justify-between text-sm mb-2">
-                          <span>Progression vers {nextLevel.name}</span>
+                          <span>{t("account.progressTo").replace("{name}", nextLevel.name)}</span>
                           <span>{user.bestrewardsBookingsCount || 0}/{nextLevel.bookings}</span>
                         </div>
                         <div className="h-2 bg-white/20 rounded-full overflow-hidden">
@@ -242,7 +242,7 @@ export default function MyAccountPage() {
                           />
                         </div>
                         <p className="text-sm text-white/70 mt-2">
-                          Plus que {bookingsToNextLevel} réservation{bookingsToNextLevel > 1 ? "s" : ""} pour atteindre le niveau suivant !
+                          {(bookingsToNextLevel > 1 ? t("account.toNextMany") : t("account.toNextOne")).replace("{n}", String(bookingsToNextLevel))}
                         </p>
                       </div>
                     )}
@@ -254,13 +254,13 @@ export default function MyAccountPage() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Wallet className="w-5 h-5" />
-                      Wallet MyBestBooking
+                      {t("account.walletTitle")}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div>
-                        <p className="text-sm text-gray-500">Solde disponible</p>
+                        <p className="text-sm text-gray-500">{t("account.availableBalance")}</p>
                         <p className="text-3xl font-bold text-[#1B3A6B]">
                           {formatPrice(parseFloat(user.walletBalance || "0"), "EUR")}
                         </p>
@@ -272,7 +272,7 @@ export default function MyAccountPage() {
                         href="/recherche?wallet=1"
                         className="inline-flex items-center px-4 py-2 rounded-lg border border-[#1B3A6B] text-[#1B3A6B] font-medium hover:bg-[#1B3A6B] hover:text-white transition"
                       >
-                        Utiliser mon solde
+                        {t("account.useBalance")}
                       </Link>
                     </div>
                     <p className="text-sm text-gray-500 mt-3">
@@ -287,7 +287,7 @@ export default function MyAccountPage() {
                 {/* Levels */}
                 <Card>
                   <CardHeader>
-                    <CardTitle>Niveaux et avantages</CardTitle>
+                    <CardTitle>{t("account.levelsTitle")}</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
@@ -309,7 +309,7 @@ export default function MyAccountPage() {
                               </div>
                               <div>
                                 <p className="font-semibold">{level.name}</p>
-                                <p className="text-sm text-gray-500">{level.bookings}+ réservations</p>
+                                <p className="text-sm text-gray-500">{t("account.bookingsPlus").replace("{n}", String(level.bookings))}</p>
                               </div>
                             </div>
                             <p className="text-sm text-gray-600">{level.benefits}</p>

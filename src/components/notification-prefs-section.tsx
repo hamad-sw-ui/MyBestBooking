@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   initial: {
@@ -24,6 +25,7 @@ interface Props {
  * dans /dashboard/settings > Notifications.
  */
 export function NotificationPrefsSection({ initial }: Props) {
+  const t = useT();
   const router = useRouter();
   const [priceAlert, setPriceAlert] = useState(initial.priceAlertEnabled);
   const [busy, setBusy] = useState(false);
@@ -42,12 +44,12 @@ export function NotificationPrefsSection({ initial }: Props) {
       });
       if (!r.ok) {
         const j = await r.json().catch(() => ({}));
-        throw new Error(j.error ?? "Erreur");
+        throw new Error(j.error ?? t("auth.error"));
       }
       setSaved(true);
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("auth.error"));
     } finally {
       setBusy(false);
     }
@@ -56,15 +58,14 @@ export function NotificationPrefsSection({ initial }: Props) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Préférences de notification</CardTitle>
+        <CardTitle>{t("notif.title")}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center justify-between">
           <div>
-            <p className="font-medium">Alertes prix favoris</p>
+            <p className="font-medium">{t("notif.priceAlerts")}</p>
             <p className="text-sm text-gray-500">
-              Recevoir un email quand le prix d&apos;un hébergement suivi
-              descend sous votre seuil.
+              {t("notif.priceAlertsBody")}
             </p>
           </div>
           <label className="relative inline-flex items-center cursor-pointer">
@@ -73,22 +74,21 @@ export function NotificationPrefsSection({ initial }: Props) {
               className="sr-only peer"
               checked={priceAlert}
               onChange={(e) => setPriceAlert(e.target.checked)}
-              aria-label="Alertes prix"
+              aria-label={t("notif.priceAlerts")}
             />
             <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]"></div>
           </label>
         </div>
         <p className="text-xs text-gray-500 border-t border-gray-100 pt-3">
-          Les préférences globales de notification (confirmations,
-          rappels) sont configurées par l&apos;équipe MyBestBooking.
+          {t("notif.globalNote")}
         </p>
       </CardContent>
       <CardFooter className="flex items-center gap-3">
         <Button onClick={save} disabled={busy}>
           {busy ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-          Enregistrer
+          {t("action.save")}
         </Button>
-        {saved && <span className="text-sm text-green-600">Enregistré ✓</span>}
+        {saved && <span className="text-sm text-green-600">{t("notif.saved")}</span>}
         {error && <span className="text-sm text-red-600">{error}</span>}
       </CardFooter>
     </Card>

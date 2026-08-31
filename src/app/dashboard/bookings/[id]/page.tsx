@@ -15,6 +15,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { BookingRowActions } from "@/components/booking-row-actions";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 interface BookingDetailPageProps {
   params: Promise<{ id: string }>;
@@ -76,35 +78,36 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   }
 
   const { booking, property, room, guest, review } = data;
+  const t = makeT(await getServerLocale());
 
   // T-130 : l'hôte du bien (ou l'admin) peut clôturer un séjour / marquer un
   // no-show. Le voyageur propriétaire ne voit pas ces actions.
   const canManageStay = isAdmin || property?.hostId === user.id;
 
   const statusLabels: Record<string, string> = {
-    pending: "En attente",
-    confirmed: "Confirmée",
-    cancelled: "Annulée",
-    completed: "Terminée",
-    no_show: "No-show",
+    pending: t("status.pending"),
+    confirmed: t("status.confirmed"),
+    cancelled: t("status.cancelled"),
+    completed: t("status.completed"),
+    no_show: t("status.no_show"),
   };
 
   const paymentStatusLabels: Record<string, string> = {
-    pending: "En attente",
-    paid: "Payé",
-    partially_refunded: "Partiellement remboursé",
-    refunded: "Remboursé",
+    pending: t("status.pending"),
+    paid: t("host.paid"),
+    partially_refunded: t("host.partialRefund"),
+    refunded: t("host.refunded"),
   };
 
   const timeline = [
     { 
-      label: "Réservation créée", 
+      label: t("host.created"), 
       date: booking.createdAt, 
       icon: Calendar, 
       completed: true 
     },
     { 
-      label: "Paiement confirmé", 
+      label: t("host.paymentConfirmed"), 
       date: booking.createdAt, 
       icon: CreditCard, 
       completed: booking.paymentStatus === "paid" 
@@ -132,15 +135,15 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Retour aux réservations
+{t("host.backToBookings")}
         </Link>
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-              Réservation {booking.bookingReference}
+{t("host.bookingTitle").replace("{ref}", booking.bookingReference)}
             </h1>
             <p className="text-gray-600 mt-1">
-              Créée le {formatDate(booking.createdAt)}
+{t("host.createdOn").replace("{date}", formatDate(booking.createdAt))}
             </p>
           </div>
           <Badge className={`${getStatusBadgeColor(booking.status)} text-base px-4 py-1`}>
@@ -155,7 +158,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           {/* Property & Room */}
           <Card>
             <CardHeader>
-              <CardTitle>Hébergement</CardTitle>
+<CardTitle>{t("dash.colProperty")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex gap-4">
@@ -183,29 +186,29 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           {/* Dates */}
           <Card>
             <CardHeader>
-              <CardTitle>Dates du séjour</CardTitle>
+<CardTitle>{t("host.stayDates")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">Arrivée</p>
+<p className="text-sm text-gray-500">{t("book.checkIn")}</p>
                   <p className="text-lg font-bold">{formatDate(booking.checkIn, { day: "numeric", month: "short" })}</p>
-                  <p className="text-sm text-gray-500">à partir de {property?.checkInFrom || "14:00"}</p>
+                  <p className="text-sm text-gray-500">{t("host.fromTime").replace("{time}", property?.checkInFrom || "14:00")}</p>
                 </div>
                 <div className="text-center p-4 bg-[#1B3A6B] text-white rounded-lg">
-                  <p className="text-sm text-white/70">Durée</p>
+<p className="text-sm text-white/70">{t("host.duration")}</p>
                   <p className="text-2xl font-bold">{booking.numNights}</p>
-                  <p className="text-sm text-white/70">nuit{booking.numNights > 1 ? "s" : ""}</p>
+                  <p className="text-sm text-white/70">{booking.numNights > 1 ? t("reservation.nightsPlural") : t("reservation.nights")}</p>
                 </div>
                 <div className="text-center p-4 bg-gray-50 rounded-lg">
-                  <p className="text-sm text-gray-500">Départ</p>
+<p className="text-sm text-gray-500">{t("book.checkOut")}</p>
                   <p className="text-lg font-bold">{formatDate(booking.checkOut, { day: "numeric", month: "short" })}</p>
-                  <p className="text-sm text-gray-500">avant {property?.checkOutUntil || "11:00"}</p>
+                  <p className="text-sm text-gray-500">{t("host.beforeTime").replace("{time}", property?.checkOutUntil || "11:00")}</p>
                 </div>
               </div>
               <div className="mt-4 text-center text-sm text-gray-500">
-                {booking.numAdults} adulte{booking.numAdults > 1 ? "s" : ""}
-                {booking.numChildren && booking.numChildren > 0 && `, ${booking.numChildren} enfant${booking.numChildren > 1 ? "s" : ""}`}
+{(booking.numAdults > 1 ? t("reservation.adultsOptionPlural") : t("reservation.adultsOption")).replace("{n}", String(booking.numAdults))}
+                {booking.numChildren && booking.numChildren > 0 && `, ${(booking.numChildren > 1 ? t("reservation.childrenOptionPlural") : t("reservation.childrenOption")).replace("{n}", String(booking.numChildren))}`}
               </div>
             </CardContent>
           </Card>
@@ -213,7 +216,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           {/* Guest Info */}
           <Card>
             <CardHeader>
-              <CardTitle>Informations du voyageur</CardTitle>
+<CardTitle>{t("host.guestInfo")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -243,13 +246,13 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                 {booking.tripPurpose && (
                   <div className="flex items-center gap-3 text-gray-600">
                     <User className="w-4 h-4" />
-                    <span className="capitalize">{booking.tripPurpose === "leisure" ? "Loisirs" : "Affaires"}</span>
+                    <span className="capitalize">{booking.tripPurpose === "leisure" ? t("review.traveler.leisure") : t("review.traveler.business")}</span>
                   </div>
                 )}
               </div>
               {booking.specialRequests && (
                 <div className="mt-4 p-4 bg-yellow-50 rounded-lg">
-                  <p className="text-sm font-medium text-yellow-800">Demandes spéciales</p>
+                  <p className="text-sm font-medium text-yellow-800">{t("host.specialRequests")}</p>
                   <p className="text-sm text-yellow-700 mt-1">{booking.specialRequests}</p>
                 </div>
               )}
@@ -262,7 +265,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Star className="w-5 h-5 text-[#F5A623]" />
-                  Avis du voyageur
+{t("host.guestReview")}
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -271,7 +274,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                     {parseFloat(review.overallRating).toFixed(1)}
                   </div>
                   <span className="text-gray-600">
-                    Publié le {formatDate(review.createdAt)}
+{t("host.publishedOn").replace("{date}", formatDate(review.createdAt))}
                   </span>
                 </div>
                 {review.positiveComment && (
@@ -294,31 +297,31 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           {/* Payment Summary */}
           <Card>
             <CardHeader>
-              <CardTitle>Récapitulatif</CardTitle>
+<CardTitle>{t("host.summary")}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Chambre × {booking.numNights} nuits</span>
+                <span className="text-gray-600">{t("host.roomNights").replace("{n}", String(booking.numNights))}</span>
                 <span>{formatPrice(booking.subtotal, booking.currency)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Taxes et frais</span>
+<span className="text-gray-600">{t("reservation.taxesFees")}</span>
                 <span>{formatPrice(booking.taxes || "0", booking.currency)}</span>
               </div>
               {parseFloat(booking.discount || "0") > 0 && (
                 <div className="flex justify-between text-sm text-green-600">
-                  <span>Réduction</span>
+<span>{t("host.discount")}</span>
                   <span>-{formatPrice(booking.discount || "0", booking.currency)}</span>
                 </div>
               )}
               <hr />
               <div className="flex justify-between font-bold text-lg">
-                <span>Total</span>
+<span>{t("bookings.total")}</span>
                 <span className="text-[#1B3A6B]">{formatPrice(booking.total, booking.currency)}</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <CreditCard className="w-4 h-4 text-gray-400" />
-                <span className="text-gray-600">{booking.paymentMethod || "Carte"}</span>
+                <span className="text-gray-600">{booking.paymentMethod || t("host.card")}</span>
                 <Badge className={getStatusBadgeColor(booking.paymentStatus || "pending")}>
                   {paymentStatusLabels[booking.paymentStatus || "pending"]}
                 </Badge>
@@ -328,13 +331,13 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
               <CardFooter className="bg-gray-50 border-t">
                 <div className="w-full space-y-2 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Commission ({booking.commissionRate}%)</span>
+                    <span className="text-gray-600">{t("host.commission").replace("{pct}", String(booking.commissionRate))}</span>
                     <span className="text-green-600 font-medium">
                       {formatPrice(booking.commissionAmount, booking.currency)}
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Net hébergeur</span>
+<span className="text-gray-600">{t("host.netHost")}</span>
                     <span>{formatPrice(booking.netToHost, booking.currency)}</span>
                   </div>
                 </div>
@@ -345,7 +348,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
           {/* Timeline */}
           <Card>
             <CardHeader>
-              <CardTitle>Historique</CardTitle>
+<CardTitle>{t("host.history")}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">

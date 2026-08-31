@@ -12,6 +12,8 @@ import {
   CreditCard, Download, FileText, Calendar,
   TrendingUp, Wallet, ArrowRight, CheckCircle
 } from "lucide-react";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 async function getBillingData(userId: string, isAdmin: boolean) {
   const now = new Date();
@@ -113,6 +115,7 @@ async function getBillingData(userId: string, isAdmin: boolean) {
 }
 
 export default async function BillingPage() {
+  const t = makeT(await getServerLocale());
   const user = await getCurrentUser();
   if (!user) return null;
 
@@ -123,13 +126,13 @@ export default async function BillingPage() {
     return (
       <div>
         <h1 className="text-2xl font-bold text-gray-900 mb-8" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Facturation
+{t("dash.billing")}
         </h1>
         <Card>
           <EmptyState
             icon={<CreditCard className="w-8 h-8" />}
-            title="Aucune donnée de facturation"
-            description="Les informations de facturation apparaîtront après vos premières réservations"
+            title={t("billing.noDataTitle")}
+            description={t("billing.noDataDesc")}
             className="py-16"
           />
         </Card>
@@ -142,10 +145,10 @@ export default async function BillingPage() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Facturation
+{t("dash.billing")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Gérez vos revenus et factures
+{t("billing.manage")}
         </p>
       </div>
 
@@ -155,12 +158,12 @@ export default async function BillingPage() {
           <CardContent>
             <div className="flex items-center justify-between mb-4">
               <Wallet className="w-8 h-8 text-white/80" />
-              <Badge className="bg-white/20 text-white">Ce mois</Badge>
+<Badge className="bg-white/20 text-white">{t("billing.thisMonth")}</Badge>
             </div>
-            <p className="text-white/70 text-sm">Revenus nets</p>
+<p className="text-white/70 text-sm">{t("billing.netRevenue")}</p>
             <p className="text-3xl font-bold mt-1">{formatCurrencyBreakdown(billing.thisMonth.netByCurrency)}</p>
             <p className="text-white/60 text-sm mt-2">
-              {billing.thisMonth.bookings} réservation{billing.thisMonth.bookings !== 1 ? "s" : ""}
+{(billing.thisMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.thisMonth.bookings))}
             </p>
           </CardContent>
         </Card>
@@ -169,12 +172,12 @@ export default async function BillingPage() {
           <CardContent>
             <div className="flex items-center justify-between mb-4">
               <TrendingUp className="w-8 h-8 text-green-500" />
-              <span className="text-sm text-gray-500">Mois dernier</span>
+<span className="text-sm text-gray-500">{t("billing.lastMonth")}</span>
             </div>
-            <p className="text-gray-500 text-sm">Revenus nets</p>
+<p className="text-gray-500 text-sm">{t("billing.netRevenue")}</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.lastMonth.netByCurrency)}</p>
             <p className="text-gray-500 text-sm mt-2">
-              {billing.lastMonth.bookings} réservation{billing.lastMonth.bookings !== 1 ? "s" : ""}
+{(billing.lastMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.lastMonth.bookings))}
             </p>
           </CardContent>
         </Card>
@@ -185,10 +188,10 @@ export default async function BillingPage() {
               <Calendar className="w-8 h-8 text-[#F5A623]" />
               <span className="text-sm text-gray-500">Total</span>
             </div>
-            <p className="text-gray-500 text-sm">Revenus cumulés</p>
+<p className="text-gray-500 text-sm">{t("billing.cumulated")}</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.total.netByCurrency)}</p>
             <p className="text-gray-500 text-sm mt-2">
-              {billing.total.bookings} réservation{billing.total.bookings !== 1 ? "s" : ""} au total
+{(billing.total.bookings !== 1 ? t("billing.bookingsTotalMany") : t("billing.bookingsTotal")).replace("{n}", String(billing.total.bookings))}
             </p>
           </CardContent>
         </Card>
@@ -199,18 +202,18 @@ export default async function BillingPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Factures</CardTitle>
+<CardTitle>{t("billing.invoices")}</CardTitle>
               <div className="flex items-center gap-2">
                 <a href="/api/dashboard/billing/export" className="inline-flex items-center px-3 py-1 rounded-lg border border-[#1B3A6B] text-xs text-[#1B3A6B] hover:bg-blue-50">
-                  <Download className="w-3 h-3 mr-1" /> Export CSV
+<Download className="w-3 h-3 mr-1" /> {t("billing.exportCsv")}
                 </a>
-                <span className="inline-flex items-center px-3 py-1 rounded-lg border border-gray-200 text-xs text-gray-500">Factures légales indisponibles</span>
+<span className="inline-flex items-center px-3 py-1 rounded-lg border border-gray-200 text-xs text-gray-500">{t("billing.invoicesUnavailable")}</span>
               </div>
             </div>
           </CardHeader>
           <CardContent>
             {billing.invoices.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Les factures et exports seront disponibles après intégration du moteur comptable.</p>
+<p className="text-center text-gray-500 py-8">{t("billing.invoicesSoon")}</p>
             ) : (
               <div className="space-y-4">
                 {billing.invoices.map((invoice) => (
@@ -225,7 +228,7 @@ export default async function BillingPage() {
                       <div>
                         <p className="font-medium text-gray-900">{invoice.period}</p>
                         <p className="text-sm text-gray-500">
-                          {invoice.bookingsCount} réservation{invoice.bookingsCount !== 1 ? "s" : ""}
+{(invoice.bookingsCount !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(invoice.bookingsCount))}
                         </p>
                       </div>
                     </div>
@@ -235,14 +238,14 @@ export default async function BillingPage() {
                         {invoice.status === "paid" ? (
                           <Badge variant="success">
                             <CheckCircle className="w-3 h-3 mr-1" />
-                            Payé
+                            {t("host.paid")}
                           </Badge>
                         ) : (
-                          <Badge variant="warning">En attente</Badge>
+<Badge variant="warning">{t("status.pending")}</Badge>
                         )}
                         <a
                           href="/api/dashboard/billing/export"
-                          aria-label={`Télécharger l'export CSV de la période ${invoice.period}`}
+                          aria-label={t("billing.csvAria").replace("{period}", invoice.period)}
                           className="inline-flex items-center text-[#1B3A6B] hover:underline"
                         >
                           <Download className="w-4 h-4" aria-hidden="true" />
@@ -259,11 +262,11 @@ export default async function BillingPage() {
         {/* Recent Transactions */}
         <Card>
           <CardHeader>
-            <CardTitle>Transactions récentes</CardTitle>
+<CardTitle>{t("billing.recent")}</CardTitle>
           </CardHeader>
           <CardContent>
             {billing.recentTransactions.length === 0 ? (
-              <p className="text-center text-gray-500 py-8">Aucune transaction</p>
+<p className="text-center text-gray-500 py-8">{t("billing.noTx")}</p>
             ) : (
               <div className="space-y-4">
                 {billing.recentTransactions.map(({ booking, property }) => (
@@ -281,7 +284,7 @@ export default async function BillingPage() {
                     <div className="text-right">
                       <p className="font-bold text-green-600">+{formatPrice(booking.netToHost, booking.currency)}</p>
                       <p className="text-xs text-gray-400">
-                        Commission: {formatPrice(booking.commissionAmount, booking.currency)}
+{t("billing.commission").replace("{amount}", formatPrice(booking.commissionAmount, booking.currency))}
                       </p>
                     </div>
                   </div>
@@ -299,9 +302,9 @@ export default async function BillingPage() {
             <CreditCard className="w-5 h-5 text-blue-600" />
           </div>
           <div>
-            <h3 className="font-semibold text-blue-900">À propos des commissions</h3>
+<h3 className="font-semibold text-blue-900">{t("billing.aboutCommission")}</h3>
             <p className="text-sm text-blue-700 mt-1">
-              Les montants affichés excluent désormais les réservations annulées. Les factures légales et le calendrier de versement ne sont pas encore automatisés ; ne les considérez pas comme des documents comptables.
+              {t("billing.commissionBody")}
             </p>
           </div>
         </CardContent>

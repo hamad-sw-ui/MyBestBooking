@@ -11,30 +11,30 @@ import { PhotoUploadButton } from "@/components/photo-upload-button";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée avec la
 // recherche (28 valeurs, source unique au lieu de 12 locales).
 import { AMENITIES } from "@/lib/amenities";
-
-const PROPERTY_TYPES = [
-  { value: "hotel", label: "Hôtel" },
-  { value: "apartment", label: "Appartement" },
-  { value: "house", label: "Maison" },
-  { value: "villa", label: "Villa" },
-  { value: "hostel", label: "Auberge" },
-  { value: "resort", label: "Resort" },
-  { value: "bnb", label: "B&B" },
-  { value: "guesthouse", label: "Maison d'hôtes" },
-  { value: "riad", label: "Riad" },
-  { value: "camping", label: "Camping" },
-];
-
-const CANCELLATION_POLICIES = [
-  { value: "free", label: "Annulation gratuite" },
-  { value: "flexible", label: "Flexible (24h avant)" },
-  { value: "moderate", label: "Modérée (5 jours avant)" },
-  { value: "strict", label: "Stricte (14 jours avant)" },
-  { value: "non_refundable", label: "Non remboursable" },
-];
+import { useT } from "@/components/ui-locale-provider";
 
 export default function NewPropertyPage() {
+  const t = useT();
   const router = useRouter();
+  const PROPERTY_TYPES = [
+    { value: "hotel", label: t("search.type.hotel") },
+    { value: "apartment", label: t("search.type.apartment") },
+    { value: "house", label: t("prop.type.house") },
+    { value: "villa", label: t("search.type.villa") },
+    { value: "hostel", label: t("search.type.hostel") },
+    { value: "resort", label: t("search.type.resort") },
+    { value: "bnb", label: t("prop.type.bnb") },
+    { value: "guesthouse", label: t("search.type.guesthouse") },
+    { value: "riad", label: t("search.type.riad") },
+    { value: "camping", label: t("prop.type.camping") },
+  ];
+  const CANCELLATION_POLICIES = [
+    { value: "free", label: t("prop.policyFree") },
+    { value: "flexible", label: t("prop.policyFlexible") },
+    { value: "moderate", label: t("prop.policyModerate") },
+    { value: "strict", label: t("prop.policyStrict") },
+    { value: "non_refundable", label: t("prop.policyNonRefundable") },
+  ];
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -67,10 +67,10 @@ export default function NewPropertyPage() {
       fd.append("file", file);
       const res = await fetch("/api/properties/upload", { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? "Échec de l'upload");
+      if (!res.ok) throw new Error(data.error ?? t("account.uploadFail"));
       setFormData((prev) => ({ ...prev, mainImage: data.url }));
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "Échec de l'upload");
+      setUploadError(err instanceof Error ? err.message : t("account.uploadFail"));
     } finally {
       setUploading(false);
     }
@@ -100,14 +100,14 @@ export default function NewPropertyPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Une erreur est survenue");
+        setError(data.error || t("auth.genericError"));
         setLoading(false);
         return;
       }
 
       router.push(`/dashboard/properties/${data.property.id}`);
     } catch {
-      setError("Une erreur est survenue");
+      setError(t("auth.genericError"));
       setLoading(false);
     }
   };
@@ -121,13 +121,13 @@ export default function NewPropertyPage() {
           className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
         >
           <ArrowLeft className="w-4 h-4" />
-          Retour aux hébergements
+{t("prop.backToList")}
         </Link>
         <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
-          Ajouter un hébergement
+{t("prop.addTitle")}
         </h1>
         <p className="text-gray-600 mt-1">
-          Remplissez les informations de votre hébergement
+{t("prop.addSubtitle")}
         </p>
       </div>
 
@@ -141,12 +141,12 @@ export default function NewPropertyPage() {
         {/* Basic Info */}
         <Card>
           <CardHeader>
-            <CardTitle>Informations générales</CardTitle>
+<CardTitle>{t("prop.generalInfo")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
-              label="Nom de l'hébergement"
-              placeholder="ex: Hôtel Le Magnifique"
+              label={t("prop.name")}
+              placeholder={t("prop.namePlaceholder")}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -154,14 +154,14 @@ export default function NewPropertyPage() {
 
             <div className="grid grid-cols-2 gap-4">
               <Select
-                label="Type d'hébergement"
+                label={t("prop.type")}
                 options={PROPERTY_TYPES}
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value })}
               />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Classement (étoiles)
+{t("prop.stars")}
                 </label>
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -181,8 +181,8 @@ export default function NewPropertyPage() {
             </div>
 
             <Textarea
-              label="Description"
-              placeholder="Décrivez votre hébergement..."
+              label={t("prop.description")}
+              placeholder={t("prop.descPlaceholder")}
               rows={4}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -193,11 +193,11 @@ export default function NewPropertyPage() {
         {/* Location */}
         <Card>
           <CardHeader>
-            <CardTitle>Localisation</CardTitle>
+<CardTitle>{t("prop.location")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Input
-              label="Adresse"
+              label={t("prop.address")}
               placeholder="ex: 15 Rue de Rivoli"
               value={formData.addressLine}
               onChange={(e) => setFormData({ ...formData, addressLine: e.target.value })}
@@ -205,27 +205,27 @@ export default function NewPropertyPage() {
 
             <div className="grid grid-cols-3 gap-4">
               <Input
-                label="Ville"
+                label={t("prop.city")}
                 placeholder="Paris"
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 required
               />
               <Input
-                label="Code postal"
+                label={t("prop.postal")}
                 placeholder="75001"
                 value={formData.postalCode}
                 onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
               />
               <Select
-                label="Pays"
+                label={t("prop.country")}
                 options={[
-                  { value: "FR", label: "France" },
-                  { value: "MA", label: "Maroc" },
-                  { value: "TN", label: "Tunisie" },
-                  { value: "ES", label: "Espagne" },
-                  { value: "IT", label: "Italie" },
-                  { value: "PT", label: "Portugal" },
+{ value: "FR", label: t("prop.country.FR") },
+{ value: "MA", label: t("prop.country.MA") },
+{ value: "TN", label: t("prop.country.TN") },
+{ value: "ES", label: t("prop.country.ES") },
+{ value: "IT", label: t("prop.country.IT") },
+{ value: "PT", label: t("prop.country.PT") },
                 ]}
                 value={formData.country}
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}
@@ -237,11 +237,11 @@ export default function NewPropertyPage() {
         {/* Policies */}
         <Card>
           <CardHeader>
-            <CardTitle>Politiques</CardTitle>
+<CardTitle>{t("property.policies")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <Select
-              label="Politique d'annulation"
+              label={t("prop.cancelPolicy")}
               options={CANCELLATION_POLICIES}
               value={formData.cancellationPolicy}
               onChange={(e) => setFormData({ ...formData, cancellationPolicy: e.target.value })}
@@ -255,7 +255,7 @@ export default function NewPropertyPage() {
                   onChange={(e) => setFormData({ ...formData, petsAllowed: e.target.checked })}
                   className="rounded border-gray-300"
                 />
-                <span className="text-sm text-gray-700">Animaux acceptés</span>
+<span className="text-sm text-gray-700">{t("prop.pets")}</span>
               </label>
               <label className="flex items-center gap-2">
                 <input
@@ -264,7 +264,7 @@ export default function NewPropertyPage() {
                   onChange={(e) => setFormData({ ...formData, smokingAllowed: e.target.checked })}
                   className="rounded border-gray-300"
                 />
-                <span className="text-sm text-gray-700">Fumeurs acceptés</span>
+<span className="text-sm text-gray-700">{t("prop.smoking")}</span>
               </label>
             </div>
           </CardContent>
@@ -273,7 +273,7 @@ export default function NewPropertyPage() {
         {/* Amenities */}
         <Card>
           <CardHeader>
-            <CardTitle>Équipements</CardTitle>
+<CardTitle>{t("prop.amenities")}</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -302,33 +302,33 @@ export default function NewPropertyPage() {
         {/* Image */}
         <Card>
           <CardHeader>
-            <CardTitle>Photo principale</CardTitle>
+<CardTitle>{t("prop.mainPhotoTitle")}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Téléverser une photo
+{t("prop.uploadPhoto")}
               </label>
               <PhotoUploadButton
                 onFile={handlePhotoUpload}
                 loading={uploading}
-                ariaLabel="Importer une photo depuis l'ordinateur"
+                ariaLabel={t("prop.importAria")}
               >
                 <Upload className="w-4 h-4 mr-2" />
-                {uploading ? "Téléversement…" : "Importer depuis l'ordinateur"}
+{uploading ? t("account.uploading") : t("account.importFromComputer")}
               </PhotoUploadButton>
               <p id="photo-help" className="text-xs text-gray-500 mt-1">
-                {uploading ? "Téléversement en cours…" : "JPEG, PNG, WebP ou GIF — 5 Mo max."}
+{uploading ? t("prop.uploadingHint") : t("prop.uploadHint")}
               </p>
               {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
             </div>
 
             <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-400">ou</span>
+<span className="text-xs text-gray-400">{t("prop.or")}</span>
             </div>
 
             <Input
-              label="URL de l'image"
+              label={t("prop.imageUrl")}
               placeholder="https://..."
               value={formData.mainImage}
               onChange={(e) => setFormData({ ...formData, mainImage: e.target.value })}
@@ -338,7 +338,7 @@ export default function NewPropertyPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={formData.mainImage}
-                  alt="Aperçu de la photo principale"
+                  alt={t("prop.photoPreview")}
                   className="w-full max-w-md h-48 object-cover rounded-lg"
                 />
                 <div className="mt-2">
@@ -347,10 +347,10 @@ export default function NewPropertyPage() {
                     size="sm"
                     loading={uploading}
                     onFile={handlePhotoUpload}
-                    ariaLabel="Changer la photo principale"
+                    ariaLabel={t("prop.changeAria")}
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
-                    Changer l&apos;image
+{t("prop.changeImage")}
                   </PhotoUploadButton>
                 </div>
               </div>
@@ -361,11 +361,11 @@ export default function NewPropertyPage() {
         {/* Submit */}
         <div className="flex items-center gap-4">
           <Button type="submit" loading={loading} size="lg">
-            Créer l&apos;hébergement
+{t("prop.create")}
           </Button>
           <Link href="/dashboard/properties">
             <Button type="button" variant="ghost" size="lg">
-              Annuler
+{t("action.cancel")}
             </Button>
           </Link>
         </div>

@@ -3,8 +3,10 @@ import type { ReactNode } from "react";
 import Script from "next/script";
 import { ToastProvider } from "@/components/ui/toast";
 import { MaintenanceGate } from "@/components/maintenance-gate";
+import { UiLocaleProvider } from "@/components/ui-locale-provider";
 import { getCurrentUser } from "@/lib/auth";
 import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 import "./globals.css";
 
 // Les polices restent locales afin que le rendu initial ne dépende pas
@@ -12,14 +14,16 @@ import "./globals.css";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const locale = await getServerLocale();
+  const t = makeT(locale);
+  return {
   metadataBase: new URL(APP_URL),
   title: {
-    default: "MyBestBooking — Réservez mieux. Voyagez plus.",
+    default: t("meta.appTitle"),
     template: "%s | MyBestBooking",
   },
-  description:
-    "Trouvez des hébergements, consultez les avis vérifiés et comparez les offres disponibles.",
+  description: t("meta.appDescription"),
   keywords: [
     "réservation",
     "hôtel",
@@ -30,16 +34,15 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: "website",
-    locale: "fr_FR",
+    locale: locale === "en" ? "en_GB" : "fr_FR",
     siteName: "MyBestBooking",
-    title: "MyBestBooking — Réservez mieux. Voyagez plus.",
-    description:
-      "Trouvez des hébergements, consultez les avis vérifiés et comparez les offres disponibles.",
+    title: t("meta.appTitle"),
+    description: t("meta.appDescription"),
   },
   twitter: {
     card: "summary_large_image",
     title: "MyBestBooking",
-    description: "Réservez mieux. Voyagez plus.",
+    description: t("footer.tagline"),
   },
   // T-135 — pas de `robots: { index: true }` forcé ici : il entrait en
   // conflit avec la balise `<meta name="robots" content="noindex">` que
@@ -49,7 +52,8 @@ export const metadata: Metadata = {
   // indexables (défaut « index, follow ») et les 404 reçoivent bien
   // « noindex ». Les pages qui veulent forcer une directive le font au
   // niveau page (ex. maintenance : index:false ; mentions légales).
-};
+  };
+}
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
   // T-128 : un admin doit pouvoir traverser le site pendant la maintenance
@@ -67,7 +71,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
         {/* T-128 : bascule l'affichage vers /maintenance sur plein-chargement. */}
         <MaintenanceGate isAdmin={isAdmin} />
         {/* T-029 : skip link a11y */}
-        <a href="#main-content" className="skip-link">Aller au contenu principal</a>
+        <a href="#main-content" className="skip-link">{makeT(locale)("a11y.skipToContent")}</a>
         {/* T-029 : pré-applique la classe .dark sans FOUC */}
         <Script
           id="theme-init"
@@ -93,7 +97,9 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
               "}catch(e){}",
           }}
         />
-        <ToastProvider>{children}</ToastProvider>
+        <ToastProvider>
+          <UiLocaleProvider initialLanguage={locale}>{children}</UiLocaleProvider>
+        </ToastProvider>
       </body>
     </html>
   );

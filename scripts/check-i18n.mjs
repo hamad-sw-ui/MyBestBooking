@@ -37,6 +37,10 @@ const EXCLUDED_FILES = new Set([
   "src/lib/amenities.ts",
   "src/db/seed.ts",
   "src/lib/mail/strings.ts",
+  // Dictionnaires bilingues embarqués (contenu choisi par locale, pas du FR dur).
+  "src/app/(main)/confidentialite/page.tsx",
+  "src/app/(main)/mentions-legales/page.tsx",
+  "src/components/help-center.tsx",
 ]);
 const SKIP_LINE = /^\s*(\/\/|\/\*|\*|import\s|export\s+.*\bfrom\b)/;
 

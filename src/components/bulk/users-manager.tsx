@@ -7,6 +7,7 @@ import { Mail } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
 import { UserSuspendActions } from "@/components/admin/user-suspend-actions";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 export interface UserRow {
   id: string;
@@ -23,13 +24,7 @@ export interface UserRow {
   deletedAt: string | null;
 }
 
-const roleLabels: Record<string, string> = {
-  customer: "Client",
-  host: "Hébergeur",
-  admin: "Admin",
-  moderator: "Modérateur",
-  support: "Support",
-};
+
 const roleBadges: Record<string, string> = {
   customer: "bg-blue-100 text-blue-800",
   host: "bg-green-100 text-green-800",
@@ -38,10 +33,10 @@ const roleBadges: Record<string, string> = {
   support: "bg-teal-100 text-teal-800",
 };
 
-function fmt(d: string | null): string {
+function fmt(d: string | null, locale: string): string {
   if (!d) return "—";
   try {
-    return new Date(d).toLocaleDateString("fr-FR", {
+    return new Date(d).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
       day: "numeric",
       month: "short",
       year: "numeric",
@@ -57,6 +52,15 @@ interface Props {
 }
 
 export function UsersManager({ users, currentUserId }: Props) {
+  const t = useT();
+  const locale = useUiLocale();
+  const roleLabels: Record<string, string> = {
+    customer: t("auth.roleCustomer"),
+    host: t("auth.roleHost"),
+    admin: t("auth.roleAdmin"),
+    moderator: t("bulk.roleModerator"),
+    support: t("bulk.roleSupport"),
+  };
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [roleFilter, setRoleFilter] = useState<string>("all");
@@ -114,10 +118,10 @@ export function UsersManager({ users, currentUserId }: Props) {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: "Total", value: stats.total, color: "text-gray-900" },
-          { label: "Clients", value: stats.customers, color: "text-blue-600" },
-          { label: "Hébergeurs", value: stats.hosts, color: "text-green-600" },
-          { label: "Admins", value: stats.admins, color: "text-purple-600" },
+          { label: t("bulk.total"), value: stats.total, color: "text-gray-900" },
+          { label: t("bulk.customers"), value: stats.customers, color: "text-blue-600" },
+          { label: t("bulk.hosts"), value: stats.hosts, color: "text-green-600" },
+          { label: t("bulk.admins"), value: stats.admins, color: "text-purple-600" },
         ].map((s) => (
           <Card key={s.label} padding="sm">
             <div className="p-4">
@@ -137,36 +141,36 @@ export function UsersManager({ users, currentUserId }: Props) {
         onDeselectAll={() => setSelected(new Set())}
         searchValue={q}
         onSearchChange={setQ}
-        searchPlaceholder="Nom, email, pays…"
+        searchPlaceholder={t("bulk.searchUsers")}
         statusOptions={[
-          { value: "all", label: "Tous les statuts" },
-          { value: "active", label: "Actifs" },
-          { value: "suspended", label: "Suspendus" },
-          { value: "verified", label: "Email vérifié" },
-          { value: "unverified", label: "Email non vérifié" },
+          { value: "all", label: t("bulk.allStatuses") },
+          { value: "active", label: t("bulk.active") },
+          { value: "suspended", label: t("bulk.suspended") },
+          { value: "verified", label: t("bulk.emailVerified") },
+          { value: "unverified", label: t("bulk.emailUnverified") },
         ]}
         statusValue={statusFilter}
         onStatusChange={setStatusFilter}
         actions={[
           {
             key: "suspend",
-            label: "Suspendre",
+            label: t("bulk.suspend"),
             icon: BulkIcons.suspend,
             variant: "danger",
-            confirmMessage: `Suspendre ${selected.size} utilisateur(s) ? Leurs sessions seront tuées.`,
+            confirmMessage: t("bulk.confirmSuspend").replace("{n}", String(selected.size)),
           },
           {
             key: "reactivate",
-            label: "Réactiver",
+            label: t("bulk.reactivate"),
             icon: BulkIcons.reactivate,
             variant: "secondary",
           },
           {
             key: "anonymize",
-            label: "Anonymiser (RGPD)",
+            label: t("bulk.anonymize"),
             icon: BulkIcons.delete,
             variant: "danger",
-            confirmMessage: `Anonymiser ${selected.size} utilisateur(s) ? L'email et le nom seront effacés (irréversible).`,
+            confirmMessage: t("bulk.confirmAnonymize").replace("{n}", String(selected.size)),
           },
         ]}
       />
@@ -184,17 +188,16 @@ export function UsersManager({ users, currentUserId }: Props) {
                 : "bg-white text-gray-600 border-gray-300 hover:border-gray-400"
             }`}
           >
-            {r === "all" ? "Tous les rôles" : roleLabels[r] ?? r}
+            {r === "all" ? t("bulk.allRoles") : roleLabels[r] ?? r}
           </button>
         ))}
       </div>
 
       {/* Résumé filtre */}
       <p className="text-sm text-gray-600 mb-3">
-        {filtered.length} utilisateur{filtered.length > 1 ? "s" : ""} affiché
-        {filtered.length > 1 ? "s" : ""}
-        {filtered.length !== users.length && ` sur ${users.length}`}
-        {selected.size > 0 && ` · ${selected.size} sélectionné(s)`}
+        {(filtered.length > 1 ? t("bulk.usersShownMany") : t("bulk.usersShown")).replace("{n}", String(filtered.length))}
+        {filtered.length !== users.length && ` ${t("bulk.ofTotal").replace("{n}", String(users.length))}`}
+        {selected.size > 0 && t("bulk.selectedSuffix").replace("{n}", String(selected.size))}
       </p>
 
       {/* Table */}
@@ -206,27 +209,27 @@ export function UsersManager({ users, currentUserId }: Props) {
                 <th className="px-4 py-4 w-10">
                   <input
                     type="checkbox"
-                    aria-label="Sélectionner tous les utilisateurs visibles"
+                    aria-label={t("bulk.selectAllUsers")}
                     checked={allSelected}
                     onChange={toggleAll}
                     disabled={selectable.length === 0}
                     className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B]"
                   />
                 </th>
-                <th className="px-4 py-4 font-medium">Utilisateur</th>
-                <th className="px-4 py-4 font-medium">Email</th>
-                <th className="px-4 py-4 font-medium">Rôle</th>
+                <th className="px-4 py-4 font-medium">{t("bulk.colUser")}</th>
+                <th className="px-4 py-4 font-medium">{t("bulk.colEmail")}</th>
+                <th className="px-4 py-4 font-medium">{t("bulk.colRole")}</th>
                 <th className="px-4 py-4 font-medium">BestRewards</th>
-                <th className="px-4 py-4 font-medium">Inscrit</th>
-                <th className="px-4 py-4 font-medium">Dernière conn.</th>
-                <th className="px-4 py-4 font-medium text-right">Actions</th>
+                <th className="px-4 py-4 font-medium">{t("bulk.colSignedUp")}</th>
+                <th className="px-4 py-4 font-medium">{t("bulk.colLastLogin")}</th>
+                <th className="px-4 py-4 font-medium text-right">{t("bulk.colActions")}</th>
               </tr>
             </thead>
             <tbody>
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
-                    Aucun utilisateur ne correspond à vos filtres.
+                    {t("bulk.noUsers")}
                   </td>
                 </tr>
               )}
@@ -244,12 +247,12 @@ export function UsersManager({ users, currentUserId }: Props) {
                     <td className="px-4 py-4">
                       <input
                         type="checkbox"
-                        aria-label={`Sélectionner ${u.email}`}
+                        aria-label={t("bulk.selectUser").replace("{email}", u.email)}
                         checked={selected.has(u.id)}
                         onChange={() => toggle(u.id)}
                         disabled={!canSelect}
                         className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B] disabled:opacity-30"
-                        title={!canSelect ? "Non sélectionnable (vous ou admin)" : undefined}
+                        title={!canSelect ? t("bulk.notSelectable") : undefined}
                       />
                     </td>
                     <td className="px-4 py-4">
@@ -287,20 +290,20 @@ export function UsersManager({ users, currentUserId }: Props) {
                         <div className="flex items-center gap-2">
                           <Badge variant="bestrewards">💎 Level {u.bestrewardsLevel}</Badge>
                           <span className="text-xs text-gray-500">
-                            {u.bestrewardsBookingsCount ?? 0} résa.
+                            {t("bulk.bookingsShort").replace("{n}", String(u.bestrewardsBookingsCount ?? 0))}
                           </span>
                         </div>
                       )}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {fmt(u.createdAt)}
+                      {fmt(u.createdAt, locale)}
                     </td>
                     <td className="px-4 py-4 text-sm text-gray-600">
-                      {fmt(u.lastLoginAt)}
+                      {fmt(u.lastLoginAt, locale)}
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex flex-col items-end gap-1">
-                        {suspended && <Badge variant="danger">Suspendu</Badge>}
+                        {suspended && <Badge variant="danger">{t("bulk.suspendedBadge")}</Badge>}
                         <UserSuspendActions
                           userId={u.id}
                           suspended={suspended}
@@ -309,11 +312,11 @@ export function UsersManager({ users, currentUserId }: Props) {
                         <RowDeleteButton
                           entity="users"
                           id={u.id}
-                          label={`l'utilisateur ${u.email}`}
+                          label={t("bulk.userLabel").replace("{email}", u.email)}
                           disabled={isSelf || u.role === "admin"}
                         />
                         {isSelf && (
-                          <span className="text-[10px] text-gray-400">(vous)</span>
+                          <span className="text-[10px] text-gray-400">{t("bulk.you")}</span>
                         )}
                       </div>
                     </td>
@@ -327,9 +330,9 @@ export function UsersManager({ users, currentUserId }: Props) {
 
       {/* Aide raccourcis */}
       <p className="text-xs text-gray-400 mt-3">
-        Raccourcis : <kbd className="px-1 bg-gray-100 rounded">/</kbd> chercher ·{" "}
-        <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> tout sélectionner ·{" "}
-        <kbd className="px-1 bg-gray-100 rounded">Échap</kbd> vider
+        {t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")} ·{" "}
+        <kbd className="px-1 bg-gray-100 rounded">Ctrl+A</kbd> {t("bulk.shortcutSelectAll")} ·{" "}
+        <kbd className="px-1 bg-gray-100 rounded">Esc</kbd> {t("bulk.shortcutClear")}
       </p>
     </div>
   );

@@ -9,6 +9,8 @@ import { MessageComposer } from "@/components/message-composer";
 import { MessageAttachment } from "@/components/message-attachment";
 import { formatDate } from "@/lib/utils";
 import { ArrowLeft, User } from "lucide-react";
+import { getServerLocale } from "@/lib/server-locale";
+import { makeT } from "@/lib/ui-strings";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +41,7 @@ export default async function ConversationPage({
   const isGuest = row.conv.userId === user.id;
   const isHost = row.property?.hostId === user.id;
   if (!isGuest && !isHost) redirect("/messages");
+  const t = makeT(await getServerLocale());
 
   const msgs = await db
     .select()
@@ -59,12 +62,12 @@ export default async function ConversationPage({
         className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-[#1B3A6B] mb-4"
       >
         <ArrowLeft className="w-4 h-4" />
-        Retour aux messages
+        {t("messages.back")}
       </Link>
 
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          {row.property?.name ?? "Conversation"}
+          {row.property?.name ?? t("messages.conversation")}
         </h1>
         <p className="text-sm text-gray-500">
           {row.property?.city}, {row.property?.country}
@@ -74,7 +77,7 @@ export default async function ConversationPage({
       <div className="space-y-3 mb-6 min-h-[200px]">
         {msgs.length === 0 && (
           <p className="text-center text-gray-500 py-12">
-            Envoyez votre premier message ci-dessous.
+            {t("messages.emptyThread")}
           </p>
         )}
         {msgs.map((m) => {
