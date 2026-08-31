@@ -3596,3 +3596,30 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   ✅ `next build` (Turbopack, TS, 60 pages statiques).
 - **Preuves** : `/tmp/sim-runs/` (logs), `.ai/REPORTS/simulation_*.md`,
   commit `0fb18fc`.
+
+## Session 2026-08-31 — i18n navbar (demande utilisateur : « contenus non traduits »)
+
+- **Demande** : « dites-moi si vous voyez encore les contenus de traductions
+  comme au niveau du navbar qui ne sont pas traduisible ».
+- **Réponse vérifiée dans le code réel (pas une rassurance)** : OUI — le
+  navbar était rendu **EN FRANÇAIS au premier rendu SSR** même avec le cookie
+  `mybb:ui-language=en` (test curl : « Hébergements », « Se connecter »,
+  « Aide », aria « Langue »). Le footer (RSC → `getServerLocale`) était déjà
+  EN : l'écart venait du `Header` client (`makeT(language)` avec
+  `language=null` au SSR → dictionnaire FR).
+- **Cause** : le pattern `initialLanguage` de T-164 n'avait jamais été
+  propagé au Header ni à ses enfants (LanguageSelector, DarkModeToggle) ;
+  la home `src/app/page.tsx` rendait aussi son propre `<Header />` sans locale.
+- **Correctif (9720b68)** : pattern T-164 étendu à Header/LanguageSelector/
+  DarkModeToggle/UnreadMessagesBadge + sidebar & mobile header dashboard ;
+  layout `(main)`, home et dashboard fournissent `initialLanguage` via
+  `getServerLocale()` ; chaînes en dur « Déconnexion », rôles, « Level »,
+  erreurs du sélecteur → dictionnaire (clés FR+EN).
+- **Preuves** (TS+SSR réels) : cookie `en` → `Accommodations · Help · Log in
+  · Sign up · aria Language · Switch to dark mode`, **0** occurrence
+  Hébergements/Aide/Se connecter/S'inscrire/Langue/Activer le mode sombre ;
+  cookie `fr` → comportement FR intact ; compte EN connecté → navbar et
+  dashboard EN (Analytics, Dashboard, Host, Log out). tsc 0 · lint 0 err
+  (14 warn préexistants) · vitest ui-strings 4/4 · i18n:check exit 0 ·
+  health 200. Les pages auth (connexion/inscription/mot-de-passe-oublie/…)
+  restent en FR par conception (hors périmètre du garde-fou, V2).
