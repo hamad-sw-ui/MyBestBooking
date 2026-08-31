@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { makeT } from "@/lib/ui-strings";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
 
 /**
  * <UnreadMessagesBadge /> (T-130) — pastille « messages non lus » pour la
@@ -12,6 +14,8 @@ import { useEffect, useState } from "react";
  */
 export function UnreadMessagesBadge({ viewerRole, userId }: { viewerRole?: string; userId?: string }) {
   const [count, setCount] = useState(0);
+  const { language } = useDisplayPreferences();
+  const t = makeT(language);
 
   useEffect(() => {
     let cancelled = false;
@@ -47,7 +51,7 @@ export function UnreadMessagesBadge({ viewerRole, userId }: { viewerRole?: strin
   if (count <= 0) return null;
   return (
     <span
-      aria-label={`${count} message${count > 1 ? "s" : ""} non lu${count > 1 ? "s" : ""}`}
+      aria-label={t(count > 1 ? "nav.unreadMany" : "nav.unreadOne").replace("{n}", String(count))}
       className="ml-1 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold leading-none"
     >
       {count > 99 ? "99+" : count}

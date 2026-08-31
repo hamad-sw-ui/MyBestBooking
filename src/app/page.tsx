@@ -33,7 +33,8 @@ async function getFeaturedProperties() {
 
 export default async function HomePage() {
   const user = await getCurrentUser();
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
 
   // T-022 : mode maintenance — les non-admins sont redirigés vers
   // /maintenance. La page racine n'est pas dans le groupe (main),
@@ -54,7 +55,7 @@ export default async function HomePage() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header user={user} />
+      <Header user={user} initialLanguage={locale} />
       
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-[#1B3A6B] to-[#0f2444] text-white">

@@ -29,12 +29,14 @@ import { makeT } from "@/lib/ui-strings";
 
 interface DashboardSidebarProps {
   user: User;
+  /** T-164 pattern : locale serveur pour le SSR (évite le flash FR). */
+  initialLanguage?: string | null;
 }
 
-export function DashboardSidebar({ user }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, initialLanguage = null }: DashboardSidebarProps) {
   const pathname = usePathname();
   const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = makeT(language ?? initialLanguage);
   const [collapsed, setCollapsed] = useState(false);
 
   const isAdmin = user.role === "admin";
@@ -96,7 +98,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{user.firstName} {user.lastName}</p>
-              <p className="text-xs text-white/60 capitalize">{user.role === "admin" ? "Administrateur" : "Hébergeur"}</p>
+              <p className="text-xs text-white/60 capitalize">{t(user.role === "admin" ? "nav.roleAdmin" : "nav.roleHost")}</p>
             </div>
           </div>
         </div>
@@ -152,10 +154,10 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
               "flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white transition-colors w-full",
               collapsed && "justify-center"
             )}
-            title={collapsed ? "Déconnexion" : undefined}
+            title={collapsed ? t("nav.logout") : undefined}
           >
             <LogOut className="w-5 h-5 flex-shrink-0" />
-            {!collapsed && <span className="text-sm font-medium">Déconnexion</span>}
+            {!collapsed && <span className="text-sm font-medium">{t("nav.logout")}</span>}
           </button>
         </form>
 

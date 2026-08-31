@@ -23,13 +23,15 @@ import type { User as UserType } from "@/db/schema";
  * utilisent déjà `makeT` ; les écrans encore en français dur seront migrés
  * au fil de l'eau (voir opportunités T-152).
  */
-export function LanguageSelector({ user }: { user: UserType | null }) {
+export function LanguageSelector({ user, initialLanguage = null }: { user: UserType | null; initialLanguage?: string | null }) {
   const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  // SSR : langue résolue côté serveur (pattern T-164) ; le hook reste
+  // l'autorité après hydratation (compte > localStorage > plateforme).
+  const t = makeT(language ?? initialLanguage);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [local, setLocal] = useState<string | null>(null);
-  const value = local ?? language ?? "fr";
+  const value = local ?? language ?? initialLanguage ?? "fr";
 
   async function change(next: string) {
     if (next === value) return;
@@ -40,7 +42,7 @@ export function LanguageSelector({ user }: { user: UserType | null }) {
     } catch {
       // stockage indisponible : la préférence restera non persistée
     }
-    document.documentElement.lang = next;
+    document.documentElement.setAttribute("lang", next);
     if (user) {
       setSaving(true);
       try {
@@ -51,10 +53,10 @@ export function LanguageSelector({ user }: { user: UserType | null }) {
         });
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
-          throw new Error(data.error ?? "Impossible d'enregistrer la préférence");
+          throw new Error(data.error ?? t("nav.languageSaveError"));
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Impossible d'enregistrer la préférence");
+        setError(e instanceof Error ? e.message : t("nav.languageSaveError"));
         setSaving(false);
         // Pas de rechargement : la préférence n'a pas été persistée côté
         // compte, on laisse l'UI sur l'ancienne langue après retour.

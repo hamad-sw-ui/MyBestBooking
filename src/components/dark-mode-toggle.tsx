@@ -2,13 +2,22 @@
 
 import { useEffect, useState } from "react";
 import { Moon, Sun } from "lucide-react";
+import { makeT } from "@/lib/ui-strings";
 
 /**
  * <DarkModeToggle /> (T-029) — bascule .dark sur <html>, persistée
  * dans localStorage. Respecte prefers-color-scheme au premier chargement.
  */
-export function DarkModeToggle({ className = "p-2 rounded-lg hover:bg-gray-100 transition" }: { className?: string }) {
+export function DarkModeToggle({
+  className = "p-2 rounded-lg hover:bg-gray-100 transition",
+  initialLanguage = null,
+}: {
+  className?: string;
+  /** Langue SSR (pattern T-164) pour le libellé aria-hidden de la 1re peinture. */
+  initialLanguage?: string | null;
+}) {
   const [isDark, setIsDark] = useState(false);
+  const t = makeT(initialLanguage);
 
   useEffect(() => {
     // Défère le setState pour éviter le cascading render warning.
@@ -34,7 +43,7 @@ export function DarkModeToggle({ className = "p-2 rounded-lg hover:bg-gray-100 t
     <button
       type="button"
       onClick={toggle}
-      aria-label={isDark ? "Activer le mode clair" : "Activer le mode sombre"}
+      aria-label={isDark ? t("nav.darkModeOn") : t("nav.darkModeOff")}
       className={className}
     >
       {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}

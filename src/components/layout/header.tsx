@@ -14,12 +14,17 @@ import { makeT } from "@/lib/ui-strings";
 
 interface HeaderProps {
   user: UserType | null;
+  /** T-164 pattern : langue résolue côté serveur (cookie/compte) pour le
+   *  rendu SSR — évite le flash FR du navbar avant hydratation. */
+  initialLanguage?: string | null;
 }
 
-export function Header({ user }: HeaderProps) {
+export function Header({ user, initialLanguage = null }: HeaderProps) {
   const pathname = usePathname();
   const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  // Le hook est l'autorité après hydratation ; la valeur SSR évite le
+  // rendu franco-français de la première peinture pour un visiteur EN.
+  const t = makeT(language ?? initialLanguage);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
@@ -69,8 +74,8 @@ export function Header({ user }: HeaderProps) {
 
           {/* Right side */}
           <div className="flex items-center gap-4">
-            <LanguageSelector user={user} />
-            <DarkModeToggle />
+            <LanguageSelector user={user} initialLanguage={initialLanguage} />
+            <DarkModeToggle initialLanguage={initialLanguage} />
             {user ? (
               <div className="relative">
                 <button
@@ -94,7 +99,7 @@ export function Header({ user }: HeaderProps) {
                         <p className="text-xs text-gray-500">{user.email}</p>
                         {user.bestrewardsLevel && (
                           <span className="inline-flex items-center mt-1 px-2 py-0.5 rounded-full text-xs font-medium bg-gradient-to-r from-[#F5A623] to-[#f7b84a] text-white">
-                            💎 Level {user.bestrewardsLevel}
+                            💎 {t("nav.level")} {user.bestrewardsLevel}
                           </span>
                         )}
                       </div>

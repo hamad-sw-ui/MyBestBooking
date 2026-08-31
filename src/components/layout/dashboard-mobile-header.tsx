@@ -17,12 +17,14 @@ import { makeT } from "@/lib/ui-strings";
 
 interface DashboardMobileHeaderProps {
   user: User;
+  /** T-164 pattern : locale serveur pour le SSR (évite le flash FR). */
+  initialLanguage?: string | null;
 }
 
-export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
+export function DashboardMobileHeader({ user, initialLanguage = null }: DashboardMobileHeaderProps) {
   const pathname = usePathname();
   const { language } = useDisplayPreferences();
-  const t = makeT(language);
+  const t = makeT(language ?? initialLanguage);
   const [open, setOpen] = useState(false);
 
   const isAdmin = user.role === "admin";
@@ -134,7 +136,7 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
                   className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-white/70 hover:bg-white/10 hover:text-white w-full"
                 >
                   <LogOut className="w-5 h-5" />
-                  <span className="text-sm font-medium">Déconnexion</span>
+                  <span className="text-sm font-medium">{t("nav.logout")}</span>
                 </button>
               </form>
             </div>
