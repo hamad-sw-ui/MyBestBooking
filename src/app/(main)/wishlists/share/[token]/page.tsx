@@ -115,7 +115,7 @@ export default async function SharedWishlistPage({
                   </h3>
                   <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
                     <MapPin className="w-3 h-3" />
-                    {it.property.city}, {it.property.country}
+                    {it.property.city}, {countryLabel(it.property.country, t)}
                   </p>
                   {it.property.averageRating && (
                     <p className="text-sm text-gray-700 mt-2 flex items-center gap-1">
