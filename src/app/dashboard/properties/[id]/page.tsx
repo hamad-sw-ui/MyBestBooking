@@ -12,8 +12,8 @@ import { PropertySubmitButton } from "@/components/property-submit-button";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
 import { formatPrice } from "@/lib/utils";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
-import { AMENITIES } from "@/lib/amenities";
-import { useT } from "@/components/ui-locale-provider";
+import { AMENITIES, amenityLabel } from "@/lib/amenities";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 interface Property {
   id: string;
@@ -53,6 +53,7 @@ interface Room {
 
 export default function EditPropertyPage() {
   const t = useT();
+  const locale = useUiLocale();
   const router = useRouter();
   const PROPERTY_TYPES = [
     { value: "hotel", label: t("search.type.hotel") },
@@ -418,11 +419,14 @@ export default function EditPropertyPage() {
                 <Select
                   label={t("prop.country")}
                   options={[
-                    { value: "FR", label: "France" },
-                    { value: "MA", label: "Maroc" },
-                    { value: "TN", label: "Tunisie" },
-                    { value: "ES", label: "Espagne" },
-                    { value: "IT", label: "Italie" },
+                    { value: "FR", label: t("prop.country.FR") },
+                    { value: "MA", label: t("prop.country.MA") },
+                    { value: "TN", label: t("prop.country.TN") },
+                    { value: "ES", label: t("prop.country.ES") },
+                    { value: "IT", label: t("prop.country.IT") },
+                    { value: "PT", label: t("prop.country.PT") },
+                    { value: "DE", label: t("prop.country.DE") },
+                    { value: "GB", label: t("prop.country.GB") },
                   ]}
                   value={property.country}
                   onChange={(e) => setProperty({ ...property, country: e.target.value })}
@@ -452,7 +456,7 @@ export default function EditPropertyPage() {
                       onChange={() => handleAmenityToggle(amenity.id)}
                       className="sr-only"
                     />
-                    <span className="text-sm">{amenity.label}</span>
+                    <span className="text-sm">{amenityLabel(amenity.id, locale)}</span>
                   </label>
                 ))}
               </div>
@@ -531,7 +535,7 @@ export default function EditPropertyPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <p className="font-bold">{formatPrice(parseFloat(room.basePrice), room.currency ?? "EUR")}/nuit</p>
+                      <p className="font-bold">{formatPrice(parseFloat(room.basePrice), room.currency ?? "EUR")}{t("price.perNight")}</p>
                       <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
                         <Button variant="ghost" size="sm">
                           {t("bulk.calendar")}

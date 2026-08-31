@@ -7,6 +7,7 @@ import { UiLocaleProvider } from "@/components/ui-locale-provider";
 import { getCurrentUser } from "@/lib/auth";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { langInitInlineScript } from "@/lib/ui-language";
 import "./globals.css";
 
 // Les polices restent locales afin que le rendu initial ne dépende pas
@@ -89,12 +90,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           id="lang-init"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{
-            __html:
-              "try{var hasAccount=" + JSON.stringify(hasAccount) + ";" +
-              "if(!hasAccount){var s=localStorage.getItem('mybb:ui-language');" +
-              "if(s==='en'||s==='fr'){document.documentElement.lang=s;" +
-              "document.cookie='mybb:ui-language='+s+';path=/;max-age=31536000;SameSite=Lax';}" +
-              "}catch(e){}",
+            __html: langInitInlineScript(hasAccount),
           }}
         />
         <UiLocaleProvider initialLanguage={locale}>

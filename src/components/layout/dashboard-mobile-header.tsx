@@ -12,8 +12,7 @@ import { useState } from "react";
 import type { User } from "@/db/schema";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
+import { useT } from "@/components/ui-locale-provider";
 
 interface DashboardMobileHeaderProps {
   user: User;
@@ -21,10 +20,9 @@ interface DashboardMobileHeaderProps {
   initialLanguage?: string | null;
 }
 
-export function DashboardMobileHeader({ user, initialLanguage = null }: DashboardMobileHeaderProps) {
+export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
   const pathname = usePathname();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language ?? initialLanguage);
+  const t = useT();
   const [open, setOpen] = useState(false);
 
   const isAdmin = user.role === "admin";

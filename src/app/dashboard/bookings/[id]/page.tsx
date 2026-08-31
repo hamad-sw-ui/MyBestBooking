@@ -120,7 +120,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
       completed: booking.status === "completed" || new Date(booking.checkIn) < new Date()
     },
     { 
-      label: "Check-out", 
+      label: t("book.checkOut"), 
       date: new Date(booking.checkOut), 
       icon: CheckCircle, 
       completed: booking.status === "completed" 

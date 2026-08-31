@@ -75,7 +75,7 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
     );
   }
 
-  const levelNames = ["", "Explorer", "Voyageur", "Ambassador"];
+  const levelNames = ["", t("bestrewards.level1Name"), t("bestrewards.level2Name"), t("bestrewards.level3Name")];
   const nextThreshold = level >= 3 ? null : level === 1 ? thresholds[0] : thresholds[1];
   const remaining = nextThreshold === null ? 0 : Math.max(0, nextThreshold - bookings);
   // T-153 (audit n°25, E) : le solde wallet est libellé en EUR (cagnotte

@@ -9,8 +9,7 @@ import type { User as UserType } from "@/db/schema";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
 import { LanguageSelector } from "@/components/language-selector";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
+import { useT } from "@/components/ui-locale-provider";
 
 interface HeaderProps {
   user: UserType | null;
@@ -21,10 +20,7 @@ interface HeaderProps {
 
 export function Header({ user, initialLanguage = null }: HeaderProps) {
   const pathname = usePathname();
-  const { language } = useDisplayPreferences();
-  // Le hook est l'autorité après hydratation ; la valeur SSR évite le
-  // rendu franco-français de la première peinture pour un visiteur EN.
-  const t = makeT(language ?? initialLanguage);
+  const t = useT();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 

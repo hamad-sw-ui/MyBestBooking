@@ -10,11 +10,12 @@ import Link from "next/link";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée avec la
 // recherche (28 valeurs, source unique au lieu de 12 locales).
-import { AMENITIES } from "@/lib/amenities";
-import { useT } from "@/components/ui-locale-provider";
+import { AMENITIES, amenityLabel } from "@/lib/amenities";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 export default function NewPropertyPage() {
   const t = useT();
+  const locale = useUiLocale();
   const router = useRouter();
   const PROPERTY_TYPES = [
     { value: "hotel", label: t("search.type.hotel") },
@@ -292,7 +293,7 @@ export default function NewPropertyPage() {
                     onChange={() => handleAmenityToggle(amenity.id)}
                     className="sr-only"
                   />
-                  <span className="text-sm">{amenity.label}</span>
+                  <span className="text-sm">{amenityLabel(amenity.id, locale)}</span>
                 </label>
               ))}
             </div>

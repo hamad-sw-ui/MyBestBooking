@@ -24,8 +24,7 @@ import {
 import { useState } from "react";
 import type { User } from "@/db/schema";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
-import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
+import { useT } from "@/components/ui-locale-provider";
 
 interface DashboardSidebarProps {
   user: User;
@@ -33,10 +32,9 @@ interface DashboardSidebarProps {
   initialLanguage?: string | null;
 }
 
-export function DashboardSidebar({ user, initialLanguage = null }: DashboardSidebarProps) {
+export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const pathname = usePathname();
-  const { language } = useDisplayPreferences();
-  const t = makeT(language ?? initialLanguage);
+  const t = useT();
   const [collapsed, setCollapsed] = useState(false);
 
   const isAdmin = user.role === "admin";

@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { normalizeDisplayCurrency } from "@/lib/i18n";
 import { isUiLocale } from "@/lib/ui-strings";
+import { UI_LANGUAGE_STORAGE_KEY } from "@/lib/ui-language";
+
+export { UI_LANGUAGE_STORAGE_KEY };
 
 /**
  * T-131/T-132 — Préférences d'affichage (devise + langue) du visiteur.
@@ -21,9 +24,6 @@ import { isUiLocale } from "@/lib/ui-strings";
  * Les deux requêtes sont mises en cache au niveau module (une seule par
  * chargement de page, pas une par carte).
  */
-
-/** T-152 (D) : clé de persistance locale du sélecteur de langue (anonyme). */
-export const UI_LANGUAGE_STORAGE_KEY = "mybb:ui-language";
 
 /** T-158 (audit n°29) : clé de persistance locale du sélecteur de devise. */
 export const UI_CURRENCY_STORAGE_KEY = "mybb:ui-currency";

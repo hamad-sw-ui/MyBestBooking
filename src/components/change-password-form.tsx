@@ -51,7 +51,7 @@ export function ChangePasswordForm() {
         <input id="cp-new" type="password" required minLength={8} value={newPw} onChange={(e) => setNewPw(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" placeholder={t("auth.passwordMinPlaceholder")} />
       </div>
       <div>
-        <label htmlFor="cp-confirm" className="block text-sm font-medium text-gray-700 mb-1">Confirmer</label>
+        <label htmlFor="cp-confirm" className="block text-sm font-medium text-gray-700 mb-1">{t("auth.confirm")}</label>
         <input id="cp-confirm" type="password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
       </div>
       <div className="flex items-center gap-3">

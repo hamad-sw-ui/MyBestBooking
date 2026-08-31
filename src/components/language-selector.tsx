@@ -4,9 +4,9 @@ import { useState } from "react";
 import {
   useDisplayPreferences,
   resetDisplayPreferencesCache,
-  UI_LANGUAGE_STORAGE_KEY,
 } from "@/lib/use-display-currency";
-import { makeT } from "@/lib/ui-strings";
+import { persistUiLanguageClient } from "@/lib/ui-language";
+import { useT } from "@/components/ui-locale-provider";
 import type { User as UserType } from "@/db/schema";
 
 /**
@@ -15,9 +15,9 @@ import type { User as UserType } from "@/db/schema";
  * - Compte connecté : `PATCH /api/users/me { language }` (route existante,
  *   déjà gardée par `isUiLocale`) puis rechargement → toute l'UI
  *   (serveur + client) bascule sur la nouvelle langue.
- * - Anonyme : préférence dans `localStorage` (appliquée avant hydratation
- *   par le script `lang-init` du layout et lue par `useDisplayPreferences`
- *   avec la priorité compte > localStorage > plateforme > fr).
+ * - Anonyme : `persistUiLanguageClient` (localStorage + cookie
+ *   `mybb:ui-language`) avant reload, pour que `getServerLocale` rejoue EN
+ *   au SSR. `lang-init` recopie aussi le localStorage → cookie.
  *
  * Aucune nouvelle chaîne : plusieurs composants (header, recherche, fiche)
  * utilisent déjà `makeT` ; les écrans encore en français dur seront migrés
@@ -25,9 +25,7 @@ import type { User as UserType } from "@/db/schema";
  */
 export function LanguageSelector({ user, initialLanguage = null }: { user: UserType | null; initialLanguage?: string | null }) {
   const { language } = useDisplayPreferences();
-  // SSR : langue résolue côté serveur (pattern T-164) ; le hook reste
-  // l'autorité après hydratation (compte > localStorage > plateforme).
-  const t = makeT(language ?? initialLanguage);
+  const t = useT();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [local, setLocal] = useState<string | null>(null);
@@ -37,12 +35,7 @@ export function LanguageSelector({ user, initialLanguage = null }: { user: UserT
     if (next === value) return;
     setLocal(next);
     setError(null);
-    try {
-      localStorage.setItem(UI_LANGUAGE_STORAGE_KEY, next);
-    } catch {
-      // stockage indisponible : la préférence restera non persistée
-    }
-    document.documentElement.setAttribute("lang", next);
+    persistUiLanguageClient(next);
     if (user) {
       setSaving(true);
       try {
