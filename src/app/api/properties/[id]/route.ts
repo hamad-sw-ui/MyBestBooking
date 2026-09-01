@@ -6,6 +6,7 @@ import { isUuid, frenchZodMessage } from "@/lib/http";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { z } from "zod";
 import { toPublicProperty } from "@/lib/public-property";
+import { apiError } from "@/lib/api-error";
 // T-154d (audit n°26, P2-4) : taux de TVA et réduction BestRewards réels
 // (settings, niveau du user courant) exposés en lecture seule à l'aperçu de
 // réservation — plus de TVA 0.1 en dur ni de remise invisible côté client.
@@ -42,7 +43,7 @@ export async function GET(
   try {
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
     const user = await getCurrentUser();
     const [property] = await db
@@ -51,14 +52,14 @@ export async function GET(
       .where(eq(properties.id, id));
 
     if (!property) {
-      return NextResponse.json({ error: "Hébergement non trouvé" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Hébergement non trouvé") }, { status: 404 });
     }
 
     const canSeePrivate = user?.role === "admin" || property.hostId === user?.id;
     // 404 plutôt que 403 : une URL publique ne doit pas confirmer qu’un
     // brouillon, un suspendu ou un archive existe.
     if (property.status !== "active" && !canSeePrivate) {
-      return NextResponse.json({ error: "Hébergement non trouvé" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Hébergement non trouvé") }, { status: 404 });
     }
 
     const propertyRooms = await db
@@ -133,7 +134,7 @@ export async function GET(
     });
   } catch (error) {
     console.error("Error fetching property:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
@@ -145,14 +146,14 @@ export async function PUT(
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
 
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
     const body = await request.json();
     const data = updatePropertySchema.parse(body);
@@ -165,14 +166,14 @@ export async function PUT(
 
     if (!property) {
       return NextResponse.json(
-        { error: "Hébergement non trouvé" },
+        { error: await apiError("Hébergement non trouvé") },
         { status: 404 }
       );
     }
 
     if (property.hostId !== user.id && user.role !== "admin") {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 403 }
       );
     }
@@ -181,7 +182,7 @@ export async function PUT(
     // Un host ne peut jamais modifier sa propre commission.
     if (data.commissionRate !== undefined && user.role !== "admin") {
       return NextResponse.json(
-        { error: "Modification de commission réservée à l'admin" },
+        { error: await apiError("Modification de commission réservée à l'admin") },
         { status: 403 },
       );
     }
@@ -189,7 +190,7 @@ export async function PUT(
     // son contenu mais ne peut pas s’auto-approuver depuis un PATCH générique.
     if (data.status !== undefined && user.role !== "admin") {
       return NextResponse.json(
-        { error: "Modification du statut réservée à l'administration" },
+        { error: await apiError("Modification du statut réservée à l'administration") },
         { status: 403 },
       );
     }
@@ -207,17 +208,17 @@ export async function PUT(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: frenchZodMessage(error) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 }
       );
     }
     console.error("Error updating property:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
@@ -231,7 +232,7 @@ export async function DELETE(
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
@@ -246,14 +247,14 @@ export async function DELETE(
 
     if (!property) {
       return NextResponse.json(
-        { error: "Hébergement non trouvé" },
+        { error: await apiError("Hébergement non trouvé") },
         { status: 404 }
       );
     }
 
     if (property.hostId !== user.id && user.role !== "admin") {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 403 }
       );
     }
@@ -268,7 +269,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Error deleting property:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }

@@ -5,6 +5,7 @@ import { conversations, properties, bookings } from "@/db/schema";
 import { eq, or } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
+import { apiError } from "@/lib/api-error";
 
 const createSchema = z.object({
   propertyId: z.string().uuid(),
@@ -18,7 +19,7 @@ const createSchema = z.object({
  */
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   const rows = await db
     .select({ conversation: conversations, property: properties })
     .from(conversations)
@@ -30,25 +31,25 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const data = createSchema.parse(await request.json());
 
     const [property] = await db.select().from(properties).where(eq(properties.id, data.propertyId));
-    if (!property) return NextResponse.json({ error: "Hébergement introuvable" }, { status: 404 });
+    if (!property) return NextResponse.json({ error: await apiError("Hébergement introuvable") }, { status: 404 });
 
     let participantUserId = user.id;
     if (data.bookingId) {
       const [booking] = await db.select().from(bookings).where(eq(bookings.id, data.bookingId));
       if (!booking || booking.propertyId !== property.id) {
-        return NextResponse.json({ error: "Réservation invalide" }, { status: 400 });
+        return NextResponse.json({ error: await apiError("Réservation invalide") }, { status: 400 });
       }
       if (property.hostId === user.id) {
         participantUserId = booking.userId;
       } else if (booking.userId !== user.id) {
-        return NextResponse.json({ error: "Réservation invalide" }, { status: 403 });
+        return NextResponse.json({ error: await apiError("Réservation invalide") }, { status: 403 });
       }
     } else if (property.hostId === user.id) {
-      return NextResponse.json({ error: "Un hôte doit sélectionner une réservation pour ouvrir une conversation" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Un hôte doit sélectionner une réservation pour ouvrir une conversation") }, { status: 400 });
     }
 
     const conversationKey = data.bookingId
@@ -67,10 +68,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     console.error("conversations POST error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

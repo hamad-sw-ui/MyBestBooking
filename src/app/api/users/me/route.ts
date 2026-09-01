@@ -8,6 +8,7 @@ import { cookies } from "next/headers";
 import { eq } from "drizzle-orm";
 import { DISPLAY_CURRENCIES } from "@/lib/i18n";
 import { isUiLocale } from "@/lib/ui-strings";
+import { apiError } from "@/lib/api-error";
 
 // T-135 — langues de l'UI réellement traduites (fr/en). L'arabe n'a pas
 // de dictionnaire V1 : on le rejette ici plutôt que de stocker une
@@ -44,7 +45,7 @@ const schema = z.object({
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
     const data = schema.parse(await request.json());
     const [updated] = await db
@@ -75,13 +76,13 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("users/me PATCH error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
@@ -95,10 +96,10 @@ export async function PATCH(request: NextRequest) {
  */
 export async function DELETE() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   if (user.role === "admin") {
     return NextResponse.json(
-      { error: "Un admin ne peut pas se supprimer lui-même" },
+      { error: await apiError("Un admin ne peut pas se supprimer lui-même") },
       { status: 400 },
     );
   }

@@ -7,6 +7,17 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-09-01 — T-168 i18n 100 % (facture, placeholders, API)
+
+- **Demande** : continuer jusqu'à 100 % (placeholders settings, facture
+  HTML, erreurs JSON API visibles).
+- 🔨 Facture `makeT(locale)` + `html lang` ; 5 placeholders
+  `settings.ph*` ; `apiError()` FR→EN selon `getServerLocale` (défaut fr).
+  `makeT` inchangé (`.replace` seulement).
+- 🔨 tsc **0** · 🔍 i18n:check **0** · 🧪 src/lib **323 passed** ·
+  catalogue **1394** FR=EN · invoice FR/EN · `frenchZodMessage` FR.
+- ❓ smoke HTTP non rejoué (pas de serveur). T-168 **CORRIGÉ (VALIDÉ)**.
+
 ## Session 2026-09-01 — T-167 clôturée (VALIDÉ)
 
 - **Demande** : clôturer T-167 méthodiquement, sans régression.

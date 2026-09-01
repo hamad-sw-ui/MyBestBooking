@@ -15,6 +15,7 @@ import { recoverPendingPaymentIntents } from "@/lib/payment-intents";
 import { processPendingPaymentEvents, reconcileLateCapturedPaymentRefunds } from "@/lib/payment-events";
 import { sendBookingReminders, sendReviewRequests } from "@/lib/booking-lifecycle-emails";
 import { templates } from "@/lib/mail";
+import { apiError } from "@/lib/api-error";
 
 export const dynamic = "force-dynamic";
 
@@ -165,7 +166,7 @@ async function cleanupOrphanUploads(): Promise<number> {
 }
 
 export async function GET(request: NextRequest) {
-  if (!authorized(request)) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!authorized(request)) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
   try {
     const today = new Date().toISOString().slice(0, 10);
@@ -243,6 +244,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ ok: true, scanned: alerts.length, notified, pastAlertsExpired, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
   } catch (error) {
     console.error("[cron price-alerts]", error);
-    return NextResponse.json({ error: "Échec du traitement des alertes prix" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Échec du traitement des alertes prix") }, { status: 500 });
   }
 }

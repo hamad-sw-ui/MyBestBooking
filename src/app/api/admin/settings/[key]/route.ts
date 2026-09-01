@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
+import { apiError } from "@/lib/api-error";
 import {
   SETTING_KEYS,
   SettingKey,
@@ -25,12 +26,12 @@ export async function GET(
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   }
 
   const { key } = await params;
   if (!isValidKey(key)) {
-    return NextResponse.json({ error: "Clé inconnue" }, { status: 404 });
+    return NextResponse.json({ error: await apiError("Clé inconnue") }, { status: 404 });
   }
 
   try {
@@ -39,7 +40,7 @@ export async function GET(
   } catch (error) {
     console.error(`[admin/settings/${key}] GET error:`, error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 },
     );
   }
@@ -56,7 +57,7 @@ export async function PATCH(
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   }
 
   const rl = rateLimit(`admin:settings:${user.id}`, {
@@ -65,21 +66,21 @@ export async function PATCH(
   });
   if (!rl.ok) {
     return NextResponse.json(
-      { error: "Trop de modifications, réessayez dans une minute" },
+      { error: await apiError("Trop de modifications, réessayez dans une minute") },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
     );
   }
 
   const { key } = await params;
   if (!isValidKey(key)) {
-    return NextResponse.json({ error: "Clé inconnue" }, { status: 404 });
+    return NextResponse.json({ error: await apiError("Clé inconnue") }, { status: 404 });
   }
 
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: await apiError("JSON invalide") }, { status: 400 });
   }
 
   try {
@@ -105,16 +106,16 @@ export async function PATCH(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       // T-159 : message français seul — les détails internes de validation
       // (issues en anglais) ne sont plus exposés.
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error(`[admin/settings/${key}] PATCH error:`, error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 },
     );
   }

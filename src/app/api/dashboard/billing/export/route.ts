@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookings, properties } from "@/db/schema";
 import { and, eq, gte, lte, ne } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
+import { apiError } from "@/lib/api-error";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -18,7 +19,7 @@ function csvCell(value: unknown): string {
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user || (user.role !== "host" && user.role !== "admin")) {
-    return NextResponse.json({ error: "Accès hébergeur ou admin requis" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès hébergeur ou admin requis") }, { status: 403 });
   }
 
   // T-127 (P3) : filtre optionnel par période de création (from/to, YYYY-MM-DD).
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
   const to = request.nextUrl.searchParams.get("to");
   if (from !== null || to !== null) {
     if ((from && !DATE_RE.test(from)) || (to && !DATE_RE.test(to)) || (from && to && from > to)) {
-      return NextResponse.json({ error: "Période invalide (from/to au format YYYY-MM-DD, from ≤ to)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Période invalide (from/to au format YYYY-MM-DD, from ≤ to)") }, { status: 400 });
     }
     if (from) filters.push(gte(bookings.createdAt, new Date(`${from}T00:00:00.000Z`)));
     if (to) filters.push(lte(bookings.createdAt, new Date(`${to}T23:59:59.999Z`)));

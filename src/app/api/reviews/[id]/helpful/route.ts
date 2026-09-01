@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isUuid } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { and, eq, sql } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/reviews/[id]/helpful — utilisateur connecté (T-026 audit).
@@ -21,12 +22,12 @@ export async function POST(
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+      return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     }
 
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
 
     // T-126 (P2) : un vote déjà enregistré est un état définitif → 409
@@ -38,7 +39,7 @@ export async function POST(
       .where(and(eq(reviewVotes.reviewId, id), eq(reviewVotes.userId, user.id)))
       .limit(1);
     if (existingVote) {
-      return NextResponse.json({ error: "Vous avez déjà marqué cet avis comme utile" }, { status: 409 });
+      return NextResponse.json({ error: await apiError("Vous avez déjà marqué cet avis comme utile") }, { status: 409 });
     }
 
     // Rate-limit anti-spam : un même user ne peut incrémenter le même avis
@@ -50,7 +51,7 @@ export async function POST(
     });
     if (!rl.ok) {
       return NextResponse.json(
-        { error: "Trop d'actions, réessayez plus tard" },
+        { error: await apiError("Trop d'actions, réessayez plus tard") },
         { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
       );
     }
@@ -77,10 +78,10 @@ export async function POST(
         .returning({ id: reviews.id, helpfulCount: reviews.helpfulCount });
       return { review: updated };
     });
-    if ("missing" in result) return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
+    if ("missing" in result) return NextResponse.json({ error: await apiError("Avis introuvable") }, { status: 404 });
     if ("own" in result) {
       return NextResponse.json(
-        { error: "Vous ne pouvez pas marquer votre propre avis comme utile" },
+        { error: await apiError("Vous ne pouvez pas marquer votre propre avis comme utile") },
         { status: 400 },
       );
     }
@@ -88,10 +89,10 @@ export async function POST(
     // définitif), pas 429 (« réessayez plus tard ») qui laissait croire à une
     // limitation temporaire. Le 429 reste réservé au vrai spam (rate-limit
     // en amont, plusieurs actions rapprochées).
-    if ("duplicate" in result) return NextResponse.json({ error: "Vous avez déjà marqué cet avis comme utile" }, { status: 409 });
+    if ("duplicate" in result) return NextResponse.json({ error: await apiError("Vous avez déjà marqué cet avis comme utile") }, { status: 409 });
     return NextResponse.json({ review: result.review });
   } catch (error) {
     console.error("[reviews/helpful] error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

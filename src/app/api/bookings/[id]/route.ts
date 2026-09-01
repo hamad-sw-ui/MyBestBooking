@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getSetting } from "@/lib/settings";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { transitionError, type BookingActor, type BookingStatus } from "@/lib/booking-lifecycle";
+import { apiError } from "@/lib/api-error";
 import {
   assertNotMaintenance,
   MaintenanceError,
@@ -32,9 +33,9 @@ export async function GET(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const { id } = await params;
-    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     const [result] = await db
       .select({
         booking: bookings,
@@ -47,17 +48,17 @@ export async function GET(
       .leftJoin(rooms, eq(bookings.roomId, rooms.id))
       .leftJoin(users, eq(bookings.userId, users.id))
       .where(eq(bookings.id, id));
-    if (!result) return NextResponse.json({ error: "Réservation non trouvée" }, { status: 404 });
+    if (!result) return NextResponse.json({ error: await apiError("Réservation non trouvée") }, { status: 404 });
 
     const isOwner = result.booking.userId === user.id;
     const isHost = result.property?.hostId === user.id;
     if (!isOwner && !isHost && user.role !== "admin") {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 403 });
     }
     return NextResponse.json(result);
   } catch (error) {
     console.error("Error fetching booking:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
@@ -67,23 +68,23 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     await assertNotMaintenance(user);
 
     const { id } = await params;
-    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     const data = updateBookingSchema.parse(await request.json());
     const [existing] = await db
       .select({ booking: bookings, property: properties })
       .from(bookings)
       .leftJoin(properties, eq(bookings.propertyId, properties.id))
       .where(eq(bookings.id, id));
-    if (!existing) return NextResponse.json({ error: "Réservation non trouvée" }, { status: 404 });
+    if (!existing) return NextResponse.json({ error: await apiError("Réservation non trouvée") }, { status: 404 });
 
     const isOwner = existing.booking.userId === user.id;
     const isHost = existing.property?.hostId === user.id;
     if (!isOwner && !isHost && user.role !== "admin") {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 403 });
     }
 
     const transition = transitionError({
@@ -92,7 +93,7 @@ export async function PUT(
       actor: actorFor(user.role, isOwner),
       checkOut: existing.booking.checkOut,
     });
-    if (transition) return NextResponse.json({ error: transition }, { status: 400 });
+    if (transition) return NextResponse.json({ error: await apiError(transition) }, { status: 400 });
 
     // Annulation : une seule commande métier pour route individuelle et bulk.
     // Elle conserve les états refund, libère les avantages et émet l’outbox.
@@ -108,7 +109,7 @@ export async function PUT(
         return NextResponse.json({ booking: outcome.booking });
       } catch (cancellationError) {
         if (cancellationError instanceof BookingCancellationError) {
-          return NextResponse.json({ error: cancellationError.message }, { status: 409 });
+          return NextResponse.json({ error: await apiError(cancellationError.message) }, { status: 409 });
         }
         throw cancellationError;
       }
@@ -184,16 +185,16 @@ export async function PUT(
     if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     if (error instanceof Error && error.message.startsWith("BOOKING_TRANSITION:")) {
-      return NextResponse.json({ error: error.message.replace("BOOKING_TRANSITION:", "") }, { status: 409 });
+      return NextResponse.json({ error: await apiError(error.message.replace("BOOKING_TRANSITION:", "")) }, { status: 409 });
     }
     if (error instanceof Error && error.message === "BOOKING_NOT_FOUND") {
-      return NextResponse.json({ error: "Réservation non trouvée" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Réservation non trouvée") }, { status: 404 });
     }
     console.error("Error updating booking:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

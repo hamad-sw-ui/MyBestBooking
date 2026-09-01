@@ -5,6 +5,7 @@ import { rooms, properties, ratePlans } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid, frenchZodMessage } from "@/lib/http";
 import { and, eq } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 const createSchema = z.object({
   name: z.string().min(3).max(100),
@@ -34,13 +35,13 @@ async function ownership(userId: string, roomId: string) {
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   const { id } = await params;
-  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+  if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
   const row = await ownership(user.id, id);
-  if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  if (!row) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
   if (row.property?.hostId !== user.id && user.role !== "admin") {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
   }
 
   const list = await db
@@ -53,13 +54,13 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const { id } = await params;
-    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     const row = await ownership(user.id, id);
-    if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+    if (!row) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
     if (row.property?.hostId !== user.id && user.role !== "admin") {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
     }
     const data = createSchema.parse(await request.json());
 
@@ -81,28 +82,28 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("rate-plans POST error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const { id: roomId } = await params;
-    if (!isUuid(roomId)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    if (!isUuid(roomId)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     const row = await ownership(user.id, roomId);
-    if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
-    if (row.property?.hostId !== user.id && user.role !== "admin") return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    if (!row) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
+    if (row.property?.hostId !== user.id && user.role !== "admin") return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
     const data = updateSchema.parse(await request.json());
     const [existing] = await db.select().from(ratePlans).where(and(eq(ratePlans.id, data.id), eq(ratePlans.roomId, roomId)));
-    if (!existing) return NextResponse.json({ error: "Plan tarifaire introuvable" }, { status: 404 });
+    if (!existing) return NextResponse.json({ error: await apiError("Plan tarifaire introuvable") }, { status: 404 });
     const update: Record<string, unknown> = { ...data };
     delete update.id;
     if (data.discountPercentage !== undefined) update.discountPercentage = String(data.discountPercentage);
@@ -111,10 +112,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     console.error("rate-plans PATCH error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

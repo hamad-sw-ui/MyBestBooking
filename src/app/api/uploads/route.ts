@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { uploadObjects } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { rateLimit } from "@/lib/rate-limit";
+import { apiError } from "@/lib/api-error";
 import {
   getUploader,
   MAX_UPLOAD_BYTES,
@@ -21,20 +22,20 @@ import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
 export async function DELETE(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   }
   const key = new URL(request.url).searchParams.get("key");
   if (!key || !/^uploads\/[A-Za-z0-9._-]+$/.test(key)) {
-    return NextResponse.json({ error: "Key invalide" }, { status: 400 });
+    return NextResponse.json({ error: await apiError("Key invalide") }, { status: 400 });
   }
   // Vérif ownership : les nouveaux uploads privés sont sous uploads/<id8>-.
   const ownedPrefix = user.id.slice(0, 8);
   if (user.role !== "admin" && !key.startsWith(`uploads/${ownedPrefix}-`)) {
-    return NextResponse.json({ error: "Non autorisé sur ce fichier" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Non autorisé sur ce fichier") }, { status: 403 });
   }
   const [upload] = await db.select().from(uploadObjects).where(eq(uploadObjects.key, key));
-  if (!upload) return NextResponse.json({ error: "Fichier introuvable" }, { status: 404 });
-  if (upload.attachedAt) return NextResponse.json({ error: "Cette pièce jointe est déjà liée à un message" }, { status: 409 });
+  if (!upload) return NextResponse.json({ error: await apiError("Fichier introuvable") }, { status: 404 });
+  if (upload.attachedAt) return NextResponse.json({ error: await apiError("Cette pièce jointe est déjà liée à un message") }, { status: 409 });
   const ok = await (await getUploader()).remove(key);
   if (ok) await db.delete(uploadObjects).where(eq(uploadObjects.key, key));
   return NextResponse.json({ removed: ok });
@@ -49,7 +50,7 @@ export async function DELETE(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   }
   // T-022 : mode maintenance
   if (user.role !== "admin" && (await isMaintenanceActive())) {
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
   });
   if (!rl.ok) {
     return NextResponse.json(
-      { error: "Trop d'uploads, réessayez plus tard" },
+      { error: await apiError("Trop d'uploads, réessayez plus tard") },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
     );
   }
@@ -72,7 +73,7 @@ export async function POST(request: NextRequest) {
     formData = await request.formData();
   } catch {
     return NextResponse.json(
-      { error: "Corps invalide (multipart attendu)" },
+      { error: await apiError("Corps invalide (multipart attendu)") },
       { status: 400 },
     );
   }
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
   const file = formData.get("file");
   if (!file || typeof file === "string") {
     return NextResponse.json(
-      { error: "Aucun fichier fourni (champ 'file' attendu)" },
+      { error: await apiError("Aucun fichier fourni (champ 'file' attendu)") },
       { status: 400 },
     );
   }
@@ -125,6 +126,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (e) {
     console.error("[upload] failed:", e);
-    return NextResponse.json({ error: "Échec de l'upload" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Échec de l'upload") }, { status: 500 });
   }
 }

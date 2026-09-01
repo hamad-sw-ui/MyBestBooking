@@ -6,6 +6,7 @@ import { verifyPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
+import { apiError } from "@/lib/api-error";
 
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     if (!ipLimit.ok || !emailLimit.ok) {
       const retryAfter = Math.max(ipLimit.retryAfter, emailLimit.retryAfter);
       return NextResponse.json(
-        { error: "Trop de tentatives, réessayez plus tard" },
+        { error: await apiError("Trop de tentatives, réessayez plus tard") },
         { status: 429, headers: { "Retry-After": String(retryAfter) } },
       );
     }
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
         "$2b$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj6UPzP5nrIu"
       );
       return NextResponse.json(
-        { error: "Email ou mot de passe incorrect" },
+        { error: await apiError("Email ou mot de passe incorrect") },
         { status: 401 }
       );
     }
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await verifyPassword(data.password, user.passwordHash);
     if (!isValidPassword) {
       return NextResponse.json(
-        { error: "Email ou mot de passe incorrect" },
+        { error: await apiError("Email ou mot de passe incorrect") },
         { status: 401 }
       );
     }
@@ -74,7 +75,7 @@ export async function POST(request: NextRequest) {
     // erreur (il croyait son compte détruit). Message neutre et exact.
     if (user.deletedAt) {
       return NextResponse.json(
-        { error: "Ce compte est désactivé. Contactez le support pour le réactiver." },
+        { error: await apiError("Ce compte est désactivé. Contactez le support pour le réactiver.") },
         { status: 401 }
       );
     }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     if (user.twoFactorEnabled && user.twoFactorSecret) {
       if (!data.totpCode) {
         return NextResponse.json(
-          { error: "Code 2FA requis", twoFactorRequired: true },
+          { error: await apiError("Code 2FA requis"), twoFactorRequired: true },
           { status: 401 }
         );
       }
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
       });
       if (!validTotp) {
         return NextResponse.json(
-          { error: "Code 2FA invalide", twoFactorRequired: true },
+          { error: await apiError("Code 2FA invalide"), twoFactorRequired: true },
           { status: 401 }
         );
       }
@@ -126,17 +127,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: await apiError(error.issues[0].message) },
         { status: 400 }
       );
     }
     console.error("Login error:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }

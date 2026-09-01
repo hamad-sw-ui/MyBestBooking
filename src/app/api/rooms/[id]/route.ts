@@ -6,6 +6,7 @@ import { isUuid, frenchZodMessage } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
+import { apiError } from "@/lib/api-error";
 
 const updateRoomSchema = z.object({
   name: z.string().min(3).optional(),
@@ -34,7 +35,7 @@ export async function GET(
   try {
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
 
     const [row] = await db
@@ -44,19 +45,19 @@ export async function GET(
       .where(eq(rooms.id, id));
 
     if (!row?.room || !row.property) {
-      return NextResponse.json({ error: "Chambre non trouvée" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Chambre non trouvée") }, { status: 404 });
     }
     const user = await getCurrentUser();
     const canSeePrivate = user?.role === "admin" || row.property.hostId === user?.id;
     if ((!row.room.isActive || row.property.status !== "active") && !canSeePrivate) {
-      return NextResponse.json({ error: "Chambre non trouvée" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Chambre non trouvée") }, { status: 404 });
     }
 
     return NextResponse.json({ room: row.room });
   } catch (error) {
     console.error("Error fetching room:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
@@ -70,14 +71,14 @@ export async function PUT(
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
 
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
     const body = await request.json();
     const data = updateRoomSchema.parse(body);
@@ -86,7 +87,7 @@ export async function PUT(
     const [room] = await db.select().from(rooms).where(eq(rooms.id, id));
     if (!room) {
       return NextResponse.json(
-        { error: "Chambre non trouvée" },
+        { error: await apiError("Chambre non trouvée") },
         { status: 404 }
       );
     }
@@ -98,7 +99,7 @@ export async function PUT(
 
     if (property.hostId !== user.id && user.role !== "admin") {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 403 }
       );
     }
@@ -114,7 +115,7 @@ export async function PUT(
       quantity: data.quantity ?? room.quantity ?? null,
     });
     if (capacityError) {
-      return NextResponse.json({ error: capacityError }, { status: 400 });
+      return NextResponse.json({ error: await apiError(capacityError) }, { status: 400 });
     }
 
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
@@ -135,17 +136,17 @@ export async function PUT(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: frenchZodMessage(error) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 }
       );
     }
     console.error("Error updating room:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
@@ -159,7 +160,7 @@ export async function DELETE(
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
@@ -170,7 +171,7 @@ export async function DELETE(
     const [room] = await db.select().from(rooms).where(eq(rooms.id, id));
     if (!room) {
       return NextResponse.json(
-        { error: "Chambre non trouvée" },
+        { error: await apiError("Chambre non trouvée") },
         { status: 404 }
       );
     }
@@ -182,7 +183,7 @@ export async function DELETE(
 
     if (property.hostId !== user.id && user.role !== "admin") {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 403 }
       );
     }
@@ -197,7 +198,7 @@ export async function DELETE(
   } catch (error) {
     console.error("Error deleting room:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }

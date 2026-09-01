@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { hashToken, issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
+import { apiError } from "@/lib/api-error";
 
 const schema = z.object({ email: z.string().email() });
 
@@ -62,12 +63,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: error.issues[0].message }, { status: 400 });
+      return NextResponse.json({ error: await apiError(error.issues[0].message) }, { status: 400 });
     }
     console.error("forgot-password error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

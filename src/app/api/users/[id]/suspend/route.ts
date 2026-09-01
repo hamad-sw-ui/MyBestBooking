@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isUuid, frenchZodMessage } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 const schema = z.object({
   suspended: z.boolean(),
@@ -25,16 +26,16 @@ export async function PATCH(
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
     }
 
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
     if (id === user.id) {
       return NextResponse.json(
-        { error: "Vous ne pouvez pas vous suspendre vous-même" },
+        { error: await apiError("Vous ne pouvez pas vous suspendre vous-même") },
         { status: 400 },
       );
     }
@@ -49,7 +50,7 @@ export async function PATCH(
       .where(eq(users.id, id))
       .returning({ id: users.id, email: users.email, deletedAt: users.deletedAt });
 
-    if (!updated) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+    if (!updated) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
 
     if (suspended) {
       await db.delete(sessions).where(eq(sessions.userId, id));
@@ -71,12 +72,12 @@ export async function PATCH(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("suspend user error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

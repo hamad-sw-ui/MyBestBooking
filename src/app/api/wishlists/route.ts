@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
+import { apiError } from "@/lib/api-error";
 
 const createWishlistSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
@@ -29,7 +30,7 @@ export async function GET() {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
@@ -62,7 +63,7 @@ export async function GET() {
   } catch (error) {
     console.error("Error fetching wishlists:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
     });
     if (!rl.ok) {
       return NextResponse.json(
-        { error: "Trop d'ajouts, ralentissez" },
+        { error: await apiError("Trop d'ajouts, ralentissez") },
         { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
       );
     }
@@ -106,7 +107,7 @@ export async function POST(request: NextRequest) {
 
       if (!wishlist) {
         return NextResponse.json(
-          { error: "Liste non trouvée" },
+          { error: await apiError("Liste non trouvée") },
           { status: 404 }
         );
       }
@@ -119,7 +120,7 @@ export async function POST(request: NextRequest) {
         .where(eq(properties.id, data.propertyId))
         .limit(1);
       if (!targetProperty) {
-        return NextResponse.json({ error: "Hébergement introuvable" }, { status: 404 });
+        return NextResponse.json({ error: await apiError("Hébergement introuvable") }, { status: 404 });
       }
 
       // Check if already in wishlist
@@ -135,7 +136,7 @@ export async function POST(request: NextRequest) {
 
       if (existing.length > 0) {
         return NextResponse.json(
-          { error: "Hébergement déjà dans la liste" },
+          { error: await apiError("Hébergement déjà dans la liste") },
           { status: 400 }
         );
       }
@@ -168,17 +169,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: frenchZodMessage(error) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 }
       );
     }
     console.error("Error creating wishlist:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
@@ -187,13 +188,13 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const data = updateWishlistSchema.parse(await request.json());
     const [wishlist] = await db
       .select()
       .from(wishlists)
       .where(and(eq(wishlists.id, data.wishlistId), eq(wishlists.userId, user.id)));
-    if (!wishlist) return NextResponse.json({ error: "Liste non trouvée" }, { status: 404 });
+    if (!wishlist) return NextResponse.json({ error: await apiError("Liste non trouvée") }, { status: 404 });
 
     const isPublic = data.isPublic ?? wishlist.isPublic ?? false;
     const shouldGenerateToken = isPublic && (!wishlist.shareToken || data.rotateShareToken);
@@ -209,11 +210,11 @@ export async function PATCH(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     console.error("Error updating wishlist:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
@@ -222,7 +223,7 @@ export async function DELETE(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
@@ -233,7 +234,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!wishlistId) {
       return NextResponse.json(
-        { error: "wishlistId requis" },
+        { error: await apiError("wishlistId requis") },
         { status: 400 }
       );
     }
@@ -246,7 +247,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!wishlist) {
       return NextResponse.json(
-        { error: "Liste non trouvée" },
+        { error: await apiError("Liste non trouvée") },
         { status: 404 }
       );
     }
@@ -271,7 +272,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     console.error("Error deleting wishlist:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }

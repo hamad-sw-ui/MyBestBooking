@@ -5,6 +5,7 @@ import { promotions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { desc, eq } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 const createSchema = z
   .object({
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
     }
 
     const data = createSchema.parse(await request.json());
@@ -69,7 +70,7 @@ export async function POST(request: NextRequest) {
       .from(promotions)
       .where(eq(promotions.code, data.code));
     if (exists) {
-      return NextResponse.json({ error: "Ce code existe déjà" }, { status: 409 });
+      return NextResponse.json({ error: await apiError("Ce code existe déjà") }, { status: 409 });
     }
 
     const [created] = await db
@@ -92,12 +93,12 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("promotions POST error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

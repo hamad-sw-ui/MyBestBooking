@@ -8,6 +8,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
+import { apiError } from "@/lib/api-error";
 
 const schema = z.object({
   status: z.enum(["approved", "pending", "hidden", "rejected"]),
@@ -31,7 +32,7 @@ export async function PATCH(
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
     }
 
     const rl = rateLimit(`admin:review-moderate:${user.id}`, {
@@ -40,18 +41,18 @@ export async function PATCH(
     });
     if (!rl.ok) {
       return NextResponse.json(
-        { error: "Trop de modérations, réessayez dans une minute" },
+        { error: await apiError("Trop de modérations, réessayez dans une minute") },
         { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
       );
     }
 
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
     const body = await request.json().catch(() => null);
     if (!body) {
-      return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("JSON invalide") }, { status: 400 });
     }
     const { status } = schema.parse(body);
 
@@ -76,7 +77,7 @@ export async function PATCH(
     });
 
     if ("notFound" in result) {
-      return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Avis introuvable") }, { status: 404 });
     }
 
     // T-024 : audit log
@@ -92,15 +93,15 @@ export async function PATCH(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: frenchZodMessage(error) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 },
       );
     }
     console.error("review moderate error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { hashPassword } from "@/lib/auth";
 import { generateSlug, generateBookingReference } from "@/lib/utils";
 import { eq } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
+import { apiError } from "@/lib/api-error";
 
 /**
  * Vérifie qu'une requête POST /api/seed est autorisée.
@@ -512,7 +513,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Seed error:", error);
     return NextResponse.json(
-      { error: "Erreur lors de la création des données", details: String(error) },
+      { error: await apiError("Erreur lors de la création des données"), details: String(error) },
       { status: 500 }
     );
   }

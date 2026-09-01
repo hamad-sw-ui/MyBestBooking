@@ -226,26 +226,26 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
               label={t("settings.legalName")}
               value={v.companyLegalName ?? ""}
               onChange={(e) => setV({ ...v, companyLegalName: e.target.value })}
-              placeholder="MyBestBooking SAS"
+              placeholder={t("settings.phLegalName")}
             />
             <Input
               label={t("settings.legalId")}
               value={v.companyLegalId ?? ""}
               onChange={(e) => setV({ ...v, companyLegalId: e.target.value })}
-              placeholder="SIRET 123 456 789 00010"
+              placeholder={t("settings.phLegalId")}
             />
             <Input
               label={t("settings.vat")}
               value={v.vatNumber ?? ""}
               onChange={(e) => setV({ ...v, vatNumber: e.target.value })}
-              placeholder="FR 12 345678901"
+              placeholder={t("settings.phVat")}
             />
             <Input
               label={t("settings.billingEmail")}
               type="email"
               value={v.companyContactEmail ?? ""}
               onChange={(e) => setV({ ...v, companyContactEmail: e.target.value })}
-              placeholder="facturation@exemple.com"
+              placeholder={t("settings.phBillingEmail")}
             />
             <Input
               label={t("settings.invoicePrefix")}
@@ -260,7 +260,7 @@ function BillingSection({ initial }: { initial: SettingValue<"billing"> }) {
               rows={2}
               value={v.companyAddress ?? ""}
               onChange={(e) => setV({ ...v, companyAddress: e.target.value })}
-              placeholder="12 rue du Plateau, 75019 Paris, France"
+              placeholder={t("settings.phAddress")}
             />
           </div>
           <div className="mt-4">

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency } from "@/lib/promotions";
 import { applyWalletToTotal } from "@/lib/wallet-currency";
 import { getSetting } from "@/lib/settings";
+import { apiError } from "@/lib/api-error";
 import {
   assertNotMaintenance,
   MaintenanceError,
@@ -68,7 +69,7 @@ class BookingInputError extends Error {}
 export async function GET(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
@@ -120,7 +121,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ bookings: results });
   } catch (error) {
     console.error("Error fetching bookings:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     const isGuestBooking = !user && data.isGuestBooking === true;
 
     if (!user && !isGuestBooking) {
-      return NextResponse.json({ error: "Veuillez vous connecter pour réserver" }, { status: 401 });
+      return NextResponse.json({ error: await apiError("Veuillez vous connecter pour réserver") }, { status: 401 });
     }
 
     // T-157 (audit n°29) : un compte connecté réserve sous SON identité. Les
@@ -142,19 +143,19 @@ export async function POST(request: NextRequest) {
 
     await assertNotMaintenance(user);
     const today = new Date().toISOString().slice(0, 10);
-    if (data.checkIn < today) return NextResponse.json({ error: "La date d'arrivée ne peut pas être dans le passé" }, { status: 400 });
-    if (!stayNightsWithinLimit(data.checkIn, data.checkOut)) return NextResponse.json({ error: "Un séjour doit compter entre 1 et 365 nuits" }, { status: 400 });
+    if (data.checkIn < today) return NextResponse.json({ error: await apiError("La date d'arrivée ne peut pas être dans le passé") }, { status: 400 });
+    if (!stayNightsWithinLimit(data.checkIn, data.checkOut)) return NextResponse.json({ error: await apiError("Un séjour doit compter entre 1 et 365 nuits") }, { status: 400 });
 
     // Un invité n’a pas encore de userId : limiter par IP avant toute écriture.
     const rl = user
       ? rateLimit(`bookings:user:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 })
       : rateLimit(`bookings:guest-ip:${ipFromRequest(request)}`, { limit: 10, windowMs: 60 * 60 * 1000 });
-    if (!rl.ok) return NextResponse.json({ error: "Trop de tentatives, réessayez plus tard" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
+    if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de tentatives, réessayez plus tard") }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
     const [property] = await db.select().from(properties).where(eq(properties.id, data.propertyId));
-    if (!property || property.status !== "active") return NextResponse.json({ error: "Hébergement non disponible" }, { status: 400 });
+    if (!property || property.status !== "active") return NextResponse.json({ error: await apiError("Hébergement non disponible") }, { status: 400 });
     const [room] = await db.select().from(rooms).where(and(eq(rooms.id, data.roomId), eq(rooms.propertyId, data.propertyId)));
-    if (!room || !room.isActive) return NextResponse.json({ error: "Chambre non disponible" }, { status: 400 });
+    if (!room || !room.isActive) return NextResponse.json({ error: await apiError("Chambre non disponible") }, { status: 400 });
 
     if (isGuestBooking) {
       const [existing] = await db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.email, data.guestEmail.toLowerCase())).limit(1);
@@ -407,14 +408,14 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       if (error instanceof PromoCodeNotFoundError) {
         // T-155 (audit n°27) : 400 — entrée invalide (code inexistant).
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: await apiError(error.message) }, { status: 400 });
       }
       if (error instanceof BookingInputError) {
         // T-157 (audit n°29) : 400 — entrée invalide (capacité, dates…).
-        return NextResponse.json({ error: error.message }, { status: 400 });
+        return NextResponse.json({ error: await apiError(error.message) }, { status: 400 });
       }
       if (error instanceof BookingRuleError) {
-        return NextResponse.json({ error: error.message }, { status: 409 });
+        return NextResponse.json({ error: await apiError(error.message) }, { status: 409 });
       }
       throw error;
     }
@@ -448,12 +449,12 @@ export async function POST(request: NextRequest) {
     } catch (paymentError) {
       console.error("[booking] payment intent setup failed:", paymentError);
       return NextResponse.json({
-        error: "La réservation est temporairement retenue, mais le paiement sécurisé n'a pas pu être préparé. Réessayez dans quelques instants.",
+        error: await apiError("La réservation est temporairement retenue, mais le paiement sécurisé n'a pas pu être préparé. Réessayez dans quelques instants."),
         booking: createdBooking,
       }, { status: 503 });
     }
     if (!payment) {
-      return NextResponse.json({ error: "La réservation a expiré avant la préparation du paiement" }, { status: 409 });
+      return NextResponse.json({ error: await apiError("La réservation a expiré avant la préparation du paiement") }, { status: 409 });
     }
     createdBooking = payment.booking;
 
@@ -476,14 +477,14 @@ export async function POST(request: NextRequest) {
     if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       // T-137 (A1) : libellé français (les messages Zod par défaut sont en
       // anglais et fuyaient jusqu'au client : « Too small… », « Invalid email »).
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("Error creating booking:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

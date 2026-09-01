@@ -4,6 +4,7 @@ import { reviews, properties, users, bookings } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq, and, or, desc, inArray } from "drizzle-orm";
 import { z } from "zod";
+import { apiError } from "@/lib/api-error";
 import {
   assertNotMaintenance,
   MaintenanceError,
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       const ids = hostProperties.map((property) => property.id);
       if (!ids.length) return NextResponse.json({ reviews: [] });
       if (parsed.propertyId && !ids.includes(parsed.propertyId)) {
-        return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+        return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
       }
       conditions.push(eq(reviews.status, requestedStatus));
       conditions.push(parsed.propertyId ? eq(reviews.propertyId, parsed.propertyId) : inArray(reviews.propertyId, ids));
@@ -91,28 +92,28 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     console.error("Error fetching reviews:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     await assertNotMaintenance(user);
 
     const rl = rateLimit(`reviews:user:${user.id}`, { limit: 20, windowMs: 60 * 60 * 1000 });
-    if (!rl.ok) return NextResponse.json({ error: "Trop d'avis publiés, réessayez plus tard" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
+    if (!rl.ok) return NextResponse.json({ error: await apiError("Trop d'avis publiés, réessayez plus tard") }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
     const data = reviewSchema.parse(await request.json());
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, data.bookingId));
-    if (!booking) return NextResponse.json({ error: "Réservation non trouvée" }, { status: 404 });
-    if (booking.userId !== user.id) return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
-    if (!isReviewEligible(booking.status as BookingStatus, booking.checkOut)) return NextResponse.json({ error: "Vous ne pouvez laisser un avis qu'après un séjour terminé" }, { status: 400 });
+    if (!booking) return NextResponse.json({ error: await apiError("Réservation non trouvée") }, { status: 404 });
+    if (booking.userId !== user.id) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 403 });
+    if (!isReviewEligible(booking.status as BookingStatus, booking.checkOut)) return NextResponse.json({ error: await apiError("Vous ne pouvez laisser un avis qu'après un séjour terminé") }, { status: 400 });
 
     // T-125 (P1) : la modération préalable est un réglage admin. Par défaut
     // (`requireModeration=false`) le comportement historique est conservé :
@@ -146,16 +147,16 @@ export async function POST(request: NextRequest) {
       await recomputePropertyReviewAggregate(tx, booking.propertyId);
       return review;
     });
-    if (!created) return NextResponse.json({ error: "Vous avez déjà laissé un avis pour cette réservation" }, { status: 400 });
+    if (!created) return NextResponse.json({ error: await apiError("Vous avez déjà laissé un avis pour cette réservation") }, { status: 400 });
     return NextResponse.json({ review: created }, { status: 201 });
   } catch (error) {
     if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     console.error("Error creating review:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

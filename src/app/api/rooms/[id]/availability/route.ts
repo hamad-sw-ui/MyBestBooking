@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isUuid, frenchZodMessage } from "@/lib/http";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { stayNightsWithinLimit } from "@/lib/booking-rules";
+import { apiError } from "@/lib/api-error";
 
 /**
  * GET /api/rooms/[id]/availability?from=&to=
@@ -40,13 +41,13 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   const { id } = await params;
-  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+  if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
   const row = await checkOwnership(user.id, id);
-  if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  if (!row) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
   if (row.property?.hostId !== user.id && user.role !== "admin") {
-    return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
   }
 
   const from = request.nextUrl.searchParams.get("from")
@@ -55,7 +56,7 @@ export async function GET(
     ?? new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
 
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || !stayNightsWithinLimit(from, new Date(`${to}T00:00:00Z`).getTime() === new Date(`${from}T00:00:00Z`).getTime() ? to : new Date(new Date(`${to}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10))) {
-    return NextResponse.json({ error: "La fenêtre availability doit couvrir au maximum 365 jours" }, { status: 400 });
+    return NextResponse.json({ error: await apiError("La fenêtre availability doit couvrir au maximum 365 jours") }, { status: 400 });
   }
 
   const list = await db
@@ -85,13 +86,13 @@ export async function PUT(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const { id } = await params;
-    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     const row = await checkOwnership(user.id, id);
-    if (!row) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+    if (!row) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
     if (row.property?.hostId !== user.id && user.role !== "admin") {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
     }
 
     const { days } = batchSchema.parse(await request.json());
@@ -130,12 +131,12 @@ export async function PUT(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("availability PUT error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

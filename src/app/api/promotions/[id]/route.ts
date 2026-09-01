@@ -5,6 +5,7 @@ import { promotions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid, frenchZodMessage } from "@/lib/http";
 import { eq } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 const updateSchema = z.object({
   name: z.string().min(3).max(100).optional(),
@@ -21,10 +22,10 @@ export async function PATCH(
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== "admin") {
-      return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
     }
     const { id } = await params;
-    if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+    if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     const patch = updateSchema.parse(await request.json());
 
     // T-126 (P1) : si on décale la date de fin, elle ne doit pas passer
@@ -36,7 +37,7 @@ export async function PATCH(
         .where(eq(promotions.id, id));
       if (existing && new Date(patch.validUntil).getTime() <= existing.validFrom.getTime()) {
         return NextResponse.json(
-          { error: "La date de fin doit être postérieure à la date de début" },
+          { error: await apiError("La date de fin doit être postérieure à la date de début") },
           { status: 400 },
         );
       }
@@ -53,18 +54,18 @@ export async function PATCH(
       })
       .where(eq(promotions.id, id))
       .returning();
-    if (!updated) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+    if (!updated) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
     return NextResponse.json({ promotion: updated });
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("promotions PATCH error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }
 
@@ -74,11 +75,11 @@ export async function DELETE(
 ) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   }
   const { id } = await params;
-  if (!isUuid(id)) return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+  if (!isUuid(id)) return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
   const result = await db.delete(promotions).where(eq(promotions.id, id)).returning({ id: promotions.id });
-  if (!result.length) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  if (!result.length) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
   return NextResponse.json({ ok: true });
 }

@@ -4,9 +4,10 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a05736-mybestbooking`
-- **HEAD Git** : à mettre à jour en fin de session (T-167 **CORRIGÉ
-  (VALIDÉ)** — i18n vague 3, 1354 clés, SSR cookie `en` prouvé). Base
-  code i18n `0b96de2` + tests/docs de clôture. Le workflow
+- **HEAD Git** : à mettre à jour en fin de session (T-168 **CORRIGÉ
+  (VALIDÉ)** — i18n 100 % facture HTML, placeholders réglages, erreurs
+  API `apiError` défaut **fr** ; catalogue **1394** FR=EN). T-167
+  (vague 3 UI) inclus dans le même arbre. Le workflow
   `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces push car le
   jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1

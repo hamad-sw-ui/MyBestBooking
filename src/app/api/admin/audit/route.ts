@@ -4,6 +4,7 @@ import { auditLog } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { desc, eq, and, gte } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 /**
  * GET /api/admin/audit — journal des actions admin (T-024).
@@ -13,7 +14,7 @@ import { desc, eq, and, gte } from "drizzle-orm";
 export async function GET(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   }
 
   const rl = rateLimit(`admin:audit-read:${user.id}`, {
@@ -22,7 +23,7 @@ export async function GET(request: NextRequest) {
   });
   if (!rl.ok) {
     return NextResponse.json(
-      { error: "Trop de requêtes" },
+      { error: await apiError("Trop de requêtes") },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
     );
   }
@@ -52,6 +53,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ entries: rows, limit, offset });
   } catch (error) {
     console.error("[admin/audit] GET error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

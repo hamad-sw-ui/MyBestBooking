@@ -7,6 +7,7 @@ import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { consumeToken } from "@/lib/tokens";
 import { createSession, hashPassword } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
+import { apiError } from "@/lib/api-error";
 
 const schema = z.object({
   token: z.string().min(10, "Lien de réinitialisation invalide"),
@@ -20,11 +21,11 @@ export async function POST(request: NextRequest) {
   try {
     const ip = ipFromRequest(request);
     const rl = rateLimit(`reset:ip:${ip}`, { limit: 10, windowMs: 60 * 60 * 1000 });
-    if (!rl.ok) return NextResponse.json({ error: "Trop de tentatives, réessayez plus tard" }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
+    if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de tentatives, réessayez plus tard") }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
     const { token, password, claimGuest } = schema.parse(await request.json());
     const userId = await consumeToken(token, claimGuest ? "guest_claim" : "password_reset");
-    if (!userId) return NextResponse.json({ error: "Lien invalide ou expiré" }, { status: 400 });
+    if (!userId) return NextResponse.json({ error: await apiError("Lien invalide ou expiré") }, { status: 400 });
 
     const passwordHash = await hashPassword(password);
     await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, userId));
@@ -37,10 +38,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     console.error("reset-password error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

@@ -4,6 +4,7 @@ import { properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid } from "@/lib/http";
 import { eq } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/properties/[id]/submit (T-137, A2)
@@ -33,22 +34,22 @@ export async function POST(
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+      return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     }
 
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
 
     const [prop] = await db.select().from(properties).where(eq(properties.id, id));
     if (!prop) {
-      return NextResponse.json({ error: "Hébergement non trouvé" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Hébergement non trouvé") }, { status: 404 });
     }
 
     const isOwner = prop.hostId === user.id;
     if (!isOwner && user.role !== "admin") {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 403 });
     }
 
     // Déjà en attente : rien à faire (idempotent), on renvoie l'état courant.
@@ -58,7 +59,7 @@ export async function POST(
     // Déjà active : aucun enjeu de re-soumission, on ne touche pas au statut.
     if (prop.status === "active") {
       return NextResponse.json(
-        { error: "Cet hébergement est déjà actif" },
+        { error: await apiError("Cet hébergement est déjà actif") },
         { status: 409 },
       );
     }
@@ -66,7 +67,7 @@ export async function POST(
     // re-soumis par l'hôte. `archived` est un retrait volontaire hors flux.
     if (prop.status !== "draft" && prop.status !== "suspended") {
       return NextResponse.json(
-        { error: "Cette annonce ne peut pas être re-soumise dans son état actuel" },
+        { error: await apiError("Cette annonce ne peut pas être re-soumise dans son état actuel") },
         { status: 409 },
       );
     }
@@ -80,6 +81,6 @@ export async function POST(
     return NextResponse.json({ property: updated });
   } catch (error) {
     console.error("property submit error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

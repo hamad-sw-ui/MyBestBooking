@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { and, eq, desc } from "drizzle-orm";
 import { isStayPast } from "@/lib/price-alert-rules";
+import { apiError } from "@/lib/api-error";
 
 const schema = z.object({
   propertyId: z.string().uuid(),
@@ -25,7 +26,7 @@ const schema = z.object({
  */
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   const alerts = await db
     .select()
     .from(priceAlerts)
@@ -40,7 +41,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const data = schema.parse(await request.json());
     // T-127 (P1) : on vérifie que la propriété existe avant d'insérer
     // (propertyId est une clé étrangère NOT NULL) ; sinon la base lèverait une
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       .where(eq(properties.id, data.propertyId))
       .limit(1);
     if (!targetProperty) {
-      return NextResponse.json({ error: "Hébergement introuvable" }, { status: 404 });
+      return NextResponse.json({ error: await apiError("Hébergement introuvable") }, { status: 404 });
     }
     // T-161 (audit n°30) : une alerte « séjour » ne peut pas porter une
     // arrivée passée (elle ne pourrait jamais se réaliser → fake
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     const today = new Date().toISOString().slice(0, 10);
     if (data.checkIn && isStayPast(data.checkIn, today)) {
       return NextResponse.json(
-        { error: "La date d'arrivée de l'alerte ne peut pas être dans le passé" },
+        { error: await apiError("La date d'arrivée de l'alerte ne peut pas être dans le passé") },
         { status: 400 },
       );
     }
@@ -106,13 +107,13 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (e instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (e instanceof z.ZodError) {
       // T-137 (A1) : libellé français au lieu du message Zod anglais par défaut.
-      return NextResponse.json({ error: frenchZodMessage(e) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(e)) }, { status: 400 });
     }
     console.error("[price-alerts] POST", e);
-    return NextResponse.json({ error: "Erreur" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Erreur") }, { status: 500 });
   }
 }

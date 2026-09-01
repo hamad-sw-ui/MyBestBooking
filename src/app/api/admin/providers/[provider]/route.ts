@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
+import { apiError } from "@/lib/api-error";
 import {
   isKnownProvider,
   PROVIDER_FIELDS,
@@ -32,12 +33,12 @@ export async function PUT(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   const { provider: rawProvider } = await params;
-  if (!isKnownProvider(rawProvider)) return NextResponse.json({ error: "Provider inconnu" }, { status: 404 });
+  if (!isKnownProvider(rawProvider)) return NextResponse.json({ error: await apiError("Provider inconnu") }, { status: 404 });
 
   const rl = rateLimit(`admin:providers:${user.id}`, { limit: 20, windowMs: 60_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Trop de modifications, réessayez plus tard" }, { status: 429 });
+  if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de modifications, réessayez plus tard") }, { status: 429 });
 
   try {
     const { values } = updateSchema.parse(await request.json());
@@ -59,12 +60,12 @@ export async function PUT(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
-    if (error instanceof ProviderCredentialsError) return NextResponse.json({ error: error.message }, { status: 503 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof ProviderCredentialsError) return NextResponse.json({ error: await apiError(error.message) }, { status: 503 });
     console.error("[admin/providers] PUT", error);
-    return NextResponse.json({ error: "Impossible d'enregistrer le provider" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Impossible d'enregistrer le provider") }, { status: 500 });
   }
 }
 
@@ -74,11 +75,11 @@ export async function POST(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   const { provider: rawProvider } = await params;
-  if (!isKnownProvider(rawProvider)) return NextResponse.json({ error: "Provider inconnu" }, { status: 404 });
+  if (!isKnownProvider(rawProvider)) return NextResponse.json({ error: await apiError("Provider inconnu") }, { status: 404 });
   const rl = rateLimit(`admin:provider-test:${user.id}`, { limit: 5, windowMs: 60_000 });
-  if (!rl.ok) return NextResponse.json({ error: "Trop de tests, réessayez plus tard" }, { status: 429 });
+  if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de tests, réessayez plus tard") }, { status: 429 });
 
   try {
     if (rawProvider === "stripe") {
@@ -121,14 +122,14 @@ export async function DELETE(
   { params }: { params: Promise<{ provider: string }> },
 ) {
   const user = await requireAdmin();
-  if (!user) return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+  if (!user) return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   const { provider: rawProvider } = await params;
-  if (!isKnownProvider(rawProvider)) return NextResponse.json({ error: "Provider inconnu" }, { status: 404 });
+  if (!isKnownProvider(rawProvider)) return NextResponse.json({ error: await apiError("Provider inconnu") }, { status: 404 });
 
   try {
     const body = deleteSchema.parse(await request.json());
     if (body.confirmProvider !== rawProvider) {
-      return NextResponse.json({ error: "Confirmation du provider requise" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Confirmation du provider requise") }, { status: 400 });
     }
     await removeProviderCredentials(rawProvider);
     await recordAudit({
@@ -143,10 +144,10 @@ export async function DELETE(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     console.error("[admin/providers] DELETE", error);
-    return NextResponse.json({ error: "Impossible de réinitialiser le provider" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Impossible de réinitialiser le provider") }, { status: 500 });
   }
 }

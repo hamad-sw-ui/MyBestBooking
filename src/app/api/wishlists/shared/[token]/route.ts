@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { wishlists, wishlistItems, properties } from "@/db/schema";
 import { and, eq } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 /**
  * GET /api/wishlists/shared/[token] — accès public à une wishlist
@@ -19,7 +20,7 @@ export async function GET(
     .where(and(eq(wishlists.shareToken, token), eq(wishlists.isPublic, true)))
     .limit(1);
 
-  if (!wl) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
+  if (!wl) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
 
   const items = await db
     .select({

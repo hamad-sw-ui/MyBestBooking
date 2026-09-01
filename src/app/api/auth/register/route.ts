@@ -9,6 +9,7 @@ import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { assignReferralCode, resolveReferrerId } from "@/lib/referral";
+import { apiError } from "@/lib/api-error";
 
 const registerSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     const ipLimit = rateLimit(`register:ip:${ip}`, { limit: 10, windowMs: 60_000 });
     if (!ipLimit.ok) {
       return NextResponse.json(
-        { error: "Trop de créations de compte, réessayez plus tard" },
+        { error: await apiError("Trop de créations de compte, réessayez plus tard") },
         { status: 429, headers: { "Retry-After": String(ipLimit.retryAfter) } },
       );
     }
@@ -51,7 +52,7 @@ export async function POST(request: NextRequest) {
       // T-136 (A2) : 409 Conflict — la ressource (compte sur cet email)
       // existe déjà. Les erreurs de validation restent en 400.
       return NextResponse.json(
-        { error: "Un compte existe déjà avec cet email" },
+        { error: await apiError("Un compte existe déjà avec cet email") },
         { status: 409 }
       );
     }
@@ -119,17 +120,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: error.issues[0].message },
+        { error: await apiError(error.issues[0].message) },
         { status: 400 }
       );
     }
     console.error("Registration error:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }

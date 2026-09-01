@@ -27,7 +27,7 @@ describe("uiStrings (T-132)", () => {
     const fr = uiStrings("fr");
     const en = uiStrings("en");
     expect(Object.keys(fr).sort()).toEqual(Object.keys(en).sort());
-    expect(Object.keys(fr)).toHaveLength(1354);
+    expect(Object.keys(fr)).toHaveLength(1394);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {
@@ -43,5 +43,16 @@ describe("uiStrings (T-132)", () => {
     expect(en["home.heroTitle1"]).toBe("Book better.");
     expect(fr["a11y.skipToContent"]).toBe("Aller au contenu principal");
     expect(en["a11y.skipToContent"]).toBe("Skip to main content");
+  });
+
+  it("traduit facture et placeholders réglages (T-168)", () => {
+    const fr = uiStrings("fr");
+    const en = uiStrings("en");
+    expect(fr["inv.kindInvoice"]).toBe("FACTURE");
+    expect(en["inv.kindInvoice"]).toBe("INVOICE");
+    expect(fr["inv.kindReceipt"]).toMatch(/REÇU/);
+    expect(en["inv.kindReceipt"]).toMatch(/RECEIPT/);
+    expect(fr["settings.phBillingEmail"]).toBe("facturation@exemple.com");
+    expect(en["settings.phBillingEmail"]).toBe("billing@example.com");
   });
 });

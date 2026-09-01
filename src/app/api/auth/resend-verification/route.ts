@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
+import { apiError } from "@/lib/api-error";
 
 /**
  * POST /api/auth/resend-verification (T-137, A3)
@@ -34,7 +35,7 @@ export async function POST() {
   try {
     const user = await getCurrentUser();
     if (!user) {
-      return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+      return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     }
 
     const rl = rateLimit(`verify-resend:user:${user.id}`, {
@@ -43,7 +44,7 @@ export async function POST() {
     });
     if (!rl.ok) {
       return NextResponse.json(
-        { error: "Trop de demandes, réessayez plus tard" },
+        { error: await apiError("Trop de demandes, réessayez plus tard") },
         { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
       );
     }
@@ -78,7 +79,7 @@ export async function POST() {
       console.error("[resend-verification] mail failed:", mailErr);
       // Best-effort : on prévient l'utilisateur que l'envoi n'a pu aboutir.
       return NextResponse.json(
-        { error: "L'envoi de l'email a échoué, réessayez plus tard" },
+        { error: await apiError("L'envoi de l'email a échoué, réessayez plus tard") },
         { status: 502 },
       );
     }
@@ -88,6 +89,6 @@ export async function POST() {
     });
   } catch (error) {
     console.error("resend-verification error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

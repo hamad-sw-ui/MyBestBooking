@@ -6,6 +6,7 @@ import { frenchZodMessage } from "@/lib/http";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
+import { apiError } from "@/lib/api-error";
 
 const roomSchema = z.object({
   propertyId: z.string().uuid(),
@@ -34,7 +35,7 @@ export async function GET(request: NextRequest) {
 
     if (!propertyId) {
       return NextResponse.json(
-        { error: "propertyId est requis" },
+        { error: await apiError("propertyId est requis") },
         { status: 400 }
       );
     }
@@ -48,7 +49,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching rooms:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user || (user.role !== "host" && user.role !== "admin")) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
@@ -76,7 +77,7 @@ export async function POST(request: NextRequest) {
       quantity: data.quantity ?? null,
     });
     if (capacityError) {
-      return NextResponse.json({ error: capacityError }, { status: 400 });
+      return NextResponse.json({ error: await apiError(capacityError) }, { status: 400 });
     }
 
     // Check property ownership
@@ -87,14 +88,14 @@ export async function POST(request: NextRequest) {
 
     if (!property) {
       return NextResponse.json(
-        { error: "Hébergement non trouvé" },
+        { error: await apiError("Hébergement non trouvé") },
         { status: 404 }
       );
     }
 
     if (property.hostId !== user.id && user.role !== "admin") {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 403 }
       );
     }
@@ -114,17 +115,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: frenchZodMessage(error) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 }
       );
     }
     console.error("Error creating room:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }

@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { isUuid } from "@/lib/http";
 import { and, eq } from "drizzle-orm";
+import { apiError } from "@/lib/api-error";
 
 const schema = z.object({ reply: z.string().min(1).max(2000) });
 
@@ -21,11 +22,11 @@ export async function POST(
 ) {
   try {
     const user = await getCurrentUser();
-    if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
     const { id } = await params;
     if (!isUuid(id)) {
-      return NextResponse.json({ error: "Identifiant invalide" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
     const { reply } = schema.parse(await request.json());
 
@@ -36,9 +37,9 @@ export async function POST(
       .where(eq(reviews.id, id))
       .limit(1);
 
-    if (!row) return NextResponse.json({ error: "Avis introuvable" }, { status: 404 });
+    if (!row) return NextResponse.json({ error: await apiError("Avis introuvable") }, { status: 404 });
     if (row.property?.hostId !== user.id && user.role !== "admin") {
-      return NextResponse.json({ error: "Accès refusé" }, { status: 403 });
+      return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
     }
 
     const [updated] = await db
@@ -51,12 +52,12 @@ export async function POST(
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: frenchZodMessage(error) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("review reply error:", error);
-    return NextResponse.json({ error: "Une erreur est survenue" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
 }

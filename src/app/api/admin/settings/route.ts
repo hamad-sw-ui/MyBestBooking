@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
+import { apiError } from "@/lib/api-error";
 import {
   getAllSettings,
   getProviderStatus,
@@ -16,7 +17,7 @@ export async function GET() {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     return NextResponse.json(
-      { error: "Accès admin requis" },
+      { error: await apiError("Accès admin requis") },
       { status: 403 },
     );
   }
@@ -28,7 +29,7 @@ export async function GET() {
   } catch (error) {
     console.error("[admin/settings] GET error:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 },
     );
   }

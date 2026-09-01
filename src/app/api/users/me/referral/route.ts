@@ -4,6 +4,7 @@ import { users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { randomBytes } from "node:crypto";
+import { apiError } from "@/lib/api-error";
 
 /**
  * Génère un code alphanumérique lisible (majuscules + chiffres, sans
@@ -25,7 +26,7 @@ function generateReferralCode(): string {
  */
 export async function GET() {
   const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+  if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   const [row] = await db
     .select({ referralCode: users.referralCode })
     .from(users)
@@ -42,5 +43,5 @@ export async function GET() {
       // collision → retry
     }
   }
-  return NextResponse.json({ error: "Génération échouée" }, { status: 500 });
+  return NextResponse.json({ error: await apiError("Génération échouée") }, { status: 500 });
 }

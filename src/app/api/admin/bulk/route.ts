@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
+import { apiError } from "@/lib/api-error";
 import {
   users,
   properties,
@@ -461,7 +462,7 @@ async function bulkPromotions(action: string, ids: string[]): Promise<Result> {
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
-    return NextResponse.json({ error: "Accès admin requis" }, { status: 403 });
+    return NextResponse.json({ error: await apiError("Accès admin requis") }, { status: 403 });
   }
 
   let data: z.infer<typeof bulkSchema>;
@@ -470,15 +471,15 @@ export async function POST(request: NextRequest) {
   } catch (e) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (e instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (e instanceof z.ZodError) {
       return NextResponse.json(
-        { error: frenchZodMessage(e) },
+        { error: await apiError(frenchZodMessage(e)) },
         { status: 400 },
       );
     }
-    return NextResponse.json({ error: "JSON invalide" }, { status: 400 });
+    return NextResponse.json({ error: await apiError("JSON invalide") }, { status: 400 });
   }
 
   let result: Result;

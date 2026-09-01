@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency } from "@/lib/promotions";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { isMaintenanceActive, maintenanceResponse } from "@/lib/maintenance";
+import { apiError } from "@/lib/api-error";
 
 /**
  * GET /api/promotions/apply?code=SUMMER26&amount=250 (T-016)
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
   });
   if (!rl.ok) {
     return NextResponse.json(
-      { ok: false, error: "Trop de tentatives" },
+      { ok: false, error: await apiError("Trop de tentatives") },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
     );
   }
@@ -38,10 +39,10 @@ export async function GET(request: NextRequest) {
   // en EUR et convertis avant application.
   const currencyRaw = request.nextUrl.searchParams.get("currency");
   const currency = (currencyRaw || "EUR").trim().toUpperCase();
-  if (!code) return NextResponse.json({ ok: false, error: "Code manquant" }, { status: 400 });
+  if (!code) return NextResponse.json({ ok: false, error: await apiError("Code manquant") }, { status: 400 });
   const amount = amountRaw ? parseFloat(amountRaw) : NaN;
   if (!Number.isFinite(amount) || amount <= 0) {
-    return NextResponse.json({ ok: false, error: "Montant invalide" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: await apiError("Montant invalide") }, { status: 400 });
   }
 
   const [promo] = await db
@@ -50,7 +51,7 @@ export async function GET(request: NextRequest) {
     .where(eq(promotions.code, code))
     .limit(1);
   if (!promo) {
-    return NextResponse.json({ ok: false, error: "Code inconnu" }, { status: 404 });
+    return NextResponse.json({ ok: false, error: await apiError("Code inconnu") }, { status: 404 });
   }
 
   const check = isPromoUsable(promo);
@@ -60,7 +61,7 @@ export async function GET(request: NextRequest) {
 
   const result = applyPromoToTotal(normalizePromoForCurrency(promo, currency), amount);
   if ("error" in result) {
-    return NextResponse.json({ ok: false, error: result.error }, { status: 400 });
+    return NextResponse.json({ ok: false, error: await apiError(result.error) }, { status: 400 });
   }
 
   return NextResponse.json({

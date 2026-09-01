@@ -4,6 +4,7 @@ import { db } from "@/db";
 import { users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { rateLimit } from "@/lib/rate-limit";
+import { apiError } from "@/lib/api-error";
 import {
   getPublicUploader,
   MAX_UPLOAD_BYTES,
@@ -26,7 +27,7 @@ import { assertNotMaintenance } from "@/lib/maintenance";
 export async function POST(request: NextRequest) {
   const user = await getCurrentUser();
   if (!user) {
-    return NextResponse.json({ error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
   }
   await assertNotMaintenance(user);
 
@@ -36,7 +37,7 @@ export async function POST(request: NextRequest) {
   });
   if (!rl.ok) {
     return NextResponse.json(
-      { error: "Trop d'uploads, réessayez plus tard" },
+      { error: await apiError("Trop d'uploads, réessayez plus tard") },
       { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
     );
   }
@@ -45,12 +46,12 @@ export async function POST(request: NextRequest) {
   try {
     formData = await request.formData();
   } catch {
-    return NextResponse.json({ error: "Corps invalide (multipart attendu)" }, { status: 400 });
+    return NextResponse.json({ error: await apiError("Corps invalide (multipart attendu)") }, { status: 400 });
   }
 
   const file = formData.get("file");
   if (!file || typeof file === "string") {
-    return NextResponse.json({ error: "Aucun fichier fourni (champ 'file' attendu)" }, { status: 400 });
+    return NextResponse.json({ error: await apiError("Aucun fichier fourni (champ 'file' attendu)") }, { status: 400 });
   }
 
   if (!ALLOWED_UPLOAD_MIMES.has(file.type)) {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
     const realMime = sniffImageMime(buffer);
     if (!realMime || !ALLOWED_UPLOAD_MIMES.has(realMime)) {
       return NextResponse.json(
-        { error: "Le fichier n'est pas une image valide (JPEG, PNG, WebP ou GIF attendu)." },
+        { error: await apiError("Le fichier n'est pas une image valide (JPEG, PNG, WebP ou GIF attendu).") },
         { status: 400 },
       );
     }
@@ -94,6 +95,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (e) {
     console.error("[avatar-upload] failed:", e);
-    return NextResponse.json({ error: "Échec de l'upload" }, { status: 500 });
+    return NextResponse.json({ error: await apiError("Échec de l'upload") }, { status: 500 });
   }
 }

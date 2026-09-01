@@ -7,6 +7,7 @@ import { generateSlug } from "@/lib/utils";
 import { stayNights } from "@/lib/booking-rules";
 import { eq, and, ilike, or, desc, asc, sql, min, count, gte, lte, lt, gt, ne, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
+import { apiError } from "@/lib/api-error";
 
 const propertySchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
@@ -56,7 +57,7 @@ export async function GET(request: NextRequest) {
       const o = Number.parseInt(offsetRaw, 10);
       if (!Number.isFinite(o) || o < 0) {
         return NextResponse.json(
-          { error: "Le paramètre offset doit être un entier positif ou nul" },
+          { error: await apiError("Le paramètre offset doit être un entier positif ou nul") },
           { status: 400 },
         );
       }
@@ -66,7 +67,7 @@ export async function GET(request: NextRequest) {
       const r = Number(minRating);
       if (!Number.isFinite(r) || r < 0 || r > 10) {
         return NextResponse.json(
-          { error: "Le paramètre minRating doit être un nombre entre 0 et 10" },
+          { error: await apiError("Le paramètre minRating doit être un nombre entre 0 et 10") },
           { status: 400 },
         );
       }
@@ -102,7 +103,7 @@ export async function GET(request: NextRequest) {
       const parsed = Number(guests);
       if (!Number.isInteger(parsed) || parsed < 1) {
         return NextResponse.json(
-          { error: "Le paramètre guests doit être un entier positif" },
+          { error: await apiError("Le paramètre guests doit être un entier positif") },
           { status: 400 },
         );
       }
@@ -343,7 +344,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error("Error fetching properties:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
@@ -354,7 +355,7 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user || (user.role !== "host" && user.role !== "admin")) {
       return NextResponse.json(
-        { error: "Non autorisé" },
+        { error: await apiError("Non autorisé") },
         { status: 401 }
       );
     }
@@ -385,17 +386,17 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
-      return NextResponse.json({ error: "Corps de requête invalide ou manquant (JSON attendu)" }, { status: 400 });
+      return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: frenchZodMessage(error) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 }
       );
     }
     console.error("Error creating property:", error);
     return NextResponse.json(
-      { error: "Une erreur est survenue" },
+      { error: await apiError("Une erreur est survenue") },
       { status: 500 }
     );
   }
