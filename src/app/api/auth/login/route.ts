@@ -6,6 +6,7 @@ import { verifyPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
+import { frenchZodMessage } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 
 const loginSchema = z.object({
@@ -115,7 +116,7 @@ export async function POST(request: NextRequest) {
     await createSession(user.id, data.rememberMe === true);
 
     return NextResponse.json({
-      message: "Connexion réussie",
+      message: await apiError("Connexion réussie"),
       user: {
         id: user.id,
         email: user.email,
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: await apiError(error.issues[0].message) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 }
       );
     }

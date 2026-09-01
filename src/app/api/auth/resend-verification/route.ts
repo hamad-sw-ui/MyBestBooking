@@ -58,7 +58,7 @@ export async function POST() {
     // d'état supplémentaire au-delà de ce que l'utilisateur sait de lui-même).
     if (fresh?.emailVerified) {
       return NextResponse.json({
-        message: "Votre email est déjà vérifié.",
+        message: await apiError("Votre email est déjà vérifié."),
       });
     }
 
@@ -85,7 +85,7 @@ export async function POST() {
     }
 
     return NextResponse.json({
-      message: "Un email de vérification vient de vous être envoyé.",
+      message: await apiError("Un email de vérification vient de vous être envoyé."),
     });
   } catch (error) {
     console.error("resend-verification error:", error);

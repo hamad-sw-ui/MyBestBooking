@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
       .delete(sessions)
       .where(and(eq(sessions.userId, user.id), ne(sessions.token, currentToken)));
 
-    return NextResponse.json({ message: "Mot de passe modifié" });
+    return NextResponse.json({ message: await apiError("Mot de passe modifié") });
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {

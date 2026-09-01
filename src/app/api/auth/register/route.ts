@@ -9,6 +9,7 @@ import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { assignReferralCode, resolveReferrerId } from "@/lib/referral";
+import { frenchZodMessage } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 
 const registerSchema = z.object({
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
     await createSession(newUser.id);
 
     return NextResponse.json({
-      message: "Inscription réussie",
+      message: await apiError("Inscription réussie"),
       user: {
         id: newUser.id,
         email: newUser.email,
@@ -124,7 +125,7 @@ export async function POST(request: NextRequest) {
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: await apiError(error.issues[0].message) },
+        { error: await apiError(frenchZodMessage(error)) },
         { status: 400 }
       );
     }

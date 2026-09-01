@@ -44,6 +44,15 @@ describe("localizeApiMessage (T-168 / T-169)", () => {
     expect(localizeApiMessage("Fichier trop volumineux (6.12 MB > 5 MB)", "en")).toBe(
       "File too large (6.12 MB > 5 MB)",
     );
+    expect(localizeApiMessage("Connexion stripe validée", "en")).toBe("stripe connection validated");
+    expect(localizeApiMessage("Transition invalide : pending → completed", "en")).toBe(
+      "Invalid transition: pending → completed",
+    );
+    expect(localizeApiMessage("2 réservation(s) future(s) — impossible de supprimer", "en")).toBe(
+      "2 future booking(s) — cannot delete",
+    );
+    expect(localizeApiMessage("user introuvable", "en")).toBe("user not found");
+    expect(localizeApiMessage("Inscription réussie", "en")).toBe("Sign-up successful");
   });
 
   it("laisse intact un message hors dictionnaire", () => {

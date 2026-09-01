@@ -194,7 +194,7 @@ export async function DELETE(
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(rooms.id, id));
 
-    return NextResponse.json({ message: "Chambre supprimée" });
+    return NextResponse.json({ message: await apiError("Chambre supprimée") });
   } catch (error) {
     console.error("Error deleting room:", error);
     return NextResponse.json(

@@ -200,7 +200,7 @@ export async function POST(request: NextRequest) {
     // Check if data already exists
     const existingUsers = await db.select().from(users).limit(1);
     if (existingUsers.length > 0) {
-      return NextResponse.json({ message: "Données déjà présentes" });
+      return NextResponse.json({ message: await apiError("Données déjà présentes") });
     }
 
     // Create admin user
@@ -502,7 +502,7 @@ export async function POST(request: NextRequest) {
     });
 
     return NextResponse.json({
-      message: "Données de démonstration créées avec succès",
+      message: await apiError("Données de démonstration créées avec succès"),
       users: {
         admin: { email: "admin@mybestbooking.com", password: "Admin123!" },
         host: { email: "host@mybestbooking.com", password: "Host123!" },

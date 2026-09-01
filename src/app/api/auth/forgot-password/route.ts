@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { hashToken, issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
+import { frenchZodMessage } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 
 const schema = z.object({ email: z.string().email() });
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     });
     if (!rl.ok) {
       return NextResponse.json(
-        { message: "Si un compte existe pour cet email, un lien vous a été envoyé." },
+        { message: await apiError("Si un compte existe pour cet email, un lien vous a été envoyé.") },
         { status: 200 },
       );
     }
@@ -57,7 +58,7 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json(
-      { message: "Si un compte existe pour cet email, un lien vous a été envoyé." },
+      { message: await apiError("Si un compte existe pour cet email, un lien vous a été envoyé.") },
       { status: 200 },
     );
   } catch (error) {
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(error.issues[0].message) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("forgot-password error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });

@@ -265,7 +265,7 @@ export async function DELETE(
       .set({ status: "archived", updatedAt: new Date() })
       .where(eq(properties.id, id));
 
-    return NextResponse.json({ message: "Hébergement archivé" });
+    return NextResponse.json({ message: await apiError("Hébergement archivé") });
   } catch (error) {
     console.error("Error deleting property:", error);
     return NextResponse.json(

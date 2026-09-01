@@ -527,5 +527,17 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return NextResponse.json(result);
+  return NextResponse.json(await localizeBulkResult(result));
+}
+
+async function localizeBulkResult(r: Result): Promise<Result> {
+  return {
+    ...r,
+    skipped: await Promise.all(
+      r.skipped.map(async (s) => ({ ...s, reason: await apiError(s.reason) })),
+    ),
+    failed: await Promise.all(
+      r.failed.map(async (s) => ({ ...s, error: await apiError(s.error) })),
+    ),
+  };
 }

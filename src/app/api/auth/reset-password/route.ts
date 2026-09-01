@@ -32,9 +32,9 @@ export async function POST(request: NextRequest) {
     await db.delete(sessions).where(eq(sessions.userId, userId));
     if (claimGuest) {
       await createSession(userId);
-      return NextResponse.json({ message: "Accès activé. Vos réservations sont disponibles." });
+      return NextResponse.json({ message: await apiError("Accès activé. Vos réservations sont disponibles.") });
     }
-    return NextResponse.json({ message: "Mot de passe réinitialisé. Vous pouvez vous connecter." });
+    return NextResponse.json({ message: await apiError("Mot de passe réinitialisé. Vous pouvez vous connecter.") });
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {

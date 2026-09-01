@@ -106,7 +106,7 @@ export async function POST(
     }
     await db.insert(providerTestLogs).values({ provider: rawProvider, actorId: user.id, status: "success", message: "Connexion validée" });
     await recordAudit({ actorId: user.id, actorEmail: user.email, action: AUDIT_ACTIONS.providerConnectionTest, entityType: "provider", entityId: rawProvider, metadata: { result: "success" } });
-    return NextResponse.json({ ok: true, message: `Connexion ${rawProvider} validée` });
+    return NextResponse.json({ ok: true, message: await apiError(`Connexion ${rawProvider} validée`) });
   } catch (error) {
     const rawMessage = error instanceof Error ? error.message : "Échec du test provider";
     const code = /auth|key|credential|401|403/i.test(rawMessage) ? "AUTH_FAILED" : /network|fetch|timeout/i.test(rawMessage) ? "NETWORK_ERROR" : "CONNECTION_FAILED";

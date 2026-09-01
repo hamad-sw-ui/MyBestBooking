@@ -1,7 +1,7 @@
 import type { UiLocale } from "@/lib/ui-strings";
 
 /**
- * T-169 — Traduction des messages d'erreur JSON renvoyés par l'API.
+ * T-170 — Traduction des messages JSON renvoyés par l'API (erreurs + succès + bulk).
  *
  * Les routes conservent le français comme **source** (contrats smoke,
  * `frenchZodMessage`, défaut plateforme). Quand la locale UI est `en`
@@ -209,6 +209,27 @@ export const API_ERROR_EN: Record<string, string> = {
   "La ville est requise": "City is required",
   "Ce type de promotion nécessite un calcul par nuit et n'est pas encore disponible":
     "This promotion type requires a per-night calculation and is not available yet",
+  "Email invalide": "Invalid email",
+  "L'admin ne peut pas s'auto-modifier via bulk": "An admin cannot self-modify via bulk",
+  "user introuvable ou est admin": "user not found or is an admin",
+  "user introuvable": "user not found",
+  "impossible d'anonymize un admin": "cannot anonymize an admin",
+  "property introuvable": "property not found",
+  "review introuvable": "review not found",
+  "room introuvable": "room not found",
+  "promotion introuvable": "promotion not found",
+  "Cette réservation vient déjà d'être modifiée": "This booking has already been modified",
+  "Un voyageur peut uniquement annuler sa réservation": "A guest can only cancel their booking",
+  "Le séjour ne peut être clôturé qu'après la date de départ": "The stay can only be closed after the check-out date",
+  "Transition réservée à un administrateur": "Transition reserved to an administrator",
+  "La tâche système ne peut que clôturer un séjour": "The system task can only complete a stay",
+  "Le séjour n'est pas encore terminé": "The stay is not finished yet",
+  "Impossible de déchiffrer une configuration provider ; vérifiez la clé maître ou restaurez une sauvegarde cohérente":
+    "Unable to decrypt a provider configuration; check the master key or restore a consistent backup",
+  "La configuration web des providers exige CREDENTIALS_ENCRYPTION_KEY côté serveur":
+    "Web provider configuration requires CREDENTIALS_ENCRYPTION_KEY on the server",
+  "La rotation exige CREDENTIALS_ENCRYPTION_KEY et CREDENTIALS_ENCRYPTION_KEY_PREVIOUS côté serveur":
+    "Rotation requires CREDENTIALS_ENCRYPTION_KEY and CREDENTIALS_ENCRYPTION_KEY_PREVIOUS on the server",
 };
 
 const API_ERROR_PREFIXES: Array<[string, string]> = [
@@ -261,6 +282,17 @@ const API_ERROR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
     (m) => `Unsupported currency for wallet application: ${m[1]}`,
   ],
   [/^Action invalide pour (\w+) : (.+)$/, (m) => `Invalid action for ${m[1]}: ${m[2]}`],
+  [/^Transition invalide : (\w+) → (\w+)$/, (m) => `Invalid transition: ${m[1]} → ${m[2]}`],
+  [/^Connexion (\w+) validée$/, (m) => `${m[1]} connection validated`],
+  [
+    /^(\d+) réservation\(s\) future\(s\) — impossible de supprimer$/,
+    (m) => `${m[1]} future booking(s) — cannot delete`,
+  ],
+  [
+    /^promotion déjà utilisée \((.+)× \) — désactivez plutôt$/,
+    (m) => `promotion already used (${m[1]}×) — deactivate instead`,
+  ],
+  [/^(.+) doit encoder exactement 32 octets$/, (m) => `${m[1]} must encode exactly 32 bytes`],
 ];
 
 export function localizeApiMessage(

@@ -1,20 +1,20 @@
 # 🎯 TÂCHE EN COURS
 
-**ID** : T-169
+**ID** : T-170
 
-**Niveau de proportionnalité** : S (additif — `localizeApiMessage` préfixes/regex + wrapping `apiError` restant ; défaut **fr**)
+**Niveau de proportionnalité** : S (additif — JSON `message` + bulk skipped/failed via `apiError` ; défaut **fr**)
 
-**Titre** : i18n — erreurs API interpolées + pays facture + 503 maintenance.
+**Titre** : i18n — succès API, motifs bulk, transitions réservation.
 
 **Statut** : **CORRIGÉ** (2026-09-01)
 
-**Activité** : `localizeApiMessage` exact + préfixes `Code promo : `/`Wallet : ` + motifs (capacité, min-stay, MIME, stock, champ, test, bulk) ; wrap HTTP restant ; facture `countryLabel` ; `maintenanceResponse` async `apiError`. Lib FR inchangée (`booking-rules` / `promotions` / `wallet-currency`). `makeT` inchangé. Stripe `"Invalid signature"` non wrappé.
+**Activité** : wrap HTTP `message` (login, register, forgot/reset/change-password, resend-verif, rooms, properties, seed, provider test) ; `localizeBulkResult` ; dict + regex (transitions, Connexion X validée, skip bulk). `frenchZodMessage` sur login/register/forgot. Lib FR inchangée. Stripe signature non wrappée. `makeT` inchangé.
 
 ## Preuves de clôture
 
 - 🔨 `npx tsc --noEmit` 0
 - 🔍 `i18n:check` **0 candidat**
-- 🧪 `src/lib` vitest **324 passed** / 12 skipped · catalogue **1394** · invoice Maroc/Morocco · préfixes `localizeApiMessage`
+- 🧪 `src/lib` vitest **324 passed** / 12 skipped
 - ❓ smoke HTTP non rejoué — défaut locale **fr**
 
-Rapport : `REPORTS/validation_T-169_2026-09-01.md`.
+Rapport : `REPORTS/validation_T-170_2026-09-01.md`.
