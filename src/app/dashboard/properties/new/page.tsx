@@ -199,7 +199,7 @@ export default function NewPropertyPage() {
           <CardContent className="space-y-4">
             <Input
               label={t("prop.address")}
-              placeholder="ex: 15 Rue de Rivoli"
+              placeholder={t("prop.addressPlaceholder")}
               value={formData.addressLine}
               onChange={(e) => setFormData({ ...formData, addressLine: e.target.value })}
             />
@@ -207,14 +207,14 @@ export default function NewPropertyPage() {
             <div className="grid grid-cols-3 gap-4">
               <Input
                 label={t("prop.city")}
-                placeholder="Paris"
+                placeholder={t("prop.cityPlaceholder")}
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 required
               />
               <Input
                 label={t("prop.postal")}
-                placeholder="75001"
+                placeholder={t("prop.postalPlaceholder")}
                 value={formData.postalCode}
                 onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
               />
@@ -227,6 +227,9 @@ export default function NewPropertyPage() {
 { value: "ES", label: t("prop.country.ES") },
 { value: "IT", label: t("prop.country.IT") },
 { value: "PT", label: t("prop.country.PT") },
+{ value: "DE", label: t("prop.country.DE") },
+{ value: "GB", label: t("prop.country.GB") },
+{ value: "US", label: t("prop.country.US") },
                 ]}
                 value={formData.country}
                 onChange={(e) => setFormData({ ...formData, country: e.target.value })}

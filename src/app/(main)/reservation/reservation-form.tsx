@@ -548,7 +548,7 @@ function ReservationPageInner() {
                           </option>
                         ))}
                       </select>
-                      {selectedRatePlan && <p className="mt-1 text-xs text-gray-500">{t("reservation.policyPrefix").replace("{policy}", selectedRatePlan.cancellationPolicy)}{selectedRatePlan.includesBreakfast ? t("reservation.breakfastIncludedCaps") : ""}</p>}
+                      {selectedRatePlan && <p className="mt-1 text-xs text-gray-500">{t("reservation.policyPrefix").replace("{policy}", cancellationPolicyLabel(selectedRatePlan.cancellationPolicy, t))}{selectedRatePlan.includesBreakfast ? t("reservation.breakfastIncludedCaps") : ""}</p>}
                     </div>
                   )}
                 </CardContent>
@@ -619,6 +619,7 @@ function ReservationPageInner() {
                         { value: "TN", label: t("prop.country.TN") },
                         { value: "ES", label: t("prop.country.ES") },
                         { value: "IT", label: t("prop.country.IT") },
+                        { value: "PT", label: t("prop.country.PT") },
                         { value: "DE", label: t("prop.country.DE") },
                         { value: "GB", label: t("prop.country.GB") },
                         { value: "US", label: t("prop.country.US") },

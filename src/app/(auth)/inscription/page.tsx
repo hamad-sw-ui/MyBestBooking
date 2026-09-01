@@ -127,7 +127,7 @@ export default function RegisterPage() {
           <Input
             type="text"
             label={t("auth.firstName")}
-            placeholder="Jean"
+            placeholder={t("auth.firstNamePlaceholder")}
             value={formData.firstName}
             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
             required
@@ -135,7 +135,7 @@ export default function RegisterPage() {
           <Input
             type="text"
             label={t("auth.lastName")}
-            placeholder="Dupont"
+            placeholder={t("auth.lastNamePlaceholder")}
             value={formData.lastName}
             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
             required

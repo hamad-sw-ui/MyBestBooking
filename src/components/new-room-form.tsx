@@ -137,10 +137,10 @@ export function NewRoomForm({ properties }: Props) {
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
               >
 <option value="single">{t("room.type.single")}</option>
-                <option value="double">Double</option>
-                <option value="twin">Twin</option>
-                <option value="suite">Suite</option>
-                <option value="studio">Studio</option>
+                <option value="double">{t("room.type.double")}</option>
+                <option value="twin">{t("room.type.twin")}</option>
+                <option value="suite">{t("room.type.suite")}</option>
+                <option value="studio">{t("room.type.studio")}</option>
 <option value="family">{t("room.type.family")}</option>
 <option value="dormitory">{t("room.type.dormitory")}</option>
               </select>

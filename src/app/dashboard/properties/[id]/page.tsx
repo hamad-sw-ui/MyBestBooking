@@ -427,6 +427,7 @@ export default function EditPropertyPage() {
                     { value: "PT", label: t("prop.country.PT") },
                     { value: "DE", label: t("prop.country.DE") },
                     { value: "GB", label: t("prop.country.GB") },
+                    { value: "US", label: t("prop.country.US") },
                   ]}
                   value={property.country}
                   onChange={(e) => setProperty({ ...property, country: e.target.value })}
@@ -488,7 +489,7 @@ export default function EditPropertyPage() {
                     <span className="text-gray-500">%</span>
                   </div>
                   <p className="text-xs text-gray-500 mt-1">
-                    {t("prop.commissionHint")} total − commission.
+                    {t("prop.commissionHint")}
                   </p>
                 </div>
               </CardContent>

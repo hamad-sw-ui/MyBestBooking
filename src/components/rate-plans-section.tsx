@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
 import { formatPrice } from "@/lib/utils";
+import { cancellationPolicyLabel } from "@/lib/cancellation-label";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
+import type { UiStringKey } from "@/lib/ui-strings";
 
 interface RatePlan {
   id: string;
@@ -35,6 +37,16 @@ const EMPTY_FORM: RatePlanForm = {
   cancellationPolicy: "flexible",
   cancellationFreeDays: "0",
 };
+
+function ratePlanTypeLabel(type: string, t: (key: UiStringKey) => string): string {
+  switch (type) {
+    case "flexible": return t("settings.policyFlexible");
+    case "non_refundable": return t("settings.policyNonRefundable");
+    case "early_bird": return t("rate.earlyBird");
+    case "long_stay": return t("rate.longStay");
+    default: return type;
+  }
+}
 
 function formFor(plan: RatePlan): RatePlanForm {
   return {
@@ -112,7 +124,7 @@ export function RatePlansSection({ roomId, basePrice, initialRatePlans, currency
     <section className="mt-8 border border-gray-200 rounded-xl p-5 bg-white">
 <h2 className="text-lg font-semibold text-gray-900">{t("rate.title")}</h2>
       <p className="text-sm text-gray-600 mt-1">{t("rate.body")}</p>
-      {plans.length > 0 && <ul className="mt-4 divide-y divide-gray-100">{plans.map((plan) => <li key={plan.id} className="py-3 text-sm flex flex-wrap items-center justify-between gap-2"><span><strong>{plan.name}</strong> · {plan.type} · -{plan.discountPercentage ?? "0"}% · {plan.cancellationPolicy}{plan.includesBreakfast ? t("rate.breakfastIncl") : ""} {(plan.cancellationFreeDays ?? 0) > 0 ? t("rate.freeCancelDays").replace("{n}", String(plan.cancellationFreeDays)) : ""} {!plan.isActive && t("rate.archived")}</span><span className="flex gap-1"><Button size="sm" variant="ghost" disabled={busy} onClick={() => { setEditingId(plan.id); setForm(formFor(plan)); setError(null); }}>{t("rate.edit")}</Button><Button size="sm" variant="ghost" disabled={busy} onClick={() => setActive(plan.id, !plan.isActive)}>{plan.isActive ? t("rate.archive") : t("rate.reactivate")}</Button></span></li>)}</ul>}
+      {plans.length > 0 && <ul className="mt-4 divide-y divide-gray-100">{plans.map((plan) => <li key={plan.id} className="py-3 text-sm flex flex-wrap items-center justify-between gap-2"><span><strong>{plan.name}</strong> · {ratePlanTypeLabel(plan.type, t)} · -{plan.discountPercentage ?? "0"}% · {cancellationPolicyLabel(plan.cancellationPolicy, t)}{plan.includesBreakfast ? t("rate.breakfastIncl") : ""} {(plan.cancellationFreeDays ?? 0) > 0 ? t("rate.freeCancelDays").replace("{n}", String(plan.cancellationFreeDays)) : ""} {!plan.isActive && t("rate.archived")}</span><span className="flex gap-1"><Button size="sm" variant="ghost" disabled={busy} onClick={() => { setEditingId(plan.id); setForm(formFor(plan)); setError(null); }}>{t("rate.edit")}</Button><Button size="sm" variant="ghost" disabled={busy} onClick={() => setActive(plan.id, !plan.isActive)}>{plan.isActive ? t("rate.archive") : t("rate.reactivate")}</Button></span></li>)}</ul>}
       <div className="mt-5 border-t pt-4">
         <h3 className="font-medium text-gray-900">{editingId ? t("rate.editPlan") : t("rate.addPlan")}</h3>
         <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
