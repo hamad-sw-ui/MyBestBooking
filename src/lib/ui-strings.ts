@@ -1378,6 +1378,10 @@ const FR = {
   "prop.addressPlaceholder": "ex. 15 Rue de Rivoli",
   "prop.cityPlaceholder": "Paris",
   "prop.postalPlaceholder": "75001",
+  "account.langEn": "Anglais",
+  "account.phonePlaceholder": "+33 6 00 00 00 00",
+  "promo.typeLabel": "Type de réduction",
+  "promo.codePlaceholder": "Ex. : SUMMER2026",
 } as const;
 
 export type UiStringKey = keyof typeof FR;
@@ -2735,6 +2739,10 @@ const EN: Record<UiStringKey, string> = {
   "prop.addressPlaceholder": "e.g. 15 Rue de Rivoli",
   "prop.cityPlaceholder": "Paris",
   "prop.postalPlaceholder": "75001",
+  "account.langEn": "English",
+  "account.phonePlaceholder": "+1 202 555 0100",
+  "promo.typeLabel": "Discount type",
+  "promo.codePlaceholder": "e.g. SUMMER2026",
 };
 
 export function isUiLocale(locale: string | null | undefined): locale is UiLocale {

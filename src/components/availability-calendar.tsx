@@ -226,7 +226,7 @@ export function AvailabilityCalendar({
               checked={batch.stopSell}
               onChange={(e) => setBatch((b) => ({ ...b, stopSell: e.target.checked }))}
             />
-            Stop-sell
+            {t("cal.stopSell")}
           </label>
           <button
             type="button" onClick={applyBatch} disabled={loading}

@@ -85,7 +85,7 @@ export function PromotionForm() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label htmlFor="promo-code" className="block text-sm font-medium text-gray-700 mb-1">
-            Code
+            {t("promo.codeLabel")}
           </label>
           <input
             id="promo-code"
@@ -94,7 +94,7 @@ export function PromotionForm() {
             onChange={(e) => set("code", e.target.value.toUpperCase())}
             pattern="[A-Z0-9_-]{3,50}"
             className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-            placeholder="SUMMER2026"
+            placeholder={t("promo.codePlaceholder")}
           />
         </div>
         <div>
@@ -112,7 +112,7 @@ placeholder={t("promo.namePlaceholder")}
         </div>
         <div>
           <label htmlFor="promo-type" className="block text-sm font-medium text-gray-700 mb-1">
-            Type
+            {t("promo.typeLabel")}
           </label>
           <select
             id="promo-type"

@@ -300,7 +300,7 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                             checked={selected.has(booking.id)}
                             onChange={() => toggle(booking.id)}
                             disabled={!canCancel}
-                            title={!canCancel ? t("bulk.statusNotCancellable").replace("{status}", booking.status) : undefined}
+                            title={!canCancel ? t("bulk.statusNotCancellable").replace("{status}", statusLabels[booking.status] ?? booking.status) : undefined}
                             className="w-4 h-4 rounded border-gray-300 text-[#1B3A6B] focus:ring-[#1B3A6B] disabled:opacity-30"
                           />
                         </td>

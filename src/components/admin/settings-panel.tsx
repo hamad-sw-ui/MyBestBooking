@@ -131,7 +131,7 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
               onChange={(e) => setV({ ...v, defaultLanguage: e.target.value as typeof v.defaultLanguage })}
             >
               <option value="fr">🇫🇷 {t("account.langFr")}</option>
-              <option value="en">🇬🇧 English</option>
+              <option value="en">🇬🇧 {t("account.langEn")}</option>
               {/* T-145 : l'arabe n'est pas une locale UI supportée (UiLocale
                   = "fr" | "en") ; le proposer faisait retomber l'affichage en
                   français. Retiré jusqu'à une vraie traduction. */}

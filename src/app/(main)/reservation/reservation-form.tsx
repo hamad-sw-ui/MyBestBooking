@@ -606,7 +606,7 @@ function ReservationPageInner() {
                     label={t("reservation.phone")}
                     value={formData.guestPhone}
                     onChange={(e) => setFormData({ ...formData, guestPhone: e.target.value })}
-                    placeholder="+33 6 00 00 00 00"
+                    placeholder={t("account.phonePlaceholder")}
                     readOnly={isAuthed}
                     disabled={isAuthed}
                   />

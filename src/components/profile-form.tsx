@@ -128,7 +128,7 @@ export function ProfileForm({ initial }: Props) {
         </div>
         <div>
           <label htmlFor="pf-phone" className="block text-sm font-medium text-gray-700 mb-1">{t("account.phone")}</label>
-          <input id="pf-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder="+33 6 00 00 00 00" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
+          <input id="pf-phone" type="tel" value={form.phone} onChange={(e) => set("phone", e.target.value)} placeholder={t("account.phonePlaceholder")} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
         </div>
         <div>
           <label htmlFor="pf-country" className="block text-sm font-medium text-gray-700 mb-1">{t("account.country")}</label>
@@ -159,7 +159,7 @@ export function ProfileForm({ initial }: Props) {
           <label htmlFor="pf-lang" className="block text-sm font-medium text-gray-700 mb-1">{t("account.language")}</label>
           <select id="pf-lang" value={form.language} onChange={(e) => set("language", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]">
             <option value="fr">{t("account.langFr")}</option>
-            <option value="en">English</option>
+            <option value="en">{t("account.langEn")}</option>
           </select>
           {/* T-132/T-145 : seuls le français et l'anglais sont des langues
               d'interface traduites (UiLocale = fr|en). */}

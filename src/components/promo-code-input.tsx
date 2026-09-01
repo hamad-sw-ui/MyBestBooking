@@ -103,7 +103,7 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
             value={code}
             onChange={(e) => setCode(e.target.value.toUpperCase())}
             className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-            placeholder="SUMMER2026"
+            placeholder={t("promo.codePlaceholder")}
           />
         </div>
         {error && <p className="text-xs text-red-600 mt-1">{error}</p>}

@@ -187,7 +187,7 @@ export default function RegisterPage() {
         <Input
           type="text"
           label={t("auth.referralOptional")}
-          placeholder="Ex : 4WHABQ4M"
+          placeholder={t("auth.referralPlaceholder")}
           icon={<Gift className="w-5 h-5" />}
           value={referralCode}
           onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
