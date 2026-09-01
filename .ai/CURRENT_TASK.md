@@ -6,17 +6,15 @@
 
 **Titre** : i18n vague 3 — restes FR en dur (auth → dashboard → widgets).
 
-**Statut** : **EN COURS** (inspection). 🔨 `npx tsc --noEmit` 0. 🧪 ui-strings 4/4 (1304 FR=EN). 🔍 `i18n:check` **0 candidat**. ❓ SSR cookie `en` non rejoué.
+**Statut** : **CORRIGÉ (VALIDÉ)** (2026-09-01)
 
-**Activité** : extraction vers `ui-strings.ts` + `useT` / `makeT`. Interpolation `.replace` / `.replaceAll` (ne pas changer `makeT`).
+**Activité** : extraction vers `ui-strings.ts` + `useT` / `makeT`. Interpolation `.replace` / `.replaceAll` (ne pas changer `makeT`). SSR cookie `en` via `getServerLocale` + proxy.
 
-## Branché
+## Preuves de clôture
 
-- Auth, compte, messages, chrome dashboard
-- settings-panel, bulk, analytics/billing, bookings `[id]`, properties new/`[id]`, rate-plans, calendrier
-- Widgets restants du garde-fou : new-room, room-edit, promo-form, booking-row-actions, review-moderate, user-suspend, stripe-payment, host-reply, wishlists, price-alert, property-card, submit-button, bestrewards-status, attachments, descriptions
-- Vague **sans accent** : onglets/édition propriété, managers bulk (rooms/properties/reviews/promotions), rooms/new + calendrier, promotions/new, messages dashboard `[id]`, fiche publique politiques, mes-favoris, alertes prix, code promo, toast, validate-actions, Nom/Retour réservation
+- 🔨 `npx tsc --noEmit` 0
+- 🔍 `i18n:check` **0 candidat**
+- 🧪 catalogue **1354** FR=EN · proxy cookie RFC + historique
+- ▶️ curl cookie `mybb-ui-language=en` : `html lang=en`, « Book better. », Login, Display currency ; défaut FR intact
 
-## Restes possibles
-
-Autres libellés **sans accent** encore en dur (non vus par le garde-fou) : pays (France/Maroc…), « No-show », quelques lignes du tunnel (frais, reprise paiement). Pas de preuve runtime EN sur cookie.
+Rapport : `REPORTS/validation_T-167_2026-09-01.md`.

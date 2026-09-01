@@ -42,13 +42,13 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **i18n UI partielle (T-167).** Le garde-fou `i18n:check` (accents FR) est
-  à **0 candidat** sur `(main)`/`(auth)`/`dashboard`/`src/components`.
-  Une vague **sans accent** a branché édition propriété, bulk, favoris,
-  politiques fiche, promo/toast. Restent possibles : noms de pays, « No-show »,
-  quelques lignes du tunnel. Le SSR cookie `en` n'a pas été rejoué ici.
-  Pages légales / centre d'aide déjà bilingues. Le sélecteur FR/EN (T-152)
-  n'agit que via `useT`/`makeT`.
+- **i18n UI (T-167 VALIDÉ).** Catalogue **1354** clés FR=EN ; `i18n:check`
+  **0 candidat** ; SSR cookie `en` prouvé (`html lang=en`, navbar/home/auth/
+  recherche). Restent **hors périmètre** (pas des bugs) : placeholders
+  d’exemple du panneau admin (`settings-panel`), document facture/reçu HTML,
+  messages JSON d’API, termes métier identiques FR/EN (« No-show »). Pages
+  légales et centre d’aide déjà bilingues (T-162/T-158). Le sélecteur FR/EN
+  n’agit que via `useT`/`makeT`.
 - **Devise multi : tunnel et totaux gérés, affichages secondaires non.** La
   table `bookings.currency` est multi-devises : le tunnel de réservation
   (T-152) et les totaux analytics/billing (T-152, `sumByCurrency` — jamais
@@ -73,10 +73,9 @@ l'outbox). Restent assumées :
   est accepté/persisté à l'inscription et au checkout invité → l'e-mail de
   vérification et la réclamation de compte sont localisés fr/en pour le
   destinataire (défaut fr). **T-152** ajoute le sélecteur FR/EN du header
-  (compte + anonyme) et `<html lang>` dynamique. Reste : **couverture i18n
-  partielle** (~22/113 composants traduits ; le reste en français dur) —
-  voir `REPORTS/audit_fonctionnel_profond24_2026-08-30.md` finding D et
-  `REPORTS/opportunites_T-152_2026-08-30.md`.
+  (compte + anonyme) et `<html lang>` dynamique. **T-167** clôture la vague 3
+  UI (`useT`/`makeT`, 1354 clés, SSR cookie `en`). Restent hors i18n UI :
+  corps e-mails admin et JSON API.
 - **Corps éditables admin non traduits.** Les blocs `emailTemplates`
   personnalisés par l'admin gardent la langue de rédaction admin (compromis
   T-025) ; la localisation fr/en s'applique aux contenus plateforme

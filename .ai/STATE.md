@@ -3,15 +3,10 @@
 ## 📌 Identification
 
 - **Projet** : MyBestBooking
-- **Branche actuelle** : `arena/01a052ed-mybestbooking`
-- **HEAD de base** : `99b4c7f` (T-151 — T-149 sur la branche sœur
-  `arena/01a042cf-mybestbooking` : `304e10e` + `2d8c885`).
-- **PR ouverte** : historique (PR #2) — session T-153 en cours sur
-  `arena/01a052ed-mybestbooking` (suivi des commits de cette branche).
-- **HEAD Git** : **`bc41fa7`** — session test intégral complet (2026-08-31)
-  close : `0fb18fc` = correctif des 3 échecs sims (smoke/surface/paranoid) +
-  lint `property-header-actions`, `bc41fa7` = trace `.ai/`. L'audit n°30
-  (T-160→T-166) reste implémenté/validé (base `52911fa`). Le workflow
+- **Branche actuelle** : `arena/01a05736-mybestbooking`
+- **HEAD Git** : à mettre à jour en fin de session (T-167 **CORRIGÉ
+  (VALIDÉ)** — i18n vague 3, 1354 clés, SSR cookie `en` prouvé). Base
+  code i18n `0b96de2` + tests/docs de clôture. Le workflow
   `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces push car le
   jeton GitHub App n'a pas la permission `workflows`.
 - **Version Framework** : AI-DOS 3.0.1

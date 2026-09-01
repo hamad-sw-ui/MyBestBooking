@@ -86,6 +86,34 @@ describe("tampon locale SSR (T-167)", () => {
     const res = await proxy(makeRequest("/recherche"));
     expect(res.headers.get("location")).toBeNull();
   });
+
+  it("laisse passer le cookie RFC mybb-ui-language=en sans rediriger /", async () => {
+    const { proxy } = await import("./proxy");
+    const req = new NextRequest("http://localhost:3000/", {
+      headers: { cookie: "mybb-ui-language=en" },
+    });
+    expect(req.cookies.get("mybb-ui-language")?.value).toBe("en");
+    const res = await proxy(req);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("laisse passer le cookie historique mybb:ui-language=en sur /recherche", async () => {
+    const { proxy } = await import("./proxy");
+    const req = new NextRequest("http://localhost:3000/recherche", {
+      headers: { cookie: "mybb:ui-language=en" },
+    });
+    expect(req.cookies.get("mybb:ui-language")?.value).toBe("en");
+    const res = await proxy(req);
+    expect(res.headers.get("location")).toBeNull();
+  });
+
+  it("matche les pages publiques pour tamponner la locale", async () => {
+    const { config } = await import("./proxy");
+    const matcher = config.matcher.join(" ");
+    for (const path of ["/", "/recherche", "/hebergement/:path*", "/reservation", "/bestrewards", "/aide"]) {
+      expect(matcher).toContain(path);
+    }
+  });
 });
 
 describe("garde de rôle dashboard (T-123 / G2)", () => {

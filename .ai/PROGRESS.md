@@ -7,6 +7,22 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-09-01 — T-167 clôturée (VALIDÉ)
+
+- **Demande** : clôturer T-167 méthodiquement, sans régression.
+- 🔍 Audit restes in-scope : seuls hors-périmètre = placeholder
+  `settings-panel` (« 12 rue du Plateau… »), facture HTML, JSON API ;
+  pays via `countryLabel` ; « No-show » identique FR/EN (métier).
+- 🔨 Tests additifs : proxy cookie RFC + historique + matcher public ;
+  `ui-strings` 1354 clés + restes langue/pays/auth/hero. `makeT` inchangé.
+- ▶️ SSR cookie `en` (sans `?lang=`) : `/` `lang=en` Book better /
+  Accommodations / Log in ; `/connexion` Login ; `/recherche` cookie
+  historique Display currency ; `/?lang=en` Set-Cookie dual ; défaut FR
+  intact.
+- 🔨 tsc **0** · 🔍 i18n:check **0** · 🧪 ui-strings **5/5** · proxy **22/22**
+  · vitest **419 passed** (1 échec T-154d seed BestRewards 15≠17, hors i18n).
+- T-167 **CORRIGÉ (VALIDÉ)**.
+
 ## Session 2026-08-31 — T-167 libellés sans accent (édition / bulk / favoris)
 
 - **Demande** : aller encore plus loin après garde-fou = 0 (accents).

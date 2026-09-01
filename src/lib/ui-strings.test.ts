@@ -27,5 +27,21 @@ describe("uiStrings (T-132)", () => {
     const fr = uiStrings("fr");
     const en = uiStrings("en");
     expect(Object.keys(fr).sort()).toEqual(Object.keys(en).sort());
+    expect(Object.keys(fr)).toHaveLength(1354);
+  });
+
+  it("traduit les restes T-167 (langue, pays, auth, hero)", () => {
+    const fr = uiStrings("fr");
+    const en = uiStrings("en");
+    expect(fr["account.langEn"]).toBe("Anglais");
+    expect(en["account.langEn"]).toBe("English");
+    expect(fr["prop.country.MA"]).toBe("Maroc");
+    expect(en["prop.country.MA"]).toBe("Morocco");
+    expect(fr["auth.login"]).toBe("Connexion");
+    expect(en["auth.login"]).toBe("Login");
+    expect(fr["home.heroTitle1"]).toBe("Réservez mieux.");
+    expect(en["home.heroTitle1"]).toBe("Book better.");
+    expect(fr["a11y.skipToContent"]).toBe("Aller au contenu principal");
+    expect(en["a11y.skipToContent"]).toBe("Skip to main content");
   });
 });

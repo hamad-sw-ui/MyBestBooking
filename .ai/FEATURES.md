@@ -207,7 +207,7 @@ modification de code.
 
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
-| Chaînes UI | ✅ | i18n incrémentale via `makeT`/`ui-strings` (fr/en) : `language` persistant sur le compte, sélecteur FR/EN dans le header (T-152), `<html lang>` dynamique ; composants restants en français dur = limite assumée (22/113 fichiers utilisent `makeT`/`useDisplayPreferences`) | T-025, T-029, T-132, T-149, T-152 |
+| Chaînes UI | ✅ | Catalogue `ui-strings` **1354** clés FR=EN + `useT`/`makeT` (T-167) : auth → dashboard → widgets ; sélecteur FR/EN (T-152) ; `<html lang>` + cookie/header SSR (`getServerLocale`, proxy public) ; garde-fou `i18n:check` 0 candidat. Hors périmètre : placeholders admin, PDF facture, JSON API | T-025, T-029, T-132, T-149, T-152, T-158, T-162, T-167 |
 | Support EN via `descriptionEn` | ✅ | `src/lib/i18n.ts` `pickLocalized(row, {description:"descriptionEn"}, "en")` (T-029). 12 tests unitaires | T-029 |
 | Bibliothèque i18n | ✅ | Helper maison `src/lib/i18n.ts` (léger, sans dep). `next-intl` non nécessaire pour V1 — reste 🎯 si besoins UI dépassent (T-029) | T-029 |
 | Devise dynamique | ✅ | `convertAmount(amount, from, to)` + `formatMoney(amount, currency, locale)` (T-029). Table de taux figée V1 (EUR/USD/GBP/CHF/MAD/XAF). 8 tests unitaires | T-029 |
