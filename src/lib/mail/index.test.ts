@@ -18,6 +18,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ConsoleMailer, templates, stripHtml, _resetMailer, getMailer } from "./index";
 import { DEFAULTS } from "@/lib/settings";
+import { mailStrings } from "./strings";
 
 describe("ConsoleMailer (T-013, §13.5)", () => {
   let tmp: string;
@@ -370,6 +371,106 @@ describe("templates (T-013 + T-025)", () => {
     expect(t.html).not.toContain("<img src=x onerror=alert(1)>");
     expect(t.html).toContain("&lt;img");
     expect(t.html).not.toContain("<b>r</b>");
+  });
+
+  it("T-171 : copies FR des gabarits éditables = DEFAULTS (détection custom)", () => {
+    const s = mailStrings("fr");
+    const d = DEFAULTS.emailTemplates;
+    expect(s.verifySubject).toBe(d.emailVerification.subject);
+    expect(s.verifyBody).toBe(d.emailVerification.body);
+    expect(s.resetSubject).toBe(d.passwordReset.subject);
+    expect(s.resetBody).toBe(d.passwordReset.body);
+    expect(s.welcomeSubject).toBe(d.welcomeEmail.subject);
+    expect(s.welcomeBody).toBe(d.welcomeEmail.body);
+    expect(s.bookingConfirmSubject).toBe(d.bookingConfirmation.subject);
+    expect(s.bookingConfirmBody).toBe(d.bookingConfirmation.body);
+    expect(s.hostNotifSubject).toBe(d.bookingHostNotification.subject);
+    expect(s.hostNotifBody).toBe(d.bookingHostNotification.body);
+    expect(s.cancelSubject).toBe(d.bookingCancellation.subject);
+    expect(s.cancelBody).toBe(d.bookingCancellation.body);
+    expect(s.reminderSubject).toBe(d.bookingReminder.subject);
+    expect(s.reminderBody).toBe(d.bookingReminder.body);
+    expect(s.reviewSubject).toBe(d.reviewRequest.subject);
+    expect(s.reviewBody).toBe(d.reviewRequest.body);
+  });
+
+  it("T-171 : DEFAULTS non custom → corps/sujet EN selon le destinataire", async () => {
+    const verify = await templates.emailVerification({
+      firstName: "John", url: "https://x/verify", language: "en",
+    });
+    expect(verify.subject).toBe("Verify your email — MyBestBooking");
+    expect(verify.text).toContain("Thanks for creating");
+    expect(verify.text).not.toContain("Bienvenue");
+    expect(verify.text).not.toContain("Merci d'avoir créé");
+
+    const reset = await templates.passwordReset({
+      firstName: "John", url: "https://x/reset", language: "en",
+    });
+    expect(reset.subject).toMatch(/Reset your password/);
+    expect(reset.text).toMatch(/1 hour/);
+    expect(reset.text).not.toContain("1 heure");
+
+    const welcome = await templates.welcomeEmail({
+      firstName: "John", url: "https://x/dashboard", language: "en",
+    });
+    expect(welcome.subject).toMatch(/Welcome to MyBestBooking/);
+    expect(welcome.text).not.toContain("Bonjour");
+    expect(welcome.text).toContain("Hi John");
+
+    const confirm = await templates.bookingConfirmation({
+      firstName: "John", bookingReference: "MBB-EN", propertyName: "Hotel X",
+      city: "Paris", checkIn: "2026-09-01", checkOut: "2026-09-03",
+      total: "200.00", currency: "EUR", language: "en",
+    });
+    expect(confirm.subject).toBe("Booking confirmed MBB-EN");
+    expect(confirm.text).toContain("Your booking is confirmed");
+    expect(confirm.text).not.toContain("Votre réservation est confirmée");
+
+    const host = await templates.bookingHostNotification({
+      hostFirstName: "Paul", bookingReference: "MBB-HOST", propertyName: "Villa X",
+      guestName: "Marie D.", checkIn: "2026-09-01", checkOut: "2026-09-05", language: "en",
+    });
+    expect(host.subject).toBe("New booking MBB-HOST");
+    expect(host.text).toContain("A new booking has just been confirmed");
+    expect(host.text).not.toContain("Une nouvelle réservation");
+
+    const cancel = await templates.bookingCancellation({
+      firstName: "John", bookingReference: "MBB-C", propertyName: "Hotel X",
+      cancellationFee: "10.00", currency: "EUR", language: "en",
+    });
+    expect(cancel.subject).toBe("Booking cancelled MBB-C");
+    expect(cancel.text).toContain("Cancellation fee applied");
+    expect(cancel.text).not.toContain("Frais d'annulation");
+
+    const reminder = await templates.bookingReminder({
+      firstName: "John", bookingReference: "MBB-REM", propertyName: "Hotel Y",
+      city: "Douala", checkIn: "2026-09-10", checkOut: "2026-09-13",
+      daysLabel: "Your arrival is in 3 days", url: "https://x/bookings", language: "en",
+    });
+    expect(reminder.subject).toBe("Your stay at Hotel Y is coming up (2026-09-10)");
+    expect(reminder.text).toContain("Find booking MBB-REM");
+    expect(reminder.text).not.toContain("Retrouvez votre réservation");
+
+    const review = await templates.reviewRequest({
+      firstName: "John", propertyName: "Hotel Z", bookingReference: "MBB-REV",
+      url: "https://x/review", language: "en",
+    });
+    expect(review.subject).toBe("How was your stay at Hotel Z?");
+    expect(review.text).toContain("Your review helps other travellers");
+    expect(review.text).not.toContain("Votre avis aide");
+  });
+
+  it("T-171 : personnalisation admin d'un gabarit n'est pas auto-traduite", async () => {
+    settingsMock.getSetting.mockResolvedValueOnce({
+      ...DEFAULTS.emailTemplates,
+      emailVerification: { subject: "Perso vérif {firstName}", body: "Corps FR perso {firstName}" },
+    });
+    const t = await templates.emailVerification({
+      firstName: "John", url: "https://x/verify", language: "en",
+    });
+    expect(t.subject).toBe("Perso vérif John");
+    expect(t.text).toContain("Corps FR perso John");
+    expect(t.html).toContain("Verify my email");
   });
 });
 

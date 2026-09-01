@@ -8,10 +8,10 @@
  * Périmètre : ces chaînes couvrent les éléments que la plateforme maîtrise
  * (logo/slogan, boutons d'action, en-têtes des tableaux récapitulatifs,
  * mentions légales et gabarits entièrement gérés par la plateforme comme
- * l'alerte de prix ou l'activation de compte invité). Les *corps de message*
- * éditables par l'admin (`app_settings.emailTemplates`) restent dans la
- * langue de rédaction choisie par l'admin (français par défaut) : c'est un
- * contenu éditorial qui n'est pas traduit automatiquement.
+ * l'alerte de prix ou l'activation de compte invité). Les *corps* des
+ * gabarits admin (`app_settings.emailTemplates`) : si l'admin n'a pas
+ * personnalisé le bloc (égal aux DEFAULTS FR), on envoie la version
+ * localisée ; une rédaction custom reste telle quelle.
  *
  * Comme l'interface (voir `UiLocale` dans `ui-strings.ts`), seuls le
  * français et l'anglais sont traduits ; toute autre langue (`ar`…) retombe
@@ -63,6 +63,22 @@ interface MailStrings {
   operatorCancelAdminSubject: string;
   operatorCancelAdminBody: string;
   lblFullRefund: string;
+  verifySubject: string;
+  verifyBody: string;
+  resetSubject: string;
+  resetBody: string;
+  welcomeSubject: string;
+  welcomeBody: string;
+  bookingConfirmSubject: string;
+  bookingConfirmBody: string;
+  hostNotifSubject: string;
+  hostNotifBody: string;
+  cancelSubject: string;
+  cancelBody: string;
+  reminderSubject: string;
+  reminderBody: string;
+  reviewSubject: string;
+  reviewBody: string;
 }
 
 const FR: MailStrings = {
@@ -114,6 +130,45 @@ const FR: MailStrings = {
     "Votre réservation {bookingReference} chez {propertyName} a été annulée par l'équipe MyBestBooking. " +
     "Le montant de {refundAmount} {currency} vous sera remboursé intégralement.",
   lblFullRefund: "Remboursement intégral",
+  verifySubject: "Vérifiez votre email — MyBestBooking",
+  verifyBody:
+    "Bienvenue {firstName} 👋\n\n" +
+    "Merci d'avoir créé votre compte MyBestBooking. Il ne reste qu'à confirmer votre adresse email pour commencer à réserver.\n\n" +
+    "Ce lien expire dans 24 heures.",
+  resetSubject: "Réinitialiser votre mot de passe — MyBestBooking",
+  resetBody:
+    "Bonjour {firstName},\n\n" +
+    "Vous avez demandé à réinitialiser votre mot de passe.\n\n" +
+    "Ce lien expire dans 1 heure. Si vous n'avez pas fait cette demande, ignorez cet email.",
+  welcomeSubject: "Bienvenue sur MyBestBooking 🎉",
+  welcomeBody:
+    "Bonjour {firstName} 👋\n\n" +
+    "Votre adresse email est vérifiée : votre compte MyBestBooking est prêt.\n\n" +
+    "Recherchez un hébergement, suivez vos coups de cœur et retrouvez vos réservations depuis votre tableau de bord. Bonnes réservations !",
+  bookingConfirmSubject: "Réservation confirmée {bookingReference}",
+  bookingConfirmBody:
+    "Bonjour {firstName},\n\n" +
+    "Votre réservation est confirmée. Retrouvez le récapitulatif ci-dessous.\n\n" +
+    "Bon voyage !",
+  hostNotifSubject: "Nouvelle réservation {bookingReference}",
+  hostNotifBody:
+    "Bonjour {hostFirstName},\n\n" +
+    "Une nouvelle réservation vient d'être confirmée sur votre hébergement.",
+  cancelSubject: "Réservation annulée {bookingReference}",
+  cancelBody:
+    "Bonjour {firstName},\n\n" +
+    "Votre réservation {bookingReference} pour {propertyName} a été annulée.\n\n" +
+    "Frais d'annulation appliqués : {cancellationFee} {currency}.",
+  reminderSubject: "Votre séjour à {propertyName} approche ({checkIn})",
+  reminderBody:
+    "Bonjour {firstName},\n\n" +
+    "Votre séjour pour {propertyName}, {city} commence le {checkIn} (départ le {checkOut}).\n\n" +
+    "{daysLabel}. Retrouvez votre réservation {bookingReference} et toutes les infos pratiques dans votre tableau de bord.",
+  reviewSubject: "Comment s'est passé votre séjour à {propertyName} ?",
+  reviewBody:
+    "Bonjour {firstName},\n\n" +
+    "Nous espérons que votre séjour à {propertyName} s'est bien passé.\n\n" +
+    "Votre avis aide les autres voyageurs à mieux réserver. Cela ne prend qu'une minute — merci pour votre retour !",
 };
 
 const EN: MailStrings = {
@@ -165,6 +220,45 @@ const EN: MailStrings = {
     "Your booking {bookingReference} at {propertyName} has been cancelled by the MyBestBooking team. " +
     "The amount of {refundAmount} {currency} will be refunded to you in full.",
   lblFullRefund: "Full refund",
+  verifySubject: "Verify your email — MyBestBooking",
+  verifyBody:
+    "Welcome {firstName} 👋\n\n" +
+    "Thanks for creating your MyBestBooking account. Confirm your email address to start booking.\n\n" +
+    "This link expires in 24 hours.",
+  resetSubject: "Reset your password — MyBestBooking",
+  resetBody:
+    "Hi {firstName},\n\n" +
+    "You asked to reset your password.\n\n" +
+    "This link expires in 1 hour. If you did not request this, ignore this email.",
+  welcomeSubject: "Welcome to MyBestBooking 🎉",
+  welcomeBody:
+    "Hi {firstName} 👋\n\n" +
+    "Your email is verified: your MyBestBooking account is ready.\n\n" +
+    "Search for a stay, follow your favourites and find your bookings in your dashboard. Happy travels!",
+  bookingConfirmSubject: "Booking confirmed {bookingReference}",
+  bookingConfirmBody:
+    "Hi {firstName},\n\n" +
+    "Your booking is confirmed. See the summary below.\n\n" +
+    "Have a great trip!",
+  hostNotifSubject: "New booking {bookingReference}",
+  hostNotifBody:
+    "Hi {hostFirstName},\n\n" +
+    "A new booking has just been confirmed on your property.",
+  cancelSubject: "Booking cancelled {bookingReference}",
+  cancelBody:
+    "Hi {firstName},\n\n" +
+    "Your booking {bookingReference} for {propertyName} has been cancelled.\n\n" +
+    "Cancellation fee applied: {cancellationFee} {currency}.",
+  reminderSubject: "Your stay at {propertyName} is coming up ({checkIn})",
+  reminderBody:
+    "Hi {firstName},\n\n" +
+    "Your stay at {propertyName}, {city} starts on {checkIn} (check-out {checkOut}).\n\n" +
+    "{daysLabel}. Find booking {bookingReference} and practical details in your dashboard.",
+  reviewSubject: "How was your stay at {propertyName}?",
+  reviewBody:
+    "Hi {firstName},\n\n" +
+    "We hope your stay at {propertyName} went well.\n\n" +
+    "Your review helps other travellers book better. It only takes a minute — thank you!",
 };
 
 export function mailStrings(locale: MailLocale): MailStrings {

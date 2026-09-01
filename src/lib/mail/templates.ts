@@ -3,6 +3,9 @@
  * T-025 : le sujet et le paragraphe principal (`body`) de chaque
  * template sont éditables via `app_settings.emailTemplates`. Le
  * layout HTML (branding, boutons, disclaimer) reste figé.
+ * T-171 : si le bloc admin est encore égal aux DEFAULTS FR, on envoie
+ * la copie localisée (langue du destinataire). Une rédaction custom
+ * n'est pas traduite.
  *
  * Placeholders `{name}` supportés — voir DEFAULTS dans
  * `src/lib/settings.ts` pour la liste par template.
@@ -64,11 +67,31 @@ function bodyToHtml(body: string): string {
     .join("\n");
 }
 
+type EditableBlock = { subject: string; body: string };
+
+/**
+ * T-171 — DEFAULTS FR non personnalisés → copie plateforme (fr/en).
+ * Rédaction admin différente des DEFAULTS → telle quelle.
+ */
+function pickEditable(
+  admin: EditableBlock,
+  fallbackFr: EditableBlock,
+  platform: EditableBlock,
+): EditableBlock {
+  const custom =
+    admin.subject !== fallbackFr.subject || admin.body !== fallbackFr.body;
+  return custom ? admin : platform;
+}
+
 export const templates = {
   async emailVerification({ firstName, url, language }: { firstName: string; url: string; language?: string | null }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
-    const tpl = (await getSetting("emailTemplates")).emailVerification;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).emailVerification,
+      DEFAULTS.emailTemplates.emailVerification,
+      { subject: s.verifySubject, body: s.verifyBody },
+    );
     const subject = renderTemplate(tpl.subject, { firstName, url });
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), { firstName, url });
     const html = layout(`
@@ -82,7 +105,11 @@ export const templates = {
   async passwordReset({ firstName, url, language }: { firstName: string; url: string; language?: string | null }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
-    const tpl = (await getSetting("emailTemplates")).passwordReset;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).passwordReset,
+      DEFAULTS.emailTemplates.passwordReset,
+      { subject: s.resetSubject, body: s.resetBody },
+    );
     const subject = renderTemplate(tpl.subject, { firstName, url });
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), { firstName, url });
     const html = layout(`
@@ -96,7 +123,11 @@ export const templates = {
   async welcomeEmail({ firstName, url, language }: { firstName: string; url: string; language?: string | null }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
-    const tpl = (await getSetting("emailTemplates")).welcomeEmail;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).welcomeEmail,
+      DEFAULTS.emailTemplates.welcomeEmail,
+      { subject: s.welcomeSubject, body: s.welcomeBody },
+    );
     const subject = renderTemplate(tpl.subject, { firstName, url });
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), { firstName, url });
     const html = layout(`
@@ -133,7 +164,11 @@ export const templates = {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
     const vars = { firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency };
-    const tpl = (await getSetting("emailTemplates")).bookingConfirmation;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).bookingConfirmation,
+      DEFAULTS.emailTemplates.bookingConfirmation,
+      { subject: s.bookingConfirmSubject, body: s.bookingConfirmBody },
+    );
     const subject = renderTemplate(tpl.subject, vars);
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
     const html = layout(`
@@ -156,8 +191,13 @@ export const templates = {
     cancellationFee: string; currency: string; language?: string | null;
   }) {
     const loc = toMailLocale(language);
+    const s = mailStrings(loc);
     const vars = { firstName, bookingReference, propertyName, cancellationFee, currency };
-    const tpl = (await getSetting("emailTemplates")).bookingCancellation;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).bookingCancellation,
+      DEFAULTS.emailTemplates.bookingCancellation,
+      { subject: s.cancelSubject, body: s.cancelBody },
+    );
     const subject = renderTemplate(tpl.subject, vars);
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
     const html = layout(bodyRendered, loc);
@@ -247,7 +287,11 @@ export const templates = {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
     const vars = { firstName, bookingReference, propertyName, city, checkIn, checkOut, daysLabel, url };
-    const tpl = (await getSetting("emailTemplates")).bookingReminder;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).bookingReminder,
+      DEFAULTS.emailTemplates.bookingReminder,
+      { subject: s.reminderSubject, body: s.reminderBody },
+    );
     const subject = renderTemplate(tpl.subject, vars);
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
     const html = layout(`
@@ -270,7 +314,11 @@ export const templates = {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
     const vars = { firstName, propertyName, bookingReference, url };
-    const tpl = (await getSetting("emailTemplates")).reviewRequest;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).reviewRequest,
+      DEFAULTS.emailTemplates.reviewRequest,
+      { subject: s.reviewSubject, body: s.reviewBody },
+    );
     const subject = renderTemplate(tpl.subject, vars);
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
     const html = layout(`
@@ -324,12 +372,13 @@ export const templates = {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
     const vars = { firstName, senderName, url: url ?? "" };
-    const tpl = (await getSetting("emailTemplates")).newMessage;
-    const custom = tpl.subject !== DEFAULTS.emailTemplates.newMessage.subject
-      || tpl.body !== DEFAULTS.emailTemplates.newMessage.body;
-    const subject = renderTemplate(custom ? tpl.subject : s.newMessageSubject, vars);
-    const bodySource = custom ? tpl.body : s.newMessageBody;
-    const bodyRendered = renderTemplate(bodyToHtml(bodySource), vars);
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).newMessage,
+      DEFAULTS.emailTemplates.newMessage,
+      { subject: s.newMessageSubject, body: s.newMessageBody },
+    );
+    const subject = renderTemplate(tpl.subject, vars);
+    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
     const cta = url
       ? `<p style="margin:24px 0;">${button(url, s.replyToMessage)}</p>`
       : "";
@@ -349,7 +398,11 @@ export const templates = {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
     const vars = { hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut };
-    const tpl = (await getSetting("emailTemplates")).bookingHostNotification;
+    const tpl = pickEditable(
+      (await getSetting("emailTemplates")).bookingHostNotification,
+      DEFAULTS.emailTemplates.bookingHostNotification,
+      { subject: s.hostNotifSubject, body: s.hostNotifBody },
+    );
     const subject = renderTemplate(tpl.subject, vars);
     const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
     const dashboardUrl = appBaseUrl();
