@@ -257,7 +257,13 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                               )}`}
                               {st !== "approved" && (
                                 <span className="ml-2 px-2 py-0.5 text-xs rounded bg-orange-100 text-orange-700">
-                                  {st}
+                                  {st === "pending"
+                                    ? t("status.pending")
+                                    : st === "hidden"
+                                    ? t("bulk.hidden")
+                                    : st === "rejected"
+                                    ? t("bulk.rejected")
+                                    : st}
                                 </span>
                               )}
                             </p>

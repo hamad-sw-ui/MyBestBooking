@@ -8,6 +8,7 @@ import { isUuid } from "@/lib/http";
 import { MessageComposer } from "@/components/message-composer";
 import { MessageAttachment } from "@/components/message-attachment";
 import { formatDate } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { ArrowLeft, User } from "lucide-react";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
@@ -71,7 +72,7 @@ export default async function ConversationPage({
           {row.property?.name ?? t("messages.conversation")}
         </h1>
         <p className="text-sm text-gray-500">
-          {row.property?.city}, {row.property?.country}
+          {row.property?.city}, {countryLabel(row.property?.country, t)}
         </p>
       </div>
 

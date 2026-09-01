@@ -230,7 +230,7 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                     <p className="font-medium">{booking.guestFirstName} {booking.guestLastName}</p>
                     {guest?.bestrewardsLevel && (
                       <Badge variant="bestrewards" className="text-xs">
-                        💎 Level {guest.bestrewardsLevel}
+                        💎 {t("nav.level")} {guest.bestrewardsLevel}
                       </Badge>
                     )}
                   </div>

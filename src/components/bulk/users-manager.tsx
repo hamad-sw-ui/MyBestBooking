@@ -8,6 +8,7 @@ import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
 import { UserSuspendActions } from "@/components/admin/user-suspend-actions";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
+import { countryLabel } from "@/lib/country-label";
 
 export interface UserRow {
   id: string;
@@ -266,7 +267,7 @@ export function UsersManager({ users, currentUserId }: Props) {
                             {u.firstName} {u.lastName}
                           </p>
                           {u.country && (
-                            <p className="text-sm text-gray-500">{u.country}</p>
+                            <p className="text-sm text-gray-500">{countryLabel(u.country, t)}</p>
                           )}
                         </div>
                       </div>
@@ -288,7 +289,7 @@ export function UsersManager({ users, currentUserId }: Props) {
                     <td className="px-4 py-4">
                       {u.bestrewardsLevel && (
                         <div className="flex items-center gap-2">
-                          <Badge variant="bestrewards">💎 Level {u.bestrewardsLevel}</Badge>
+                          <Badge variant="bestrewards">💎 {t("nav.level")} {u.bestrewardsLevel}</Badge>
                           <span className="text-xs text-gray-500">
                             {t("bulk.bookingsShort").replace("{n}", String(u.bestrewardsBookingsCount ?? 0))}
                           </span>

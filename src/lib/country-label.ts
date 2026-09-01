@@ -34,6 +34,6 @@ export function travelerTypeLabel(
   t: (key: UiStringKey) => string,
 ): string {
   if (!type) return "";
-  const key = TRAVELER_KEYS[type];
+  const key = TRAVELER_KEYS[type.toLowerCase()];
   return key ? t(key) : type;
 }

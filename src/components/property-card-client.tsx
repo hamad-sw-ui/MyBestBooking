@@ -143,7 +143,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
             </h3>
             <p className="text-sm text-gray-500 flex items-center gap-1 mt-0.5">
               <MapPin className="w-3.5 h-3.5" />
-              {property.city}, {property.country}
+              {property.city}, {countryLabel(property.country, t)}
             </p>
           </div>
           {rating && (

@@ -101,7 +101,7 @@ export default async function BestRewardsPage() {
             <div className="inline-flex items-center gap-3 bg-white/10 px-6 py-3 rounded-full">
               <span className="text-white/70">{t("bestrewards.yourLevel")}</span>
               <Badge variant="bestrewards" className="text-base px-4 py-1">
-                💎 Level {user.bestrewardsLevel} — {levels[(user.bestrewardsLevel || 1) - 1].name}
+                💎 {t("nav.level")} {user.bestrewardsLevel} — {levels[(user.bestrewardsLevel || 1) - 1].name}
               </Badge>
             </div>
           )}
@@ -153,7 +153,7 @@ export default async function BestRewardsPage() {
               >
                 <div className={`bg-gradient-to-r ${level.color} text-white p-6`}>
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-white/70">Level {level.level}</span>
+                    <span className="text-white/70">{t("nav.level")} {level.level}</span>
                     {user?.bestrewardsLevel === level.level && (
                       <Badge className="bg-white text-[#1B3A6B]">{t("bestrewards.yourLevelBadge")}</Badge>
                     )}
