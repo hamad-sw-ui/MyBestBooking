@@ -116,7 +116,7 @@ describe("maintenance.isMaintenanceActive (T-022)", () => {
 
 describe("maintenance.maintenanceResponse (T-022)", () => {
   it("retourne 503 + Retry-After", async () => {
-    const r = maintenanceResponse(45);
+    const r = await maintenanceResponse(45);
     expect(r.status).toBe(503);
     expect(r.headers.get("Retry-After")).toBe("45");
     const body = await r.json();

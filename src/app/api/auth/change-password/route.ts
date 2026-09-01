@@ -7,6 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { and, eq, ne } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { apiError } from "@/lib/api-error";
+import { frenchZodMessage } from "@/lib/http";
 
 const schema = z.object({
   oldPassword: z.string().min(1),
@@ -37,7 +38,7 @@ export async function POST(request: NextRequest) {
     const { oldPassword, newPassword } = schema.parse(await request.json());
     if (!user.passwordHash || !(await verifyPassword(oldPassword, user.passwordHash))) {
       return NextResponse.json(
-        { error: "Ancien mot de passe incorrect" },
+        { error: await apiError("Ancien mot de passe incorrect") },
         { status: 400 },
       );
     }
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(error.issues[0].message) }, { status: 400 });
+      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     }
     console.error("change-password error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });

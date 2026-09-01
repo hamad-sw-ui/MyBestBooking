@@ -161,9 +161,11 @@ export async function POST(request: NextRequest) {
       const [existing] = await db.select({ id: users.id, passwordHash: users.passwordHash }).from(users).where(eq(users.email, data.guestEmail.toLowerCase())).limit(1);
       if (existing) {
         return NextResponse.json({
-          error: existing.passwordHash
-            ? "Connectez-vous pour réserver avec cet email"
-            : "Activez d'abord votre accès depuis l'email de confirmation, puis connectez-vous",
+          error: await apiError(
+            existing.passwordHash
+              ? "Connectez-vous pour réserver avec cet email"
+              : "Activez d'abord votre accès depuis l'email de confirmation, puis connectez-vous",
+          ),
         }, { status: 409 });
       }
     }

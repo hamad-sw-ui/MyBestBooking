@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
         const p = Number(val);
         if (!Number.isFinite(p) || p < 0) {
           return NextResponse.json(
-            { error: `Le paramètre ${name} doit être un nombre positif` },
+            { error: await apiError(`Le paramètre ${name} doit être un nombre positif`) },
             { status: 400 },
           );
         }

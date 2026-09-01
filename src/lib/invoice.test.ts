@@ -58,6 +58,8 @@ describe("invoice i18n (T-168)", () => {
     expect(html).toContain("reçu de réservation");
     expect(html).toContain("Confirmée");
     expect(html).toContain("Payé");
+    expect(html).toContain("Maroc");
+    expect(html).not.toContain(", MA");
     expect(invoiceFilename(data)).toBe("recu-MBB-2026-ABCDEF.html");
   });
 
@@ -77,6 +79,8 @@ describe("invoice i18n (T-168)", () => {
     expect(html).toContain("Accommodation subtotal");
     expect(html).toContain("Confirmed");
     expect(html).toContain("Paid");
+    expect(html).toContain("Morocco");
+    expect(html).not.toContain(", MA");
     expect(invoiceFilename(data)).toBe("invoice-MBB-2026-ABCDEF.html");
   });
 });

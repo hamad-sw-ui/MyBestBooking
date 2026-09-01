@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
 
   const check = isPromoUsable(promo);
   if (check !== true) {
-    return NextResponse.json({ ok: false, error: check }, { status: 400 });
+    return NextResponse.json({ ok: false, error: await apiError(check) }, { status: 400 });
   }
 
   const result = applyPromoToTotal(normalizePromoForCurrency(promo, currency), amount);

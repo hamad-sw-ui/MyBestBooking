@@ -99,7 +99,7 @@ export async function PUT(
     const roomCapacity = row.room.quantity ?? 1;
     if (days.some((day) => day.availableCount > roomCapacity)) {
       return NextResponse.json(
-        { error: `Le stock journalier ne peut pas dépasser la capacité de ${roomCapacity}` },
+        { error: await apiError(`Le stock journalier ne peut pas dépasser la capacité de ${roomCapacity}`) },
         { status: 400 },
       );
     }

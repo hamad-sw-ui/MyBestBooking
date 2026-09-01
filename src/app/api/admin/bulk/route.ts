@@ -506,7 +506,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Erreur bulk" },
+      { error: await apiError(err instanceof Error ? err.message : "Erreur bulk") },
       { status: 400 },
     );
   }

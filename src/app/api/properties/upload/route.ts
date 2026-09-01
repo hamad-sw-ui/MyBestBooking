@@ -58,13 +58,13 @@ export async function POST(request: NextRequest) {
   const mimeType = file.type;
   if (!ALLOWED_UPLOAD_MIMES.has(mimeType)) {
     return NextResponse.json(
-      { error: `Type non autorisé : ${mimeType}. Formats acceptés : JPEG, PNG, WebP, GIF.` },
+      { error: await apiError(`Type non autorisé : ${mimeType}. Formats acceptés : JPEG, PNG, WebP, GIF.`) },
       { status: 400 },
     );
   }
   if (file.size > MAX_UPLOAD_BYTES) {
     return NextResponse.json(
-      { error: `Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(2)} MB > 5 MB)` },
+      { error: await apiError(`Fichier trop volumineux (${(file.size / 1024 / 1024).toFixed(2)} MB > 5 MB)`) },
       { status: 413 },
     );
   }

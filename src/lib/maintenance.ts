@@ -13,6 +13,7 @@
  */
 
 import { NextResponse } from "next/server";
+import { apiError } from "./api-error";
 import { getSetting } from "./settings";
 
 export class MaintenanceError extends Error {
@@ -46,10 +47,10 @@ export async function assertNotMaintenance(
  * Réponse HTTP 503 standard pour un handler bloqué par le mode
  * maintenance.
  */
-export function maintenanceResponse(retryAfterSeconds = 60): NextResponse {
+export async function maintenanceResponse(retryAfterSeconds = 60): Promise<NextResponse> {
   return NextResponse.json(
     {
-      error: "Service momentanément en maintenance",
+      error: await apiError("Service momentanément en maintenance"),
       code: "MAINTENANCE_MODE",
     },
     {

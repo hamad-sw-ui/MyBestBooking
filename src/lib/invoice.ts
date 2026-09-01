@@ -1,3 +1,4 @@
+import { countryLabel } from "@/lib/country-label";
 import { formatDateShort, intlLocale } from "@/lib/utils";
 import { makeT, type UiLocale, type UiStringKey } from "@/lib/ui-strings";
 
@@ -171,6 +172,7 @@ export function renderInvoiceHtml(d: InvoiceData): string {
   ].join("");
 
   const guestName = `${b.guestFirstName} ${b.guestLastName}`.trim();
+  const propertyCountry = countryLabel(b.propertyCountry, t);
   const travellers = travellersLine(t, b.numAdults, b.numChildren);
   const nights =
     b.numNights == null
@@ -256,7 +258,7 @@ export function renderInvoiceHtml(d: InvoiceData): string {
         <td style="padding:10px 0;">
           <div style="font-weight:600;">${esc(b.propertyName)}</div>
           <div style="color:#6b7280; font-size:13px;">
-            ${esc(b.propertyCity ?? "")}${b.propertyCity && b.propertyCountry ? ", " : ""}${esc(b.propertyCountry ?? "")}
+            ${esc(b.propertyCity ?? "")}${b.propertyCity && propertyCountry ? ", " : ""}${esc(propertyCountry)}
           </div>
           <div style="color:#6b7280; font-size:13px;">
             ${esc(stay)}

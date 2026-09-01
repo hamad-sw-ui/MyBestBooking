@@ -1,7 +1,7 @@
 import type { UiLocale } from "@/lib/ui-strings";
 
 /**
- * T-168 — Traduction des messages d'erreur JSON renvoyés par l'API.
+ * T-169 — Traduction des messages d'erreur JSON renvoyés par l'API.
  *
  * Les routes conservent le français comme **source** (contrats smoke,
  * `frenchZodMessage`, défaut plateforme). Quand la locale UI est `en`
@@ -186,14 +186,100 @@ export const API_ERROR_EN: Record<string, string> = {
   "Échec de l'upload": "Upload failed",
   "Échec du test provider": "Provider test failed",
   "Échec du traitement des alertes prix": "Price-alert processing failed",
+  "Ancien mot de passe incorrect": "Incorrect current password",
+  "Erreur bulk": "Bulk error",
+  "Le tarif de la chambre est invalide": "The room rate is invalid",
+  "Service momentanément en maintenance": "Service temporarily under maintenance",
+  "Service en maintenance": "Service under maintenance",
+  "Cette chambre n'est plus disponible pour ces dates": "This room is no longer available for these dates",
+  "Le fichier n'est pas une image valide (JPEG, PNG, WebP ou GIF).":
+    "The file is not a valid image (JPEG, PNG, WebP or GIF).",
+  "Le nombre d'adultes est invalide": "The number of adults is invalid",
+  "Le nombre d'enfants est invalide": "The number of children is invalid",
+  "Code inactif": "Inactive code",
+  "Code pas encore actif": "Code not yet active",
+  "Code expiré": "Expired code",
+  "Code épuisé": "Code exhausted",
+  "Code promo inconnu": "Unknown promo code",
+  "Compte introuvable": "Account not found",
+  "Plan tarifaire indisponible pour cette chambre": "Rate plan unavailable for this room",
+  "Connectez-vous pour réserver avec cet email": "Sign in to book with this email",
+  "Activez d'abord votre accès depuis l'email de confirmation, puis connectez-vous":
+    "Activate your access from the confirmation email first, then sign in",
+  "La ville est requise": "City is required",
+  "Ce type de promotion nécessite un calcul par nuit et n'est pas encore disponible":
+    "This promotion type requires a per-night calculation and is not available yet",
 };
+
+const API_ERROR_PREFIXES: Array<[string, string]> = [
+  ["Code promo : ", "Promo code: "],
+  ["Wallet : ", "Wallet: "],
+];
+
+function enNoun(count: string, one: string, many: string): string {
+  return count === "1" ? `1 ${one}` : `${count} ${many}`;
+}
+
+const API_ERROR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [
+    /^Le paramètre (.+) doit être un nombre positif$/,
+    (m) => `The ${m[1]} parameter must be a positive number`,
+  ],
+  [
+    /^Type non autorisé : (.+)\. Formats acceptés : JPEG, PNG, WebP, GIF\.$/,
+    (m) => `Unauthorized type: ${m[1]}. Accepted formats: JPEG, PNG, WebP, GIF.`,
+  ],
+  [
+    /^Fichier trop volumineux \((.+) MB > 5 MB\)$/,
+    (m) => `File too large (${m[1]} MB > 5 MB)`,
+  ],
+  [
+    /^Le stock journalier ne peut pas dépasser la capacité de (.+)$/,
+    (m) => `Daily stock cannot exceed the capacity of ${m[1]}`,
+  ],
+  [/^Champ non autorisé : (.+)$/, (m) => `Unauthorized field: ${m[1]}`],
+  [/^Test (.+) échoué : (.+)$/, (m) => `${m[1]} test failed: ${m[2]}`],
+  [
+    /^Cet hébergement exige un séjour minimum de (\d+) nuits?$/,
+    (m) => `This property requires a minimum stay of ${enNoun(m[1], "night", "nights")}`,
+  ],
+  [
+    /^Cette chambre accepte au maximum (\d+) adultes?$/,
+    (m) => `This room accepts a maximum of ${enNoun(m[1], "adult", "adults")}`,
+  ],
+  [
+    /^Cette chambre accepte au maximum (\d+) enfants?$/,
+    (m) => `This room accepts a maximum of ${enNoun(m[1], "child", "children")}`,
+  ],
+  [
+    /^Cette chambre accepte au maximum (\d+) personnes?$/,
+    (m) => `This room accepts a maximum of ${enNoun(m[1], "guest", "guests")}`,
+  ],
+  [/^Réservation minimum (.+)$/, (m) => `Minimum booking ${m[1]}`],
+  [
+    /^Devise non supportée pour l'application du wallet : (.+)$/,
+    (m) => `Unsupported currency for wallet application: ${m[1]}`,
+  ],
+  [/^Action invalide pour (\w+) : (.+)$/, (m) => `Invalid action for ${m[1]}: ${m[2]}`],
+];
 
 export function localizeApiMessage(
   fr: string,
   locale: UiLocale | string | null | undefined,
 ): string {
   if (locale !== "en") return fr;
-  return API_ERROR_EN[fr] ?? fr;
+  const exact = API_ERROR_EN[fr];
+  if (exact) return exact;
+  for (const [prefix, enPrefix] of API_ERROR_PREFIXES) {
+    if (fr.startsWith(prefix)) {
+      return enPrefix + localizeApiMessage(fr.slice(prefix.length), "en");
+    }
+  }
+  for (const [re, toEn] of API_ERROR_PATTERNS) {
+    const m = fr.match(re);
+    if (m) return toEn(m);
+  }
+  return fr;
 }
 
 /** Locale UI de la requête → message d'erreur affiché. Défaut : français. */

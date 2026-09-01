@@ -44,7 +44,7 @@ export async function PUT(
     const { values } = updateSchema.parse(await request.json());
     const allowed = new Set(PROVIDER_FIELDS[rawProvider]);
     const invalid = Object.keys(values).find((key) => !allowed.has(key));
-    if (invalid) return NextResponse.json({ error: `Champ non autorisé : ${invalid}` }, { status: 400 });
+    if (invalid) return NextResponse.json({ error: await apiError(`Champ non autorisé : ${invalid}`) }, { status: 400 });
 
     await saveProviderCredentials(rawProvider, values, user.id);
     await recordAudit({
@@ -112,7 +112,7 @@ export async function POST(
     const code = /auth|key|credential|401|403/i.test(rawMessage) ? "AUTH_FAILED" : /network|fetch|timeout/i.test(rawMessage) ? "NETWORK_ERROR" : "CONNECTION_FAILED";
     await db.insert(providerTestLogs).values({ provider: rawProvider, actorId: user.id, status: "failed", message: code });
     await recordAudit({ actorId: user.id, actorEmail: user.email, action: AUDIT_ACTIONS.providerConnectionTest, entityType: "provider", entityId: rawProvider, metadata: { result: "failed", code } });
-    return NextResponse.json({ error: `Test ${rawProvider} échoué : ${code}` }, { status: 422 });
+    return NextResponse.json({ error: await apiError(`Test ${rawProvider} échoué : ${code}`) }, { status: 422 });
   }
 }
 
