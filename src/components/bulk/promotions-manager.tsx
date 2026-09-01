@@ -315,7 +315,7 @@ export function PromotionsManager({ promotions }: Props) {
                           {promo.type === "percentage"
                             ? `-${promo.value}%`
                             : promo.type === "fixed_amount"
-                            ? `-${formatPrice(promo.value)}`
+                            ? `-${formatPrice(promo.value, "EUR", locale)}`
                             : t("bulk.oneNightFree")}
                         </span>
                       </td>

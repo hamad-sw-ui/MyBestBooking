@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
 import { isUiLocale, type UiLocale } from "@/lib/ui-strings";
@@ -10,9 +10,10 @@ import { UI_LANGUAGE_COOKIE, UI_LANGUAGE_COOKIE_ALT } from "@/lib/ui-language";
  *
  * Miroir serveur de la logique client (`useDisplayPreferences`) :
  *   1. préférence `language` du compte connecté ;
- *   2. sinon cookie `mybb:ui-language` / `mybb-ui-language` ;
- *   3. sinon langue par défaut de la plateforme (`general.defaultLanguage`) ;
- *   4. sinon "fr".
+ *   2. sinon header `x-ui-language` (proxy : `?lang=` / cookie) ;
+ *   3. sinon cookie `mybb:ui-language` / `mybb-ui-language` ;
+ *   4. sinon langue par défaut de la plateforme (`general.defaultLanguage`) ;
+ *   5. sinon "fr".
  *
  * Chaque étape a son propre try : un échec auth ne doit pas empêcher
  * la lecture du cookie anonyme.
@@ -23,6 +24,12 @@ export async function getServerLocale(): Promise<UiLocale> {
     if (user?.language && isUiLocale(user.language)) return user.language;
   } catch {
     // auth/DB indisponible : on continue avec le cookie
+  }
+  try {
+    const hdr = (await headers()).get("x-ui-language");
+    if (hdr && isUiLocale(hdr)) return hdr;
+  } catch {
+    // hors requête
   }
   try {
     const jar = await cookies();

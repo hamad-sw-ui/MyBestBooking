@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
 import { formatPrice } from "@/lib/utils";
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 interface RatePlan {
   id: string;
@@ -50,6 +50,7 @@ function formFor(plan: RatePlan): RatePlanForm {
 /** Plans éditables sans modifier les snapshots des réservations historiques. */
 export function RatePlansSection({ roomId, basePrice, initialRatePlans, currency = "EUR" }: { roomId: string; basePrice: string; initialRatePlans: RatePlan[]; /** T-154e/P3-9 : devise de la chambre pour l'aperçu (plus de montant nu). */ currency?: string | null }) {
   const t = useT();
+  const locale = useUiLocale();
   const { addToast } = useToast();
   const [plans, setPlans] = useState(initialRatePlans);
   const [form, setForm] = useState<RatePlanForm>(EMPTY_FORM);
@@ -122,7 +123,7 @@ export function RatePlansSection({ roomId, basePrice, initialRatePlans, currency
           <label className="text-sm">{t("rate.freeCancelDaysLabel")}<input type="number" min="0" max="365" value={form.cancellationFreeDays} onChange={(event) => setForm({ ...form, cancellationFreeDays: event.target.value })} className="mt-1 w-full border rounded px-3 py-2" /></label>
           <label className="inline-flex items-center gap-2 self-end text-sm"><input type="checkbox" checked={form.includesBreakfast} onChange={(event) => setForm({ ...form, includesBreakfast: event.target.checked })} /> {t("rate.breakfast")}</label>
         </div>
-        <p className="mt-3 rounded bg-blue-50 p-3 text-sm text-blue-900">{Number.isFinite(base) ? t("rate.preview").replace("{from}", formatPrice(base, ccy)).replace("{to}", formatPrice(preview, ccy)) : t("rate.previewUnavailable")}</p>
+        <p className="mt-3 rounded bg-blue-50 p-3 text-sm text-blue-900">{Number.isFinite(base) ? t("rate.preview").replace("{from}", formatPrice(base, ccy, locale)).replace("{to}", formatPrice(preview, ccy, locale)) : t("rate.previewUnavailable")}</p>
         <div className="mt-4 flex flex-wrap items-center gap-3"><Button size="sm" onClick={save} disabled={busy || !form.name.trim()}>{busy ? t("settings.saving") : editingId ? t("rate.saveChanges") : t("rate.addCta")}</Button>{editingId && <Button size="sm" variant="ghost" onClick={resetForm} disabled={busy}>{t("action.cancel")}</Button>}{error && <span role="alert" className="text-sm text-red-600">{error}</span>}</div>
       </div>
     </section>

@@ -21,7 +21,8 @@ export default async function RoomCalendarPage({
   params: Promise<{ id: string }>;
 }) {
   const user = await getCurrentUser();
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   if (!user) redirect("/connexion");
   if (user.role !== "host" && user.role !== "admin") redirect("/dashboard");
 
@@ -71,7 +72,7 @@ export default async function RoomCalendarPage({
           {t("cal.meta")
             .replace("{property}", row.property?.name ?? "")
             .replace("{units}", String(row.room.quantity ?? 1))
-            .replace("{price}", formatPrice(row.room.basePrice, row.room.currency ?? "EUR"))}
+            .replace("{price}", formatPrice(row.room.basePrice, row.room.currency ?? "EUR", locale))}
         </p>
       </div>
 
@@ -80,7 +81,7 @@ export default async function RoomCalendarPage({
         quantity={row.room.quantity ?? 1}
         // T-154e (audit n°26, P3-9) : prix de base affiché formaté (devise),
         // plus de « 148.33 » nu.
-        basePrice={formatPrice(Number(row.room.basePrice), row.room.currency ?? "EUR")}
+        basePrice={formatPrice(Number(row.room.basePrice), row.room.currency ?? "EUR", locale)}
         initialFrom={from}
         initialTo={to}
         initialDays={days.map((d) => ({

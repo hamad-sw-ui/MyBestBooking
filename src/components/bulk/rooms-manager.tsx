@@ -1,6 +1,6 @@
 "use client";
 
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
@@ -45,6 +45,7 @@ interface Props {
 
 export function RoomsManager({ rooms, isAdmin }: Props) {
   const t = useT();
+  const locale = useUiLocale();
   function roomTypeLabel(type: string): string {
     switch (type) {
       case "single": return t("room.type.single");
@@ -168,7 +169,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
           { label: t("bulk.units"), value: stats.units, color: "text-blue-600" },
           {
             label: t("bulk.avgPrice"),
-            value: stats.avgPrice > 0 ? formatPrice(stats.avgPrice) : "—",
+            value: stats.avgPrice > 0 ? formatPrice(stats.avgPrice, "EUR", locale) : "—",
             color: "text-[#1B3A6B]",
           },
         ].map((s) => (
@@ -318,7 +319,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div>
                     <p className="text-xl font-bold text-[#1B3A6B]">
-                      {formatPrice(room.basePrice, room.currency || "EUR")}
+                      {formatPrice(room.basePrice, room.currency || "EUR", locale)}
                     </p>
                     <p className="text-xs text-gray-500">
                       {((room.quantity ?? 0) > 1 ? t("bulk.perNightUnitsMany") : t("bulk.perNightUnits")).replace("{n}", String(room.quantity ?? 0))}

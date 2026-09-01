@@ -535,7 +535,7 @@ export default function EditPropertyPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <p className="font-bold">{formatPrice(parseFloat(room.basePrice), room.currency ?? "EUR")}{t("price.perNight")}</p>
+                      <p className="font-bold">{formatPrice(parseFloat(room.basePrice), room.currency ?? "EUR", locale)}{t("price.perNight")}</p>
                       <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
                         <Button variant="ghost" size="sm">
                           {t("bulk.calendar")}

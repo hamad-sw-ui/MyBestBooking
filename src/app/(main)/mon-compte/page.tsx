@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { formatPrice } from "@/lib/utils";
 import { UserAvatar } from "@/components/user-avatar";
 import { ChangePasswordForm } from "@/components/change-password-form";
@@ -42,6 +42,7 @@ interface UserData {
 export default function MyAccountPage() {
   const router = useRouter();
   const t = useT();
+  const locale = useUiLocale();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -260,7 +261,7 @@ export default function MyAccountPage() {
                       <div>
                         <p className="text-sm text-gray-500">{t("account.availableBalance")}</p>
                         <p className="text-3xl font-bold text-[#1B3A6B]">
-                          {formatPrice(parseFloat(user.walletBalance || "0"), "EUR")}
+                          {formatPrice(parseFloat(user.walletBalance || "0"), "EUR", locale)}
                         </p>
                       </div>
                       {/* T-153 (audit n°25, F) : flèche le scénario d'utilisation
@@ -352,8 +353,7 @@ export default function MyAccountPage() {
                   <CardContent className="flex items-start gap-3 py-4">
                     <Award className="w-5 h-5 text-[#F5A623] mt-0.5 flex-shrink-0" />
                     <p className="text-sm text-gray-600">
-                      Parrainez vos amis et gagnez des crédits : retrouvez votre
-                      code de parrainage dans l&apos;onglet{" "}
+                      {t("account.referralHint")}{" "}
                       <button
                         type="button"
                         onClick={() => setActiveTab("bestrewards")}

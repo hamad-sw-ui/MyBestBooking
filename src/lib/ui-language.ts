@@ -30,7 +30,7 @@ function cookieAttributeSuffix(): string {
   return (
     ";path=/;max-age=31536000;SameSite=" +
     (secure ? "None" : "Lax") +
-    (secure ? ";Secure" : "")
+    (secure ? ";Secure;Partitioned" : "")
   );
 }
 
@@ -46,7 +46,7 @@ export function langInitInlineScript(hasAccount: boolean): string {
     "if(!s){var m=document.cookie.match(/(?:^|; )(?:mybb-ui-language|mybb:ui-language)=([^;]*)/);if(m)s=decodeURIComponent(m[1]);}" +
     "if(s==='en'||s==='fr'){document.documentElement.lang=s;" +
     "var sec=location.protocol==='https:';" +
-    "var a=';path=/;max-age=31536000;SameSite='+(sec?'None':'Lax')+(sec?';Secure':'');" +
+    "var a=';path=/;max-age=31536000;SameSite='+(sec?'None':'Lax')+(sec?';Secure;Partitioned':'');" +
     "document.cookie='" +
     UI_LANGUAGE_COOKIE +
     "='+s+a;document.cookie='" +

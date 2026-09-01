@@ -18,3 +18,22 @@ export function countryLabel(code: string | null | undefined, t: (key: UiStringK
   const key = COUNTRY_KEYS[code.toUpperCase()];
   return key ? t(key) : code;
 }
+
+const TRAVELER_KEYS: Record<string, UiStringKey> = {
+  leisure: "review.traveler.leisure",
+  solo: "review.traveler.solo",
+  couple: "review.traveler.couple",
+  family: "review.traveler.family",
+  group: "review.traveler.group",
+  business: "review.traveler.business",
+};
+
+/** Type de voyageur (avis) — jamais le code brut « leisure ». */
+export function travelerTypeLabel(
+  type: string | null | undefined,
+  t: (key: UiStringKey) => string,
+): string {
+  if (!type) return "";
+  const key = TRAVELER_KEYS[type];
+  return key ? t(key) : type;
+}

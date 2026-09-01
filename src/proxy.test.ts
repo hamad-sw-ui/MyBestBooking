@@ -63,9 +63,28 @@ describe("middleware auth (T-003, §13.5)", () => {
     expect(res.headers.get("location")).toBeNull();
   });
 
-  it("laisse /reservation hors du matcher afin de permettre l'achat invité", async () => {
-    const { config } = await import("./proxy");
-    expect(config.matcher).not.toContain("/reservation/:path*");
+  it("laisse /reservation public (achat invité) tout en étant matchée pour la locale", async () => {
+    const { proxy, config } = await import("./proxy");
+    expect(config.matcher).toContain("/reservation/:path*");
+    const res = await proxy(makeRequest("/reservation"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+});
+
+describe("tampon locale SSR (T-167)", () => {
+  it("propage ?lang=en vers le header x-ui-language sur /", async () => {
+    const { proxy } = await import("./proxy");
+    const res = await proxy(makeRequest("/?lang=en"));
+    expect(res.headers.get("location")).toBeNull();
+    const setCookie = res.headers.getSetCookie?.() ?? [];
+    const joined = setCookie.join("; ") || res.headers.get("set-cookie") || "";
+    expect(joined).toMatch(/mybb-ui-language=en/);
+  });
+
+  it("ne redirige pas un anonyme sur /recherche", async () => {
+    const { proxy } = await import("./proxy");
+    const res = await proxy(makeRequest("/recherche"));
+    expect(res.headers.get("location")).toBeNull();
   });
 });
 

@@ -6,7 +6,7 @@ import { properties, rooms, reviews, users } from "@/db/schema";
 import { eq, and, desc } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
-import { countryLabel } from "@/lib/country-label";
+import { countryLabel, travelerTypeLabel } from "@/lib/country-label";
 import { safeJsonForScript } from "@/lib/safe-json-ld";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -402,9 +402,9 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                               </p>
                               <p className="text-sm text-gray-500">
                                 {review.travelerType && (
-                                  <span className="capitalize">{review.travelerType}</span>
+                                  <span>{travelerTypeLabel(review.travelerType, t)}</span>
                                 )}
-                                {reviewer?.country && ` · ${reviewer.country}`}
+                                {reviewer?.country && ` · ${countryLabel(reviewer.country, t)}`}
                               </p>
                             </div>
                           </div>

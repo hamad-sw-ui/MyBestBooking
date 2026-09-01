@@ -6,7 +6,7 @@ import { formatPrice } from "@/lib/utils";
 // T-154d (audit n°26, P2-8) : confirmation/échec globaux via le ToastProvider
 // (monté dans layout mais jamais utilisé).
 import { useToast } from "@/components/ui/toast";
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 interface Applied {
   code: string;
@@ -30,6 +30,7 @@ interface Props {
 export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
   const { addToast } = useToast();
   const t = useT();
+  const locale = useUiLocale();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +52,7 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
       };
       setApplied(a);
       onApplied?.(a);
-      addToast("success", t("promo.appliedLine").replace("{code}", a.code).replace("{amount}", formatPrice(a.discount, a.currency)));
+      addToast("success", t("promo.appliedLine").replace("{code}", a.code).replace("{amount}", formatPrice(a.discount, a.currency, locale)));
     } catch (e) {
       setApplied(null);
       onApplied?.(null);
@@ -74,7 +75,7 @@ export function PromoCodeInput({ amount, currency = "EUR", onApplied }: Props) {
       <div className="flex items-center justify-between gap-3 p-3 bg-green-50 border border-green-200 rounded-lg text-sm">
         <div className="flex items-center gap-2 text-green-800">
           <Check className="w-4 h-4" />
-          {t("promo.appliedLine").replace("{code}", applied.code).replace("{amount}", formatPrice(applied.discount, applied.currency))}
+          {t("promo.appliedLine").replace("{code}", applied.code).replace("{amount}", formatPrice(applied.discount, applied.currency, locale))}
         </div>
         <button
           type="button"

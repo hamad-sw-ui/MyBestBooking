@@ -9,6 +9,7 @@ import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
 import { HostReplyForm } from "@/components/host-reply-form";
 import { ReviewModerateActions } from "@/components/admin/review-moderate-actions";
+import { countryLabel, travelerTypeLabel } from "@/lib/country-label";
 
 export interface ReviewRow {
   review: {
@@ -247,9 +248,9 @@ export function ReviewsManager({ reviews, isAdmin }: Props) {
                             </p>
                             <p className="text-sm text-gray-500">
                               {r.review.travelerType && (
-                                <span className="capitalize">{r.review.travelerType}</span>
+                                <span>{travelerTypeLabel(r.review.travelerType, t)}</span>
                               )}
-                              {r.user?.country && ` · ${r.user.country}`}
+                              {r.user?.country && ` · ${countryLabel(r.user.country, t)}`}
                               {` · ${new Date(r.review.createdAt).toLocaleDateString(
                                 locale === "en" ? "en-GB" : "fr-FR",
                                 { day: "numeric", month: "short", year: "numeric" },

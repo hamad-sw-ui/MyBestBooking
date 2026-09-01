@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Wallet, Award, Gift, Copy, Check } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { useT } from "@/components/ui-locale-provider";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 /**
  * Statut BestRewards PERSONNALISÉ (T-114). Affiche le niveau réel, le
@@ -15,6 +15,7 @@ import { useT } from "@/components/ui-locale-provider";
  */
 export function BestRewardsStatus({ thresholds }: { thresholds: [number, number] }) {
   const t = useT();
+  const locale = useUiLocale();
   const [state, setState] = useState<"loading" | "anon" | "ready">("loading");
   const [level, setLevel] = useState(1);
   const [bookings, setBookings] = useState(0);
@@ -81,7 +82,7 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
   // T-153 (audit n°25, E) : le solde wallet est libellé en EUR (cagnotte
   // BestRewards) — affichage toujours en euros, quelle que soit la devise
   // d'affichage préférée.
-  const fmtWallet = formatPrice(Number(wallet), "EUR");
+  const fmtWallet = formatPrice(Number(wallet), "EUR", locale);
 
   const copyReferral = async () => {
     if (!referral) return;

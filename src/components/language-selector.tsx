@@ -15,9 +15,9 @@ import type { User as UserType } from "@/db/schema";
  * - Compte connecté : `PATCH /api/users/me { language }` (route existante,
  *   déjà gardée par `isUiLocale`) puis rechargement → toute l'UI
  *   (serveur + client) bascule sur la nouvelle langue.
- * - Anonyme : `persistUiLanguageClient` (localStorage + cookie
- *   `mybb:ui-language`) avant reload, pour que `getServerLocale` rejoue EN
- *   au SSR. `lang-init` recopie aussi le localStorage → cookie.
+ * - Anonyme : `persistUiLanguageClient` (localStorage + cookies) puis
+ *   navigation `?lang=` : le proxy tamponne `x-ui-language` même si le
+ *   cookie iframe est bloqué. `getServerLocale` lit header → cookies.
  *
  * Aucune nouvelle chaîne : plusieurs composants (header, recherche, fiche)
  * utilisent déjà `makeT` ; les écrans encore en français dur seront migrés
@@ -58,7 +58,9 @@ export function LanguageSelector({ user, initialLanguage = null }: { user: UserT
       setSaving(false);
     }
     resetDisplayPreferencesCache();
-    window.location.reload();
+    const url = new URL(window.location.href);
+    url.searchParams.set("lang", next);
+    window.location.assign(url.toString());
   }
 
   return (

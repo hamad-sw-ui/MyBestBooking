@@ -32,6 +32,44 @@ const JWT_SECRET = process.env.JWT_SECRET
   ? new TextEncoder().encode(process.env.JWT_SECRET)
   : null;
 
+/** Langue UI depuis `?lang=` (prioritaire) ou cookies anonymes. */
+function localeFromRequest(request: NextRequest): "fr" | "en" | null {
+  const q = request.nextUrl.searchParams.get("lang");
+  if (q === "en" || q === "fr") return q;
+  const alt = request.cookies.get("mybb-ui-language")?.value;
+  if (alt === "en" || alt === "fr") return alt;
+  const hist = request.cookies.get("mybb:ui-language")?.value;
+  if (hist === "en" || hist === "fr") return hist;
+  return null;
+}
+
+function stampLocaleCookies(res: NextResponse, lang: "fr" | "en", secure: boolean) {
+  const common = {
+    path: "/",
+    maxAge: 31536000,
+    sameSite: (secure ? "none" : "lax") as "none" | "lax",
+    secure,
+  };
+  res.cookies.set("mybb-ui-language", lang, common);
+  try {
+    res.cookies.set("mybb:ui-language", lang, common);
+  } catch {
+    // nom avec deux-points refusé par certains runtimes
+  }
+}
+
+function nextWithLocale(request: NextRequest): NextResponse {
+  const lang = localeFromRequest(request);
+  const h = new Headers(request.headers);
+  if (lang) h.set("x-ui-language", lang);
+  const res = NextResponse.next({ request: { headers: h } });
+  const q = request.nextUrl.searchParams.get("lang");
+  if (q === "en" || q === "fr") {
+    stampLocaleCookies(res, q, request.nextUrl.protocol === "https:");
+  }
+  return res;
+}
+
 type SessionRole = "admin" | "host" | "customer" | "guest" | string;
 
 interface SessionInfo {
@@ -106,7 +144,7 @@ async function shareNotFoundResponse(request: NextRequest): Promise<NextResponse
     return null;
   }
   if (status !== 404) return null;
-  const en = request.cookies.get("mybb:ui-language")?.value === "en";
+  const en = localeFromRequest(request) === "en";
   const title = en ? "Page not found" : "Page introuvable";
   const body = en
     ? "This shared list does not exist or is no longer available."
@@ -149,9 +187,21 @@ function redirectToLogin(request: NextRequest): NextResponse {
   return NextResponse.redirect(url);
 }
 
+const PROTECTED_PREFIXES = [
+  "/mon-compte",
+  "/mes-reservations",
+  "/mes-favoris",
+  "/messages",
+  "/dashboard",
+];
+
 export async function proxy(request: NextRequest) {
   const session = await getSession(request);
   const { pathname } = request.nextUrl;
+
+  const isProtected = PROTECTED_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(`${p}/`),
+  );
 
   // T-135 — pages d'authentification publiques (connexion/inscription).
   // Un visiteur déjà authentifié n'a rien à y faire : on le renvoie à
@@ -170,13 +220,19 @@ export async function proxy(request: NextRequest) {
       home.search = "";
       return NextResponse.redirect(home);
     }
-    return NextResponse.next();
+    return nextWithLocale(request);
   }
 
   // T-163 : partage de favoris — PUBLIC (aucune session requise). 404 réel
   // avant streaming si token inconnu, sinon la page RSC s'exécute.
   if (pathname.startsWith(SHARE_PREFIX)) {
-    return (await shareNotFoundResponse(request)) ?? NextResponse.next();
+    return (await shareNotFoundResponse(request)) ?? nextWithLocale(request);
+  }
+
+  // Pages publiques ajoutées au matcher uniquement pour tamponner la locale
+  // (`?lang=` / cookie → header `x-ui-language` lu par getServerLocale).
+  if (!isProtected) {
+    return nextWithLocale(request);
   }
 
   // Non authentifié (ou JWT absent/invalide) → connexion sur les routes
@@ -199,7 +255,7 @@ export async function proxy(request: NextRequest) {
     // les gardes RSC (qui lisent la base) tranchent côté serveur.
   }
 
-  return NextResponse.next();
+  return nextWithLocale(request);
 }
 
 export const config = {
@@ -211,10 +267,22 @@ export const config = {
     // T-135 : pages d'auth à interdire aux visiteurs déjà connectés.
     "/connexion",
     "/inscription",
-    // /reservation reste public pour permettre l'achat invité. Les règles
-    // d'authentification et de propriété sont vérifiées dans les handlers API.
+    // T-167 : /reservation reste public (achat invité) mais est matchée
+    // pour tamponner `?lang=` / cookie → `x-ui-language`. Auth inchangée.
+    "/reservation",
+    "/reservation/:path*",
+    "/dashboard",
     "/dashboard/:path*",
     // T-163 : partage public — validation du token au proxy pour un vrai 404.
     "/wishlists/share/:path*",
+    // T-167 : tampon locale SSR sur les pages publiques (cookie iframe
+    // parfois bloqué : le query `lang` est la source de vérité).
+    "/",
+    "/recherche",
+    "/recherche/:path*",
+    "/hebergement/:path*",
+    "/bestrewards",
+    "/aide",
+    "/aide/:path*",
   ],
 };
