@@ -316,26 +316,21 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
   smoke, timeouts/retry runner). Runner unifié : **396 OK · 3 WARN ·
   0 KO** · tsc 0 · vitest 372/372.
 
-### Audit 28 (2026-08-30) — `REPORTS/audit_fonctionnel_profond28_2026-08-30.md` (rapport seul, à arbitrer)
+### Audit 28 (2026-08-30) — `REPORTS/audit_fonctionnel_profond28_2026-08-30.md` (~~à arbitrer~~ ✅ traité — voir section Audit 29)
 
-- 🔴 **T-156 (P1)** — Annulation par l'hôte : `cancelBooking` sans notion
-  d'acteur → frais de politique facturés au voyageur (preuve 277,38 €) ;
-  bouton hôte « Annuler » inopérant (quote 403). → actor
-  (host/admin → fee 0 + refund intégral + raison/emails dédiés), quote
-  autorisé hôte du bien, UI hôte dédiée. Additif, cas voyageur inchangé.
-- 🟠 **T-157 (P2)** — Identité voyageur en mode connecté : le serveur doit
-  utiliser l'identité du compte (ignorer les champs invité du payload pour
-  un user connecté) ; UI lecture seule + option « réserver pour un
-  proche » à arbitrer. Guest mode inchangé.
-- 🟠 **T-158 (P2)** — i18n : vague 1 = fiche propriété publique (EN) +
-  **help-center bilingue** (8 articles fr/en + métadonnées) + **garde-fou CI
-  (warn)** `npm run i18n:check` ; sélecteur de devise dans la recherche
-  (priorité compte > localStorage > locale, contrat `displayCurrency`
-  inchangé).
-- 🟢 **T-159 (P3)** — Hygiène : script de purge des artefacts de
-  simulation (`--dry-run`) ; PATCH settings par section (merge additif) +
-  suppression des `issues` dans la réponse d'erreur ; alignement 409→400
-  sur « capacité dépassée » (à décider).
+> ⚠️ **Resynchronisation T-190 (2026-09-02)** : cette section était restée
+> marquée « à arbitrer » alors que T-156→T-159 ont été implémentés et
+> validés le même jour (section « Audit 29 » ci-dessous). Conservée pour
+> l'historique ; ne pas re-traiter ces items.
+
+- 🔴 ~~**T-156 (P1)** — Annulation par l'hôte~~ ✅ **CORRIGÉ (VALIDÉ)**
+  2026-08-30 (voir section Audit 29).
+- 🟠 ~~**T-157 (P2)** — Identité voyageur en mode connecté~~ ✅
+  **CORRIGÉ (VALIDÉ)** 2026-08-30 (voir section Audit 29).
+- 🟠 ~~**T-158 (P2)** — i18n vague 1 fiche propriété + help-center~~ ✅
+  **CORRIGÉ (VALIDÉ)** 2026-08-30 (voir section Audit 29).
+- 🟢 ~~**T-159 (P3)** — Hygiène purge/settings~~ ✅ **CORRIGÉ (VALIDÉ)**
+  2026-08-30 (voir section Audit 29).
 
 ### Audit 29 (2026-08-30) — `.ai/REPORTS/audit_fonctionnel_profond29_2026-08-30.md` (implémenté + validé)
 
@@ -353,21 +348,32 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - Preuves : 🔨 tsc 0 · 🧪 vitest **57 fichiers / 390 tests** · ▶️ sims
   **5/5 · 396 OK · 0 KO** · ▶️ probes **30/30** · ✅ ai:check.
 
-### Audit 30 (2026-08-30) — `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md` (rapport seul, à arbitrer)
+### Audit 30 (2026-08-30) — `.ai/REPORTS/audit_fonctionnel_profond30_2026-08-30.md` (~~rapport seul, à arbitrer~~ ✅ implémenté + validé)
 
-- 🟠 **T-160 (P2)** — Favoris : 123 wishlists d'artefacts de sims sur le
-  compte seed + N+1 (124 requêtes) + compteur non dédupliqué. → purge
-  étendue + refactor (jointure/count + Set) + cleanup runner.
-- 🟠 **T-161 (P2)** — Alertes prix : dates passées acceptées (201) et jamais
-  expirées. → validation `checkIn >= today` (400) + désactivation cron.
-- 🟠 **T-162 (P2)** — i18n vague 2 : 5 pages publiques encore FR avec langue
-  EN (confidentialité, mentions légales, bestrewards, réservation, partage
-  favoris). → pattern `getServerLocale`/`makeT` + métadonnées.
-- 🟢 **T-163 (P3)** — Token de partage invalide → UI 404 mais HTTP 200.
-  → `notFound()` dans `generateMetadata`.
-- 🟢 **T-164 (P3)** — Sélecteur devise : label FR au SSR même en EN.
-  → prop `initialLanguage` SSR.
-- 🟢 **T-165 (P3)** — E-mails : liens relatifs si `NEXT_PUBLIC_APP_URL`
-  manque. → helper `appBaseUrl()` + repli.
-- 🟢 **T-166 (P3)** — Hygiène : votes/wishlists/alertes des runs non
-  nettoyées. → `cleanup_db` runner étendu.
+> ⚠️ **Resynchronisation T-190 (2026-09-02)** : cette section était restée
+> marquée « à arbitrer » alors que T-160→T-166 ont été implémentés le
+> 2026-08-30 (PROGRESS, session 49) — vérifié par probes runtime le
+> 2026-09-02 : re-POST d'alerte avec arrivée 2020 → **400** ; token de
+> partage invalide → **404** ; `confidentialite`/`mentions-legales`
+> servies en EN avec le cookie langue ; `purge-sim-data.mjs` couvre
+> votes/wishlists/alertes. Conservée pour l'historique ; ne pas
+> re-traiter ces items.
+
+- 🟠 ~~**T-160 (P2)** — Favoris : purge + N+1 + compteur~~ ✅ **livré
+  2026-08-30** : `purge-sim-data.mjs` + `cleanup_db`, jointure/
+  déduplication (`src/app/api/wishlists/route.ts`), tests
+  `wishlist-utils.test.ts (T-160)`.
+- 🟠 ~~**T-161 (P2)** — Alertes prix : dates passées~~ ✅ **livré
+  2026-08-30** : `isStayPast`/`isStayExpired` (`price-alert-rules.ts`),
+  POST → 400, cron `expirePastStayAlerts` (probe runtime 2026-09-02).
+- 🟠 ~~**T-162 (P2)** — i18n vague 2 (5 pages)~~ ✅ **livré 2026-08-30** :
+  `getServerLocale`/`makeT` + métadonnées (probes EN 2026-09-02 :
+  « Privacy policy », « Legal notice »).
+- 🟢 ~~**T-163 (P3)** — Token partage invalide~~ ✅ **livré 2026-08-30** :
+  `notFound()` dans `generateMetadata` (probe 404 le 2026-09-02).
+- 🟢 ~~**T-164 (P3)** — Sélecteur devise SSR~~ ✅ **livré 2026-08-30** :
+  `UiLocaleProvider` amorcé par `getServerLocale` — pas de flash FR.
+- 🟢 ~~**T-165 (P3)** — E-mails liens relatifs~~ ✅ **livré 2026-08-30** :
+  `src/lib/app-url.ts` (`appBaseUrl()` + repli) + tests `app-url.test.ts`.
+- 🟢 ~~**T-166 (P3)** — Hygiène runs~~ ✅ **livré 2026-08-30** :
+  `purge-sim-data.mjs` étendu (votes/alertes/wishlists de sims).

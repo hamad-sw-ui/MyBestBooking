@@ -1,34 +1,33 @@
 # Tâche courante
 
-- **ID** : T-189
-- Titre : Hygiène hooks & directives eslint — 11 warnings → 0 (cause
-  racine : `useT()` instable ; micro-bug i18n du filtre chambres corrigé)
+- **ID** : T-190
+- Titre : Resynchronisation du BACKLOG (audits 28/30 listés « à arbitrer »
+  mais livrés le 2026-08-30) + restauration de l'environnement sandbox
+  (node_modules/.data/.next/.env.local non persistés ; cron 500 réparé via
+  `ALLOW_MOCK_PAYMENTS=true`)
 - **Statut** : CORRIGÉ (VALIDÉ) ✅
 - **Niveau** : **S**
 
 ## Description
-`eslint src` complet : 11 warnings, 0 erreur. Cause racine : `useT()`
-recréait `makeT()` à chaque render → `t` jamais inscriptible en deps des
-hooks (5 effects, 1 memo). Correction : `useMemo(makeT, [locale])` — `t`
-stable ; 5 effets inscrivent `t` (sûr, re-déclenchés au changement de
-langue → messages localisés). `rooms-manager` : `roomTypeLabel` en
-`useCallback([t])` (corrige le filtre texte figé sur l'ancienne langue —
-micro-bug i18n réel). `promotions-manager` : `now` mémoïsé au montage.
-5 directives eslint orphelines retirées. Résultat : **0 erreur,
-0 warning** sur tout `src`. Aucun comportement modifié.
+En préparant T-161 (backlog), le code était déjà corrigé. Audit croisé
+code+probes : T-156→T-159 (audit 29) et T-160→T-166 (session 49) sont TOUS
+livrés — le backlog était figé. BACKLOG.md mis à jour (items barrés,
+renvois). Environnement restauré : npm install, .env.local recréé,
+db:push + seed, build 60/60, cron `ok:true`. Aucun code produit modifié.
 
 ## Sprint de fermeture (tous ✅)
-- [x] eslint 11 → 0 · tsc 0 · vitest 484/484 ×2 isolés · build 60/60
-- [x] pages touchées probées 200 (hôte/admin/customer, EN compris)
-- [x] smoke 94/94 · i18n:check 0 · perf inchangée
-- [x] rapports (audit, validation) + gouvernance
+- [x] probes runtime : 400 dates passées, 404 partage, pages EN, cron ok
+- [x] BACKLOG.md resynchronisé (audits 28 & 30)
+- [x] eslint 0/0 · tsc 0 · vitest 484/484 · smoke 94/94 · build 60/60
+- [x] rapports + gouvernance · ai:check 20/0/0
 
-## Précédente tâche
-- **ID** : T-188 — SmartImage + cron preview vivant — **VALIDÉ** ✅
+## Précédentes tâches
+- T-189 — hygiène hooks/eslint 11→0 — **VALIDÉ** ✅
+- T-188 — SmartImage + cron preview vivant — **VALIDÉ** ✅
 
 ## Prochaine
-- **ID** : T-190
-- Suggestions : (a) dark mode (P2 backlog, chantier dédié à cadrer) ;
-  (b) audit d'exécution des boutons restants « grisés » du footer si le
-  scope marketing est décidé ; (c) renforcer la CI : smoke et vitest
-  lancés sur bases distinctes (leçon T-187/188/189).
+- **ID** : T-191
+- Suggestions : (a) dark mode (P2 backlog, chantier dédié à cadrer —
+  demander le scope) ; (b) CI GitHub Actions (aucun workflow : gates
+  disjoints smoke/vitest, leçon T-187/188) ; (c) items restants « à
+  arbitrer » T-108→T-112 (audit d'architecture, nécessite une décision).

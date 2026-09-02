@@ -3895,3 +3895,13 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   orphelines retirées (règles inactives repérées).
 - Résultat : eslint 0/0 sur tout src ; vitest 484/484 ×2 ; smoke 94/94 ;
   aucun changement de comportement.
+
+## T-190 — 2026-09-02 (resynchronisation backlog, VALIDÉ)
+
+- Le backlog listait « à arbitrer » des items livrés (T-156→159 audit 29 ;
+  T-160→166 session 49). Chaque item re-prouvé par le code et/ou des probes
+  runtime (400 dates passées ; 404 partage ; pages légales EN ; cron ok).
+- Effet de bord sandbox : node_modules/.data/.next/.env.local non persistés
+  → restauration complète (install, env, db:push, seed, build) ; cron 500
+  diagnostiqué (`ALLOW_MOCK_PAYMENTS` exige la chaîne "true").
+- Aucune ligne de code produit modifiée.

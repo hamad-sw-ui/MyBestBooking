@@ -519,3 +519,11 @@
   smoke 94/94 · probes 200.
 - Prochaine : T-190 (dark mode P2 à cadrer / CI bases distinctes / footer
   marketing si scope décidé).
+
+## T-190 — 2026-09-02 | Resynchronisation backlog audits 28/30 : VALIDÉ ✅
+
+- Probes runtime : alertes prix dates passées → 400 ; partage invalide →
+  404 ; pages légales EN servies ; cron price-alerts ok:true.
+- Environnement sandbox restauré (DB seedée, prod 200, cron runner actif).
+- Gates : eslint 0/0 · tsc 0 · vitest 484/484 · smoke 94/94 · build 60/60.
+- Prochaine : T-191 (dark mode à cadrer / CI gates disjoints / T-108→112).
