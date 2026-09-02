@@ -4,10 +4,13 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a05dfc-mybestbooking` (branche Arena active)
-- **HEAD Git** : `ecff196` — **T-193 CORRIGÉ (VALIDÉ)** (2026-09-02) :
+- **HEAD Git** : `53decd2` — **T-194 CORRIGÉ (VALIDÉ)** (2026-09-02) :
+  accès démo en un clic sur /connexion (3 boutons partageant le flux de
+  login normal, i18n fr/en, smoke +1 assertion = 95). Précédente (même
+  jour) :
+  **T-193** —
   audit runtime site-wide outillé (`npm run site:audit` : 236 pages
-  crawlées ×5 profils, 0 issue). Précédente (même jour) :
-  **T-192** —
+  crawlées ×5 profils, 0 issue) ; **T-192** —
   KNOWN_LIMITATIONS purgé (7 lignes obsolètes, probes à l'appui) +
   `npm run env:restore` (restauration sandbox idempotente, testée).
   npm run ci VERT (484/484 + smoke 94/94) ; **T-191** —
