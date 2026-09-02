@@ -4,7 +4,11 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a05dfc-mybestbooking` (branche Arena active)
-- **HEAD Git** : `572f433` — **T-191 CORRIGÉ (VALIDÉ)** (2026-09-02) :
+- **HEAD Git** : `9b29eef` — **T-192 CORRIGÉ (VALIDÉ)** (2026-09-02) :
+  KNOWN_LIMITATIONS purgé (7 lignes obsolètes, probes à l'appui) +
+  `npm run env:restore` (restauration sandbox idempotente, testée).
+  npm run ci VERT (484/484 + smoke 94/94). Précédente (même jour) :
+  **T-191** —
   CI reproductible `npm run ci` (ordre vitest→smoke imposé ; eslint dur
   `--max-warnings 0`) ; workflow GHA livré sous `docs/` (activation
   bloquée : permission `workflows` absente de l'App). Preuve `npm run ci`
