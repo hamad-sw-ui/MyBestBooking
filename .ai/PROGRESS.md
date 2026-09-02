@@ -3923,3 +3923,13 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   (7 lignes obsolètes probes-vérifiées) + outillage anti-perte sandbox.
 - `npm run env:restore` : idempotent ; régénération .env.local testée
   (identique au backup). Leçon de session devenue outillage.
+
+## T-193 — 2026-09-02 (audit runtime + site:audit, VALIDÉ)
+
+- Crawl HTTP exhaustif (anon/admin/hôte/voyageur × FR, anon EN) : 236
+  pages, 0 erreur 5xx, 0 vraie 404, 0 résidu FR en EN anonyme.
+- Garde-fous appris dans le script : langue = profil si connecté (ne pas
+  crawler EN avec des comptes FR) ; seeds = routes réelles + liens
+  découverts uniquement.
+- `npm run site:audit` rejouable ; hors `npm run ci` (nécessite l'app
+  servie).
