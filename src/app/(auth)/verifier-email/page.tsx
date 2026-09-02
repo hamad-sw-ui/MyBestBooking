@@ -5,6 +5,17 @@ import { makeT } from "@/lib/ui-strings";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * T-172 — titre localisé + noindex (page à jeton de vérification d'email).
+ */
+export async function generateMetadata() {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("auth.meta.verifyTitle"),
+    robots: { index: false, follow: false },
+  };
+}
+
 export default async function VerifyEmailPage({
   searchParams,
 }: {

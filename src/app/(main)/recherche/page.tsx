@@ -18,6 +18,21 @@ import { formatPrice } from "@/lib/utils";
 // sont filtrables (avant : 5 options codées en dur, kitchen/sea_view/…
 // inaccessibles via l'UI alors que le filtre ?amenity= les gère).
 import { AMENITIES, amenityLabel } from "@/lib/amenities";
+import { searchFilterWarnings, SEARCH_WARNING_KEY } from "@/lib/search-warnings";
+import { publicCatalogCache } from "@/lib/read-cache";
+
+/**
+ * T-172 (audit UIT 2026-09-01) — les clés `search.meta.*` existaient depuis
+ * T-162 sans jamais être branchées : `/recherche`, page SEO cœur du site,
+ * héritait du titre générique du layout racine. Désormais localisées.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("search.meta.title"),
+    description: t("search.meta.description"),
+  };
+}
 
 interface SearchPageProps {
   searchParams: Promise<{
@@ -164,22 +179,38 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
   if (max !== null) conditions.push(sql`${minPriceEur} <= ${max}`);
 
   const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
-  const [{ total }] = await db.select({ total: count() }).from(properties).where(and(...conditions));
-  const totalPages = Math.max(1, Math.ceil(total / 20));
-  const page = Math.min(requestedPage, totalPages);
   const order = params.sort === "price_asc"
     ? [sql`${minPriceEur} ASC`, asc(properties.id)]
     : params.sort === "price_desc"
       ? [sql`${minPriceEur} DESC`, asc(properties.id)]
       : [desc(properties.averageRating), asc(properties.id)];
 
-  const rows = await db
-    .select({ property: properties })
-    .from(properties)
-    .where(and(...conditions))
-    .orderBy(...order)
-    .limit(20)
-    .offset((page - 1) * 20);
+  // T-184 : le `count(*)` (pagination) et la page courante sont deux
+  // requêtes indépendantes — elles étaient séquentielles, désormais
+  // parallélisées sur des offsets bornés (page demandée). Le clamp
+  // `page = min(requestedPage, totalPages)` est conservé : si la page
+  // demandée dépasse, on relit au bon offset (cas rare, correct).
+  const [countRes, firstRows] = await Promise.all([
+    db.select({ total: count() }).from(properties).where(and(...conditions)),
+    db.select({ property: properties })
+      .from(properties)
+      .where(and(...conditions))
+      .orderBy(...order)
+      .limit(20)
+      .offset((requestedPage - 1) * 20),
+  ]);
+  const { total } = countRes[0];
+  const totalPages = Math.max(1, Math.ceil(total / 20));
+  const page = Math.min(requestedPage, totalPages);
+  const rows = page === requestedPage
+    ? firstRows
+    : await db
+        .select({ property: properties })
+        .from(properties)
+        .where(and(...conditions))
+        .orderBy(...order)
+        .limit(20)
+        .offset((page - 1) * 20);
 
   // Prix d'affichage : seconde requête au lieu de sous-requêtes corrélées en
   // projection (voir minEligiblePriceEur). On récupère les rooms éligibles des
@@ -227,8 +258,35 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     const user = await getCurrentUser();
     if (user) walletAmount = Number(user.walletBalance ?? "0");
   }
-  const search = await searchProperties(params);
+  // T-182 : le catalogue SANS DATES (contenu identique pour tous les
+  // visiteurs, aucune donnée de disponibilité) est servi depuis un cache
+  // TTL 60 s (fraîcheur bornée, pattern settings T-179). AVEC dates, la
+  // disponibilité reste calculée en temps réel — jamais cachée (zéro
+  // risque de surbooking). Le payload caché est le résultat brut (EUR,
+  // avant formatage) : indépendant de la locale et de l'utilisateur.
+  const cacheable = !validStay(params);
+  const cacheKey = cacheable
+    ? JSON.stringify({
+        city: params.city?.trim().toLowerCase() ?? null,
+        country: params.country ?? null,
+        type: params.type ?? null,
+        amenity: params.amenity ?? null,
+        guests: params.guests ?? null,
+        min: priceBounds(params).min,
+        max: priceBounds(params).max,
+        sort: params.sort ?? null,
+        page: Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
+      })
+    : null;
+  const search = cacheKey
+    ? await publicCatalogCache.wrap(`search:${cacheKey}`, () => searchProperties(params))
+    : await searchProperties(params);
   const { results, total, page: currentPage, totalPages } = search;
+  // T-175 — bandeau avertissements : signale chaque paramètre saisi mais
+  // ignoré/incohérent (bornes prix inversées, dates invalides/passées,
+  // voyageurs non entiers). AUCUN impact sur le filtrage : lecture seule des
+  // mêmes règles que le moteur (validStay, priceBounds, guests entier).
+  const filterWarnings = searchFilterWarnings(params);
   const pageQuery = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (value && key !== "page") pageQuery.set(key, value);
   function pageHref(page: number) {
@@ -330,7 +388,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <option value="rating">{t("search.sort.rating")}</option><option value="price_asc">{t("search.sort.priceAsc")}</option><option value="price_desc">{t("search.sort.priceDesc")}</option>
               </select>
             </div>
-            <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} initialLanguage={locale} />
+            <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} />
             <Button type="submit" size="md">
               <Search className="w-4 h-4 mr-2" />
               {t("search.button")}
@@ -355,6 +413,21 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
               {total} {total !== 1 ? t("search.resultsPlural") : t("search.resultsCount")} · {t("search.pageShort")} {currentPage} {t("search.pageOf")} {totalPages}
             </p>
           </div>
+
+          {/* T-175 : avertissements filtres saisis mais ignorés/incohérents —
+              lecture seule, n'altère ni requête ni résultats. */}
+          {filterWarnings.length > 0 && (
+            <div
+              role="alert"
+              className="mb-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3"
+            >
+              <ul className="list-disc pl-5 space-y-1 text-sm text-amber-900">
+                {filterWarnings.map((w) => (
+                  <li key={w}>{t(SEARCH_WARNING_KEY[w])}</li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
 
         {/* Results Grid */}

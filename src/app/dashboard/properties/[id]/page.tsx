@@ -14,6 +14,7 @@ import { formatPrice } from "@/lib/utils";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
 import { AMENITIES, amenityLabel } from "@/lib/amenities";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface Property {
   id: string;
@@ -108,7 +109,7 @@ export default function EditPropertyPage() {
         setError(t("auth.genericError"));
         setLoading(false);
       });
-  }, [propertyId]);
+  }, [propertyId, t]);
 
   const handleSave = async () => {
     if (!property) return;
@@ -593,8 +594,7 @@ export default function EditPropertyPage() {
                     const isMain = property.mainImage === url;
                     return (
                       <div key={url} className="relative group">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={url} alt="" className="w-full h-32 object-cover rounded-lg border" />
+                        <SmartImage src={url} alt="" className="w-full h-32 object-cover rounded-lg border" sizes="(max-width: 768px) 50vw, 25vw" />
                         <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-2 py-1 bg-black/50 rounded-b-lg">
                           <button
                             type="button"

@@ -6,6 +6,7 @@ import { generateSlug, generateBookingReference } from "@/lib/utils";
 import { eq } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 import { apiError } from "@/lib/api-error";
+import { seedImageUrl } from "@/lib/seed-images";
 
 /**
  * Vérifie qu'une requête POST /api/seed est autorisée.
@@ -44,10 +45,12 @@ const DEMO_PROPERTIES = [
     latitude: "48.8606",
     longitude: "2.3376",
     amenities: ["wifi", "spa", "restaurant", "bar", "gym", "parking", "room_service", "concierge"],
-    mainImage: "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
+    // T-186 : visuels locaux (`public/seed-images/`) servis dès que le
+    // fichier est généré ; sinon l'URL Unsplash historique (aucun 404).
+    mainImage: seedImageUrl("hotel-le-magnifique-1", "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800",
-      "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800",
+      seedImageUrl("hotel-le-magnifique-1", "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"),
+      seedImageUrl("hotel-le-magnifique-2", "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=800"),
       "https://images.unsplash.com/photo-1590490360182-c33d57733427?w=800",
     ],
   },
@@ -63,10 +66,10 @@ const DEMO_PROPERTIES = [
     latitude: "31.6295",
     longitude: "-7.9811",
     amenities: ["wifi", "pool", "restaurant", "spa", "terrace", "air_conditioning"],
-    mainImage: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=800",
+    mainImage: seedImageUrl("riad-jardin-secret-1", "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=800",
-      "https://images.unsplash.com/photo-1539437829697-1b4ed5aebd19?w=800",
+      seedImageUrl("riad-jardin-secret-1", "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=800"),
+      seedImageUrl("riad-jardin-secret-2", "https://images.unsplash.com/photo-1539437829697-1b4ed5aebd19?w=800"),
     ],
   },
   {
@@ -81,10 +84,10 @@ const DEMO_PROPERTIES = [
     latitude: "43.7102",
     longitude: "7.2620",
     amenities: ["wifi", "pool", "beach_access", "parking", "garden", "bbq", "sea_view"],
-    mainImage: "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800",
+    mainImage: seedImageUrl("villa-azure-1", "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800",
-      "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
+      seedImageUrl("villa-azure-1", "https://images.unsplash.com/photo-1613490493576-7fde63acd811?w=800"),
+      seedImageUrl("villa-azure-2", "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800"),
     ],
   },
   {
@@ -99,10 +102,10 @@ const DEMO_PROPERTIES = [
     latitude: "48.8867",
     longitude: "2.3431",
     amenities: ["wifi", "kitchen", "washing_machine", "city_view", "balcony"],
-    mainImage: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
+    mainImage: seedImageUrl("appartement-montmartre-1", "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800",
-      "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
+      seedImageUrl("appartement-montmartre-1", "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800"),
+      seedImageUrl("appartement-montmartre-2", "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800"),
     ],
   },
   {
@@ -117,9 +120,10 @@ const DEMO_PROPERTIES = [
     latitude: "36.7992",
     longitude: "10.1719",
     amenities: ["wifi", "restaurant", "terrace", "air_conditioning", "traditional_hammam"],
-    mainImage: "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800",
+    mainImage: seedImageUrl("dar-el-medina-1", "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800",
+      seedImageUrl("dar-el-medina-1", "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800"),
+      seedImageUrl("dar-el-medina-2", "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800"),
     ],
   },
   {
@@ -134,10 +138,10 @@ const DEMO_PROPERTIES = [
     latitude: "33.8076",
     longitude: "10.9445",
     amenities: ["wifi", "pool", "beach", "spa", "restaurant", "bar", "gym", "kids_club", "water_sports"],
-    mainImage: "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800",
+    mainImage: seedImageUrl("resort-les-dunes-1", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800",
-      "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800",
+      seedImageUrl("resort-les-dunes-1", "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800"),
+      seedImageUrl("resort-les-dunes-2", "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?w=800"),
     ],
   },
   {
@@ -152,9 +156,10 @@ const DEMO_PROPERTIES = [
     latitude: "41.3851",
     longitude: "2.1734",
     amenities: ["wifi", "pool", "restaurant", "bar", "gym", "rooftop", "city_view"],
-    mainImage: "https://images.unsplash.com/photo-1455587734955-081b22074882?w=800",
+    mainImage: seedImageUrl("hotel-barcelona-center-1", "https://images.unsplash.com/photo-1455587734955-081b22074882?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1455587734955-081b22074882?w=800",
+      seedImageUrl("hotel-barcelona-center-1", "https://images.unsplash.com/photo-1455587734955-081b22074882?w=800"),
+      seedImageUrl("hotel-barcelona-center-2", "https://images.unsplash.com/photo-1455587734955-081b22074882?w=800"),
     ],
   },
   {
@@ -169,9 +174,10 @@ const DEMO_PROPERTIES = [
     latitude: "43.7696",
     longitude: "11.2558",
     amenities: ["wifi", "breakfast", "garden", "parking", "countryside_view"],
-    mainImage: "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800",
+    mainImage: seedImageUrl("bb-toscana-1", "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800"),
     images: [
-      "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800",
+      seedImageUrl("bb-toscana-1", "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800"),
+      seedImageUrl("bb-toscana-2", "https://images.unsplash.com/photo-1564501049412-61c2a3083791?w=800"),
     ],
   },
 ];

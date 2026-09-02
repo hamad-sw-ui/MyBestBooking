@@ -683,7 +683,7 @@ function ProvidersSection({ providers }: { providers: Providers }) {
     }
     void loadMetadata();
     return () => { active = false; };
-  }, []);
+  }, [t]);
 
   async function save(provider: ProviderKey) {
     const nonEmpty = Object.fromEntries(Object.entries(values[provider]).filter(([, value]) => value.trim()));

@@ -15,6 +15,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { AUDIT_ACTIONS, recordAudit } from "@/lib/audit";
 import { getPaymentProvider } from "@/lib/payment";
 import { getMailer } from "@/lib/mail";
+import { mailStrings, toMailLocale } from "@/lib/mail/strings";
 import { getUploader, S3Uploader } from "@/lib/storage";
 import { db } from "@/db";
 import { providerTestLogs } from "@/db/schema";
@@ -91,11 +92,13 @@ export async function POST(
     } else if (rawProvider === "resend") {
       const mailer = await getMailer();
       if (mailer.constructor.name !== "ResendMailer") throw new Error("Resend n'est pas configuré");
+      // E-mail localisé dans la langue du compte admin destinataire (fr/en).
+      const ms = mailStrings(toMailLocale(user.language ?? null));
       await mailer.send({
         to: user.email,
-        subject: "Test de configuration Resend — MyBestBooking",
-        text: "La configuration Resend a répondu avec succès.",
-        html: "<p>La configuration Resend a répondu avec succès.</p>",
+        subject: ms.providerTestSubject,
+        text: ms.providerTestBody,
+        html: `<p>${ms.providerTestBody}</p>`,
       });
     } else {
       const uploader = await getUploader();

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
+import { isMaintenanceActive, shouldBypassMaintenance } from "@/lib/maintenance";
 
 /**
  * Proxy d'authentification (T-003, ADR-005, BUG-005 ; G2/T-123).
@@ -199,6 +200,34 @@ export async function proxy(request: NextRequest) {
   const session = await getSession(request);
   const { pathname } = request.nextUrl;
 
+  // T-179 — mode maintenance appliqué AU PROXY (vrai 307 au chargement
+  // direct, comme les autres gardes de ce fichier ; le commentaire d'en-tête
+  // explique pourquoi les redirections sont faites ici plutôt que dans un
+  // layout RSC). Constat d'exécution : le `redirect()` du layout (main)
+  // (T-022) était avalé côté rendu — la page se servait en 200 malgré
+  // maintenance=true — et la page d'accueil `/` (hors groupe (main)) n'y
+  // était de toute façon pas couverte. Ici : whitelist déterministe
+  // (shouldBypassMaintenance : /connexion, /api/auth/*, /api/admin/*,
+  // /maintenance, assets…), admins traversent (anti-lockout).
+  // Échec de lecture (DB) → on laisse passer : ne jamais bloquer le site
+  // sur une indisponibilité de la sonde (les gardes API décident ensuite).
+  if (!shouldBypassMaintenance(pathname) && (!session || session.role !== "admin")) {
+    try {
+      if (await isMaintenanceActive()) {
+        // Log opérationnel (peu fréquent par nature) : chaque détournement
+        // vers /maintenance est traçable côté serveur.
+        console.info("[proxy] maintenance active — redirection", pathname, "→ /maintenance");
+        const target = request.nextUrl.clone();
+        target.pathname = "/maintenance";
+        target.search = "";
+        return NextResponse.redirect(target, 307);
+      }
+    } catch (probeError) {
+      // sonde indisponible : passthrough — jamais de blocage sur erreur,
+      // mais journalisé pour l'observabilité (T-179).
+      console.error("[proxy] sonde maintenance indisponible :", probeError);
+    }
+  }
   const isProtected = PROTECTED_PREFIXES.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`),
   );

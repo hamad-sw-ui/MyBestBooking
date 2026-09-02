@@ -335,12 +335,23 @@ export async function GET(request: NextRequest) {
         });
     // T-121 (F2) — métadonnées de pagination additifs (aucun appelant
     // existant cassé). La page /recherche garde son propre SQL/SSR.
-    return NextResponse.json({
-      properties: sanitized,
-      total,
-      limit,
-      offset,
-    });
+    // T-183 — le catalogue est un contenu PUBLIC identique pour tous :
+    // cache HTTP court (navigateur + éventuel CDN) UNIQUEMENT pour les
+    // requêtes sans cookie de session (sinon private/no-store, historique).
+    const authed = Boolean(request.cookies.get("session"));
+    return NextResponse.json(
+      {
+        properties: sanitized,
+        total,
+        limit,
+        offset,
+      },
+      {
+        headers: authed
+          ? { "Cache-Control": "private, no-store" }
+          : { "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60" },
+      },
+    );
   } catch (error) {
     console.error("Error fetching properties:", error);
     return NextResponse.json(

@@ -12,6 +12,18 @@ import { CreateWishlistButton } from "@/components/create-wishlist-button";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { aggregateWishlistItems, uniqueProperties } from "@/lib/wishlist-utils";
+
+/**
+ * T-172 — titre localisé + noindex : une page de favoris est une donnée
+ * personnelle ; elle n'a pas vocation à être indexée par les moteurs.
+ */
+export async function generateMetadata() {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("fav.meta.title"),
+    robots: { index: false, follow: false },
+  };
+}
 import { PriceAlertsSection } from "@/components/price-alerts-section";
 import { Heart, Bell } from "lucide-react";
 import Link from "next/link";

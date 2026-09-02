@@ -40,15 +40,29 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   Suffisant pour ralentir un attaquant naïf, à remplacer par Redis
   (Upstash, ioredis) pour un vrai rate-limiting global.
 
+- **Cache catalogue/fiches 60 s (T-182, mono-instance).**
+  `src/lib/read-cache.ts` sert les recherches **sans dates** et les fiches
+  **publiques** depuis un TTL 60 s process-local (pattern settings T-179).
+  Conséquences bornées et acceptées : un hébergement nouvellement validé
+  ou un avis approuvé peut mettre ≤ 60 s à apparaître publiquement ;
+  la disponibilité AVEC dates et le tunnel de réservation restent temps
+  réel (jamais cachés). En multi-instance, chaque instance diverge ≤ TTL —
+  à remplacer par `unstable_cache`/Redis le jour venu.
+
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **i18n UI (T-167 VALIDÉ).** Catalogue **1354** clés FR=EN ; `i18n:check`
-  **0 candidat** ; SSR cookie `en` prouvé (`html lang=en`, navbar/home/auth/
-  recherche). Restent **hors périmètre** (pas des bugs) : placeholders
-  d’exemple du panneau admin (`settings-panel`), document facture/reçu HTML,
-  messages JSON d’API, termes métier identiques FR/EN (« No-show »). Pages
-  légales et centre d’aide déjà bilingues (T-162/T-158). Le sélecteur FR/EN
-  n’agit que via `useT`/`makeT`.
+- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1416** clés FR=EN ;
+  `i18n:check` **0 candidat** ; SSR cookie `en` prouvé (`html lang=en`,
+  navbar/home/auth/recherche). T-168→T-171 ont depuis localisé facture
+  HTML, placeholders réglages, messages JSON d’API et e-mails
+  transactionnels ; T-172 a câblé les métadonnées localisées sur toutes
+  les pages (incl. `/recherche`, auth, compte) avec `noindex` sur les
+  zones privées. Restent **hors périmètre** (pas des bugs) : termes métier
+  identiques FR/EN (« No-show »), contenus stockés en base (seed, avis,
+  motifs d’annulation, corps d’e-mails personnalisés par l’admin), arabe
+  `ar` (repli FR volontaire — défaut `supportedLocales` aligné fr/en).
+  Pages légales et centre d’aide bilingues (T-162/T-158). Le sélecteur
+  FR/EN n’agit que via `useT`/`makeT`.
 - **Devise multi : tunnel et totaux gérés, affichages secondaires non.** La
   table `bookings.currency` est multi-devises : le tunnel de réservation
   (T-152) et les totaux analytics/billing (T-152, `sumByCurrency` — jamais

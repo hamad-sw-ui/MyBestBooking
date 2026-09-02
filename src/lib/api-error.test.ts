@@ -55,6 +55,34 @@ describe("localizeApiMessage (T-168 / T-169)", () => {
     expect(localizeApiMessage("Inscription réussie", "en")).toBe("Sign-up successful");
   });
 
+  it("traduit la validation chambre et les tests providers", () => {
+    expect(localizeApiMessage("Le prix de base doit être strictement positif", "en")).toBe(
+      "The base price must be strictly positive",
+    );
+    expect(
+      localizeApiMessage("Le nombre d'adultes ne peut pas dépasser la capacité maximale", "en"),
+    ).toBe("The number of adults cannot exceed the maximum capacity");
+    expect(
+      localizeApiMessage("Adultes + enfants ne peuvent pas dépasser la capacité maximale", "en"),
+    ).toBe("Adults + children cannot exceed the maximum capacity");
+    expect(localizeApiMessage("La quantité ne peut pas dépasser 50", "en")).toBe(
+      "The quantity cannot exceed 50",
+    );
+    expect(localizeApiMessage("Stripe n'est pas complètement configuré", "en")).toBe(
+      "Stripe is not fully configured",
+    );
+    expect(localizeApiMessage("Stripe a refusé l'annulation de l'intent de test", "en")).toBe(
+      "Stripe refused to cancel the test intent",
+    );
+    expect(localizeApiMessage("Resend n'est pas configuré", "en")).toBe("Resend is not configured");
+    expect(localizeApiMessage("S3/R2 n'est pas complètement configuré", "en")).toBe(
+      "S3/R2 is not fully configured",
+    );
+    expect(localizeApiMessage("Objet test S3 créé mais non supprimé", "en")).toBe(
+      "Test S3 object was created but not deleted",
+    );
+  });
+
   it("laisse intact un message hors dictionnaire", () => {
     expect(localizeApiMessage("Custom upstream", "en")).toBe("Custom upstream");
   });

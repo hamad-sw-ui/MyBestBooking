@@ -22,6 +22,28 @@ type WishlistsPayload = { wishlists: Wishlist[] };
 
 let cachedPayload: Promise<WishlistsPayload | null> | null = null;
 
+/**
+ * T-174 — même famille de défaut que T-173 : le cache de module survivait
+ * aux navigations SPA. Conséquence pire encore qu'un affichage figé :
+ * l'anonyme figeait `cachedPayload = null` (401) ; après connexion sans
+ * plein rechargement, les cœurs restaient vides ET `toggle()` renvoyait
+ * « unauthenticated » alors que la session existait.
+ *
+ * `invalidateWishlistCache()` vide le cache ET prévient tous les hooks
+ * montés (login/register) ; `WISHLISTS_CHANGED_EVENT` est aussi réémis par
+ * les mutations (add/remove) afin que toutes les cartes visibles d'un même
+ * bien se resynchronisent.
+ */
+export const WISHLISTS_CHANGED_EVENT = "mybb:wishlists-changed";
+
+/** Vide le cache + notifie les hooks montés. SSR-safe. */
+export function invalidateWishlistCache() {
+  cachedPayload = null;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(WISHLISTS_CHANGED_EVENT));
+  }
+}
+
 async function fetchWishlists(): Promise<WishlistsPayload | null> {
   const res = await fetch("/api/wishlists");
   if (res.status === 401) return null;
@@ -29,12 +51,17 @@ async function fetchWishlists(): Promise<WishlistsPayload | null> {
   return (await res.json()) as WishlistsPayload;
 }
 
-function getCachedWishlists(): { get: () => Promise<WishlistsPayload | null>; refresh: () => void } {
+/** Résolution (cached) utilisable hors hook — requêtes + repli anonyme. */
+export function resolveWishlists(): Promise<WishlistsPayload | null> {
   if (!cachedPayload) cachedPayload = fetchWishlists();
+  return cachedPayload;
+}
+
+function getCachedWishlists(): { get: () => Promise<WishlistsPayload | null>; refresh: () => void } {
   return {
-    get: () => cachedPayload ?? Promise.resolve(null),
+    get: () => resolveWishlists(),
     refresh: () => {
-      cachedPayload = null;
+      invalidateWishlistCache();
     },
   };
 }
@@ -45,9 +72,20 @@ export function useWishlistToggle(propertyId: string) {
   const [wishlistId, setWishlistId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const aliveRef = useRef(true);
+  // T-174 : rejoue la résolution quand la session change (login/register)
+  // ou après mutation — sans cela l'état « favori » restait celui d'avant.
+  const [epoch, setEpoch] = useState(0);
 
   useEffect(() => {
     aliveRef.current = true;
+    if (typeof window !== "undefined") {
+      const onChanged = () => setEpoch((e) => e + 1);
+      window.addEventListener(WISHLISTS_CHANGED_EVENT, onChanged);
+      return () => {
+        aliveRef.current = false;
+        window.removeEventListener(WISHLISTS_CHANGED_EVENT, onChanged);
+      };
+    }
     return () => {
       aliveRef.current = false;
     };
@@ -58,7 +96,14 @@ export function useWishlistToggle(propertyId: string) {
     getCachedWishlists()
       .get()
       .then((data) => {
-        if (ignore || !data) return;
+        if (ignore || !data) {
+          if (!ignore && !data) {
+            // Session absente (ou fraîchement perdue) : état neutre.
+            setSaved(false);
+            setWishlistId(null);
+          }
+          return;
+        }
         const list = data.wishlists.find((w) =>
           w.items.some((i) => i.propertyId === propertyId),
         );
@@ -71,8 +116,7 @@ export function useWishlistToggle(propertyId: string) {
     return () => {
       ignore = true;
     };
-  }, [propertyId]);
-
+  }, [propertyId, epoch]);
   const toggle = useCallback(async (): Promise<"ok" | "unauthenticated"> => {
     if (busy) return "ok";
     setBusy(true);

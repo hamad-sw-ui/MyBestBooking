@@ -79,6 +79,9 @@ interface MailStrings {
   reminderBody: string;
   reviewSubject: string;
   reviewBody: string;
+  // E-mail de test « vérifier la connexion provider » (panneau admin).
+  providerTestSubject: string;
+  providerTestBody: string;
 }
 
 const FR: MailStrings = {
@@ -169,6 +172,8 @@ const FR: MailStrings = {
     "Bonjour {firstName},\n\n" +
     "Nous espérons que votre séjour à {propertyName} s'est bien passé.\n\n" +
     "Votre avis aide les autres voyageurs à mieux réserver. Cela ne prend qu'une minute — merci pour votre retour !",
+  providerTestSubject: "Test de configuration Resend — MyBestBooking",
+  providerTestBody: "La configuration Resend a répondu avec succès.",
 };
 
 const EN: MailStrings = {
@@ -259,6 +264,8 @@ const EN: MailStrings = {
     "Hi {firstName},\n\n" +
     "We hope your stay at {propertyName} went well.\n\n" +
     "Your review helps other travellers book better. It only takes a minute — thank you!",
+  providerTestSubject: "Resend configuration test — MyBestBooking",
+  providerTestBody: "The Resend configuration responded successfully.",
 };
 
 export function mailStrings(locale: MailLocale): MailStrings {

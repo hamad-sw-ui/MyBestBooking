@@ -44,6 +44,39 @@ interface Resolved {
 
 let cached: Promise<Resolved> | null = null;
 
+/**
+ * T-173 — Événement d'invalidation des préférences d'affichage.
+ *
+ * Constats terrain : après connexion/inscription la navigation est SPA
+ * (`router.push` + `router.refresh`, sans plein rechargement). La promesse
+ * `cached` restait donc figée sur la résolution **anonyme** (language issu
+ * du localStorage) alors que le serveur re-rendait avec la langue **du
+ * compte** → page mixte FR/EN jusqu'au prochain F5.
+ *
+ * `invalidateDisplayPreferences()` vide le cache ET notifie tous les hooks
+ * montés : chacun relance `load()` et se synchronise (compte désormais
+ * joint via la session fraîche → priorité compte respectée partout).
+ */
+export const DISPLAY_PREFS_EVENT = "mybb:display-preferences-changed";
+
+/** Réinitialise le cache (ex. juste avant un rechargement complet). */
+export function resetDisplayPreferencesCache() {
+  cached = null;
+}
+
+/** Cache vidé + tous les hooks avertis → re-résolution immédiate. */
+export function invalidateDisplayPreferences() {
+  cached = null;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new Event(DISPLAY_PREFS_EVENT));
+  }
+}
+
+/** Résolution (cached) utilisable hors hook — requêtes + fallbacks. */
+export function resolveDisplayPreferences(): Promise<Resolved> {
+  return load();
+}
+
 function load(): Promise<Resolved> {
   if (!cached) {
     cached = (async () => {
@@ -126,19 +159,27 @@ function load(): Promise<Resolved> {
   return cached;
 }
 
-/** Réinitialise le cache (ex. après connexion/déconnexion ou changement de profil). */
-export function resetDisplayPreferencesCache() {
-  cached = null;
-}
-
 export function useDisplayPreferences(): DisplayPreferences {
   const [state, setState] = useState<DisplayPreferences>({ currency: null, language: null, ready: false });
 
   useEffect(() => {
     let cancelled = false;
-    load().then((r) => {
-      if (!cancelled) setState({ currency: r.currency, language: r.language, ready: true });
-    });
+    const reload = () => {
+      load().then((r) => {
+        if (!cancelled) setState({ currency: r.currency, language: r.language, ready: true });
+      });
+    };
+    reload();
+    // T-173 : re-résolution sur invalidation explicite (login/register, profil
+    // mis à jour) — sans cela le cache de module gardait la langue anonyme
+    // après connexion (UI mixte FR/EN jusqu'au prochain plein chargement).
+    if (typeof window !== "undefined") {
+      window.addEventListener(DISPLAY_PREFS_EVENT, reload);
+      return () => {
+        cancelled = true;
+        window.removeEventListener(DISPLAY_PREFS_EVENT, reload);
+      };
+    }
     return () => { cancelled = true; };
   }, []);
 

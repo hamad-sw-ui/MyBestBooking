@@ -7,6 +7,7 @@ import { useT } from "@/components/ui-locale-provider";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface Props {
   initial: {
@@ -148,8 +149,9 @@ export function ProfileForm({ initial }: Props) {
               {avatarUploading ? t("account.uploading") : t("account.importFromComputer")}
             </PhotoUploadButton>
             {form.avatarUrl && (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={form.avatarUrl} alt={t("account.avatarPreview")} className="w-12 h-12 rounded-full object-cover border border-gray-200" />
+              <div className="relative w-12 h-12 rounded-full overflow-hidden border border-gray-200">
+                <SmartImage src={form.avatarUrl} alt={t("account.avatarPreview")} className="w-12 h-12 rounded-full object-cover" sizes="48px" />
+              </div>
             )}
           </div>
           <input id="pf-avatar" type="url" value={form.avatarUrl} onChange={(e) => set("avatarUrl", e.target.value)} placeholder="https://…/photo.jpg" className="mt-2 w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />

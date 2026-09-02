@@ -19,6 +19,12 @@ export default async function MainLayout({ children }: { children: ReactNode }) 
   // T-022 : mode maintenance — les non-admins sont renvoyés vers la
   // page /maintenance. Les admins traversent normalement (pour pouvoir
   // désactiver le mode depuis /dashboard/settings).
+  // T-022 : mode maintenance — les non-admins sont renvoyés vers la
+  // page /maintenance. Les admins traversent normalement (pour pouvoir
+  // désactiver le mode depuis /dashboard/settings).
+  // T-179 : la garde EFFECTIVE est désormais au proxy (vrai 307 avant tout
+  // rendu — voir src/proxy.ts) ; ce redirect est conservé comme filet
+  // secondaire (navigation intra-app / race).
   if ((!user || user.role !== "admin") && (await isMaintenanceActive())) {
     redirect("/maintenance");
   }
@@ -27,7 +33,7 @@ export default async function MainLayout({ children }: { children: ReactNode }) 
     <div className="min-h-screen flex flex-col">
       <Header user={user} initialLanguage={initialLanguage} />
       <main id="main-content" className="flex-1">{children}</main>
-      <Footer />
+      <Footer userRole={user?.role ?? null} />
     </div>
   );
 }

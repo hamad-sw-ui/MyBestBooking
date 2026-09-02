@@ -22,7 +22,13 @@ export async function getPaymentProvider(): Promise<PaymentProvider> {
   const secretKey = config.secretKey;
   const webhookSecret = config.webhookSecret;
   const publishableKey = config.publishableKey;
-  if (process.env.NODE_ENV === "production" && (!secretKey || !webhookSecret || !publishableKey)) {
+  const credentialsMissing = !secretKey || !webhookSecret || !publishableKey;
+  // T-178 : la garde historique (prod ⇒ Stripe réel) reste la règle par
+  // défaut. Un environnement de DÉMO (preview, recette sans PSP) peut
+  // explicitement autoriser le mock via ALLOW_MOCK_PAYMENTS=true — opt-in
+  // visible, jamais implicite ; hors prod la variable n'a aucun effet.
+  const mockAllowedInProduction = process.env.ALLOW_MOCK_PAYMENTS === "true";
+  if (process.env.NODE_ENV === "production" && credentialsMissing && !mockAllowedInProduction) {
     throw new Error("Le paiement production exige les clés Stripe serveur, webhook et publique");
   }
   return secretKey && webhookSecret

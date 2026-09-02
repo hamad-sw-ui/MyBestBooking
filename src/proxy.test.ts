@@ -1,4 +1,11 @@
 import { describe, it, expect, beforeAll, vi } from "vitest";
+
+// T-179 : les cas historiques de ce fichier s'exécutent hors maintenance
+// — l'état vrai base-cache n'a pas à influencer le contrat auth/locale.
+vi.mock("@/lib/maintenance", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@/lib/maintenance")>();
+  return { ...mod, isMaintenanceActive: vi.fn(async () => false) };
+});
 import { NextRequest } from "next/server";
 import { SignJWT } from "jose";
 

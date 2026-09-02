@@ -153,4 +153,20 @@ describe("getPaymentProvider factory", () => {
     _resetPaymentProvider();
     await expect(getPaymentProvider()).rejects.toThrow(/exige les clés Stripe/);
   });
+
+  // T-178 : le refus prod peut être levé UNIQUEMENT par opt-in explicite
+  // (preview/recette sans PSP) — jamais par absence de clés.
+  it("production + ALLOW_MOCK_PAYMENTS=true (explicite) → Mock autorisé", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ALLOW_MOCK_PAYMENTS", "true");
+    _resetPaymentProvider();
+    expect((await getPaymentProvider()).kind).toBe("mock");
+  });
+
+  it("production + ALLOW_MOCK_PAYMENTS=false → refus inchangé", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ALLOW_MOCK_PAYMENTS", "false");
+    _resetPaymentProvider();
+    await expect(getPaymentProvider()).rejects.toThrow(/exige les clés Stripe/);
+  });
 });

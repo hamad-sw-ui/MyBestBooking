@@ -12,6 +12,7 @@ import { PhotoUploadButton } from "@/components/photo-upload-button";
 // recherche (28 valeurs, source unique au lieu de 12 locales).
 import { AMENITIES, amenityLabel } from "@/lib/amenities";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
+import { SmartImage } from "@/components/ui/smart-image";
 
 export default function NewPropertyPage() {
   const t = useT();
@@ -339,12 +340,14 @@ export default function NewPropertyPage() {
             />
             {formData.mainImage && (
               <div className="mt-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={formData.mainImage}
-                  alt={t("prop.photoPreview")}
-                  className="w-full max-w-md h-48 object-cover rounded-lg"
-                />
+                <div className="relative w-full max-w-md h-48 rounded-lg overflow-hidden">
+                  <SmartImage
+                    src={formData.mainImage}
+                    alt={t("prop.photoPreview")}
+                    className="w-full h-48 object-cover"
+                    sizes="(max-width: 768px) 100vw, 448px"
+                  />
+                </div>
                 <div className="mt-2">
                   <PhotoUploadButton
                     variant="outline"

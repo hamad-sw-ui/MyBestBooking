@@ -1,10 +1,20 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { getCurrentUser } from "@/lib/auth";
 import { getServerLocale } from "@/lib/server-locale";
 import { isMaintenanceActive } from "@/lib/maintenance";
 import { DashboardSidebar } from "@/components/layout/dashboard-sidebar";
 import { DashboardMobileHeader } from "@/components/layout/dashboard-mobile-header";
 import type { ReactNode } from "react";
+
+/**
+ * T-172 — l'espace hôte/admin est intrinsèquement privé : noindex/nofollow
+ * hérité par toutes les pages `/dashboard/*` (les titres de page restent
+ * gérés au niveau de chaque page).
+ */
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const user = await getCurrentUser();

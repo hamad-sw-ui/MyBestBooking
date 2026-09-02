@@ -40,10 +40,8 @@ export class ConsoleMailer implements Mailer {
     try {
       // Une reprise du même eventKey représente déjà un envoi accepté.
       if (!existsSync(path)) writeFileSync(path, content, "utf8");
-      // eslint-disable-next-line no-console
       console.log(`[mail:console] Sent to ${email.to} → ${path}`);
     } catch (e) {
-      // eslint-disable-next-line no-console
       console.warn(`[mail:console] Failed to write ${path}:`, e);
     }
     return { id };

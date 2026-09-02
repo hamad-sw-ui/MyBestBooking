@@ -7,6 +7,7 @@ import {
   UI_CURRENCY_STORAGE_KEY,
   resetDisplayPreferencesCache,
 } from "@/lib/use-display-currency";
+import { useT } from "@/components/ui-locale-provider";
 
 /**
  * T-158 (audit n°29) — Sélecteur de devise d'affichage PUBLIC.
@@ -19,22 +20,14 @@ import {
  * propage la devise aux libellés ET au champ caché `displayCurrency`
  * (conversion serveur des bornes inchangée — contrat T-133).
  *
- * T-164 (audit n°30) — langage SSR : `initialLanguage` (résolu par
- * `getServerLocale()` côté serveur) évite le label « Devise d'affichage »
- * rendu en français pour un visiteur EN avant hydratation. Le hook reste
- * l'autorité après hydratation (compte > localStorage > plateforme).
+ * Libellés via `useT()` : le `UiLocaleProvider` racine est amorcé par la
+ * locale serveur (`getServerLocale`), donc pas de flash français au SSR ni
+ * besoin d'une prop `initialLanguage` dédiée.
  */
-export function CurrencySelector({
-  compact = false,
-  initialLanguage = null,
-}: {
-  compact?: boolean;
-  initialLanguage?: string | null;
-}) {
-  const { currency, language } = useDisplayPreferences();
+export function CurrencySelector({ compact = false }: { compact?: boolean }) {
+  const { currency } = useDisplayPreferences();
+  const t = useT();
   const [error, setError] = useState<string | null>(null);
-  // Langue affichée : hook (résolu) sinon langue SSR fournie.
-  const effectiveLanguage = language ?? initialLanguage;
   const current = (currency ?? "XAF").toUpperCase();
 
   async function change(next: string) {
@@ -43,7 +36,7 @@ export function CurrencySelector({
     try {
       window.localStorage.setItem(UI_CURRENCY_STORAGE_KEY, next);
     } catch {
-      setError("Stockage indisponible");
+      setError(t("currency.storageError"));
       return;
     }
     resetDisplayPreferencesCache();
@@ -52,7 +45,7 @@ export function CurrencySelector({
     window.location.reload();
   }
 
-  const label = effectiveLanguage === "en" ? "Display currency" : "Devise d'affichage";
+  const label = t("currency.displayLabel");
 
   return (
     <label className={compact ? "inline-flex items-center gap-1 text-xs text-gray-500" : "block text-xs font-medium text-gray-500 mb-1"}>

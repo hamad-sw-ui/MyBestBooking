@@ -15,6 +15,18 @@ import { Star } from "lucide-react";
 import Link from "next/link";
 
 /**
+ * T-172 — titre localisé + noindex (formulaire d'avis lié à une réservation
+ * personnelle).
+ */
+export async function generateMetadata() {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("bookings.leaveReview"),
+    robots: { index: false, follow: false },
+  };
+}
+
+/**
  * Page de dépôt d'avis (T-125, P4).
  *
  * Anciennement un simple composant client qui répondait 200 pour n'importe

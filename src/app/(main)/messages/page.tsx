@@ -12,6 +12,18 @@ import { MessageSquare, Search, Send, Building2, Calendar } from "lucide-react";
 import Link from "next/link";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { SmartImage } from "@/components/ui/smart-image";
+
+/**
+ * T-172 — titre localisé + noindex (messagerie privée, non indexable).
+ */
+export async function generateMetadata() {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("messages.meta.title"),
+    robots: { index: false, follow: false },
+  };
+}
 
 async function getConversations(userId: string, search = "") {
   const userConversations = await db
@@ -142,12 +154,13 @@ export default async function MessagesPage({
                   <Card className={`hover:shadow-md transition-shadow ${unreadCount && unreadCount > 0 ? 'border-[#1B3A6B]' : ''}`}>
                     <CardContent className="flex items-start gap-4">
                       {/* Property Image */}
-                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                      <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
                         {property?.mainImage ? (
-                          <img
+                          <SmartImage
                             src={property.mainImage}
                             alt={property.name || ""}
                             className="w-full h-full object-cover"
+                            sizes="64px"
                           />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center">

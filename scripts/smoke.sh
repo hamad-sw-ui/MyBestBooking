@@ -157,7 +157,12 @@ fi
 # 1. Seed (idempotent)
 # ─────────────────────────────────────────────────────────────
 sect "1. Seed"
-seed_body=$(curl -s -X POST "$BASE_URL/api/seed" || true)
+# T-178 : en production la route seed est protégée par SEED_TOKEN (garde
+# volontaire). Si le token est présent dans l'environnement du smoke, on le
+# transmet ; sinon comportement historique inchangé (dev sans token = 200).
+seed_headers=()
+if [ -n "${SEED_TOKEN:-}" ]; then seed_headers=(-H "x-seed-token: $SEED_TOKEN"); fi
+seed_body=$(curl -s -X POST "$BASE_URL/api/seed" "${seed_headers[@]}" || true)
 if echo "$seed_body" | grep -qE '"(message|success)"'; then
   ok "POST /api/seed → OK ($(echo "$seed_body" | head -c 60))"
 else

@@ -1,7 +1,7 @@
 "use client";
 
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,7 @@ interface Props {
 export function RoomsManager({ rooms, isAdmin }: Props) {
   const t = useT();
   const locale = useUiLocale();
-  function roomTypeLabel(type: string): string {
+  const roomTypeLabel = useCallback(function roomTypeLabelInner(type: string): string {
     switch (type) {
       case "single": return t("room.type.single");
       case "double": return t("room.type.double");
@@ -57,7 +57,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
       case "family": return t("room.type.family");
       default: return type;
     }
-  }
+  }, [t]);
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -81,7 +81,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         (roomTypeLabel(r.roomType)).toLowerCase().includes(ql)
       );
     });
-  }, [rooms, q, statusFilter, typeFilter]);
+  }, [rooms, q, statusFilter, typeFilter, roomTypeLabel]);
 
   const allSelected =
     filtered.length > 0 && filtered.every((r) => selected.has(r.id));

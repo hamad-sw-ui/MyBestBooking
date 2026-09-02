@@ -45,7 +45,12 @@ export const generalSchema = z.object({
   // sans hard-coder — et surtout pour permettre à un admin de restreindre
   // l'offre disponible (ex: retirer XAF sans redéployer).
   supportedCurrencies: z.array(z.enum(["EUR", "USD", "GBP", "XAF"])).min(1).default(["EUR", "USD", "GBP", "XAF"]),
-  supportedLocales: z.array(z.enum(["fr", "en", "ar"])).min(1).default(["fr", "en", "ar"]),
+  // T-172 : le schéma tolère « ar » (données historiques / futur dictionnaire
+  // RTL), mais le défaut annonce uniquement les locales réellement servies
+  // (UiLocale = fr|en). Défaut précédent ["fr","en","ar"] : l'API publique
+  // /api/app-preferences promettait une langue que toute la chaîne i18n
+  // (ui-strings, e-mails, SSR) retombait en français — façade incohérente.
+  supportedLocales: z.array(z.enum(["fr", "en", "ar"])).min(1).default(["fr", "en"]),
 });
 
 export const billingSchema = z.object({
@@ -207,7 +212,7 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     defaultCurrency: "XAF",
     defaultLanguage: "fr",
     supportedCurrencies: ["EUR", "USD", "GBP", "XAF"],
-    supportedLocales: ["fr", "en", "ar"],
+    supportedLocales: ["fr", "en"],
   },
   billing: {
     taxRate: 0.1,

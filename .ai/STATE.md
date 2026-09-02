@@ -3,13 +3,23 @@
 ## 📌 Identification
 
 - **Projet** : MyBestBooking
-- **Branche actuelle** : `arena/01a05736-mybestbooking`
-- **HEAD Git** : à mettre à jour en fin de session (T-168 **CORRIGÉ
-  (VALIDÉ)** — i18n 100 % facture HTML, placeholders réglages, erreurs
-  API `apiError` défaut **fr** ; catalogue **1394** FR=EN). T-167
-  (vague 3 UI) inclus dans le même arbre. Le workflow
-  `.github/workflows/ci.yml` (T-113) reste hors suivi git de ces push car le
-  jeton GitHub App n'a pas la permission `workflows`.
+- **Branche actuelle** : `arena/01a05dfc-mybestbooking` (branche Arena active)
+- **HEAD Git** : `be30f60` — **T-174 CORRIGÉ (VALIDÉ)** (2026-09-01) :
+  favoris figés après login (cache module, famille T-173) → invalidation
+  réactive `WISHLISTS_CHANGED_EVENT` ; audit exhaustif : **2/2** caches
+  client couverts, layouts sains. vitest **438/438**, build 0, smoke
+  94/94, ai:check 20/0/0. Précédentes (même jour) :
+  **T-173** (invalidation préférences après login/register SPA) ;
+  **T-172** —
+  audit d'exécution des scénarios (crawl runtime FR/EN × rôles) →
+  métadonnées localisées sur 11 pages (wrappers serveur pour les 6 pages
+  client, clés `search.meta.*` orphelines câblées), `noindex` sur zones
+  privées + `/dashboard`, défaut `supportedLocales: ["fr","en"]`,
+  catalogue **1416** FR=EN. Preuves : 🔨 tsc+build 0 · 🧪 vitest
+  **432/432** (DB) · ▶️ smoke **94/94** · 🔍 i18n:check 0.
+  Session précédente : T-168 (i18n 100 % facture/placeholders/API) —
+  T-167 (vague 3 UI) inclus. Le workflow `.github/workflows/ci.yml`
+  (T-113) reste hors suivi git (permission `workflows` du jeton).
 - **Version Framework** : AI-DOS 3.0.1
 - **Dernière activité (2026-08-30)** : **audit fonctionnel profond n°30
   implémenté (T-160→T-166, sans régression)** — T-160 purge 122 wishlists
@@ -377,3 +387,135 @@
 - Compteur : `sessions_since_last_product_audit: 0`.
 - HEAD Git : à mettre à jour en fin de session (motif toléré R7 ; audit
   n°30 rapport seul, aucun commit src attendu pour l'instant).
+
+## T-175 — 2026-09-01 | Feedbacks filtres de recherche : CORRIGÉ ✅ VALIDÉ
+
+- Audit d'exécution des scénarios : `/recherche` en 9 instantanés live
+  (saines/inversées/passées/malformées) → silence utilisateur documenté.
+- Brique pure `src/lib/search-warnings.ts` + bandeau `role="alert"` FR/EN
+  (+4 clés → 1420) ; **moteur de filtrage inchangé** (zéro régression).
+- Titre état réservation : « manquantes ou invalides ».
+- Preuves : vitest 445/445 (67 fichiers) · tsc/build prod 0 (60/60) ·
+  eslint 0 · smoke **94/94** · runtime FR/EN validé · i18n:check 0 candidat.
+
+## T-176 — 2026-09-01 | Deep-links réservation : CORRIGÉ ✅ VALIDÉ
+
+- Tunnel de réservation : liens incomplets (`room` seule, `property` seule)
+  rattrapés (résolution API / redirection fiche) au lieu de l'impasse.
+  Lien complet, `?booking=` et état 「 manquantes 」 : inchangés.
+- Audit d'exécution : avis client↔hôte, messagerie, alertes prix, partage
+  favoris, annulation — tous éprouvés sains avec données réelles.
+- Preuves : vitest **450/450** (67 fichiers, +5) · tsc/build 0 (60/60) ·
+  eslint 0 nouvelle alerte · smoke **94/94** · runtime post-build 4 formes.
+
+## T-177 — 2026-09-01 | Disponibilité fiche hébergement : CORRIGÉ ✅ VALIDÉ
+
+- Fiche : chambre épuisée sur dates valides → « Complet pour ces dates »
+  au lieu du 409 final de tunnel ; sans dates → rendu inchangé (mesuré).
+- Le moteur de refus (surbooking/reprise paiement/validation) éprouvé sain
+  par campagne API réelle — aucun correctif métier requis.
+- Preuves : vitest **456/456** (68 fichiers, +6) · tsc/build 0 (60/60) ·
+  eslint 0 · smoke **94/94** · runtime 4 formes FR/EN · i18n:check 0.
+
+## T-178 — 2026-09-01 | Lenteur constatée : CORRIGÉ ✅ VALIDÉ
+
+- Preview Arena servie en **production** (pages pré-générées 60/60) :
+  mesures 10–24 ms contre 90–200 ms / 2,2 s à froid en dev.
+- Paiements : opt-in `ALLOW_MOCK_PAYMENTS=true` pour la démo ; la garde
+  « prod ⇒ vrai Stripe » reste le défaut (couvert par 2 tests).
+- `scripts/smoke.sh` transmet `x-seed-token` si défini → smoke **94/94**
+  rejoué sur la production.
+- Preuves : vitest **458/458** (68 fichiers) · tsc/build 0 · smoke 94/94.
+
+## T-179 — 2026-09-01 | Garde maintenance pages : CORRIGÉ ✅ VALIDÉ
+
+- Avant : maintenance ON → les pages restaient servies (redirect avalé dans
+  le layout ; `/` hors groupe (main)). Seules les écritures API bloquaient.
+- Après : vrai 307 `/maintenance` au proxy dès le chargement, sur tout le
+  site ; admins et `/connexion` passent (anti-lockout) ; sonde en échec =
+  passthrough loggé ; redirections tracées côté serveur.
+- Audit admin exécuté : modération avis bouclée (pending→approuvé→masqué,
+  agrégat recalculé) ; API 503 en maintenance ; RBAC — sains.
+- Preuves : vitest **465/465** (69 fichiers, +7) · tsc/build 0 (60/60) ·
+  eslint 0 · runtime prod ON/OFF · smoke **94/94**.
+
+## T-180 — 2026-09-02 | Impasse « devenir hôte » : CORRIGÉ ✅ VALIDÉ
+
+- Audit d'exécution en prod (12 zones) : promotions de bout en bout
+  (création admin → simulation → consommation réelle, `currentUses`
+  vérifié en SQL), facture HTML, export CSV hôte, parrainage, suspension
+  (coupure totale 401), reset mdp à usage unique, BestRewards, profil,
+  conversations, cycle de vie propriété (PUT, admin-only) — **tous sains**.
+- Défaut retenu : footer « Ajouter mon hébergement » envoyait **tout le
+  monde** sur `/dashboard/properties/new` → voyageur connecté : 307 → `/`
+  muet ; anonyme : aller-retour connexion→accueil.
+- Correction : `src/lib/host-entry.ts` — `hostEntryHref(role)` (hôte/admin
+  → dashboard **inchangé** ; voyageur/anonyme → `/inscription?role=host`)
+  + `initialRoleFromSearchParam` (pré-coche « Hôte », casse stricte) ;
+  `Footer(userRole?)` optionnelle, rôle passé par `(main)/layout.tsx` et
+  `page.tsx` ; initializer `useState` client (pattern `referralCode`).
+- Aucune auto-élévation : seule la création de compte hôte reste la porte.
+- Preuves : vitest **470/470** (70 fichiers, +5) · tsc/build 0 (60/60) ·
+  eslint 0 · runtime prod : href par rôle (`/`, `/recherche`) ·
+  `/inscription?role=host` 200 · hôte non régressé (200 dashboard) ·
+  i18n:check 0 · smoke **94/94** (SEED_TOKEN sourcé).
+- Artefacts d'audit en base : promo `RENTREE2026` (uses=1), réservation
+  promo payée, comptes `filleul-26639@` / `suspend-19467@` (suspendu) ;
+  mot de passe customer restauré à `Customer123!` après test du reset.
+- Prochaine : T-181 — suggestions dans `CURRENT_TASK.md`.
+
+
+## T-181…T-185 — 2026-09-02 | Accélération non-régressive : VALIDÉ ✅
+
+- Livré : cache TTL 60 s (recherche sans dates + fiche publique —
+  `src/lib/read-cache.ts`, pattern jumeau settings T-179), headers HTTP
+  conditionnels `/api/properties`, requêtes count+page et rooms+avis
+  parallélisées, `npm run perf` (scripts/perf-baseline.sh).
+- Écarté après MESURE (documenté, pas embarqué) : optimizer images (sandbox
+  sans egress Unsplash → casserait tout) ; optimizePackageImports (0 octet).
+- Jamais caché : disponibilité avec dates, tunnel de réservation, vues
+  privées hôte/admin, payloads avec session (no-store).
+- Preuves : vitest **476/476** (71 fichiers, +6) · tsc/eslint 0 · build
+  60/60 · smoke **94/94** · i18n 0 · probes runtime (tri, pagination,
+  non-fuite wallet, headers par cas). p50 : /recherche 84→12 ms chaud,
+  fiche 80→15 ms, API 5 ms.
+
+## T-186 — 2026-09-02 | Visuels locaux + optimizer images : VALIDÉ ✅
+
+- Toutes les images `<Image>` servies localement (`/seed-images/*.jpg`,
+  23 fichiers) ; optimizer activé : 350 Ko → 49 Ko (−86 %, mesuré).
+- Rollout sans 404 via `seedImageUrl` (local si présent, legacy sinon) ;
+  3 alias locaux documentés (quota génération 10/tour).
+- Preuves : vitest **479/479** (72 fichiers) · tsc/eslint 0 · build
+  60/60 · smoke **94/94** · i18n 0 · probes 200 · perf inchangée.
+- Prochaine : T-187 (visuels dédiés des alias / purge artefacts audit /
+  audit e-mails).
+
+## T-187 — 2026-09-02 | Visuels dédiés + purge + audit mails : VALIDÉ ✅
+
+- Alias → visuels dédiés (dest-tunis, hero, placeholder) : 227→129 Ko.
+- Base purgée (0 artefact) ; audit mails : 6 types joués, tous sent.
+- vitest 479/479 ×2 · smoke 94/94 · i18n 0 · probes 200.
+- Prochaine : T-188 (<img> natifs → next/image ; audit cron alertes prix
+  + BestRewards checkout ; dark mode P2).
+
+## T-188 — 2026-09-02 | SmartImage + cron preview vivant : VALIDÉ ✅
+
+- 11 `<img>` → SmartImage (optimizer si local, lazy si externe) ; fiche
+  servie en srcset responsive via /_next/image.
+- Cron preview actif (`npm run cron:local`, process Arena) : alerte prix,
+  clôture (loyalty+parrainage), rappels, review requests — idempotent.
+- BestRewards checkout prouvé (945 → 862,78 €, confirmed/paid).
+- vitest **484/484** (73 fichiers) · tsc/eslint 0 · build 60/60 · smoke
+  94/94 · i18n 0 · purge 0 artefact.
+- Prochaine : T-189 (warnings hooks préexistants ; dark mode P2).
+
+## T-189 — 2026-09-02 | Hygiène hooks/eslint (11→0) : VALIDÉ ✅
+
+- `useT()` stabilisé ; 5 useEffect inscrivent `t` ; roomTypeLabel en
+  useCallback (corrige le filtre i18n figé) ; `now` mémoïsé ; directives
+  orphelines retirées. eslint **0 erreur / 0 warning** sur tout src.
+- Aucune modification de comportement · vitest 484/484 ×2 · build 60/60 ·
+  smoke 94/94 · probes 200.
+- Prochaine : T-190 (dark mode P2 à cadrer / CI bases distinctes / footer
+  marketing si scope décidé).

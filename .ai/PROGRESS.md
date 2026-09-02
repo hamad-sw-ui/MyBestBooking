@@ -7,6 +7,64 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-09-01 — T-174 favoris figés après login (famille T-173)
+
+- **Demande** : « j'espère que les autres [fonctionnalités] n'ont pas ce
+  genre de problème sournois » → audit exhaustif des caches/états client
+  survivant aux navigations SPA.
+- 🔍 Trouvé : `use-wishlist-toggle` — promesse de module jamais invalidée ;
+  anonyme → 401 fige `null` ; après login SPA, cœurs vides ET `toggle()`
+  « unauthenticated » à tort jusqu'au F5. Négatif confirmé ailleurs :
+  2/2 caches de module client désormais invalidables, layouts sans fetch
+  stale-prone, `provider-credentials` serveur TTL 60 s sain.
+- 🔨 `WISHLISTS_CHANGED_EVENT` + `invalidateWishlistCache()` (SSR-safe) +
+  hook ré-abonné + état neutre propre ; login/register invalident ;
+  mutations add/remove rediffusées (cartes d'un même bien synchronisées).
+- 🧪 vitest **438/438 · 66 fichiers** (+3) · 🔨 tsc 0 · build prod 0
+  (60/60) · eslint 0/0 · ▶️ contrat favoris intact · smoke 94/94 · ✅
+  ai:check 20/0/0.
+- Problèmes : aucun. Opportunités consignées : synchro multi-onglets
+  (`storage` events) → backlog.
+
+## Session 2026-09-01 — T-173 fiabilité bascule de langue
+
+- **Demande** : le sélecteur de langue paraît peu fiable (pages mixtes).
+- 🔍 Cause racine : cache module `useDisplayPreferences` jamais invalidé
+  après login/register (`router.push`/`refresh` = SPA, pas de reload) →
+  serveur en langue compte, clients en langue anonyme → UI mixte FR/EN
+  jusqu'au F5. Défaut secondaire : sélecteur écrivant le local avant PATCH,
+  sans rollback en échec. Déconnexion : propre (form POST = reload).
+- 🔨 Événement `DISPLAY_PREFS_EVENT` + `invalidateDisplayPreferences()`
+  (SSR-safe) + hook réabonné ; invalidation post login/register ; rollback
+  complet du sélecteur (état + stockage) sur échec PATCH.
+- 🧪 vitest **435/435 · 65 fichiers** (+3 : dédup cache, invalidation→
+  re-fetch scénario exact, SSR-safe) · 🔨 tsc 0 · build prod 0 (60/60) ·
+  ▶️ runtime compte>cookie ✓ PATCH reflété ✓ · ▶️ smoke 94/94 · ✅
+  ai:check 20/0/0.
+- Problèmes : aucun. Reste : bascule langue conservée en reload complet
+  (comportement voulu et éprouvé) ; convergence SPA quasi immédiate après
+  login via l'invalidation.
+
+## Session 2026-09-01 — T-172 audit d'exécution + métadonnées/noindex
+
+- **Demande** : analyse profonde des scénarios/éléments fonctionnels à
+  l'exécution (pages, boutons…), correction sans régression, cadre `.ai/`.
+- 🔍 Audit runtime réel (PostgreSQL embarqué + seed + dev :3000) : crawl
+  pages publiques/privées × rôles FR/EN, paramètres aberrants, RBAC,
+  réservation, smoke officiel — socle sain (94/94, garde-fous R15/R18/R19 à
+  0). Findings : **11 pages sans métadonnées** (clés `search.meta.*`
+  orphelines, titre générique `/recherche` FR/EN), **pas de noindex** sur
+  zones privées/dashboard, façade `supportedLocales` incluant « ar ».
+- 🔨 T-172 : `generateMetadata` localisé partout (wrappers serveur T-162
+  pour les 6 pages client), robots noindex privé + dashboard, défaut
+  locales fr/en, catalogue **1416** FR=EN.
+- 🧪 vitest **432/432** (DB) · ▶️ smoke **94/94** · 🔨 tsc + build prod
+  **0 erreur** · 🔍 i18n:check 0 · ▶️ probes titres/noindex par page.
+- Problèmes : aucun. Écart sandbox accepté : E2E Playwright non rejouable
+  (CDN Chromium bloqué — déjà documenté).
+- Étape suivante : arbitrer sonde `minPrice>maxPrice` silencieuse (200) en
+  feedback utilisateur ; résidus BUG-037/038 (settings décoratifs).
+
 ## Session 2026-09-01 — T-168 i18n 100 % (facture, placeholders, API)
 
 - **Demande** : continuer jusqu'à 100 % (placeholders settings, facture
@@ -3697,3 +3755,143 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   (14 warn préexistants) · vitest ui-strings 4/4 · i18n:check exit 0 ·
   health 200. Les pages auth (connexion/inscription/mot-de-passe-oublie/…)
   restent en FR par conception (hors périmètre du garde-fou, V2).
+
+## T-175 — 2026-09-01 (feedbacks filtres de recherche, VALIDÉ)
+
+- Audit exécution : 9 combinaisons `/recherche` + `/reservation` + register doublon sondées en live.
+- Taille **S** prévue et tenue : +1 lib pure (4 estimations), 1 bandeau, 4 clés i18n, 1 test (7 cas).
+- Livré en 1 passe après validation complète (445/445, build 0, smoke 94/94, 4 runtimes FR/EN).
+- Leçon : répliquer la règle de conversion devise dans le check des bornes
+  évite un faux positif (`priceInverted` comparé après `priceBoundToStorage`).
+- Prochain angle proposé : tunnel réservation (données live), messagerie/états vides.
+
+## T-176 — 2026-09-01 (deep-links réservation incomplets, VALIDÉ)
+
+- Audit exécution 17 pages / 9 scénarios vivants : un seul défaut retenu.
+- Taille **S** tenue : 1 fonction pure (+5 tests), 1 effet de rattrapage,
+  aucune clé i18n ajoutée.
+- Leçon : extraire des **primitives** avant useEffect (objet recréé à
+  chaque rendu) — cleanup `cancelled` contre les états fantômes.
+- Prochain angle proposé : rejet de paiement / remboursement wallet à
+  l'exécution (parcours négatifs).
+
+## T-177 — 2026-09-01 (disponibilité réelle fiche, VALIDÉ)
+
+- Audit exécution négatif : réservation jusqu'à épuisement réel (6/6),
+  reprise de paiement (409 propre), validation champs (400).
+- Aucun surbooking possible (garde transactionnelle FOR UPDATE) — le seul
+  défaut était l'amont UI, corrigé.
+- Piège de parité : une clé i18n par dictionnaire → +1 au total (1421), pas
+  +2 ; le test de parité a servi de canary exact.
+
+## T-178 — 2026-09-01 (lenteur constatée, VALIDÉ)
+
+- Diagnostic mesuré avant toute correction : application rapide en soi ;
+  la lenteur venait du serving dev (compile Turbopack à la volée).
+- Décision : preview en production (next start) = 10–24 ms/page stables.
+- Deux gardes prod (SEED_TOKEN, clés Stripe) conservées ; levée de celle
+  du paiement par opt-in explicite seulement → tests 20/20 factory.
+- Leçon : avant d'optimiser le code, mesurer le serving. Dev ≠ prod.
+
+## T-179 — 2026-09-01 (maintenance pages avalée, VALIDÉ)
+
+- Preuve par instrumentation, puis retrait propre (méthode).
+- Piège prod : le bundle middleware a son propre cache settings (60 s) —
+  les tests de bascule doivent patienter le TTL ou redémarrer.
+- Leçon : `redirect()` dans un LAYOUT = avalé par le pipeline de rendu ;
+  pour une règle « vrai 307 au chargement », la règle de la maison est le
+  proxy (cf. T-135/T-163) — T-022 est désormais correctement câblé.
+
+
+## T-180 — 2026-09-02 (impasse « devenir hôte », VALIDÉ)
+
+- Audit d'exécution le plus large à ce jour : 12 zones sondées en prod
+  réelle — promotions de bout en bout (consommation `currentUses` vérifiée
+  en SQL), facture, CSV, parrainage, suspension, reset à usage unique,
+  cycle propriété (PUT admin-only), conversations… : tous sains.
+- Défaut retenu : lien footer constant → impasse muette pour tout non-hôte.
+- Correction : règle pure `host-entry.ts` (lien contextuel + présélection
+  `?role=host`), branchée aux 2 seuls sites Footer + register-client.
+- Piège à documenter : le smoke en prod exige `SEED_TOKEN` dans l'env du
+  shell (garde T-178) — sourcer `.env.local` avant `npm run smoke`.
+- Effet de bord assumé de l'audit : reset mdp customer restauré à
+  `Customer123!` pour la conformité du poste de fumée.
+- Compteurs : vitest **470/470 (70 fichiers)** · build 60/60 · smoke 94/94
+  en PROD · i18n:check 0 · runtime par rôle ✅.
+
+## T-181…T-185 — 2026-09-02 (accélération non-régressive, VALIDÉ)
+
+- Plan validé par l'utilisateur (5 tâches ordonnées, gates par tâche).
+- Mesure d'abord : 2 « optimisations » de fantaisie écartées (optimizer
+  image = egress Unsplash absent du sandbox ; optimizePackageImports =
+  0 octet gagné) — documentées, pas embarquées.
+- Livré : cache TTL 60 s sur recherche-sans-dates et fiche publique
+  (pattern settings T-179, jamais la dispo temps réel), headers HTTP
+  conditionnels sur l'API catalogue, 2 paires de requêtes parallélisées,
+  et `npm run perf` pérenne.
+- Résultat p50 : /recherche 84→12 ms (chaud), fiche 80→15 ms, API 5 ms.
+- Compteurs : vitest 476/476 (71 fichiers) · build 60/60 · smoke 94/94 ·
+  i18n 0 · ai:check à rejouer.
+
+## T-186 — 2026-09-02 (étape 1/3 — visuels locaux, EN COURS)
+
+- Résolveur `seedImageUrl` (local si présent sinon legacy Unsplash) :
+  bascule progressive pilotée par la présence des fichiers — aucune 404
+  possible pendant le rollout.
+- 10/23 visuels générés (quota 10 images/tour) : 5 propriétés couvertes,
+  servies en local (200 image/jpeg, ~250-530 Ko).
+- Le seed étant idempotent, les propriétés existantes ont été mises à jour
+  par UPDATE ciblé (équivalent du nouveau seed).
+- Optimizer `/_next/image` NON activé tant qu'une source `<Image>` peut
+  être distante (étape 3).
+- Gates étape 1 : vitest 479/479 (+3) · tsc/eslint 0 · build 60/60 ·
+  smoke 94/94.
+
+## T-186 — 2026-09-02 (visuels locaux + optimizer, VALIDÉ)
+
+- 23 visuels JPG locaux versionnés (`public/seed-images/`, ~7,2 Mo) ;
+  résolveur `seedImageUrl` : aucun 404 pendant le rollout progressif.
+- Optimizer `/_next/image` ACTIVÉ après localisation complète des sources
+  `<Image>` : −86 % mesuré sur l'image la plus lourde (350→49 Ko).
+- Leçon quota : génération d'images limitée à 10/tour → alias locaux
+  documentés pour les 3 derniers visuels (fichiers dédiés remplaçables
+  sans code, présence détectée dynamiquement).
+- Preuves : vitest 479/479 (+3) · tsc/eslint 0 · build 60/60 · smoke
+  94/94 · i18n 0 · probes statiques & optimizer 200 · perf inchangée.
+
+## T-187 — 2026-09-02 (finition visuels + purge + audit mails, VALIDÉ)
+
+- Les 3 alias de T-186 remplacés par leurs visuels dédiés (quota régénéré)
+  — le contrat `seedImageUrl` a tenu : zéro code modifié.
+- Purge audit transactionnelle : FK sessions/verification_tokens gérées ;
+  base 100 % conforme au seed (0 @test.dev, 0 artefact).
+- Audit mails réel : inscription, reset, réservation (client+hôte),
+  annulation (client+hôte), message — 6 types, tous `sent` en outbox
+  (T-105 idempotente saine).
+- Leçon : tests DB partagés avec l'audit manuel → 2 échecs transitoires
+  constatés, 479/479 ×2 après isolement. Ne plus auditer pendant vitest.
+
+## T-188 — 2026-09-02 (SmartImage + cron vivant, VALIDÉ)
+
+- Frontière image correcte = auto-hébergé vs externe (pas natif vs next) :
+  SmartImage + règle pure testée ; user-avatar inchangé (onError=fonction).
+- Défaut trouvé en audit : cron « vercel.json » jamais appelé en preview
+  (+ GET only + CRON_SECRET absent) → runner externe calé sur le handler
+  idempotent (aucune modif handler ; double-appel sans effet mesuré).
+- Preuves vivantes : alerte prix notifiée (148,33), séjour clôturé
+  (loyalty 7→8), review request envoyée, cashback 0 € conforme à la règle
+  (5 % niveau 3), remise checkout niveau 2 mesurée.
+- Leçon renforcée : jamais smoke→vitest dans le même souffle (même base) —
+  2 échecs transitoires observés, 484/484 isolé ×2.
+
+## T-189 — 2026-09-02 (hygiène hooks, VALIDÉ)
+
+- Cause racine des 5 warnings `t` manquant : `useT()` nouvelle identité à
+  chaque render. `useMemo(makeT)` la stabilise ; les effets peuvent enfin
+  l'inscrire sans boucle.
+- Bonus métier : filtre texte de rooms-manager suivait la langue initiale
+  après bascule (memo sans deps de la fn localisée) → corrigé.
+- `now` mémoïsé au montage (promotions-manager) ; 5 directives eslint
+  orphelines retirées (règles inactives repérées).
+- Résultat : eslint 0/0 sur tout src ; vitest 484/484 ×2 ; smoke 94/94 ;
+  aucun changement de comportement.

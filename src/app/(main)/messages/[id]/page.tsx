@@ -15,6 +15,17 @@ import { makeT } from "@/lib/ui-strings";
 
 export const dynamic = "force-dynamic";
 
+/**
+ * T-172 — titre localisé + noindex (conversation privée).
+ */
+export async function generateMetadata() {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("messages.meta.title"),
+    robots: { index: false, follow: false },
+  };
+}
+
 export default async function ConversationPage({
   params,
 }: {

@@ -191,6 +191,11 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 
 ## UI / UX
 
+- ✅ **T-180 (P1)** — Impasse « Ajouter mon hébergement » : lien footer
+  contextuel (hôte/admin → dashboard inchangé ; voyageur/anonyme →
+  `/inscription?role=host` avec rôle pré-coché). Audit 12 zones : cycle
+  promotions intégral, facture, CSV, parrainage, suspension, reset mdp…
+  → sains. 470 tests · smoke 94/94 · runtime par rôle validé.
 - 🟠 Dark mode + toggle
 - 🟠 i18n réelle (`next-intl`) — le modèle DB supporte déjà
   `descriptionEn`, `users.language`, `users.currency`
@@ -219,8 +224,17 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 
 ## Observabilité & prod
 
+- ✅ **T-181…T-185 (P1, 2026-09-02)** — Accélération mesurée et livrée :
+  cache lecture 60 s (recherche sans dates, fiche publique), headers HTTP
+  API conditionnels, requêtes parallélisées, `npm run perf`. 2 idées
+  écartées après mesure (optimizer images : egress Unsplash absent du
+  sandbox ; optimizePackageImports : 0 octet). `/recherche` 84→12 ms.
 - 🟠 Sentry (ou équivalent) branché sur les 5xx et erreurs client
 - 🟠 Logs structurés JSON (pino) au lieu de `console.error`
+- ✅ Migrer les visuels seed vers local + optimizer activé — **livré T-186**
+  (2026-09-02) : `public/seed-images/` (23 JPG), `seedImageUrl`, optimizer
+  ON (−86 % mesuré). Reste : 3 visuels dédiés pour remplacer les alias
+  (dest-tunis, hero, placeholder) au prochain créneau quota.
 - 🟠 Dockerfile prod + `docker-compose.yml` pour parité dev/prod
 - 🟠 Runbook incidents (DB HS, paiement HS, `JWT_SECRET` fuité)
 - 🟢 Backup DB automatique + procédure de restore testée

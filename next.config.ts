@@ -4,8 +4,13 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["127.0.0.1"],
   // T-008 (BUG-006) : autorise next/image à optimiser les images
   // hébergées sur Unsplash (utilisées par le seed et le hero).
+  // T-186 : optimizer `/_next/image` ACTIVÉ — TOUTES les sources passant
+  // par <Image> sont désormais locales (`public/seed-images/`, 23 visuels
+  // versionnés) ou servies par /uploads statique ; le sandbox n'a pas
+  // d'egress Unsplash (mesuré T-181), d'où l'exigence « zéro source
+  // distante dans <Image> » avant activation. Les remotePatterns restent
+  // pour compatibilité descendante (anciennes lignes, uploads API).
   images: {
-    unoptimized: true,
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "plus.unsplash.com" },
@@ -14,6 +19,11 @@ const nextConfig: NextConfig = {
     // static, pas besoin de remotePattern.
     // Si S3_PUBLIC_BASE_URL est défini, l'ajouter ci-dessus.
   },
+
+  // T-181 : `experimental.optimizePackageImports` (lucide-react/date-fns)
+  // essayé puis RETIRÉ — mesure honnête : 0 octet de gagné sur le bundle
+  // prod (Turbopack tree-shake déjà les barils, 1 483 688 o avant/après).
+  // On n'embarque pas de config sans effet mesurable.
 
   // Headers de sécurité (BUG-connexe P2, appliqué en même temps que T-008
   // pour éviter un deuxième cycle). Voir SECURITY.md pour les

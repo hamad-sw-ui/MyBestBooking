@@ -14,6 +14,19 @@ import Link from "next/link";
 import { BookingRowActions } from "@/components/booking-row-actions";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { SmartImage } from "@/components/ui/smart-image";
+
+/**
+ * T-172 — titre localisé + noindex (historique de réservations = données
+ * personnelles ; ne doit pas être indexé).
+ */
+export async function generateMetadata() {
+  const t = makeT(await getServerLocale());
+  return {
+    title: t("bookings.meta.title"),
+    robots: { index: false, follow: false },
+  };
+}
 
 async function getMyBookings(userId: string) {
   return db
@@ -111,11 +124,12 @@ export default async function MyBookingsPage() {
                     <Card key={booking.id} className="overflow-hidden">
                       <div className="flex flex-col md:flex-row">
                         {property?.mainImage && (
-                          <div className="md:w-48 h-40 md:h-auto flex-shrink-0">
-                            <img
+                          <div className="md:w-48 h-40 md:h-auto flex-shrink-0 relative">
+                            <SmartImage
                               src={property.mainImage}
                               alt={property.name || ""}
                               className="w-full h-full object-cover"
+                              sizes="(max-width: 768px) 100vw, 192px"
                             />
                           </div>
                         )}
@@ -193,11 +207,12 @@ export default async function MyBookingsPage() {
                     <Card key={booking.id} className="overflow-hidden opacity-75 hover:opacity-100 transition-opacity">
                       <div className="flex flex-col md:flex-row">
                         {property?.mainImage && (
-                          <div className="md:w-40 h-32 md:h-auto flex-shrink-0">
-                            <img
+                          <div className="md:w-40 h-32 md:h-auto flex-shrink-0 relative">
+                            <SmartImage
                               src={property.mainImage}
                               alt={property.name || ""}
                               className="w-full h-full object-cover grayscale"
+                              sizes="(max-width: 768px) 100vw, 160px"
                             />
                           </div>
                         )}

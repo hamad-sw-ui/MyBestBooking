@@ -69,7 +69,7 @@ export function StripePaymentForm({ clientSecret, onSubmitted }: { clientSecret:
     }
     void loadConfiguration();
     return () => { active = false; };
-  }, []);
+  }, [t]);
 
   if (error) return <p role="alert" className="p-3 rounded-lg bg-amber-50 text-sm text-amber-900">{t("pay.noneConfirmed").replace("{error}", error)}</p>;
   if (!stripePromise) return <p className="text-sm text-gray-500"><Loader2 className="inline w-4 h-4 mr-2 animate-spin" />{t("pay.loading")}</p>;

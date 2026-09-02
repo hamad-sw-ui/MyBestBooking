@@ -12,6 +12,7 @@ import { Building2, MapPin, Star, Pencil, Eye } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
 import { PropertyValidateActions } from "@/components/property-validate-actions";
+import { SmartImage } from "@/components/ui/smart-image";
 
 export interface PropertyRow {
   id: string;
@@ -257,13 +258,13 @@ export function PropertiesManager({ properties, isAdmin }: Props) {
                     )}
                     <td className="px-4 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                        <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0 relative">
                           {property.mainImage ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <SmartImage
                               src={property.mainImage}
                               alt={property.name}
                               className="w-full h-full object-cover"
+                              sizes="48px"
                             />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center">

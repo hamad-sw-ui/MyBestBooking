@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { properties, rooms, reviews, users } from "@/db/schema";
-import { eq, and, desc } from "drizzle-orm";
+import { properties, rooms, reviews, users, bookings } from "@/db/schema";
+import { eq, and, desc, inArray, lt, gt, ne, sql } from "drizzle-orm";
+import { remainingRoomInventory, stayDatesFromPropertyQuery } from "@/lib/room-remaining";
+import { publicCatalogCache } from "@/lib/read-cache";
+import { SmartImage } from "@/components/ui/smart-image";
 import { getCurrentUser } from "@/lib/auth";
 import { formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
 import { countryLabel, travelerTypeLabel } from "@/lib/country-label";
@@ -79,27 +82,42 @@ async function getProperty(slug: string, viewerId?: string, isAdmin = false) {
   const canSeePrivate = isAdmin || property.hostId === viewerId;
   if (property.status !== "active" && !canSeePrivate) return null;
 
-  const propertyRooms = await db
-    .select()
-    .from(rooms)
-    .where(and(eq(rooms.propertyId, property.id), ...(canSeePrivate ? [] : [eq(rooms.isActive, true)])));
-
-  const propertyReviews = await db
-    .select({
-      review: reviews,
-      user: {
-        firstName: users.firstName,
-        lastName: users.lastName,
-        country: users.country,
-      },
-    })
-    .from(reviews)
-    .leftJoin(users, eq(reviews.userId, users.id))
-    .where(and(eq(reviews.propertyId, property.id), eq(reviews.status, "approved")))
-    .orderBy(desc(reviews.createdAt))
-    .limit(5);
+  // T-184 : rooms et avis dépendent de property.id mais pas l'un de
+  // l'autre — parallélisés (même résultat, un aller-retour DB de moins).
+  const [propertyRooms, propertyReviews] = await Promise.all([
+    db
+      .select()
+      .from(rooms)
+      .where(and(eq(rooms.propertyId, property.id), ...(canSeePrivate ? [] : [eq(rooms.isActive, true)]))),
+    db
+      .select({
+        review: reviews,
+        user: {
+          firstName: users.firstName,
+          lastName: users.lastName,
+          country: users.country,
+        },
+      })
+      .from(reviews)
+      .leftJoin(users, eq(reviews.userId, users.id))
+      .where(and(eq(reviews.propertyId, property.id), eq(reviews.status, "approved")))
+      .orderBy(desc(reviews.createdAt))
+      .limit(5),
+  ]);
 
   return { property, rooms: propertyRooms, reviews: propertyReviews };
+}
+
+/**
+ * T-182 : la fiche publique (contenu identique pour tout visiteur non
+ * privilégié : bien actif, chambres actives, avis approuvés) est servie
+ * depuis un cache TTL 60 s. Hôte propriétaire et admin gardent le chemin
+ * dynamique (chambres inactives, brouillons…) — jamais caché. Le calcul
+ * de disponibilité par séjour (T-177) et les données viewer (wishlist,
+ * conversation) restent hors de ce bloc caché.
+ */
+async function getPublicProperty(slug: string) {
+  return publicCatalogCache.wrap(`property:${slug}`, () => getProperty(slug));
 }
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {
@@ -117,13 +135,44 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
   const viewer = await getCurrentUser();
   const locale = await getServerLocale();
   const t = makeT(locale);
-  const data = await getProperty(slug, viewer?.id, viewer?.role === "admin");
+  // T-182 : visiteur anonyme → fiche publique cachée (TTL 60 s) ;
+  // utilisateur connecté (vue éventuellement privée, garde incluse dans
+  // getProperty) → lecture dynamique inchangée.
+  const data = viewer
+    ? await getProperty(slug, viewer.id, viewer.role === "admin")
+    : await getPublicProperty(slug);
 
   if (!data) {
     notFound();
   }
 
   const { property, rooms: propertyRooms, reviews: propertyReviews } = data;
+
+  // T-177 : quand la query porte un séjour VALIDE (checkIn/checkOut
+  // cohérents — sinon rendu strictement inchangé), on calcule l'inventaire
+  // restant de chaque chambre avec la règle EXACTE de POST /api/bookings
+  // (T-157) : toute réservation non annulée chevauchant le séjour consomme
+  // une unité de `rooms.quantity`. Chambre épuisée → CTA « Réserver »
+  // remplacé par « Complet » avant le tunnel, au lieu du 409 final.
+  const stayDates = stayDatesFromPropertyQuery(query.checkIn, query.checkOut);
+  const roomRemaining = new Map<string, number>();
+  if (stayDates && propertyRooms.length > 0) {
+    const roomIds = propertyRooms.map((r) => r.id);
+    const usage = await db
+      .select({ roomId: bookings.roomId, used: sql<number>`count(*)::int` })
+      .from(bookings)
+      .where(and(
+        inArray(bookings.roomId, roomIds),
+        ne(bookings.status, "cancelled"),
+        lt(bookings.checkIn, stayDates.checkOut),
+        gt(bookings.checkOut, stayDates.checkIn),
+      ))
+      .groupBy(bookings.roomId);
+    const usedByRoom = new Map(usage.map((row) => [row.roomId, row.used]));
+    for (const room of propertyRooms) {
+      roomRemaining.set(room.id, remainingRoomInventory(room.quantity, usedByRoom.get(room.id) ?? 0));
+    }
+  }
   // T-030 : chambre la moins chère pour le CTA "Voir dispo" et alerte prix
   const cheapestRoom = propertyRooms.length > 0
     ? [...propertyRooms].sort((a, b) => parseFloat(a.basePrice) - parseFloat(b.basePrice))[0]
@@ -170,7 +219,6 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
       <Script
         id="property-json-ld"
         type="application/ld+json"
-        // eslint-disable-next-line react/no-danger
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       {/* Breadcrumb */}
@@ -227,21 +275,26 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
           <PropertyHeaderActions propertyId={property.id} propertyName={property.name} />
         </div>
 
-        {/* Image Gallery */}
+        {/* Image Gallery — T-188 : SmartImage (next/image si source
+            auto-hébergée, sinon <img> lazy) ; conteneurs `relative` requis
+            par fill. */}
         <div className="grid grid-cols-4 gap-2 mb-8 rounded-xl overflow-hidden">
-          <div className="col-span-2 row-span-2">
-            <img
-              src={property.mainImage || images[0] || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800"}
+          <div className="col-span-2 row-span-2 relative">
+            <SmartImage
+              src={property.mainImage || images[0] || "/seed-images/placeholder-property.jpg"}
               alt={property.name}
               className="w-full h-full object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              priority
             />
           </div>
           {(images.length > 0 ? images.slice(0, 4) : [1, 2, 3, 4]).map((img, i) => (
-            <div key={i} className="aspect-[4/3]">
-              <img
-                src={typeof img === "string" ? img : `https://images.unsplash.com/photo-156607377125${i}-6a8506099945?w=400`}
+            <div key={i} className="aspect-[4/3] relative">
+              <SmartImage
+                src={typeof img === "string" ? img : "/seed-images/placeholder-property.jpg"}
                 alt=""
                 className="w-full h-full object-cover"
+                sizes="(max-width: 768px) 50vw, 25vw"
               />
             </div>
           ))}
@@ -343,6 +396,14 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                         </div>
                         <div className="mt-4 md:mt-0 md:text-right">
                           <LocalizedRoomPrice basePrice={room.basePrice} currency={room.currency ?? "EUR"} />
+                          {/* T-177 : séjour renseigné + épuisé → on prévient
+                              avant le tunnel au lieu du 409 final. Sans
+                              dates (ou séjour incohérent) : CTA inchangé. */}
+                          {roomRemaining.get(room.id) === 0 ? (
+                            <Button className="mt-2" size="sm" variant="outline" disabled>
+                              {t("room.soldOut")}
+                            </Button>
+                          ) : (
                           <Link href={buildReservationUrl({
                             propertyId: property.id,
                             roomId: room.id,
@@ -355,6 +416,7 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                               {t("book.reserve")}
                             </Button>
                           </Link>
+                          )}
                         </div>
                       </div>
                     ))}

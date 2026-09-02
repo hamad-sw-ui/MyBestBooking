@@ -51,7 +51,6 @@ describe("safeMeta (T-028)", () => {
       password: "s3cret",
       apiKey: "sk_live_x",
       authToken: "t123",
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       SECRET: "xyz",
       name: "Marie",
     });

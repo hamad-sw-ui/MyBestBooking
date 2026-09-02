@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { getCurrentUser } from "@/lib/auth";
 import { isMaintenanceActive } from "@/lib/maintenance";
+import { seedImageUrl } from "@/lib/seed-images";
 import { db } from "@/db";
 import { properties, reviews, users, rooms } from "@/db/schema";
 import { eq, desc, and, min } from "drizzle-orm";
@@ -45,12 +46,14 @@ export default async function HomePage() {
 
   const featuredProperties = await getFeaturedProperties();
   
+  // T-186 : visuels locaux `public/seed-images/` dès que générés, sinon
+  // URL Unsplash historique (rollout progressif, aucune 404).
   const destinations = [
-    { name: "Paris", country: t("prop.country.FR"), image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400" },
-    { name: "Marrakech", country: t("prop.country.MA"), image: "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400" },
-    { name: "Barcelone", country: t("prop.country.ES"), image: "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400" },
-    { name: "Rome", country: t("prop.country.IT"), image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400" },
-    { name: "Tunis", country: t("prop.country.TN"), image: "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400" },
+    { name: "Paris", country: t("prop.country.FR"), image: seedImageUrl("dest-paris", "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=400") },
+    { name: "Marrakech", country: t("prop.country.MA"), image: seedImageUrl("dest-marrakech", "https://images.unsplash.com/photo-1597212618440-806262de4f6b?w=400") },
+    { name: "Barcelone", country: t("prop.country.ES"), image: seedImageUrl("dest-barcelone", "https://images.unsplash.com/photo-1583422409516-2895a77efded?w=400") },
+    { name: "Rome", country: t("prop.country.IT"), image: seedImageUrl("dest-rome", "https://images.unsplash.com/photo-1552832230-c0197dd311b5?w=400") },
+    { name: "Tunis", country: t("prop.country.TN"), image: seedImageUrl("dest-tunis", "https://images.unsplash.com/photo-1590073242678-70ee3fc28f8e?w=400") },
   ];
 
   return (
@@ -59,9 +62,9 @@ export default async function HomePage() {
       
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-[#1B3A6B] to-[#0f2444] text-white">
-        <div 
+        <div
           className="absolute inset-0 bg-cover bg-center opacity-20"
-          style={{ backgroundImage: "url('https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1920')" }}
+          style={{ backgroundImage: `url('${seedImageUrl("hero-home", "https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=1920")}')` }}
         />
         <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 md:py-32">
           <div className="max-w-3xl">
@@ -322,7 +325,7 @@ export default async function HomePage() {
         </section>
       )}
 
-      <Footer />
+      <Footer userRole={user?.role ?? null} />
     </div>
   );
 }

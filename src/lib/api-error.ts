@@ -108,6 +108,17 @@ export const API_ERROR_EN: Record<string, string> = {
   "Le prénom doit contenir au moins 2 caractères": "First name must be at least 2 characters",
   "Lien de réinitialisation invalide": "Invalid reset link",
   "Lien invalide ou expiré": "Invalid or expired link",
+  "Le prix de base doit être strictement positif": "The base price must be strictly positive",
+  "Le nombre d'adultes ne peut pas dépasser la capacité maximale":
+    "The number of adults cannot exceed the maximum capacity",
+  "Adultes + enfants ne peuvent pas dépasser la capacité maximale":
+    "Adults + children cannot exceed the maximum capacity",
+  "Stripe n'est pas complètement configuré": "Stripe is not fully configured",
+  "Stripe a refusé l'annulation de l'intent de test":
+    "Stripe refused to cancel the test intent",
+  "Resend n'est pas configuré": "Resend is not configured",
+  "S3/R2 n'est pas complètement configuré": "S3/R2 is not fully configured",
+  "Objet test S3 créé mais non supprimé": "Test S3 object was created but not deleted",
   "Liste non trouvée": "List not found",
   "Modification de commission réservée à l'admin": "Commission changes are reserved to admins",
   "Modification du statut réservée à l'administration": "Status changes are reserved to administrators",
@@ -293,6 +304,10 @@ const API_ERROR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
     (m) => `promotion already used (${m[1]}×) — deactivate instead`,
   ],
   [/^(.+) doit encoder exactement 32 octets$/, (m) => `${m[1]} must encode exactly 32 bytes`],
+  [
+    /^La quantité ne peut pas dépasser (\d+)$/,
+    (m) => `The quantity cannot exceed ${m[1]}`,
+  ],
 ];
 
 export function localizeApiMessage(

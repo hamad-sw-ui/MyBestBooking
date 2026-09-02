@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { and, eq, sql } from "drizzle-orm";
 import { templates } from "@/lib/mail";
+import { makeT } from "@/lib/ui-strings";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { rateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-error";
@@ -105,7 +106,8 @@ export async function POST(request: NextRequest) {
           conversationId: data.conversationId,
           senderId: user.id,
           senderType,
-          content: trimmedContent || "(pièce jointe)",
+          // Filet côté serveur : même clé localisée que le composer client.
+          content: trimmedContent || makeT(user.language)("messages.attachFallback"),
           attachmentKey: data.attachmentKey ?? null,
           attachmentMimeType,
         })

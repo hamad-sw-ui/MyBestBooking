@@ -11,6 +11,9 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("reservation.meta.title"),
     description: t("reservation.meta.description"),
+    // T-172 : le tunnel de réservation manipule des données personnelles —
+    // il ne doit pas être indexé (cartes privées, montants, wallet…).
+    robots: { index: false, follow: false },
   };
 }
 

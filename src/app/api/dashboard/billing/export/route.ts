@@ -4,6 +4,7 @@ import { bookings, properties } from "@/db/schema";
 import { and, eq, gte, lte, ne } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { apiError } from "@/lib/api-error";
+import { makeT } from "@/lib/ui-strings";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -51,8 +52,22 @@ export async function GET(request: NextRequest) {
     .where(condition)
     .orderBy(bookings.createdAt);
 
+  // En-têtes localisés dans la langue du compte (fr/en) — UIT : tout libellé
+  // exposé passe par le dictionnaire `ui-strings`.
+  const t = makeT(user.language);
   const lines = [
-    ["Référence", "Hébergement", "Créé le", "Arrivée", "Départ", "Total", "Commission", "Net hôte", "Devise", "Statut paiement"],
+    [
+      t("billingCsv.reference"),
+      t("billingCsv.property"),
+      t("billingCsv.createdAt"),
+      t("billingCsv.checkIn"),
+      t("billingCsv.checkOut"),
+      t("billingCsv.total"),
+      t("billingCsv.commission"),
+      t("billingCsv.netToHost"),
+      t("billingCsv.currency"),
+      t("billingCsv.paymentStatus"),
+    ],
     ...rows.map(({ booking, propertyName }) => [booking.bookingReference, propertyName, booking.createdAt.toISOString(), booking.checkIn, booking.checkOut, booking.total, booking.commissionAmount, booking.netToHost, booking.currency, booking.paymentStatus]),
   ];
   const csv = lines.map((line) => line.map(csvCell).join(",")).join("\n");

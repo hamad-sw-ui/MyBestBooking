@@ -33,3 +33,29 @@ export function readReservationParams(params: URLSearchParams): ReservationUrlIn
     numChildren: Number.isInteger(children) && children >= 0 ? children : 0,
   };
 }
+
+/**
+ * T-176 — deep-links incomplets vers le tunnel de réservation.
+ * Avant : un lien contenant uniquement `room` (ou `property`) affichait
+ * « Informations de réservation manquantes » sans recours, alors que :
+ *  - une chambre détermine sa propriété (`GET /api/rooms/[id].propertyId`),
+ *  - une propriété seule peut être renvoyée vers sa fiche publique, où se
+ *    trouvent ses chambres et leurs CTA de réservation complets.
+ * Contrat : renvoie le type de rattrapage possible, ou null si rien à
+ * faire (lien complet, reprise de paiement, lien vraiment vide).
+ */
+export type IncompleteReservationLink =
+  | { kind: "roomOnly"; roomId: string }
+  | { kind: "propertyOnly"; propertyId: string }
+  | null;
+
+export function describeIncompleteLink(params: URLSearchParams): IncompleteReservationLink {
+  if (readReservationParams(params)) return null;
+  // La reprise de paiement (?booking=) se suffit à elle-même : jamais touchée.
+  if (params.get("booking")) return null;
+  const roomId = params.get("room") ?? params.get("roomId");
+  if (roomId) return { kind: "roomOnly", roomId };
+  const propertyId = params.get("property") ?? params.get("propertyId");
+  if (propertyId) return { kind: "propertyOnly", propertyId };
+  return null;
+}

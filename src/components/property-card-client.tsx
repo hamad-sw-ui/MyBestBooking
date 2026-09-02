@@ -97,7 +97,9 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
       {/* Image */}
       <div className="relative aspect-[4/3] overflow-hidden">
         <Image
-          src={property.mainImage || "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400"}
+          // T-186 : fallback local versionné (l'optimizer est actif — une
+          // URL distante non auto-hébergée serait cassée sans egress).
+          src={property.mainImage || "/seed-images/placeholder-property.jpg"}
           alt={property.name}
           fill
           sizes="(max-width: 768px) 100vw, 25vw"

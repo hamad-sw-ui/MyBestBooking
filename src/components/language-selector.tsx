@@ -51,8 +51,11 @@ export function LanguageSelector({ user, initialLanguage = null }: { user: UserT
       } catch (e) {
         setError(e instanceof Error ? e.message : t("nav.languageSaveError"));
         setSaving(false);
-        // Pas de rechargement : la préférence n'a pas été persistée côté
-        // compte, on laisse l'UI sur l'ancienne langue après retour.
+        // T-173 — Rollback : sans succès du PATCH, le compte garde l'ancienne
+        // langue ; on réaligne l'état local (sinon : serveur=compte fr mais
+        // localStorage=en au prochain chargement → bascule fantôme).
+        setLocal(null);
+        persistUiLanguageClient(value);
         return;
       }
       setSaving(false);

@@ -54,7 +54,12 @@ export function PromotionsManager({ promotions }: Props) {
   const [typeFilter, setTypeFilter] = useState("all");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
-  const now = new Date();
+  // T-189 : `now` mémoïsé au montage (auparavant : nouvelle identité à
+  // chaque render → warning exhaustive-deps et l'objet déstabilisait le
+  // useMemo du filtre). Un panneau admin se remonte à chaque navigation :
+  // l'instant reste frais en pratique ; sémantique des filtres inchangée.
+  const now = useMemo(() => new Date(), []);
+
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
     return promotions.filter((p) => {

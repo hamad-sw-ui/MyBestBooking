@@ -1,14 +1,20 @@
 import Link from "next/link";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { hostEntryHref } from "@/lib/host-entry";
 
 /**
  * Footer public. Ne référence QUE des routes qui existent réellement
  * (règle R19 du framework — pas de lien qui envoie sur une 404).
  * Les liens marketing/entreprise non implémentés sont volontairement
  * remplacés par du texte grisé plutôt que par des liens morts.
+ *
+ * T-180 : le lien « Ajouter mon hébergement » tient désormais compte du
+ * rôle du visiteur (passé par le layout) : hôte/admin → son dashboard
+ * (inchangé) ; voyageur/anonyme → inscription avec rôle hôte
+ * présélectionné, au lieu de l'impasse silencieuse sur `/`.
  */
-export async function Footer() {
+export async function Footer({ userRole }: { userRole?: string | null } = {}) {
   const t = makeT(await getServerLocale());
   return (
     <footer className="bg-[#1B3A6B] text-white">
@@ -68,7 +74,7 @@ export async function Footer() {
             <h3 className="text-sm font-semibold mb-4">{t("footer.hosts")}</h3>
             <ul className="space-y-2">
               <li>
-                <Link href="/dashboard/properties/new" className="text-sm text-gray-300 hover:text-white transition-colors">
+                <Link href={hostEntryHref(userRole)} className="text-sm text-gray-300 hover:text-white transition-colors">
                   {t("footer.addProperty")}
                 </Link>
               </li>

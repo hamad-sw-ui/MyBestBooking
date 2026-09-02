@@ -27,7 +27,7 @@ describe("uiStrings (T-132)", () => {
     const fr = uiStrings("fr");
     const en = uiStrings("en");
     expect(Object.keys(fr).sort()).toEqual(Object.keys(en).sort());
-    expect(Object.keys(fr)).toHaveLength(1394);
+    expect(Object.keys(fr)).toHaveLength(1421);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {
@@ -54,5 +54,20 @@ describe("uiStrings (T-132)", () => {
     expect(en["inv.kindReceipt"]).toMatch(/RECEIPT/);
     expect(fr["settings.phBillingEmail"]).toBe("facturation@exemple.com");
     expect(en["settings.phBillingEmail"]).toBe("billing@example.com");
+  });
+
+  it("traduit le sélecteur de devise et les en-têtes CSV billing", () => {
+    const fr = uiStrings("fr");
+    const en = uiStrings("en");
+    expect(fr["currency.displayLabel"]).toBe("Devise d'affichage");
+    expect(en["currency.displayLabel"]).toBe("Display currency");
+    expect(fr["currency.storageError"]).toBe("Stockage indisponible");
+    expect(en["currency.storageError"]).toBe("Local storage unavailable");
+    expect(fr["billingCsv.reference"]).toBe("Référence");
+    expect(en["billingCsv.reference"]).toBe("Reference");
+    expect(fr["billingCsv.netToHost"]).toBe("Net hôte");
+    expect(en["billingCsv.netToHost"]).toBe("Host net");
+    expect(fr["billingCsv.paymentStatus"]).toBe("Statut paiement");
+    expect(en["billingCsv.paymentStatus"]).toBe("Payment status");
   });
 });

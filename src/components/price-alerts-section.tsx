@@ -75,7 +75,7 @@ export function PriceAlertsSection({ properties }: Props) {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [t]);
 
   async function remove(id: string) {
     if (!confirm(t("priceAlert.confirmRemove"))) return;

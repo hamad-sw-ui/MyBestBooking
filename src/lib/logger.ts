@@ -27,10 +27,8 @@ function emit(level: Level, msg: string, extra?: Record<string, unknown>) {
   };
   const line = JSON.stringify(evt);
   if (level === "error" || level === "warn") {
-    // eslint-disable-next-line no-console
     console.error(line);
   } else {
-    // eslint-disable-next-line no-console
     console.log(line);
   }
 }

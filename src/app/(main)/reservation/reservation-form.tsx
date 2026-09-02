@@ -22,7 +22,8 @@ import {
   Calendar, Users, Clock, CheckCircle, Star
 } from "lucide-react";
 import Link from "next/link";
-import { readReservationParams } from "@/lib/reservation-url";
+import { readReservationParams, describeIncompleteLink } from "@/lib/reservation-url";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface PropertyData {
   id: string;
@@ -79,6 +80,11 @@ function ReservationPageInner() {
   // T-152 (A) : reprise d'un paiement depuis /mes-reservations via
   // ?booking=<id> (aucune nouvelle réservation : reprise propriétaire).
   const bookingParam = searchParams.get("booking");
+  // T-176 : deep-link incomplet (?room=… seul ou ?property=… seule) — on
+  // tente un rattrapage doux avant d'afficher l'état « informations
+  // manquantes » (voir effet plus bas).
+  const incompleteLink = describeIncompleteLink(searchParams);
+  const [resolvingLink, setResolvingLink] = useState(incompleteLink !== null);
   const [loaded, setLoaded] = useState<{ propertyId: string | null; roomId: string | null }>({
     propertyId: reservationParams?.propertyId ?? null,
     roomId: reservationParams?.roomId ?? null,
@@ -222,6 +228,48 @@ function ReservationPageInner() {
     // Dépendances volontairement limitées à `bookingParam` : toutes les
     // valeurs récentes passent par des refs (tRef, resumedBookingRef).
   }, [bookingParam]);
+
+  // T-176 : rattrapage d'un deep-link incomplet vers le tunnel.
+  //  - `?room=…` seul : la chambre détermine son hébergement
+  //    (GET /api/rooms/[id]) — on pré-remplit propertyId/roomId et le
+  //    tunnel continue normalement dans l'effet principal.
+  //  - `?property=…` seule : plusieurs chambres possibles — on redirige
+  //    vers la fiche publique où le choix de la chambre est fait.
+  //  En cas d'échec : l'état « informations manquantes » reste inchangé.
+  const incompleteLinkKind = incompleteLink?.kind ?? null;
+  const incompleteLinkRoom = incompleteLink?.kind === "roomOnly" ? incompleteLink.roomId : null;
+  const incompleteLinkProperty = incompleteLink?.kind === "propertyOnly" ? incompleteLink.propertyId : null;
+  useEffect(() => {
+    if (!incompleteLinkKind) return;
+    let cancelled = false;
+    const done = () => { if (!cancelled) setResolvingLink(false); };
+    if (incompleteLinkRoom) {
+      fetch(`/api/rooms/${incompleteLinkRoom}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const room = data?.room;
+          if (cancelled) return;
+          if (room?.propertyId) {
+            setLoaded({ propertyId: room.propertyId, roomId: room.id });
+          }
+        })
+        .catch(() => undefined)
+        .finally(done);
+    } else if (incompleteLinkProperty) {
+      fetch(`/api/properties/${incompleteLinkProperty}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          const slug = data?.property?.slug;
+          if (cancelled) return;
+          if (slug) router.replace(`/hebergement/${slug}`);
+        })
+        .catch(() => undefined)
+        .finally(done);
+    }
+    return () => { cancelled = true; };
+    // Dépendances primitives extraites au-dessus : l'effet ne dépend pas
+    // de l'objet `incompleteLink` (recréé à chaque rendu).
+  }, [incompleteLinkKind, incompleteLinkRoom, incompleteLinkProperty]); // eslint-disable-line react-hooks/exhaustive-deps -- router est stable (next/navigation)
 
   useEffect(() => {
     if (!propertyId || !roomId) return;
@@ -415,7 +463,13 @@ function ReservationPageInner() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card className="max-w-md w-full">
           <CardContent className="text-center py-12">
-            {error ? (
+            {resolvingLink ? (
+              // T-176 : lien incomplet — résolution en cours (pas de faux
+              // « informations manquantes » pendant le fetch).
+              <>
+                <p className="text-gray-500 mb-4">{t("reservation.loading")}</p>
+              </>
+            ) : error ? (
               <>
                 <p className="text-gray-700 mb-4">{error}</p>
                 <Link href="/mes-reservations">
@@ -771,11 +825,14 @@ function ReservationPageInner() {
                 <CardContent>
                   {/* Property info */}
                   {property?.mainImage && (
-                    <img
-                      src={property.mainImage}
-                      alt={property.name}
-                      className="w-full h-32 object-cover rounded-lg mb-4"
-                    />
+                    <div className="relative w-full h-32 rounded-lg mb-4 overflow-hidden">
+                      <SmartImage
+                        src={property.mainImage}
+                        alt={property.name}
+                        className="w-full h-32 object-cover"
+                        sizes="(max-width: 1024px) 100vw, 320px"
+                      />
+                    </div>
                   )}
                   <h3 className="font-semibold text-gray-900">
                     {property?.name}

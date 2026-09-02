@@ -18,6 +18,7 @@ import Link from "next/link";
 import { BookingRowActions } from "@/components/booking-row-actions";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { SmartImage } from "@/components/ui/smart-image";
 
 interface BookingDetailPageProps {
   params: Promise<{ id: string }>;
@@ -165,11 +166,14 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
             <CardContent>
               <div className="flex gap-4">
                 {property?.mainImage && (
-                  <img
-                    src={property.mainImage}
-                    alt={property.name || ""}
-                    className="w-24 h-24 rounded-lg object-cover"
-                  />
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden flex-shrink-0">
+                    <SmartImage
+                      src={property.mainImage}
+                      alt={property.name || ""}
+                      className="w-24 h-24 rounded-lg object-cover"
+                      sizes="96px"
+                    />
+                  </div>
                 )}
                 <div>
                   <h3 className="font-semibold text-gray-900">{property?.name}</h3>
