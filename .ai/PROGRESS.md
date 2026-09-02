@@ -3905,3 +3905,13 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   → restauration complète (install, env, db:push, seed, build) ; cron 500
   diagnostiqué (`ALLOW_MOCK_PAYMENTS` exige la chaîne "true").
 - Aucune ligne de code produit modifiée.
+
+## T-191 — 2026-09-02 (CI GitHub Actions)
+
+- Avant : aucun workflow. Gates manuels uniquement ; leçon T-187/188/189
+  (smoke et vitest se parasitent sur la même base) jamais outillée.
+- Workflow `.github/workflows/ci.yml` : vitest sur service postgres:16
+  (app_db_ci), smoke sur son Postgres embarqué dédié (autonome) → bases
+  DISJOINTES structurellement. tsc + eslint --max-warnings 0 (le zéro
+  warning T-189 devient un gate dur) + i18n + ai:check + build + smoke.
+- `gh run watch` = preuve mesurable (run vert).
