@@ -4,12 +4,17 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a05dfc-mybestbooking` (branche Arena active)
-- **HEAD Git** : `82bb151` — **T-190 CORRIGÉ (VALIDÉ)** (2026-09-02) :
-  resynchronisation BACKLOG (audits 28/30 listés « à arbitrer » mais livrés
-  le 2026-08-30 — probes : 400 dates passées, 404 partage, pages légales EN,
-  cron ok) + restauration env sandbox (install/db:push/seed/build ;
-  cron 500 → réparé `ALLOW_MOCK_PAYMENTS=true`). eslint 0/0, tsc 0,
-  vitest 484/484, smoke 94/94, build 60/60. Précédentes (même jour) :
+- **HEAD Git** : `572f433` — **T-191 CORRIGÉ (VALIDÉ)** (2026-09-02) :
+  CI reproductible `npm run ci` (ordre vitest→smoke imposé ; eslint dur
+  `--max-warnings 0`) ; workflow GHA livré sous `docs/` (activation
+  bloquée : permission `workflows` absente de l'App). Preuve `npm run ci`
+  VERT (EXIT=0 : 484/484 vitest + smoke 94/94). Précédente (même jour) :
+  **T-190** — resynchronisation BACKLOG (audits 28/30 listés « à arbitrer »
+  mais livrés le 2026-08-30 — probes : 400 dates passées, 404 partage,
+  pages légales EN, cron ok) + restauration env sandbox
+  (install/db:push/seed/build ; cron 500 → réparé
+  `ALLOW_MOCK_PAYMENTS=true`). eslint 0/0, tsc 0, vitest 484/484, smoke
+  94/94, build 60/60. Précédentes (même jour) :
   **T-189** (hygiène hooks/eslint 11→0, `useT()` stabilisé) ; **T-188**
   (SmartImage site-wide + cron preview vivant) ; **T-174** —
   favoris figés après login (cache module, famille T-173) → invalidation
