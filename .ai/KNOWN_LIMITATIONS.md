@@ -100,12 +100,21 @@ l'outbox). Restent assumées :
 
 - **Migrations Drizzle présentes**, mais `drizzle-kit push` reste le chemin
   local le plus utilisé ; vérifier le pipeline de migration avant production.
-- **Tests automatisés partiels.** Les tests unitaires et smoke existent, mais
-  les parcours métier complets et les tests DB live ne sont pas tous stables.
-- **Quelques `<img>` HTML natifs** restent dans des écrans secondaires ; ils
-  doivent être migrés vers `next/image` pour un SEO/performance complet.
-- **`POST /api/seed` public.** Assumé en dev, à supprimer/protéger en prod
-  (BUG-002).
+- **Tests automatisés : contrats hétérogènes, ordre imposé.** 484 tests
+  (73 fichiers) stables en exécution isolée. Les tests d'intégration
+  **supposent la base démo seedée** — ne jamais les lancer après un smoke
+  sans purge (leçon T-187/188/189). L'ordre correct (vitest → smoke) est
+  outillé par `npm run ci` (T-191) ; en CI distante, bases strictement
+  disjointes (service postgres:16 vs embedded — `docs/ci-workflow.yml`).
+- **`<img>` natifs : exception unique et volontaire.** `img → SmartImage`
+  migré site-wide en T-188 (next/image pour l'auto-hébergé, lazy enrichi
+  sinon). Reste `user-avatar.tsx` — `<img>` client **justifié** : repli
+  dynamique sur les initiales via `onError` + state, impossible à porter
+  tel quel sur next/image sans perdre le repli (eslint-disable explicite).
+- **`POST /api/seed` libre en dev uniquement.** En production la route est
+  protégée par `x-seed-token` = `SEED_TOKEN` (timing-safe, 404 sinon) —
+  T-178/BUG-002 ; probe sandbox 2026-09-02 : **404 sans token, 200 avec**.
+  Reste : le compte démo seedé est public par nature (dev/preview).
 - **Rate-limit en mémoire** : présent sur les routes critiques, mais non
   distribué entre plusieurs instances. Voir la limite produit ci-dessus.
 - **Pages 404 dynamiques : statut HTTP 200 avec `noindex`.** (T-153, audit
@@ -121,29 +130,33 @@ l'outbox). Restent assumées :
 
 ## Framework
 
-- **Application manuelle du framework.** Aucun linter, aucun hook Git ne
-  vérifie que `CURRENT_TASK.md` est à jour, que les rapports d'impact
-  existent, ou que les tags §16 sont posés. L'application repose sur la
-  discipline des humains et des agents. Un mécanisme automatisé
-  (`.githooks/`, GitHub Actions) est souhaitable — voir
-  `PROCESS_IMPROVEMENTS.md`.
-- **Pas de vérification que `framework.manifest.json` est cohérent** avec
-  l'arborescence réelle. Un fichier obligatoire supprimé ne fait pas
-  échouer un `npm run build`. À terme, un script `scripts/check-ai.mjs`
-  pourrait détecter les incohérences.
+- **Vérification automatisée livrée, pas de hook pre-commit.**
+  `scripts/check-ai.mjs` (20 règles R1→R20 : manifest, CURRENT_TASK,
+  rapports S/C, liens, couvertures DB/UI, fraîcheur, sync HEAD…) est joué
+  par `npm run ai:check` et dans `npm run ci` (T-191). Reste assumé : pas
+  de hook Git local qui forcerait l'exécution avant commit — la discipline
+  reste la barrière, la CI distante (docs/ci-workflow.yml) en fera un gate.
+- **Hooks git distants :** la permission `workflows` de l'App GitHub du
+  sandbox est absente → le push de `.github/workflows/` est refusé.
+  Contournement documenté dans `docs/CI.md` (workflow prêt à activer).
 
 ## Environnement de développement
 
-- **`next/font/google` désactivé** (T-017 → revert). `next build`
-  échoue quand le CDN Google Fonts est inaccessible (cas du sandbox
-  agent Arena). Retombé sur `<link>` Google Fonts dans
-  `src/app/layout.tsx` (fonctionne à l'exécution : le navigateur du
-  visiteur télécharge les fonts). En prod avec CI ayant accès CDN,
-  migrer à `next/font/google` pour inlining + no-FOUT. Backlog.
-
-- **PostgreSQL requis en local.** Pas de SQLite d'appoint, pas de mock DB
-  intégré. Choisi pour rester au plus près de la prod. Suppose Docker (ou
-  un Postgres installé nativement).
+- **Polices Inter/Poppins jamais chargées (fallback system-ui partout).**
+  `next/font/google` indisponible hors-ligne (T-017 revert) et le `<link>`
+  Google Fonts historique n'existe plus : le site sert `--font-family-sans`
+  → system-ui. Correction possible : auto-héberger les woff2 dans `public/`
+  (téléchargement impossible dans ce sandbox) — backlog.
+- **PostgreSQL embarqué, zéro Docker.** `npm run db:dev` lance un Postgres
+  18 embarqué (`embedded-postgres`, port 55432, binaire installé par npm).
+  Reste : pas de mock SQLite — par design (fidélité prod).
+- **Artefacts sandbox non persistés entre reprises** (constaté 2026-09-02,
+  deux fois) : `node_modules`, `.data/pg`, `.next`, `.env.local`
+  disparaissent quand le conteneur redémarre. **Restauration outillée** :
+  `npm run env:restore` (T-192 — idempotent : node_modules → `.env.local`
+  → PG embedded → db:push ; l'app et le cron se relancent ensuite via le
+  gestionnaire de processus). Les secrets sandbox sont des constantes
+  déterministes pour que le vault chiffré des providers reste lisible.
 - **Node 20+** requis (contrainte de Next 16). Assumé.
 
 ---

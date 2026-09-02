@@ -3915,3 +3915,11 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   DISJOINTES structurellement. tsc + eslint --max-warnings 0 (le zéro
   warning T-189 devient un gate dur) + i18n + ai:check + build + smoke.
 - `gh run watch` = preuve mesurable (run vert).
+
+## T-192 — 2026-09-02 (hygiène doc + env:restore, VALIDÉ)
+
+- Chaque piste vérifiée avant code : dark mode = livré T-029 ; BUGS = 0
+  ouvert. Le vrai travail = purge factuelle de KNOWN_LIMITATIONS
+  (7 lignes obsolètes probes-vérifiées) + outillage anti-perte sandbox.
+- `npm run env:restore` : idempotent ; régénération .env.local testée
+  (identique au backup). Leçon de session devenue outillage.
