@@ -3933,3 +3933,11 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   découverts uniquement.
 - `npm run site:audit` rejouable ; hors `npm run ci` (nécessite l'app
   servie).
+
+## T-194 — 2026-09-02 (accès démo un clic, VALIDÉ)
+
+- Diagnostic : login API OK ×3 ; le bloc démo était du texte statique.
+- login-client : refactor `loginWith` partagé (formulaire = démo, zéro
+  divergence) ; boutons démo désactivés pendant loading.
+- ui-strings : demoHint fr/en ; verrou compteur 1421→1422 commenté.
+- smoke : assertion « 3 boutons d'accès démo présents » → 95.

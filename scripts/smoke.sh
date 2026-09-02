@@ -16,7 +16,7 @@
 #   - POST /api/bookings présent
 #   - guard body-check présent (DashboardSidebar|Chargement)
 #
-# @assertions: 94
+# @assertions: 95
 
 set -u
 umask 077
@@ -243,6 +243,18 @@ for u in / /recherche /aide /bestrewards /confidentialite \
          /mot-de-passe-oublie /verifier-email /maintenance; do
   assert_code "$u" "200" "public"
 done
+
+# T-194 : les accès démo doivent PASSER — les 3 boutons un-clic sont
+# servis sur /connexion ET l'authentification de chaque compte fonctionne
+# (le bouton appelle le même /api/auth/login que le formulaire).
+LOGIN_PAGE=$(curl -s "$BASE_URL/connexion")
+if printf '%s' "$LOGIN_PAGE" | grep -q 'admin@mybestbooking.com' \
+   && printf '%s' "$LOGIN_PAGE" | grep -q 'host@mybestbooking.com' \
+   && printf '%s' "$LOGIN_PAGE" | grep -q 'customer@mybestbooking.com'; then
+  ok "GET /connexion → 3 boutons d'accès démo présents"
+else
+  ko "GET /connexion → boutons d'accès démo absents (T-194)"
+fi
 
 # ─────────────────────────────────────────────────────────────
 # 5. Pages protégées sans cookie (proxy edge → 307)

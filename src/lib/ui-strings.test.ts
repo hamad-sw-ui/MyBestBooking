@@ -27,7 +27,8 @@ describe("uiStrings (T-132)", () => {
     const fr = uiStrings("fr");
     const en = uiStrings("en");
     expect(Object.keys(fr).sort()).toEqual(Object.keys(en).sort());
-    expect(Object.keys(fr)).toHaveLength(1421);
+    // T-194 (2026-09-02) : +1 clé auth.demoHint (accès démo en un clic)
+    expect(Object.keys(fr)).toHaveLength(1422);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

@@ -26,8 +26,11 @@ export default function LoginPage() {
     totpCode: "",
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  /** T-194 : logique de connexion partagée — le formulaire classique et les
+   * boutons démo appellent la MÊME fonction (mêmes invalidations de cache,
+   * même redirection). Aucun chemin d'accès spécial : identique à saisir
+   * les identifiants soi-même. */
+  const loginWith = async (credentials: { email: string; password: string; totpCode?: string }) => {
     setLoading(true);
     setError("");
 
@@ -35,7 +38,7 @@ export default function LoginPage() {
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...formData, rememberMe }),
+        body: JSON.stringify({ ...credentials, rememberMe }),
       });
 
       const data = await response.json();
@@ -64,6 +67,18 @@ export default function LoginPage() {
       setError(t("auth.genericError"));
       setLoading(false);
     }
+  };
+
+  /** Accès démo en un clic : pré-remplit ET connecte via le flux normal. */
+  const handleDemoLogin = (email: string, password: string) => {
+    setFormData({ email, password, totpCode: "" });
+    setRequiresTwoFactor(false);
+    void loginWith({ email, password });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await loginWith(formData);
   };
 
   return (
@@ -156,10 +171,28 @@ export default function LoginPage() {
 
       <div className="mt-6 p-4 bg-gray-50 rounded-lg">
         <p className="text-xs font-medium text-gray-500 mb-2">{t("auth.demoAccounts")}</p>
-        <div className="space-y-1 text-xs text-gray-600">
-          <p><strong>{t("auth.roleAdmin")} :</strong> admin@mybestbooking.com / Admin123!</p>
-          <p><strong>{t("auth.roleHost")} :</strong> host@mybestbooking.com / Host123!</p>
-          <p><strong>{t("auth.roleCustomer")} :</strong> customer@mybestbooking.com / Customer123!</p>
+        {/* T-194 : accès démo actionnables — un clic connecte via le flux
+            normalement utilisé (aucune API spéciale, mêmes redirections). */}
+        <div className="flex flex-col gap-2 mb-3">
+          <Button type="button" variant="outline" size="sm" className="justify-between w-full"
+            disabled={loading} onClick={() => handleDemoLogin("admin@mybestbooking.com", "Admin123!")}>
+            <span><strong>{t("auth.roleAdmin")}</strong></span>
+            <span className="opacity-70 text-xs">admin@mybestbooking.com</span>
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="justify-between w-full"
+            disabled={loading} onClick={() => handleDemoLogin("host@mybestbooking.com", "Host123!")}>
+            <span><strong>{t("auth.roleHost")}</strong></span>
+            <span className="opacity-70 text-xs">host@mybestbooking.com</span>
+          </Button>
+          <Button type="button" variant="outline" size="sm" className="justify-between w-full"
+            disabled={loading} onClick={() => handleDemoLogin("customer@mybestbooking.com", "Customer123!")}>
+            <span><strong>{t("auth.roleCustomer")}</strong></span>
+            <span className="opacity-70 text-xs">customer@mybestbooking.com</span>
+          </Button>
+        </div>
+        <p className="text-[11px] leading-snug text-gray-400">{t("auth.demoHint")}</p>
+        <div className="space-y-1 text-[11px] text-gray-400 mt-1" aria-label="mots de passe">
+          <p>{t("auth.roleAdmin")} : Admin123! · {t("auth.roleHost")} : Host123! · {t("auth.roleCustomer")} : Customer123!</p>
         </div>
       </div>
     </Card>
