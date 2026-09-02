@@ -13,8 +13,7 @@ gate dur), i18n:check, ai:check, `db:push` sur un service postgres:16
 dédié (`app_db_ci` — base réservée à vitest), vitest (484 tests), build
 production, puis smoke HTTP sur **son propre Postgres embarqué** (base
 distincte, seed inclus, pré-chauffage initdb 240 s). Concurrency
-cancel-in-progress par ref. Preuve mesurable : run GitHub vert (`gh run
-watch`).
+cancel-in-progress par ref. Contrainte : push de `.github/workflows/*` refusé (App sans permission `workflows`) → workflow livré sous `docs/ci-workflow.yml` + preuve locale `npm run ci` vert (484/484 · smoke 94/94, EXIT=0).
 
 ## Sprint de fermeture (tous ✅)
 - [x] workflow écrit ; syntaxe vérifiée par un run réel GitHub

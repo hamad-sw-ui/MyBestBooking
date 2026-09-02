@@ -19,7 +19,8 @@
     "e2e:ui": "playwright test --ui",
     "i18n:check": "node scripts/check-i18n.mjs",
     "perf": "bash scripts/perf-baseline.sh",
-    "cron:local": "node scripts/cron-runner.mjs"
+    "cron:local": "node scripts/cron-runner.mjs",
+    "ci": "bash scripts/ci.sh"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^5.6.1",
