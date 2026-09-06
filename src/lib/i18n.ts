@@ -40,6 +40,9 @@ export const RATES_FROM_EUR: Record<string, number> = {
   XAF: 655.957,
 };
 
+/** Devises acceptées pour les montants persistés et les paiements. */
+export const SUPPORTED_CURRENCIES = ["EUR", "USD", "GBP", "CHF", "MAD", "XAF"] as const;
+
 /**
  * T-135 — Devises d'affichage supportées (clés de `RATES_FROM_EUR`,
  * sauf qu'EUR est la devise de facturation mais aussi affichable).
@@ -47,7 +50,7 @@ export const RATES_FROM_EUR: Record<string, number> = {
  * `currency` du profil (API `PATCH /api/users/me`) et le garde-fou du
  * hook `useDisplayPreferences`.
  */
-export const DISPLAY_CURRENCIES = Object.keys(RATES_FROM_EUR) as string[];
+export const DISPLAY_CURRENCIES = [...SUPPORTED_CURRENCIES] as string[];
 export type DisplayCurrency = (typeof DISPLAY_CURRENCIES)[number];
 
 /**
@@ -62,6 +65,11 @@ export const UI_CURRENCY_OPTIONS = ["EUR", "USD", "GBP", "XAF"] as const;
 /** Type-guard : une devise d'affichage est-elle connue/convertible ? */
 export function isDisplayCurrency(cur: string | null | undefined): cur is DisplayCurrency {
   return typeof cur === "string" && cur.toUpperCase() in RATES_FROM_EUR;
+}
+
+/** Valide une devise avant de la persister ou de l'envoyer au PSP. */
+export function isSupportedCurrency(cur: string | null | undefined): cur is DisplayCurrency {
+  return typeof cur === "string" && (SUPPORTED_CURRENCIES as readonly string[]).includes(cur.trim().toUpperCase());
 }
 
 /**

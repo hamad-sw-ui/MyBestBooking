@@ -8,6 +8,8 @@ import {
   isDisplayCurrency,
   normalizeDisplayCurrency,
   DISPLAY_CURRENCIES,
+  SUPPORTED_CURRENCIES,
+  isSupportedCurrency,
   isZeroDecimalCurrency,
   toMinorUnits,
 } from "./i18n";
@@ -143,6 +145,16 @@ describe("validation devise d'affichage (T-135)", () => {
     expect(normalizeDisplayCurrency(null)).toBe("XAF");
     expect(normalizeDisplayCurrency(undefined)).toBe("XAF");
     expect(normalizeDisplayCurrency("ZZZ", "EUR")).toBe("EUR");
+  });
+});
+
+describe("validation des devises persistées", () => {
+  it("accepte uniquement les devises supportées, sans tenir compte de la casse", () => {
+    expect(SUPPORTED_CURRENCIES).toEqual(["EUR", "USD", "GBP", "CHF", "MAD", "XAF"]);
+    expect(isSupportedCurrency("xaf")).toBe(true);
+    expect(isSupportedCurrency(" EUR ")).toBe(true);
+    expect(isSupportedCurrency("ZZZ")).toBe(false);
+    expect(isSupportedCurrency(null)).toBe(false);
   });
 });
 

@@ -15,38 +15,200 @@ Router, React 19), **PostgreSQL** et **Drizzle ORM**.
 - Dashboard hôte : properties, rooms, bookings, avis, promotions, analytics
 - Rôles `customer` / `host` / `admin`
 
-## 🚀 Démarrage rapide
+## 🚀 Lancement local complet
 
-```bash
-# 1. Cloner + installer
+### Prérequis
+
+- Windows avec PowerShell, ou macOS/Linux avec Bash ;
+- Node.js 20 ou plus récent ;
+- npm ;
+- OpenSSL pour générer les secrets ;
+- aucun `psql` ni Docker n'est nécessaire : le projet fournit PostgreSQL embarqué ;
+- les providers externes (Stripe, Resend, S3/R2) sont optionnels en local.
+
+### 1. Installer le projet
+
+```powershell
 git clone https://github.com/hamad-sw-ui/MyBestBooking.git
-cd MyBestBooking
+Set-Location MyBestBooking
 npm install
-
-# 2. Créer .env.local (à partir de .env.example)
-cp .env.example .env.local
-# → générer un vrai JWT_SECRET avec : openssl rand -hex 32
-# → puis le copier dans .env.local
-
-# 3. Lancer PostgreSQL embarqué en local (dev only, pas de Docker requis)
-npm run db:dev     # laisser tourner dans un terminal
-
-# 4. Dans un autre terminal, appliquer le schéma + seed
-npm run db:push
-curl -X POST http://localhost:3000/api/seed   # après avoir lancé npm run dev
-
-# 5. Serveur de développement
-npm run dev
-# → http://localhost:3000
+Copy-Item .env.example .env.local
 ```
 
-Comptes de démo créés par le seed :
+Si le fichier `.env.local` existe déjà, ne l'écrasez pas. Vérifiez surtout que
+`DATABASE_URL` correspond à l'instance démarrée par `npm run db:dev` :
+
+```env
+DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:55432/app_db"
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+JWT_SECRET="une-valeur-aleatoire-d-au-moins-32-octets"
+```
+
+Générez le secret JWT avec :
+
+```powershell
+openssl rand -hex 32
+```
+
+Le fichier `.env.local` est ignoré par Git. Ne commitez jamais ses valeurs.
+
+### 2. Démarrer PostgreSQL embarqué
+
+Dans le **terminal 1**, depuis `MyBestBooking` :
+
+```powershell
+npm run db:dev
+```
+
+Laissez ce terminal ouvert. PostgreSQL écoute sur `127.0.0.1:55432` et conserve
+ses données dans `.data/pg/`. Appuyez sur `Ctrl+C` pour l'arrêter proprement.
+
+Ne mélangez pas cette instance avec un PostgreSQL déjà installé sur `5432`.
+Si `.env.local` pointe sur `5432`, `db:push` et les tests peuvent utiliser une
+base différente de celle du serveur embarqué.
+
+### 3. Appliquer le schéma
+
+Dans le **terminal 2** :
+
+```powershell
+npm run db:push
+```
+
+Cette commande synchronise le schéma Drizzle avec la base configurée. En local,
+`db:push` est pratique pour le développement ; utilisez les migrations
+versionnées pour les déploiements contrôlés.
+
+### 4. Démarrer Next.js
+
+Toujours dans le **terminal 2**, ou dans un nouveau terminal :
+
+```powershell
+npm run dev
+```
+
+Ouvrez ensuite <http://localhost:3000>.
+
+Si le port 3000 est déjà occupé :
+
+```powershell
+npm run dev -- -p 3001
+```
+
+Dans ce cas, adaptez `NEXT_PUBLIC_APP_URL` et l'URL de navigation.
+
+### 5. Charger les comptes et données de démonstration
+
+Dans le **terminal 3**, après le démarrage de Next.js :
+
+```powershell
+Invoke-WebRequest -Method POST -Uri "http://localhost:3000/api/seed"
+```
+
+Le seed est destiné au développement. Il ne doit pas être activé librement en
+production. En production, la route exige `SEED_TOKEN` et l'en-tête
+`x-seed-token`.
+
+Comptes de démonstration :
 
 | Rôle | Email | Mot de passe |
 |---|---|---|
 | Admin | `admin@mybestbooking.com` | `Admin123!` |
 | Hôte | `host@mybestbooking.com` | `Host123!` |
 | Voyageur | `customer@mybestbooking.com` | `Customer123!` |
+
+### 6. Vérifier le lancement
+
+```powershell
+npm run typecheck
+npm run lint
+npm test
+```
+
+Pour les tests d'intégration, PostgreSQL doit être démarré et `DATABASE_URL`
+doit pointer sur la même instance que celle utilisée par `npm run db:push`.
+
+Pour lancer uniquement les tests monétaires :
+
+```powershell
+npx --no-install vitest run `
+  src/lib/i18n.test.ts `
+  src/lib/utils.test.ts `
+  src/lib/promotions.test.ts `
+  src/lib/wallet-currency.test.ts `
+  src/lib/currency-summary.test.ts
+```
+
+Pour compiler la version de production :
+
+```powershell
+npm run build
+npm run start
+```
+
+### 7. Tests E2E
+
+Les tests Playwright démarrent une instance de production sur le port 3100 :
+
+```powershell
+npm run e2e
+```
+
+Prérequis : PostgreSQL actif, schéma appliqué, `JWT_SECRET` défini et données
+de test disponibles. Pour utiliser un serveur déjà démarré :
+
+```powershell
+$env:E2E_BASE_URL="http://localhost:3000"
+npm run e2e
+```
+
+### 8. Arrêt propre et nettoyage des processus
+
+Utilisez `Ctrl+C` dans chaque terminal qui exécute `npm run dev` ou
+`npm run db:dev`.
+
+Pour diagnostiquer les ports sous Windows :
+
+```powershell
+Get-NetTCPConnection -State Listen |
+  Where-Object { $_.LocalPort -in 3000, 3100, 5432, 55432 } |
+  Select-Object LocalPort, OwningProcess
+```
+
+Pour identifier un processus Node avant de l'arrêter :
+
+```powershell
+Get-CimInstance Win32_Process -Filter "name = 'node.exe'" |
+  Select-Object ProcessId, ParentProcessId, CommandLine
+```
+
+N'arrêtez que les PID dont la commande contient le chemin du projet. Exemple :
+
+```powershell
+taskkill /PID <PID_NEXT> /T /F
+taskkill /PID <PID_DEV_DB> /T /F
+```
+
+Ne tuez pas une instance PostgreSQL sur `5432` si elle appartient à un autre
+projet ou service.
+
+### Dépannage local
+
+**`ENOENT package.json`** : le terminal est dans le dossier parent. Exécutez :
+
+```powershell
+Set-Location "D:\dow\build-accommodation-booking-platform\MyBestBooking"
+```
+
+**`npx` propose d'installer Vitest** : vous n'êtes pas dans le projet ou vous
+utilisez une version absente de `node_modules`. Utilisez `npx --no-install` et
+relancez `npm install` si nécessaire.
+
+**Colonne absente ou tests bloqués** : vérifiez `DATABASE_URL`, puis relancez
+`npm run db:push` sur la même base. Ne lancez pas `db:push` sur une autre URL.
+
+**Port 3000 occupé** : identifiez le PID avec `Get-NetTCPConnection`, puis
+arrêtez uniquement le processus du projet ou utilisez `-p 3001`.
 
 ## 🔑 Configuration sécurisée des providers
 

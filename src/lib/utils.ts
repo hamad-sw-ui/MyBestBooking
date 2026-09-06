@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import { isZeroDecimalCurrency } from "@/lib/i18n";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -13,7 +14,8 @@ export function formatPrice(
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
   return new Intl.NumberFormat(intlLocale(locale), {
     style: "currency",
-    currency,
+    currency: currency.toUpperCase(),
+    maximumFractionDigits: isZeroDecimalCurrency(currency) ? 0 : 2,
   }).format(numAmount);
 }
 

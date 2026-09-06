@@ -7,6 +7,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
 import { apiError } from "@/lib/api-error";
+import { isSupportedCurrency } from "@/lib/i18n";
 
 const roomSchema = z.object({
   propertyId: z.string().uuid(),
@@ -23,7 +24,7 @@ const roomSchema = z.object({
   sizeSqm: z.number().optional(),
   quantity: z.number().int().min(1).max(ROOM_MAX_QUANTITY, `La quantité ne peut pas dépasser ${ROOM_MAX_QUANTITY}`).optional(),
   basePrice: z.number().positive("Le prix de base doit être strictement positif"),
-  currency: z.string().length(3).optional(),
+  currency: z.string().length(3).refine(isSupportedCurrency, "Devise non supportée").optional(),
   amenities: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
 });

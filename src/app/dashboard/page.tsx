@@ -5,6 +5,7 @@ import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
+import { formatCurrencyBreakdown, sumByCurrency } from "@/lib/currency-summary";
 import { 
   Building2, Calendar, Star, TrendingUp, 
   ArrowUpRight, ArrowDownRight, Users, DollarSign 
@@ -49,13 +50,13 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
   }
 
   // Calculate stats
-  const totalRevenue = allBookings
+  const totalRevenueByCurrency = sumByCurrency(allBookings
     .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
-    .reduce((sum, b) => sum + parseFloat(b.total), 0);
+    .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })));
   
-  const recentRevenue = recentBookings
+  const recentRevenueByCurrency = sumByCurrency(recentBookings
     .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
-    .reduce((sum, b) => sum + parseFloat(b.total), 0);
+    .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })));
 
   // Get reviews count
   let reviewsQuery = db.select().from(reviews);
@@ -82,8 +83,8 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
       pending: allBookings.filter(b => b.status === "pending").length,
     },
     revenue: {
-      total: totalRevenue,
-      recent: recentRevenue,
+      totalByCurrency: totalRevenueByCurrency,
+      recentByCurrency: recentRevenueByCurrency,
     },
     reviews: {
       total: allReviews.length,
@@ -173,8 +174,8 @@ export default async function DashboardPage() {
     },
     {
       title: t("dash.revenue"),
-      value: formatPrice(stats.revenue.total, "EUR", locale),
-      subValue: t("dash.revenueMonth").replace("{amount}", formatPrice(stats.revenue.recent, "EUR", locale)),
+      value: formatCurrencyBreakdown(stats.revenue.totalByCurrency, locale),
+      subValue: t("dash.revenueMonth").replace("{amount}", formatCurrencyBreakdown(stats.revenue.recentByCurrency, locale)),
       icon: DollarSign,
       color: "bg-[#F5A623]",
       href: "/dashboard/billing",

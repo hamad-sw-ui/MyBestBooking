@@ -7,11 +7,12 @@ import { frenchZodMessage } from "@/lib/http";
 import { and, eq, desc } from "drizzle-orm";
 import { isStayPast } from "@/lib/price-alert-rules";
 import { apiError } from "@/lib/api-error";
+import { isSupportedCurrency } from "@/lib/i18n";
 
 const schema = z.object({
   propertyId: z.string().uuid(),
   maxPrice: z.number().positive(),
-  currency: z.string().length(3).optional(),
+  currency: z.string().length(3).refine(isSupportedCurrency, "Devise non supportée").optional(),
   checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   numAdults: z.number().int().min(1).optional(),

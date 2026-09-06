@@ -42,6 +42,12 @@ describe("formatPrice", () => {
     expect(formatPrice("49.99", "EUR", "en")).toMatch(/49\.99/);
     expect(formatPrice("49.99", "EUR", "en")).not.toMatch(/49,99/);
   });
+  it("formate XAF sans décimales", () => {
+    const xaf = formatPrice(50000, "XAF");
+    expect(xaf).toMatch(/50[\s\u00a0\u202f]?000/);
+    expect(xaf).not.toMatch(/,00|\.00/);
+    expect(xaf).toContain("FCFA");
+  });
 });
 
 describe("formatDate / formatDateShort", () => {

@@ -67,8 +67,9 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
       .filter(b => b.paymentStatus === "paid")
       .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })),
   );
-  const currentRevenue = Object.values(currentRevenueByCurrency).reduce((sum, v) => sum + v, 0);
-  const previousRevenue = Object.values(previousRevenueByCurrency).reduce((sum, v) => sum + v, 0);
+  const comparisonCurrency = topCurrency(currentRevenueByCurrency) ?? topCurrency(previousRevenueByCurrency) ?? "EUR";
+  const currentRevenue = currentRevenueByCurrency[comparisonCurrency] ?? 0;
+  const previousRevenue = previousRevenueByCurrency[comparisonCurrency] ?? 0;
 
   const revenueChange = previousRevenue > 0 
     ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
@@ -89,12 +90,14 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
     const count = currentPaidBookings.filter(b => (b.currency || "EUR").toUpperCase() === currency).length;
     avgBookingValueByCurrency[currency] = count > 0 ? revenue / count : 0;
   }
-  const avgBookingValue = currentPaidBookings.length > 0
-    ? currentRevenue / currentPaidBookings.length
+  const currentComparisonCount = currentPaidBookings.filter(b => (b.currency || "EUR").toUpperCase() === comparisonCurrency).length;
+  const previousComparisonCount = previousPaidBookings.filter(b => (b.currency || "EUR").toUpperCase() === comparisonCurrency).length;
+  const avgBookingValue = currentComparisonCount > 0
+    ? currentRevenue / currentComparisonCount
     : 0;
 
-  const previousAvgBookingValue = previousPaidBookings.length > 0
-    ? previousRevenue / previousPaidBookings.length
+  const previousAvgBookingValue = previousComparisonCount > 0
+    ? previousRevenue / previousComparisonCount
     : 0;
 
   // Occupation sur les nuits réellement situées dans la fenêtre, et non sur

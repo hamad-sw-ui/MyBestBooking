@@ -37,6 +37,7 @@ dbTest("quotePriceAlert — repli devise (T-154c / audit n°26, P2-7)", () => {
   let quotePriceAlert: typeof import("./price-alert-quote").quotePriceAlert;
   let usdOnlyPropId = "";
   let eurPropId = "";
+  let mixedPropId = "";
   const roomIds: string[] = [];
   let hostId = "";
 
@@ -114,6 +115,49 @@ dbTest("quotePriceAlert — repli devise (T-154c / audit n°26, P2-7)", () => {
       })
       .returning();
     roomIds.push(eurRoom.id);
+
+    const [mixedProp] = await db
+      .insert(schema.properties)
+      .values({
+        hostId,
+        name: "T-154c Mixed Currency",
+        slug: generateSlug(`t154c-mixed-${Date.now()}`),
+        type: "hotel",
+        city: "TestCity",
+        country: "FR",
+        status: "active",
+      })
+      .returning();
+    mixedPropId = mixedProp.id;
+    const [mixedEurRoom] = await db
+      .insert(schema.rooms)
+      .values({
+        propertyId: mixedProp.id,
+        name: "T-154c Mixed EUR Room",
+        roomType: "double",
+        maxOccupancy: 2,
+        maxAdults: 2,
+        basePrice: "100.00",
+        quantity: 1,
+        isActive: true,
+        currency: "EUR",
+      })
+      .returning();
+    const [mixedUsdRoom] = await db
+      .insert(schema.rooms)
+      .values({
+        propertyId: mixedProp.id,
+        name: "T-154c Mixed USD Room",
+        roomType: "double",
+        maxOccupancy: 2,
+        maxAdults: 2,
+        basePrice: "90.00",
+        quantity: 1,
+        isActive: true,
+        currency: "USD",
+      })
+      .returning();
+    roomIds.push(mixedEurRoom.id, mixedUsdRoom.id);
   });
 
   afterAll(async () => {
@@ -121,6 +165,7 @@ dbTest("quotePriceAlert — repli devise (T-154c / audit n°26, P2-7)", () => {
     for (const id of roomIds) await db.delete(schema.rooms).where(eq(schema.rooms.id, id));
     if (usdOnlyPropId) await db.delete(schema.properties).where(eq(schema.properties.id, usdOnlyPropId));
     if (eurPropId) await db.delete(schema.properties).where(eq(schema.properties.id, eurPropId));
+    if (mixedPropId) await db.delete(schema.properties).where(eq(schema.properties.id, mixedPropId));
   });
 
   it("alerte EUR sur propriété USD only → quote converti 92,59 EUR (plus de null)", async () => {
@@ -160,6 +205,15 @@ dbTest("quotePriceAlert — repli devise (T-154c / audit n°26, P2-7)", () => {
       context: {},
     });
     expect(quote).toEqual({ price: 118.67, currency: "EUR", mode: "base" });
+  });
+
+  it("alerte EUR compare les chambres EUR et USD après conversion", async () => {
+    const quote = await quotePriceAlert({
+      propertyId: mixedPropId,
+      currency: "EUR",
+      context: {},
+    });
+    expect(quote).toEqual({ price: 83.33, currency: "EUR", mode: "base" });
   });
 
   it("aucune chambre active → null (inchangé)", async () => {

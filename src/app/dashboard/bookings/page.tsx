@@ -6,6 +6,8 @@ import {
   BookingsManager,
   type BookingRow,
 } from "@/components/bulk/bookings-manager";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 
@@ -105,7 +107,7 @@ export default async function BookingsPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <h1
           className="text-2xl font-bold text-gray-900"
           style={{ fontFamily: "'Poppins', sans-serif" }}
@@ -115,6 +117,14 @@ export default async function BookingsPage() {
         <p className="text-gray-600 mt-1">
           {isAdmin ? t("dash.bookingsAdminSub") : t("dash.bookingsHostSub")}
         </p>
+        {!isAdmin && (
+          <a href="/api/dashboard/billing/export" download="MyBestBooking-reservations.csv">
+            <Button variant="outline" className="w-full sm:w-auto">
+              <Download className="w-4 h-4 mr-2" aria-hidden="true" />
+              {t("billing.exportCsv")}
+            </Button>
+          </a>
+        )}
       </div>
       <BookingsManager bookings={serialized} isAdmin={isAdmin} />
     </div>

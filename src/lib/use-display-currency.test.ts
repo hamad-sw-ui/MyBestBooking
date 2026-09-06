@@ -13,9 +13,10 @@ import {
  * être dispatché pour resynchroniser les composants montés.
  */
 
-function fakeWindow(localLanguage: string | null) {
+function fakeWindow(localLanguage: string | null, localCurrency: string | null = null) {
   const store = new Map<string, string>();
   if (localLanguage) store.set("mybb:ui-language", localLanguage);
+  if (localCurrency) store.set("mybb:ui-currency", localCurrency);
   const events: string[] = [];
   return {
     events,
@@ -75,6 +76,15 @@ describe("display preferences — invalidation (T-173)", () => {
     const second = await resolveDisplayPreferences();
     expect(second.language).toBe("en");
     expect(fetchSpy.mock.calls.length).toBe(callsAfterFirst); // cache utilisé
+  });
+
+  it("résout la devise d'affichage anonyme depuis le localStorage", async () => {
+    const { win } = fakeWindow(null, "USD");
+    vi.stubGlobal("window", win);
+    vi.stubGlobal("fetch", stubFetch(401));
+
+    const result = await resolveDisplayPreferences();
+    expect(result.currency).toBe("USD");
   });
 
   it("invalidateDisplayPreferences vide le cache ET dispatch l'événement", async () => {

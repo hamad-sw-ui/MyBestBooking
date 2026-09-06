@@ -43,6 +43,7 @@ interface Resolved {
 }
 
 let cached: Promise<Resolved> | null = null;
+const PREFERENCES_FETCH_TIMEOUT_MS = 3000;
 
 /**
  * T-173 — Événement d'invalidation des préférences d'affichage.
@@ -84,7 +85,7 @@ function load(): Promise<Resolved> {
       let platformCurrency: string | null = null;
       let platformLanguage: string | null = null;
       try {
-        const prefs = await fetch("/api/app-preferences", { cache: "no-store" });
+        const prefs = await fetchWithTimeout("/api/app-preferences", { cache: "no-store" });
         if (prefs.ok) {
           const p = await prefs.json();
           platformCurrency = typeof p?.defaultCurrency === "string" ? p.defaultCurrency.toUpperCase() : null;
@@ -102,7 +103,7 @@ function load(): Promise<Resolved> {
       let userLanguage: string | null = null;
       let hasUserCurrency = false;
       try {
-        const me = await fetch("/api/auth/me", { cache: "no-store" });
+        const me = await fetchWithTimeout("/api/auth/me", { cache: "no-store" });
         if (me.ok) {
           const data = await me.json();
           const u = data?.user;
@@ -157,6 +158,16 @@ function load(): Promise<Resolved> {
     })();
   }
   return cached;
+}
+
+async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = PREFERENCES_FETCH_TIMEOUT_MS): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(input, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export function useDisplayPreferences(): DisplayPreferences {
