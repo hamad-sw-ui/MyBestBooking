@@ -51,7 +51,7 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1477** clés FR=EN ;
+- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1479** clés FR=EN ;
   `i18n:check` **0 candidat** ; SSR cookie `en` prouvé (`html lang=en`,
   navbar/home/auth/recherche). T-168→T-171 ont depuis localisé facture
   HTML, placeholders réglages, messages JSON d’API et e-mails
@@ -59,9 +59,10 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   les pages (incl. `/recherche`, auth, compte) avec `noindex` sur les
   zones privées. **T-194** (+1 `auth.demoHint`), **T-195** (+38
   `payouts.*` dont 11 `payout-account`, +2 `payouts.*` P7, +8
-  `billingCsv.*` P9) et **T-202** (+15 : `book.confirmRequest`, `dash.*`
-  approbation hôte, `host.*` gate, `pay.manualConfirmed`) ont porté le
-  verrou à **1477**.
+  `billingCsv.*` P9), **T-202** (+15 : `book.confirmRequest`, `dash.*`
+  approbation hôte, `host.*` gate, `pay.manualConfirmed`) et **T-203**
+  (+2 : `book.markPaidOffline`, `book.paymentAwaitingHost`) ont porté le
+  verrou à **1479**.
   Restent **hors périmètre** (pas des bugs) : termes métier
   identiques FR/EN (« No-show »), contenus stockés en base (seed, avis,
   motifs d’annulation, corps d’e-mails personnalisés par l’admin), arabe
@@ -122,16 +123,22 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
     Réservations). **Limite** : l'export de versements est tronqué à 500 lignes
     (garde-fou volume, même règle que l'export bookings) — au-delà, une
     pagination/CSV streamé serait nécessaire (backlog).
-- **Paiement manuel + validation hôte (T-202).** Depuis T-202, le client réserve
-  **sans paiement automatique** (`POST /api/bookings` → `status:"pending"`,
+- **Paiement manuel + validation hôte (T-202 + T-203).** Depuis T-202, le client
+  réserve **sans paiement automatique** (`POST /api/bookings` → `status:"pending"`,
   `payment:null`, `manualConfirmation:true`) et les états de réservation sont
   **gérés à la main** par l'hôte (`pending→confirmed` etc.). Limite assumée : un
   séjour n'est plus "payé en ligne" à la réservation — le règlement se fait hors
-  plateforme, et l'hôte confirme la demande. La route `/api/bookings/[id]/payment`
-  reste disponible (back-office) mais n'est plus déclenchée par défaut. Un **hôte
-  non approuvé** (`approvalStatus=pending`) peut créer/soumettre un hébergement mais
-  il ne peut **pas** passer `active` (`validate→approve` → 409) tant que l'admin
-  n'a pas approuvé son compte et fixé sa commission.
+  plateforme, et l'hôte confirme la demande. **T-203** complète le flux : l'hôte
+  ou l'admin **constate le paiement sur place** (`PUT /api/bookings/[id]
+  {markPaidOffline:true}` → `paymentStatus:"paid"` + `paymentMethodOffline:true`),
+  ce qui rend le séjour éligible au **versement** et aux **revenus** ; les demandes
+  **manuelles ne sont plus expirées** après 15 min (`paymentExpiresAt:null` sans
+  `payOnline`, cron limité aux `paymentIntentId`). La route
+  `/api/bookings/[id]/payment` reste disponible (back-office) mais n'est plus
+  déclenchée par défaut. Un **hôte non approuvé** (`approvalStatus=pending`) peut
+  créer/soumettre un hébergement mais il ne peut **pas** passer `active`
+  (`validate→approve` → 409) tant que l'admin n'a pas approuvé son compte et fixé
+  sa commission.
 - **Mode invité limité.** Le checkout accepte un email non enregistré et crée
   un profil sans mot de passe. Un email déjà associé à un compte doit être
   utilisé après connexion pour éviter le rattachement de données.

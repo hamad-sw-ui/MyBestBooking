@@ -66,6 +66,8 @@ export const AUDIT_ACTIONS = {
   // T-202 — approbation d'un hôte (validation admin + taux de commission)
   hostApprove: "host.approve",
   hostReject: "host.reject",
+  // T-203 — paiement sur place constaté par l'hôte/admin (paiement manuel)
+  bookingPayOffline: "booking.pay.offline",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

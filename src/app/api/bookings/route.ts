@@ -376,7 +376,11 @@ export async function POST(request: NextRequest) {
             paymentStatus: "pending",
             paymentMethod: null,
             paymentIntentId: null,
-            paymentExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
+            // T-203 : une réservation manuelle (sans `payOnline`) n'a pas de
+            // paiement en ligne → ne PAS fixer de TTL. Le cron
+            // `expirePendingBookings` n'annule que les bookings avec un intent
+            // réel. `payOnline` garde son hold de 15 min (non-régression).
+            paymentExpiresAt: data.payOnline ? new Date(Date.now() + 15 * 60 * 1000) : null,
             promotionId: appliedPromoId,
             // T-153 (A) : montant réellement débité du wallet, en EUR
             // (restitué à l'annulation dans la même devise).

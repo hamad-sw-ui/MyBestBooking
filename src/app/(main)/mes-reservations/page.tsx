@@ -186,6 +186,8 @@ export default async function MyBookingsPage() {
                               propertyId={property?.id ?? booking.propertyId}
                               status={booking.status}
                               paymentStatus={booking.paymentStatus}
+                              paymentMethodOffline={booking.paymentMethodOffline}
+                              paymentIntentId={booking.paymentIntentId}
                             />
                           </div>
                         </div>

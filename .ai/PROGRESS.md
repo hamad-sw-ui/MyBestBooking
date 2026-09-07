@@ -7,6 +7,35 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-09-07 — T-203 correction des divergences du paiement manuel
+
+- **Demande** : identifier tout ce qui est nécessaire au scénario « paiement
+  manuel » et corriger les divergences (sans régression, tout tester avant de
+  s'arrêter).
+- **Divergences constatées & corrigées** :
+  - `paymentMethodOffline` jamais `true` / `paymentStatus` jamais `paid` →
+    versements & revenus inertes. Ajout de l'action hôte `/admin`
+    **`{markPaidOffline:true}`** (audit `booking.pay.offline`).
+  - Une demande manuelle était **annulée après 15 min** par le cron
+    (`expirePendingBookings`) car `paymentExpiresAt` était toujours fixé. →
+    `paymentExpiresAt:null` sans `payOnline` + cron limité aux `paymentIntentId`.
+  - UI proposait encore **« Payer maintenant »** pour une demande manuelle → masqué,
+    remplacé par « En attente de confirmation de l'hôte ».
+  - Aucun contrôle **« Payé sur place »** → bouton hôte + badge.
+- **Fichiers** : `src/app/api/bookings/route.ts` · `cron/price-alerts/route.ts` ·
+  `bookings/[id]/route.ts` · `src/lib/audit.ts` · `booking-row-actions.tsx` ·
+  `mes-reservations/page.tsx` · `dashboard/bookings/[id]/page.tsx` ·
+  `src/lib/ui-strings.ts(+2)` · `src/lib/ui-strings.test.ts` · 2 fichiers de test T-203.
+- **Tests exécutés** : 🔨 tsc 0 · eslint 0 · 🔍 i18n:check 0 (catalogue **1479**) ·
+  🔨 build 64 pages · 🧪 vitest **551/551** (84 files, +5 tests) · ▶️ smoke **95/95** ·
+  ✅ ai:check 19 OK · 0 fail.
+- **Preuves runtime** : réservation manuelle → `paymentExpiresAt:null` ; confirmation
+  hôte → `confirmedBy` ; `markPaidOffline` → `paid`+`offline` ; **403** client ;
+  **idempotence** 200 ; **cron** laisse la demande `pending` ; audit tracé.
+- **Problèmes rencontrés** : test `customer` hors scope (corrigé par `customerEmail`),
+  nettoyage FK des hôtes de test (ordre de suppression).
+- **Étape suivante** : commit T-203.
+
 ## Session 2026-09-07 — T-202 validation hôte + paiement manuel (statuts à la main)
 
 - **Demande** : l'inscription d'un hôte passe par la validation de l'admin avant de

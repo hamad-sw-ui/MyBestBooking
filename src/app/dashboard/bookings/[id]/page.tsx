@@ -389,6 +389,9 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                 bookingReference={booking.bookingReference}
                 propertyId={booking.propertyId}
                 status={booking.status}
+                paymentStatus={booking.paymentStatus}
+                paymentMethodOffline={booking.paymentMethodOffline}
+                paymentIntentId={booking.paymentIntentId}
                 messageArea="dashboard"
                 canManageStay={canManageStay}
               />

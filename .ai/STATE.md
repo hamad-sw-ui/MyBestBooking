@@ -4,7 +4,24 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : `6c752f7` — **T-202 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+- **HEAD Git** : `a644dd1` — **T-203 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+  **fiabilisation du scénario « paiement manuel »** — un hôte/admin peut
+  **constater le paiement sur place** (`PUT /api/bookings/[id]
+  {markPaidOffline:true}` → `paymentStatus:"paid"` + `paymentMethodOffline:true`,
+  audit `booking.pay.offline`), ce qui débloque les **versements/revenus**
+  (pipeline `payout` filtre `paid` — corrigé indirectement, sans toucher au
+  calcul). Les **demandes manuelles ne sont plus expirées** après 15 min
+  (`paymentExpiresAt:null` sans `payOnline` + cron limité aux bookings avec
+  `paymentIntentId`). UI : bouton/badge **« Payé sur place »** + masque
+  « Payer maintenant » pour les manuels ; **i18n**
+  (**book.markPaidOffline**, **book.paymentAwaitingHost**) → catalogue **1479**.
+  **Zéro régression du tunnel Stripe/PSP ni du webhook** (intacts).
+  Preuves : 🔨 tsc 0 · eslint 0 · i18n **1479** · build 64 pages · 🧪 vitest
+  **551/551** (84 files, +5 tests) · ▶️ runtime (réservation manuelle
+  `paymentExpiresAt:null`, confirmation hôte `confirmedBy`, paiement sur place
+  `paid`+`offline`, RBAC 403, cron non-expiration) · ✅ ai:check 19 OK · 0 fail.
+  **Précédent** :
+  **T-202 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
   validation hôte par l'admin (`users.approvalStatus` + `users.commissionRate`,
   routes `/api/admin/hosts[/id]`, gate de publication) + **paiement manuel**
   (`POST /api/bookings` ne déclenche plus de paiement auto → `pending`,

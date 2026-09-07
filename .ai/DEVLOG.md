@@ -6,6 +6,26 @@ ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 
 ---
 
+## 2026-09-07 — T-203 correction du scénario « paiement manuel »
+
+**Fait.** La revue bout-en-bout du flux manual_confirm de T-202 a révélé 4
+divergences qui cassaient le scénario ; toutes corrigées sans toucher au tunnel
+Stripe/PSP ni au webhook.
+
+- **1. Versements/revenus inertes** : une réservation manuelle restait
+  `paymentStatus:"pending"` pour toujours et `paymentMethodOffline` n'était jamais
+  `true` → le pipeline `payout` (filtre `paid`) ne produisait rien. Ajouté
+  `PUT /api/bookings/[id] {markPaidOffline:true}` (hôte/admin) → `paid` + `offline`
+  + audit `booking.pay.offline`. Résolution : **ne pas modifier** le filtre `paid`
+  de `payout-service`/`dashboard` — rendre l'état `paid` atteignable.
+- **2. Expiration abusive** : le cron annulait la demande manuelle après 15 min.
+  → `paymentExpiresAt:null` sans `payOnline` ; cron limité aux `paymentIntentId`.
+- **3/4. UI** : bouton/badge « Payé sur place » + masque « Payer maintenant ».
+- **Leçon** : quand on désactive une automatisation (paiement auto), il faut
+  fournir le **contre-équivalent manuel** complet (le "constater payé"), sinon le
+  pipeline aval (payout/revenus) se retrouve en état mort. Et un cron d'expiration
+  pensé pour un hold de paiement doit être re-borné quand le paiement devient optionnel.
+
 ## 2026-09-07 — T-202 validation hôte + paiement manuel
 
 **Fait.** Ajout de la validation hôte à l'inscription (admin approuve + fixe un %

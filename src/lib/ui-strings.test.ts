@@ -14,6 +14,8 @@ describe("uiStrings (T-132)", () => {
     expect(uiStrings("en")["book.seeAvailability"]).toBe("See availability");
     expect(uiStrings("en")["fav.add"]).toBe("Add to favorites");
     expect(uiStrings("en")["home.whyReviewTitle"]).toBe("100% verified reviews");
+    expect(uiStrings("en")["book.markPaidOffline"]).toBe("Mark paid on site");
+    expect(uiStrings("en")["book.paymentAwaitingHost"]).toBe("Awaiting host confirmation");
   });
 
   it("isUiLocale n'accepte que fr/en", () => {
@@ -36,7 +38,9 @@ describe("uiStrings (T-132)", () => {
     // T-202 (2026-09-07) : +15 clés (validation hôte + paiement manuel) :
     //   +1 book.confirmRequest, +11 dash.* (approbation hôte), +2 host.* (gate),
     //   +1 pay.manualConfirmed = 1477.
-    expect(Object.keys(fr)).toHaveLength(1477);
+    // T-203 (2026-09-07) : +2 clés livre (constater paiement sur place) :
+    //   +1 book.markPaidOffline, +1 book.paymentAwaitingHost = 1479.
+    expect(Object.keys(fr)).toHaveLength(1479);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

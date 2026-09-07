@@ -15,10 +15,15 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { BookingCancellationError, cancelBooking, notifyBookingCancellation } from "@/lib/booking-cancellation";
+import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 
 const updateBookingSchema = z.object({
   status: z.enum(["pending", "confirmed", "cancelled", "completed", "no_show"]).optional(),
   cancellationReason: z.string().max(1000).optional(),
+  // T-203 : l'hôte/admin constate que le paiement a été effectué sur place
+  // (paiement manuel). Passe la réservation à `paymentStatus:"paid"` +
+  // `paymentMethodOffline:true`. Distinct de la transition de statut.
+  markPaidOffline: z.boolean().optional(),
 });
 
 function actorFor(role: string, isOwner: boolean): BookingActor {
@@ -112,6 +117,53 @@ export async function PUT(
           return NextResponse.json({ error: await apiError(cancellationError.message) }, { status: 409 });
         }
         throw cancellationError;
+      }
+    }
+
+    // T-203 : paiement sur place constaté par l'hôte du bien ou un admin
+    // (le client ne peut pas ; il ne peut qu'annuler). Passe `paymentStatus =
+    // "paid"` + `paymentMethodOffline:true` et libère l'expiration. Idempotent.
+    if (data.markPaidOffline) {
+      if (!isHost && user.role !== "admin") {
+        return NextResponse.json(
+          { error: await apiError("Seul l'hôte du bien ou un administrateur peut constater un paiement sur place") },
+          { status: 403 },
+        );
+      }
+      if (existing.booking.status === "cancelled" || existing.booking.status === "no_show") {
+        return NextResponse.json(
+          { error: await apiError("Impossible de constater un paiement sur une réservation annulée ou no-show") },
+          { status: 409 },
+        );
+      }
+      if (existing.booking.paymentStatus === "paid") {
+        // Idempotent : déjà constaté — rien à faire.
+        return NextResponse.json({ booking: existing.booking });
+      }
+      try {
+        const [paid] = await db
+          .update(bookings)
+          .set({
+            paymentStatus: "paid",
+            paymentMethodOffline: true,
+            paymentMethod: "offline",
+            paymentExpiresAt: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, id))
+          .returning();
+        // Trace l'acte (hôte ou admin) pour l'audit.
+        await recordAudit({
+          actorId: user.id,
+          action: AUDIT_ACTIONS.bookingPayOffline,
+          entityType: "booking",
+          entityId: id,
+          metadata: { host: isHost, manual: true },
+        });
+        return NextResponse.json({ booking: paid });
+      } catch (markError) {
+        console.error("[bookings/[id]] markPaidOffline:", markError);
+        return NextResponse.json({ error: await apiError("Impossible de constater le paiement sur place") }, { status: 500 });
       }
     }
 

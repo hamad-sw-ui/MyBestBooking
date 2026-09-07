@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, CreditCard, ThumbsUp } from "lucide-react";
+import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, CreditCard, ThumbsUp, BadgeCheck, Clock } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
@@ -14,6 +14,11 @@ interface Props {
   status: string;
   /** T-152 : état de paiement, permet d'offrir « Payer maintenant » aux pending. */
   paymentStatus?: string | null;
+  /** T-203 : paiement constaté sur place (paiement manuel) pour afficher le badge. */
+  paymentMethodOffline?: boolean;
+  /** T-203 : intent de paiement en ligne. Si absent (NULL) pour une réservation
+   *  `pending`, il s'agit d'une demande manuelle → on masque « Payer maintenant ». */
+  paymentIntentId?: string | null;
   messageArea?: "traveler" | "dashboard";
   /**
    * T-130 : true quand l'utilisateur courant est l'hôte du bien (ou admin) en
@@ -38,6 +43,8 @@ export function BookingRowActions({
   propertyId,
   status,
   paymentStatus = null,
+  paymentMethodOffline = false,
+  paymentIntentId = null,
   messageArea = "traveler",
   canManageStay = false,
 }: Props) {
@@ -137,6 +144,28 @@ export function BookingRowActions({
     }
   }
 
+  // T-203 : l'hôte/admin constate que le paiement a été effectué sur place
+  // (paiement manuel). PUT /api/bookings/[id] { markPaidOffline: true } →
+  // paymentStatus:"paid" + paymentMethodOffline:true. Le badge s'affiche après.
+  async function markPaidOffline() {
+    setError(null);
+    setBusyAction("offline");
+    try {
+      const r = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ markPaidOffline: true }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error ?? t("settings.error"));
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("book.actionError").replace("{label}", t("book.markPaidOffline")));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   // T-130 : clôture du séjour par l'hôte/admin. Le serveur rejette toute
   // transition invalide (acteur non autorisé, avant la date de départ) avec un
   // message explicite ; on ne fait que relayer.
@@ -170,6 +199,13 @@ export function BookingRowActions({
         <MessageSquare className="w-4 h-4 mr-2" />
 {t("book.writeHost")}
       </Button>
+      {/* T-203 : badge « Payé sur place » — l'hôte a constaté le règlement manuel. */}
+      {paymentMethodOffline && (
+        <span className="inline-flex items-center text-sm px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-medium">
+          <BadgeCheck className="w-4 h-4 mr-2" />
+          {t("pay.manualConfirmed")}
+        </span>
+      )}
       {/* T-202 : l'hôte/admin confirme la demande (pending → confirmed) à la main. */}
       {canManageStay && status === "pending" && (
         <Button
@@ -189,6 +225,23 @@ export function BookingRowActions({
       )}
       {canManageStay && status === "confirmed" && (
         <>
+          {/* T-203 : constater le paiement sur place (paiement manuel). */}
+          {!paymentMethodOffline && paymentStatus !== "paid" && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={markPaidOffline}
+              disabled={busyAction !== null}
+              className="text-emerald-700 hover:text-emerald-800 hover:bg-emerald-50"
+            >
+              {busyAction === "offline" ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <BadgeCheck className="w-4 h-4 mr-2" />
+              )}
+              {t("book.markPaidOffline")}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -232,8 +285,11 @@ export function BookingRowActions({
       {/* T-152 (audit n°24, A) : une réservation pending (paiement non
           finalisé, intent expiré, checkout abandonné) doit rester actionnable.
           L'API /api/bookings/[id]/payment et l'annulation pending existent
-          déjà ; on expose juste les actions. */}
-      {status === "pending" && paymentStatus === "pending" && (
+          déjà ; on expose juste les actions.
+          T-203 : on ne propose « Payer maintenant » que si un intent de
+          paiement en ligne existe (`paymentIntentId`) — sinon c'est une
+          demande manuelle, l'hôte confirme et constate le paiement sur place. */}
+      {status === "pending" && paymentStatus === "pending" && paymentIntentId && (
         <Link
           href={`/reservation?booking=${bookingId}`}
           className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#1B3A6B] text-white text-sm font-medium hover:bg-[#152d54] transition"
@@ -246,6 +302,12 @@ export function BookingRowActions({
         <span className="inline-flex items-center text-sm px-3 py-1.5 text-amber-700 bg-amber-50 rounded-lg">
           <Loader2 className="w-4 h-4 mr-2" />
 {t("reservation.paymentConfirming")}
+        </span>
+      )}
+      {status === "pending" && paymentStatus === "pending" && !paymentIntentId && (
+        <span className="inline-flex items-center text-sm px-3 py-1.5 text-amber-700 bg-amber-50 rounded-lg">
+          <Clock className="w-4 h-4 mr-2" />
+          {t("book.paymentAwaitingHost")}
         </span>
       )}
       {(status === "confirmed" || status === "pending") && (

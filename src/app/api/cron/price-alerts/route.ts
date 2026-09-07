@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings, priceAlerts, promotions, properties, uploadObjects, users } from "@/db/schema";
-import { and, eq, isNull, lt, lte, sql } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { deliverPendingEmails, enqueueEmail } from "@/lib/email-outbox";
 import { shouldNotifyPriceAlert, isStayExpired } from "@/lib/price-alert-rules";
 import { appBaseUrl } from "@/lib/app-url";
@@ -105,7 +105,11 @@ async function completeEligibleBookings(today: string): Promise<number> {
 
 async function expirePendingBookings(): Promise<number> {
   const now = new Date();
-  const candidates = await db.select({ id: bookings.id, paymentIntentId: bookings.paymentIntentId }).from(bookings).where(and(eq(bookings.status, "pending"), eq(bookings.paymentStatus, "pending"), lte(bookings.paymentExpiresAt, now))).limit(100);
+  // T-203 : seule une réservation avec un intent de paiement réel (hold)
+  // peut être annulée à l'expiration. Une demande manuelle (sans intent,
+  // `paymentIntentId` NULL) reste `pending` jusqu'à décision de l'hôte —
+  // sinon le cron annulerait la demande 15 min après sa création (bug T-202).
+  const candidates = await db.select({ id: bookings.id, paymentIntentId: bookings.paymentIntentId }).from(bookings).where(and(eq(bookings.status, "pending"), eq(bookings.paymentStatus, "pending"), isNotNull(bookings.paymentIntentId), lte(bookings.paymentExpiresAt, now))).limit(100);
   let expired = 0;
   const provider = await getPaymentProvider();
   for (const candidate of candidates) {
