@@ -70,7 +70,7 @@
   `/api/dashboard/billing/export-payouts` → CSV ledger versements
   (`MyBestBooking-versements.csv`, en-têtes FR) alors que GET `/export`
   (bookings) reste inchangé ; **base restaurée à la baseline** (0 résidu).
-- ✅ `ai:check` 19 OK · 0 fail (R7 STATE.md synchronisé sur HEAD `b2cd448`).
+- ✅ `ai:check` 19 OK · 0 fail (R7 STATE.md synchronisé sur HEAD `6c752f7`).
 - ⚠️ Dépendance de seed : `properties/[id]/route.test.ts` attendait
   `is_bestrewards=true` sur `hotel-le-magnifique` mais le seed est aléatoire
   (`Math.random()>0.5`) → rendu déterministe (donnée `is_bestrewards=true`) ;
