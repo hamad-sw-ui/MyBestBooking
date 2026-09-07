@@ -16,10 +16,23 @@
   « Payer maintenant » pour les manuels ; **i18n**
   (**book.markPaidOffline**, **book.paymentAwaitingHost**) → catalogue **1479**.
   **Zéro régression du tunnel Stripe/PSP ni du webhook** (intacts).
-  Preuves : 🔨 tsc 0 · eslint 0 · i18n **1479** · build 64 pages · 🧪 vitest
-  **551/551** (84 files, +5 tests) · ▶️ runtime (réservation manuelle
+  **Complément d'audit (e-mails) — P7 + P3** : l'e-mail de confirmation ne
+  partait que du flux de paiement en ligne ; la confirmation **manuelle par
+  l'hôte** (paiement sur place) ne produisait **aucun e-mail**. Corrigé :
+  `PUT /api/bookings/[id] {status:"confirmed"}` appelle désormais
+  `sendBookingConfirmationIfNeeded(id)` (best-effort, post-commit) et la
+  fonction ne conditionne plus l'envoi à `paymentStatus:"paid"` (une
+  réservation confirmée avec paiement encore `pending` reçoit bien son e-mail) +
+  respect du toggle `notifications.bookingConfirmation`. P3 : l'écran de
+  confirmation manuelle (`reservation-form.tsx`) affiche « 📩 Demande envoyée » /
+  « Montant à régler sur place » au lieu de « 🎉 C'est confirmé ! / Total payé »
+  (clés `reservation.manualRequestSent/RequestBody/AmountOnSite`).
+  Preuves : 🔨 tsc 0 · eslint 0 · i18n **1482** · build 64 pages · 🧪 vitest
+  **554 (85 files, +3 tests)** · ▶️ runtime (réservation manuelle
   `paymentExpiresAt:null`, confirmation hôte `confirmedBy`, paiement sur place
-  `paid`+`offline`, RBAC 403, cron non-expiration) · ✅ ai:check 19 OK · 0 fail.
+  `paid`+`offline`, RBAC 403, cron non-expiration, **e-mail confirmation
+  `:guest`+`:host` émis**, rappel J3 + demande d'avis par cron) · ✅ ai:check
+  19 OK · 0 fail · `npm run ci` **verte**.
   **Précédent** :
   **T-202 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
   validation hôte par l'admin (`users.approvalStatus` + `users.commissionRate`,

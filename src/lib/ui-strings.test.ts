@@ -16,6 +16,9 @@ describe("uiStrings (T-132)", () => {
     expect(uiStrings("en")["home.whyReviewTitle"]).toBe("100% verified reviews");
     expect(uiStrings("en")["book.markPaidOffline"]).toBe("Mark paid on site");
     expect(uiStrings("en")["book.paymentAwaitingHost"]).toBe("Awaiting host confirmation");
+    expect(uiStrings("en")["reservation.manualRequestSent"]).toBe("📩 Request sent");
+    expect(uiStrings("en")["reservation.manualRequestBody"]).toMatch(/booking request was sent to the host/i);
+    expect(uiStrings("en")["reservation.manualAmountOnSite"]).toBe("Amount to pay on site");
   });
 
   it("isUiLocale n'accepte que fr/en", () => {
@@ -40,7 +43,10 @@ describe("uiStrings (T-132)", () => {
     //   +1 pay.manualConfirmed = 1477.
     // T-203 (2026-09-07) : +2 clés livre (constater paiement sur place) :
     //   +1 book.markPaidOffline, +1 book.paymentAwaitingHost = 1479.
-    expect(Object.keys(fr)).toHaveLength(1479);
+    // T-203 (2026-09-07) : +3 clés reservation manuelle (écran de confirmation) :
+    //   +1 reservation.manualRequestSent, +1 reservation.manualRequestBody,
+    //   +1 reservation.manualAmountOnSite = 1482.
+    expect(Object.keys(fr)).toHaveLength(1482);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

@@ -6,6 +6,40 @@
 >
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
+## Session 2026-09-07 — T-203 audit d'intégralité + e-mails (P7/P3)
+
+- **Demande** : test de l'intégralité du site et vérification que les e-mails
+  sont complets et fonctionnels.
+- **Test d'intégralité** : `npm run ci` **verte** (typecheck 0 · lint 0 · i18n
+  **1482** · ai:check 19 OK · 0 fail (R7 warn fin de session) · vitest **554**
+  · build 64 pages · smoke **95/95**).
+- **Audit e-mails (runtime)** — tous les types envoyés via outbox
+  ConsoleMailer : vérification email 🧪, bienvenue (après vérif) 🧪, oubli mot
+  de passe 🧪, rappel J-3/J-1 (cron) 🧪, demande d'avis (cron) 🧪, confirmation
+  voyageur + hôte 🧪, annulations (voyageur/opérateur/hôte) 🧪, nouveau message
+  🧪, alerte prix 🧪 — couverts par les tests (`mail/index.test.ts`,
+  `booking-cancellation-mail.test.ts`, ...).
+- **P7 (divergence)** : la confirmation e-mail ne partait **que** du flux de
+  paiement en ligne (`payment-intents.ts`) ; la confirmation **manuelle** ne
+  produisait **aucun e-mail** (outbox vide, `confirmation_email_sent_at` NULL).
+  → Corrigé : `PUT /api/bookings/[id] {status:"confirmed"}` appelle
+  `sendBookingConfirmationIfNeeded(id)` et la fonction ne conditionne plus
+  l'envoi à `paymentStatus:"paid"` (paiement sur place encore `pending`).
+  → **Preuve runtime** : 2 e-mails émis (`:guest` « Réservation confirmée MBB-… »
+  + `:host` « Nouvelle réservation MBB-… »), `confirmation_email_sent_at` posé.
+- **P3 (divergence)** : `reservation-form.tsx` affichait « 🎉 C'est confirmé ! /
+  Total payé » pour une réservation manuelle encore `pending`. → Corrigé :
+  « 📩 Demande envoyée » / « Montant à régler sur place » (3 clés i18n FR/EN).
+- **New test** : `src/lib/booking-confirmation.test.ts` (+3 : envoi guest/host,
+  idempotence, garde `status`). **i18n** 1479 → **1482**.
+- **Fichiers modifiés** : `src/lib/booking-confirmation.ts` ·
+  `src/app/api/bookings/[id]/route.ts` · `src/app/(main)/reservation/reservation-form.tsx`
+  · `src/lib/ui-strings.ts(+3)` · `src/lib/ui-strings.test.ts`
+  · `src/lib/booking-confirmation.test.ts(+3)`.
+- **Base restaurée** : 8 propriétés · 1 hôte `approved` · 0 résa test
+  (30 réservations seed démo conservées). **Zéro régression** du tunnel
+  Stripe/PSP et du webhook.
+
 
 ## Session 2026-09-07 — T-203 correction des divergences du paiement manuel
 

@@ -40,13 +40,48 @@ fonctionnement du flux « paiement manuel ». Toutes sont corrigées et prouvée
 - **J5** — Tests : `route.t203.test.ts` (non-expiration) +
   `[id]/route.t203.test.ts` (pay offsite, 403, 409, idempotence) → +5 tests.
 
+## Nouvelles corrections (audit intégralité + e-mails)
+
+- **P7 — E-mail de confirmation manuelle (corrigé)** : l'e-mail de confirmation
+  (voyageur + hôte) n'était envoyé **que** depuis le flux de paiement en ligne
+  (`payment-intents.ts`). Quand l'hôte confirme manuellement une réservation
+  (T-202/T-203) avec paiement sur place, **aucun e-mail ne partait** (`outbox`
+  vide, `confirmation_email_sent_at` NULL). → Corrigé :
+  - `PUT /api/bookings/[id] { status:"confirmed" }` appelle désormais
+    `sendBookingConfirmationIfNeeded(bookingId)` (best-effort, post-commit).
+  - `sendBookingConfirmationIfNeeded` ne conditionne plus l'envoi à
+    `paymentStatus === "paid"` : une réservation confirmée avec paiement encore
+    `pending` (paiement sur place) reçoit bien son e-mail. La garde s'appuie sur
+    `status === "confirmed"` + `confirmationEmailSentAt` (idempotence) + le
+    toggle admin `notifications.bookingConfirmation` (désormais respecté).
+- **P3 — Écran de confirmation (corrigé)** : `reservation-form.tsx` affichait
+  « 🎉 C'est confirmé ! » / « Total payé » alors qu'une réservation manuelle est
+  encore `pending` + paiement sur place. → Corrigé : quand le POST renvoie
+  `manualConfirmation:true`, l'écran affiche « 📩 Demande envoyée » +
+  « Montant à régler sur place » + « Un email de confirmation vous sera envoyé ».
+
+## Vérification d'intégralité (audit e-mails)
+
+Test d'intégralité du site (`npm run ci`) + audit runtime de la couche e-mail :
+- **Fonctionnels** (envoyés via outbox ConsoleMailer) : vérification email,
+  bienvenue (après vérif), oubli mot de passe, rappel J-3/J-1 (cron), demande
+  d'avis (cron), confirmation (voyageur + hôte, **désormais aussi en manuel**),
+  annulations (voyageur/opérateur/hôte), nouveau message, alerte prix.
+- **Preuve runtime** : `booking-confirmation:<id>:guest` +
+  `:host` émis (statut `sent`) dès le `PUT status:"confirmed"` ; rappel J3 et
+  demande d'avis émis par le cron (`reviewRequestsSent:1`).
+
 ## Gates de fermeture (tous ✅)
 
 - [x] 🔨 `tsc --noEmit` 0 · `eslint src --max-warnings 0` 0
 - [x] 🔨 `next build` compiled (64 pages)
-- [x] 🔍 `i18n:check` 0 candidat · catalogue **1479**
-- [x] 🧪 `vitest run` **551/551** (84 fichiers, 0 skip) — +5 tests T-203
+- [x] 🔍 `i18n:check` 0 candidat · catalogue **1482** (+3 clés reservation)
+- [x] 🧪 `vitest run` **554** (85 fichiers, -2 skip DB) — +3 tests T-203
+  (`booking-confirmation.test.ts` nominal + idempotence + garde status)
 - [x] ▶️ `npm run smoke` **95/95 PASS** (contrat `pending` + `manualConfirmation`)
+- [x] ✅ `npm run ci` **verte** (chaîne complète : typecheck 0 / lint 0 /
+  i18n 0 / ai:check 19 OK · 1 warn R7 · 0 fail / vitest 554 / build 64 pages /
+  smoke 95/95)
 - [x] ✅ `ai:check` 19 OK · 0 fail (R7 warn toléré en fin de session)
 
 ## Preuves runtime (serveur :3000, base seedée puis restaurée)

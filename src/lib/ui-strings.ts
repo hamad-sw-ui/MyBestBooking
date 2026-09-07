@@ -138,6 +138,10 @@ const FR = {
   "reservation.paymentTransmitted": "Votre demande de paiement a été transmise. La réservation sera confirmée dès la réponse sécurisée du prestataire.",
   "reservation.confirmationEmail": "📧 Vous recevrez la confirmation définitive à l'issue du paiement.",
   "reservation.confirmationEmailSent": "Un email de confirmation vous sera envoyé.",
+  // T-203 : réservation manuelle (paiement sur place) — l'hôte confirme.
+  "reservation.manualRequestSent": "📩 Demande envoyée",
+  "reservation.manualRequestBody": "Votre demande de réservation a bien été transmise à l'hébergeur. Elle sera confirmée après validation de l'hôte (paiement sur place).",
+  "reservation.manualAmountOnSite": "Montant à régler sur place",
   "reservation.roomLabel": "Chambre",
   "reservation.promoCode": "Code {code}",
   "priceAlert.alertIf": "M'alerter si",
@@ -1638,6 +1642,10 @@ const EN: Record<UiStringKey, string> = {
   "reservation.paymentTransmitted": "Your payment request has been sent. The booking will be confirmed once the payment provider responds securely.",
   "reservation.confirmationEmail": "📧 You will receive the final confirmation once the payment is completed.",
   "reservation.confirmationEmailSent": "A confirmation email will be sent to you.",
+  // T-203 : réservation manuelle (paiement sur place) — l'hôte confirme.
+  "reservation.manualRequestSent": "📩 Request sent",
+  "reservation.manualRequestBody": "Your booking request was sent to the host. It will be confirmed after the host validates it (payment on site).",
+  "reservation.manualAmountOnSite": "Amount to pay on site",
   "reservation.roomLabel": "Room",
   "reservation.promoCode": "Code {code}",
   "priceAlert.alertIf": "Alert me if",

@@ -5,6 +5,38 @@ en haut). Aucun format imposé — quelques lignes suffisent : ce qu'on a fait,
 ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 
 ---
+## 2026-09-07 — T-203 audit e-mails (P7 : confirmation manuelle)
+
+**Fait.** L'utilisateur m'a demandé de tester l'intégralité du site et de dire
+si les e-mails sont complets et fonctionnels. Le test d'intégralité était déjà
+vert (`npm run ci`), mais l'audit runtime des e-mails a révélé un **vrai trou** :
+
+> La confirmation de réservation ne partait que depuis le flux de paiement en
+> ligne (`payment-intents.ts` — webhook Stripe / Paiement). Quand l'hôte
+> **confirme à la main** une réservation à payer sur place (scénario T-202/T-203),
+> **aucun e-mail** n'était envoyé (outbox vide, `confirmation_email_sent_at` NULL).
+
+**Cause.** `sendBookingConfirmationIfNeeded` exigeait `status:"confirmed"` **ET**
+`paymentStatus:"paid"`. Or en paiement sur place, la confirmation hôte survient
+avec `paymentStatus` encore `pending`. Et personne ne l'appelait depuis le PUT.
+
+**Correctif.**
+- `PUT /api/bookings/[id] {status:"confirmed"}` → appelle
+  `sendBookingConfirmationIfNeeded(id)` (best-effort, post-commit).
+- La fonction ne conditionne plus l'envoi à `paymentStatus:"paid"` : garde sur
+  `status:"confirmed"` + `confirmationEmailSentAt` (idempotence) + toggle
+  admin `notifications.bookingConfirmation` (désormais respecté).
+
+**Appris.** Le plus dur n'était pas le code mais de **prouver** le manque :
+le smoke ne teste pas la confirmation (POST → `pending`), donc un gap pouvait
+traverser toute la CI. Seul le runtime (serveur + outbox) a montré le trou.
+P3 en bonus : l'écran de confirmation disait « C'est confirmé ! / Total payé »
+pour une résa manuelle encore `pending` — corrigé avec 3 clés i18n.
+
+**Laissé pour plus tard.** R7 warn (STATE HEAD) tant que le commit de doc n'est
+pas fait ; les toggles `bookingReminder*`/`reviewRequest`/`bookingConfirmation`
+sont des clés schema mais pas toutes exposées en UI d'admin.
+
 
 ## 2026-09-07 — T-203 correction du scénario « paiement manuel »
 

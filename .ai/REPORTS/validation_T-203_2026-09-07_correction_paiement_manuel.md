@@ -44,6 +44,31 @@ Date : 2026-09-07 · Statut : **VALIDÉ**
   (`cancelledAt:null`). ✅
 - **Audit** : `booking.pay.offline` tracé (`host:true, manual:true`). ✅
 
+## Correction P7 — E-mail de confirmation manuelle (audit e-mails)
+Test d'intégralité (`npm run ci`) + audit runtime de la couche e-mail : la
+confirmation ne partait **que** depuis le flux de paiement en ligne ; la
+confirmation manuelle (hôte) ne produisait **aucun e-mail**.
+
+- **Avant** : `PUT /api/bookings/[id] {status:"confirmed"}` → `status:"confirmed"`,
+  mais `confirmation_email_sent_at` NULL, outbox `booking-confirmation:*` vide.
+- **Après** : le PUT confirmé appelle `sendBookingConfirmationIfNeeded(id)` ;
+  la fonction ne conditionne plus l'envoi à `paymentStatus === "paid"` (paiement
+  sur place encore `pending` à la confirmation) et respecte
+  `notifications.bookingConfirmation`.
+- **Preuve runtime** : après `PUT {status:"confirmed"}` sur une réservation
+  manuelle (paiement encore `pending`), 2 events outbox émis (`status:"sent"`) :
+  - `booking-confirmation:<id>:guest` → « Réservation confirmée MBB-… » (client).
+  - `booking-confirmation:<id>:host` → « Nouvelle réservation MBB-… » (hôte).
+  - `confirmation_email_sent_at` posé. ✅
+- **Test** : `src/lib/booking-confirmation.test.ts` (+3 tests : envoi + host/guest,
+  idempotence, garde `status:"confirmed"`).
+
+## Correction P3 — Écran de confirmation manuelle (UI)
+`reservation-form.tsx` affichait « 🎉 C'est confirmé ! » / « Total payé » pour une
+réservation manuelle encore `pending`. → Corrigé : `manualConfirmation:true` →
+« 📩 Demande envoyée » + « Montant à régler sur place » + « Un email de
+confirmation vous sera envoyé ». (3 clés i18n FR/EN ajoutées.)
+
 ## Récapitulatif des changements
 - **Backend** : `bookings/route.ts` (paymentExpiresAt conditionnel),
   `cron/price-alerts/route.ts` (cron limité aux intents), `bookings/[id]/route.ts`
@@ -51,7 +76,13 @@ Date : 2026-09-07 · Statut : **VALIDÉ**
 - **UI** : `booking-row-actions.tsx` (bouton + badge « payé sur place », masque
   « Payer maintenant »), `mes-reservations/page.tsx` + `dashboard/bookings/[id]/page.tsx`
   (props `paymentMethodOffline` / `paymentIntentId`).
-- **i18n** : +2 clés FR/EN (`book.markPaidOffline`, `book.paymentAwaitingHost`).
+- **i18n** : +2 clés FR/EN (`book.markPaidOffline`, `book.paymentAwaitingHost`)
+  puis +3 clés (`reservation.manualRequestSent`, `.manualRequestBody`,
+  `.manualAmountOnSite`) → catalogue **1482**.
+- **E-mail** : `booking-confirmation.ts` (déclenchement sur `status:"confirmed"`,
+  respect du toggle `notifications.bookingConfirmation`),
+  `bookings/[id]/route.ts` (appel `sendBookingConfirmationIfNeeded` après
+  confirmation manuelle), `reservation-form.tsx` (écran manuel).
 - **Aucune migration DB** : champs `paymentMethodOffline`/`confirmedBy` existants
   (migration 0019). **Aucune modification du tunnel Stripe/PSP ni du webhook.**
 

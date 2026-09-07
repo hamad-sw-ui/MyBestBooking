@@ -15,6 +15,7 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { BookingCancellationError, cancelBooking, notifyBookingCancellation } from "@/lib/booking-cancellation";
+import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 
 const updateBookingSchema = z.object({
@@ -234,7 +235,16 @@ export async function PUT(
       return updated;
     });
 
-
+    // T-203 : une confirmation manuelle (statut → "confirmed") doit envoyer
+    // l'e-mail de confirmation au voyageur ET à l'hôte, comme le fait déjà le
+    // flux de paiement en ligne. Appel hors transaction, idempotent
+    // (eventKey + confirmationEmailSentAt) ; best-effort (ne casse jamais la
+    // transition déjà committée).
+    if (data.status === "confirmed") {
+      await sendBookingConfirmationIfNeeded(updatedBooking.id).catch((error) => {
+        console.error("[bookings/[id]] confirmation mail failed:", error);
+      });
+    }
 
     return NextResponse.json({ booking: updatedBooking });
   } catch (error) {

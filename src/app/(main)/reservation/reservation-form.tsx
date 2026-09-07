@@ -117,7 +117,7 @@ function ReservationPageInner() {
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [room, setRoom] = useState<RoomData | null>(null);
   const [ratePlans, setRatePlans] = useState<RatePlanData[]>([]);
-  const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string; paymentPending?: boolean; mockPayment?: boolean } | null>(null);
+  const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string; paymentPending?: boolean; mockPayment?: boolean; manualBooking?: boolean } | null>(null);
   const [pendingStripePayment, setPendingStripePayment] = useState<{ bookingId: string; bookingReference: string; total: string; clientSecret: string } | null>(null);
   const [resumeBookingId, setResumeBookingId] = useState<string | null>(null);
   const [promo, setPromo] = useState<{ code: string; discount: number; finalTotal: number } | null>(null);
@@ -399,6 +399,9 @@ function ReservationPageInner() {
         bookingReference: data.booking.bookingReference,
         total: data.booking.total,
         mockPayment: data.payment?.provider === "mock",
+        // T-203 : paiement manuel (payé sur place) — l'hôte confirmera ; pas de
+        // « confirmé » / « payé » affiché tant que l'hôte n'a pas validé.
+        manualBooking: data.manualConfirmation === true,
       });
       setStep(4);
     } catch {
@@ -772,12 +775,18 @@ function ReservationPageInner() {
                     {confirmation.paymentPending ? <Clock className="w-10 h-10 text-white" /> : <CheckCircle className="w-10 h-10 text-white" />}
                   </div>
                   <h2 className="text-3xl font-bold text-gray-900 mb-2" style={{ fontFamily: "'Poppins', sans-serif" }}>
-                    {confirmation.paymentPending ? t("reservation.paymentConfirming") : t("reservation.confirmed")}
+                    {confirmation.paymentPending
+                      ? t("reservation.paymentConfirming")
+                      : confirmation.manualBooking
+                        ? t("reservation.manualRequestSent")
+                        : t("reservation.confirmed")}
                   </h2>
                   <p className="text-gray-600 mb-6">
                     {confirmation.paymentPending
                       ? t("reservation.paymentTransmitted")
-                      : t("reservation.thanks").replace("{name}", formData.guestFirstName)}
+                      : confirmation.manualBooking
+                        ? t("reservation.manualRequestBody")
+                        : t("reservation.thanks").replace("{name}", formData.guestFirstName)}
                   </p>
 
                   <div className="inline-block p-6 bg-gray-50 rounded-xl mb-6">
@@ -786,14 +795,20 @@ function ReservationPageInner() {
                     <div className="mt-4 space-y-1 text-sm text-gray-600">
                       <p>🏨 {property?.name}, {property?.city}</p>
                       <p>📅 {formData.checkIn} → {formData.checkOut}</p>
-                      <p>💰 {confirmation.paymentPending ? t("reservation.amountToConfirm") : t("reservation.totalPaid")} : {formatPrice(confirmation.total, roomCurrency, uiLocale)} {t("reservation.allInclusive")}</p>
+                      <p>💰 {confirmation.paymentPending
+                        ? t("reservation.amountToConfirm")
+                        : confirmation.manualBooking
+                          ? t("reservation.manualAmountOnSite")
+                          : t("reservation.totalPaid")} : {formatPrice(confirmation.total, roomCurrency, uiLocale)} {t("reservation.allInclusive")}</p>
                     </div>
                   </div>
 
                   <p className="text-sm text-gray-500 mb-3">
                     {confirmation.paymentPending
                       ? t("reservation.confirmationEmail")
-                      : t("reservation.emailSentTo").replace("{email}", formData.guestEmail)}
+                      : confirmation.manualBooking
+                        ? t("reservation.confirmationEmailSent")
+                        : t("reservation.emailSentTo").replace("{email}", formData.guestEmail)}
                   </p>
                   {confirmation.mockPayment && (
                     <p className="text-xs text-amber-800 mb-6 p-3 rounded-lg bg-amber-50">{t("reservation.demoMode")}</p>

@@ -51,7 +51,7 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1479** clés FR=EN ;
+- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1482** clés FR=EN ;
   `i18n:check` **0 candidat** ; SSR cookie `en` prouvé (`html lang=en`,
   navbar/home/auth/recherche). T-168→T-171 ont depuis localisé facture
   HTML, placeholders réglages, messages JSON d’API et e-mails
@@ -61,8 +61,9 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   `payouts.*` dont 11 `payout-account`, +2 `payouts.*` P7, +8
   `billingCsv.*` P9), **T-202** (+15 : `book.confirmRequest`, `dash.*`
   approbation hôte, `host.*` gate, `pay.manualConfirmed`) et **T-203**
-  (+2 : `book.markPaidOffline`, `book.paymentAwaitingHost`) ont porté le
-  verrou à **1479**.
+  (+2 : `book.markPaidOffline`, `book.paymentAwaitingHost` puis, suite d'audit,
+  +3 : `reservation.manualRequestSent`, `reservation.manualRequestBody`,
+  `reservation.manualAmountOnSite`) ont porté le verrou à **1482**.
   Restent **hors périmètre** (pas des bugs) : termes métier
   identiques FR/EN (« No-show »), contenus stockés en base (seed, avis,
   motifs d’annulation, corps d’e-mails personnalisés par l’admin), arabe
@@ -133,7 +134,11 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   {markPaidOffline:true}` → `paymentStatus:"paid"` + `paymentMethodOffline:true`),
   ce qui rend le séjour éligible au **versement** et aux **revenus** ; les demandes
   **manuelles ne sont plus expirées** après 15 min (`paymentExpiresAt:null` sans
-  `payOnline`, cron limité aux `paymentIntentId`). La route
+  `payOnline`, cron limité aux `paymentIntentId`). L'e-mail de **confirmation
+  manuelle** est désormais envoyé : `PUT /api/bookings/[id] {status:"confirmed"}`
+  appelle `sendBookingConfirmationIfNeeded` (qui ne conditionne plus l'envoi à
+  `paymentStatus:"paid"`), et respecte le toggle `notifications.bookingConfirmation`
+  (idempotence via `confirmationEmailSentAt` + eventKey outbox). La route
   `/api/bookings/[id]/payment` reste disponible (back-office) mais n'est plus
   déclenchée par défaut. Un **hôte non approuvé** (`approvalStatus=pending`) peut
   créer/soumettre un hébergement mais il ne peut **pas** passer `active`
