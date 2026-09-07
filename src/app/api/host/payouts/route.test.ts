@@ -288,4 +288,16 @@ dbTest("T-195/P2P3 — garde-fou devise + projection admin (multi-hôte)", () =>
     expect(body.skipped.length).toBeGreaterThanOrEqual(1);
     expect(body.skipped.every((s: any) => s.reason.includes("propriétaire"))).toBe(true);
   });
+
+  it("P6 — POST avec `currency` ne traite QUE la devise demandée (fini le multi-devise en un clic)", async () => {
+    // Hôte (compte EUR) demande uniquement le versement XAF sur la même période :
+    // ne traite QUE le payout XAF (skipped devise) — le EUR n'entre pas dans la boucle.
+    getCurrentUser.mockResolvedValue({ id: hostId, role: "host", currency: "EUR", email: "host@mybestbooking.com" });
+    const res = await POST(await makeReq({ periodStart, periodEnd, currency: "XAF" }));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    // Seul XAF est évalué : il est skipé (devise ≠ compte EUR), aucun EUR exécuté.
+    expect(body.payouts.length).toBe(0);
+    expect(body.skipped.map((s: any) => s.currency)).toEqual(["XAF"]);
+  });
 });

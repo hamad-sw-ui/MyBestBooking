@@ -31,8 +31,9 @@ describe("uiStrings (T-132)", () => {
     // T-195 (2026-09-06) : +2 clés billing.convertedNote + wallet.convertedNote
     //   (totaux convertis / wallet en devise d'affichage dans le dashboard).
     // T-195 (2026-09-06) : +17 clés payouts.* (section Versements du billing).
-    //   1424 + 17 (payouts.*) + 11 (payout-account) = 1452.
-    expect(Object.keys(fr)).toHaveLength(1452);
+    //   1424 + 17 (payouts.*) + 11 (payout-account) + 2 (skippedCurrency, accountMissing)
+    //   + 8 (billingCsv.* ledger: periodStart/End, gross, net, bookingsCount, status, paidAt, idempotencyKey) = 1462.
+    expect(Object.keys(fr)).toHaveLength(1462);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

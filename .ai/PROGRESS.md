@@ -7,9 +7,9 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
-## Session 2026-09-07 — T-195 versements + correctifs gaps P1–P4
+## Session 2026-09-07 — T-195 versements + correctifs gaps P1–P9
 
-- **Demande** : implémenter les remarques sur les écarts restants (P1–P5) sans
+- **Demande** : implémenter les remarques sur les écarts restants (P1–P9) sans
   régression, puis tout valider avant de s'arrêter. Environnement restauré
   (`npm run env:restore` : `node_modules` + `.env.local` + Postgres embarqué +
   snapshot/`db:push`), base semée via `POST /api/seed`.
@@ -17,21 +17,32 @@
   déclenché (route `POST` seule mais runner/Vercel en `GET` → 405) ; P2
   référence jamais déchiffrée + pas de croisement devise ; P3 chemin admin
   vide (`aggregatePayouts` filtré sur `adminId`) ; P4 audit `paid`/`failed`
-  absent du webhook.
+  absent du webhook ; P6 bouton sans `currency` (multi-devise en un clic) ;
+  P7 garde-fou silencieux en UI (`skipped`/`hasAccount` jamais lus) ;
+  P8 exports de la carte Versements vers l'export bookings (sémantique
+  décalée) ; P9 aucun export du ledger `payouts`.
 - 🔨 **Correctifs** : P1 `GET`+`POST` partagés sur `/api/cron/payouts` +
   `vercel.json` ; P2 `openPayoutAccountReference` + garde-fou devise
   (`skipped[]`, `pending`) ; P3 agrégation par (hôte, devise) quand `isAdmin` +
   garde d'appartenance (admin jamais exécuteur d'autrui) ; P4 `recordAudit`
-  `payout.paid`/`payout.failed` dans le webhook. Docs : `KNOWN_LIMITATIONS`,
-  `STATE.md`, `CURRENT_TASK.md`, `TRACEABILITY.md`.
-- 🧪 `vitest` **535/535** (80 fichiers, 0 skip ; +3 tests P1/P2/P3) · 🔨 tsc 0 ·
-  eslint 0 · build 62 pages · 🔍 i18n:check 0 (catalogue **1452**).
+  `payout.paid`/`payout.failed` dans le webhook ; P6 `PayoutRequestButton`
+  envoie `currency`, la route POST filtre par devise (404 sinon) ; P7 le
+  bouton consomme `skipped[]`/`hasAccount` (`payouts.skippedCurrency` /
+  `payouts.accountMissing`) ; P8 exports de la carte Versements → `/export-payouts` ;
+  P9 nouvelle route `GET /api/dashboard/billing/export-payouts` (CSV ledger).
+  Docs : `KNOWN_LIMITATIONS`, `STATE.md`, `CURRENT_TASK.md`, `TRACEABILITY.md`.
+- 🧪 `vitest` **536/536** (80 fichiers, 0 skip ; +4 tests P1/P2/P3/P6) · 🔨 tsc 0 ·
+  eslint 0 · build 63 pages · 🔍 i18n:check 0 (catalogue **1462**).
 - ▶️ **Runtime (serveur prod, base seedée)** : `GET /api/cron/payouts` → **200**
   (avant 405) ; hôte compte EUR + booking XAF → EUR `paid`, XAF
   `skipped`/`pending` ; admin GET `projected` = 2 (avant `[]`) ; admin POST →
   `skipped` (non-propriétaire) ; webhook `payout.paid` → audit `payout.paid`
-  présent ; **base restaurée à la baseline** (0 résidu).
-- ✅ `ai:check` 19 OK · 0 fail (R7 STATE.md synchronisé sur HEAD `2aedff4`).
+  présent ; **P6** POST `currency=XAF` → `skipped[]` XAF seul (EUR non
+  exécuté) / POST `currency=USD` → **404** (aucun payout USD) ; **P8/P9** GET
+  `/api/dashboard/billing/export-payouts` → CSV ledger versements
+  (`MyBestBooking-versements.csv`, en-têtes FR) alors que GET `/export`
+  (bookings) reste inchangé ; **base restaurée à la baseline** (0 résidu).
+- ✅ `ai:check` 19 OK · 0 fail (R7 STATE.md synchronisé sur HEAD `fc5e861`).
 - ⚠️ Dépendance de seed : `properties/[id]/route.test.ts` attendait
   `is_bestrewards=true` sur `hotel-le-magnifique` mais le seed est aléatoire
   (`Math.random()>0.5`) → rendu déterministe (donnée `is_bestrewards=true`) ;

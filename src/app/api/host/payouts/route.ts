@@ -28,6 +28,10 @@ import { AUDIT_ACTIONS, recordAudit } from "@/lib/audit";
 const bodySchema = z.object({
   periodStart: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   periodEnd: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  // P6 : devise optionnelle — si fournie, n'exécute que le payout de cette
+  // devise (ligne de projection = une devise). Sans `currency`, comportement
+  // historique (toutes les devises de la période).
+  currency: z.string().length(3).optional(),
 });
 
 export async function GET() {
@@ -58,14 +62,25 @@ export async function POST(request: NextRequest) {
     if (!parsed.success) {
       return NextResponse.json({ error: await apiError("Période invalide (YYYY-MM-DD)") }, { status: 400 });
     }
-    const { periodStart, periodEnd } = parsed.data;
+    const { periodStart, periodEnd, currency } = parsed.data;
     if (periodStart > periodEnd) {
       return NextResponse.json({ error: await apiError("periodStart doit être ≤ periodEnd") }, { status: 400 });
     }
     const isAdmin = user.role === "admin";
     const result = await createPayoutsForPeriod(user.id, isAdmin, periodStart, periodEnd);
-    if (result.payouts.length === 0) {
-      return NextResponse.json({ error: await apiError("Aucun montant éligible sur cette période") }, { status: 404 });
+    // P6 : si une devise est demandée, ne traiter que le payout correspondant
+    // (une ligne de projection = une devise). Sans `currency`, on traite toute
+    // la période (comportement historique).
+    const targetPayouts = currency
+      ? result.payouts.filter((p) => p.currency.toUpperCase() === currency.toUpperCase())
+      : result.payouts;
+    if (targetPayouts.length === 0) {
+      // Le payout de la devise demandée est peut-être déjà/existant ou inexistant ;
+      // on répond 404 proprement si rien à exécuter sur cette période/devise.
+      const hasAny = result.payouts.some((p) => p.currency.toUpperCase() === currency?.toUpperCase());
+      if (!hasAny) {
+        return NextResponse.json({ error: await apiError("Aucun montant éligible sur cette période") }, { status: 404 });
+      }
     }
 
     // G1 : consulte le compte de versement par défaut pour l'exécution. En
@@ -84,7 +99,7 @@ export async function POST(request: NextRequest) {
     // devises »). Il reste `pending` et est signalé dans `skipped[]`.
     const skipped = [] as Array<{ id: string; currency: string; accountCurrency: string | null; reason: string }>;
     let anyFailed = false;
-    for (const payout of result.payouts) {
+    for (const payout of targetPayouts) {
       // P3 : un admin crée des payouts pour TOUS les hôtes mais ne doit PAS
       // exécuter (marquer payé) le versement d'un autre hôte. Seul l'hôte
       // propriétaire exécute son propre versement ; sinon il reste `pending`

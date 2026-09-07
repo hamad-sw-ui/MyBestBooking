@@ -241,7 +241,9 @@ export default async function BillingPage() {
             <div className="flex items-center justify-between">
 <CardTitle>{t("billing.invoices")}</CardTitle>
               <div className="flex items-center gap-2">
-                <a href="/api/dashboard/billing/export" className="inline-flex items-center px-3 py-1 rounded-lg border border-[#1B3A6B] text-xs text-[#1B3A6B] hover:bg-blue-50">
+                {/* P8 : la carte affiche des VERSEMENTS (payouts) → l'export CSV
+                    pointe sur le ledger `/export-payouts`, pas sur les bookings. */}
+                <a href="/api/dashboard/billing/export-payouts" className="inline-flex items-center px-3 py-1 rounded-lg border border-[#1B3A6B] text-xs text-[#1B3A6B] hover:bg-blue-50">
 <Download className="w-3 h-3 mr-1" /> {t("billing.exportCsv")}
                 </a>
                 {billing.invoices.length === 0 && (
@@ -283,7 +285,7 @@ export default async function BillingPage() {
 <Badge variant="warning">{t("status.pending")}</Badge>
                         )}
                         <a
-                          href="/api/dashboard/billing/export"
+                          href="/api/dashboard/billing/export-payouts"
                           aria-label={t("billing.csvAria").replace("{period}", invoice.period)}
                           className="inline-flex items-center text-[#1B3A6B] hover:underline"
                         >
@@ -376,7 +378,7 @@ export default async function BillingPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-[#1B3A6B]">{formatPrice(p.net, p.currency, locale)}</p>
-                    <PayoutRequestButton periodStart={p.periodStart} periodEnd={p.periodEnd} />
+                    <PayoutRequestButton periodStart={p.periodStart} periodEnd={p.periodEnd} currency={p.currency} />
                   </div>
                 </div>
               ))}

@@ -4,23 +4,32 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : `d26bbca` — **T-195 CORRIGÉ (VALIDÉ)** (2026-09-07) :
+- **HEAD Git** : `fc5e861` — **T-195 CORRIGÉ P6–P9** (2026-09-07) :
   versements hôtes/admins (Phase C, S1) + webhook `payout.*` + correctifs
-  **P1–P4** (gaps) : P1 cron de versement réellement déclenché (`GET` sur
+  **P1–P9** (gaps) : P1 cron de versement réellement déclenché (`GET` sur
   `/api/cron/payouts` par le runner local ET le cron Vercel, `POST` conservé,
   `vercel.json` enrichi) ; P2 exécution avec la **vraie référence** déchiffrée
   (`openPayoutAccountReference`) + **garde-fou devise** (payout de devise ≠
   compte → `pending`/`skipped`, jamais transféré) ; P3 **chemin admin**
   réparé — agrégation **par (hôte, devise)**, l'admin n'exécute jamais le
   versement d'autrui ; P4 audit `payout.paid`/`payout.failed` journalisé par
-  le webhook. Preuves : 🔨 tsc 0 · eslint 0 · build 62 pages · 🧪 vitest
-  **535/535** (80 fichiers) · ▶️ runtime prod (base seedée) : `GET
+  le webhook ; **P6** bouton de versement **par devise** (`PayoutRequestButton`
+  envoie `currency`, la route POST ne traite que cette devise) ; **P7**
+  garde-fou devise **visible en UI** (consomme `skipped[]` → `payouts.skippedCurrency`,
+  `hasAccount===false` → `payouts.accountMissing`) ; **P8** « Factures » vs
+  « CSV » clarifié (les exports de la carte Versements pointent vers
+  `/export-payouts`, pas vers l'export bookings) ; **P9** route
+  `GET /api/dashboard/billing/export-payouts` (export CSV du ledger
+  `payouts`, host/admin). Preuves : 🔨 tsc 0 · eslint 0 · build 63 pages ·
+  🧪 vitest **536/536** (80 fichiers) · ▶️ runtime prod (base seedée) : `GET
   /api/cron/payouts` → 200 (avant 405) ; hôte compte EUR + booking XAF → EUR
   `paid`, XAF `skipped`/`pending` ; admin GET `projected` = 2 (avant `[]`) ;
   admin POST → `skipped` (non-propriétaire) ; webhook `payout.paid` → audit
-  `payout.paid` présent. 🔍 i18n:check 0 (catalogue **1452**) · ✅ ai:check
-  19 OK · 0 fail. Partie **externe** Stripe Connect → **CORRIGÉ
-  (INSPECTION)** (§13.5). Précédente (même jour) :
+  `payout.paid` présent ; POST `currency=XAF` → `skipped[]` XAF seul /
+  `currency=USD` → 404 ; `GET /api/dashboard/billing/export-payouts` → CSV
+  ledger versements / `/export` (bookings) conservé. 🔍 i18n:check 0
+  (catalogue **1462**) · ✅ ai:check 19 OK · 0 fail. Partie **externe**
+  Stripe Connect → **CORRIGÉ (INSPECTION)** (§13.5). Précédente (même jour) :
   **T-193** —
   audit runtime site-wide outillé (`npm run site:audit` : 236 pages
   crawlées ×5 profils, 0 issue) ; **T-192** —

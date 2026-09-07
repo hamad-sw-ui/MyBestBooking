@@ -51,14 +51,15 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1452** clés FR=EN ;
+- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1462** clés FR=EN ;
   `i18n:check` **0 candidat** ; SSR cookie `en` prouvé (`html lang=en`,
   navbar/home/auth/recherche). T-168→T-171 ont depuis localisé facture
   HTML, placeholders réglages, messages JSON d’API et e-mails
   transactionnels ; T-172 a câblé les métadonnées localisées sur toutes
   les pages (incl. `/recherche`, auth, compte) avec `noindex` sur les
-  zones privées. **T-194** (+1 `auth.demoHint`) et **T-195** (+28
-  `payouts.*` dont 11 `payout-account`) ont porté le verrou à **1452**.
+  zones privées. **T-194** (+1 `auth.demoHint`) et **T-195** (+38
+  `payouts.*` dont 11 `payout-account`, +2 `payouts.*` P7, +8
+  `billingCsv.*` P9) ont porté le verrou à **1462**.
   Restent **hors périmètre** (pas des bugs) : termes métier
   identiques FR/EN (« No-show »), contenus stockés en base (seed, avis,
   motifs d’annulation, corps d’e-mails personnalisés par l’admin), arabe
@@ -101,6 +102,24 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
     mais **n'exécute jamais** le versement d'un autre hôte (garde d'appartenance
     → `skipped`, reste `pending`). Seul l'hôte propriétaire exécute son
     versement.
+  - **Bouton par devise (P6) et feedback visible (P7)** : le bouton demande un
+    versement pour **une seule devise** (`currency` transmis au POST, la route
+    ne traite que cette devise → 404 si aucun payout de cette devise pour la
+    période). Garde-fou explicite en UI : si des versements sont `skipped`
+    (devise ≠ compte) ou si `hasAccount === false`, le bouton affiche un
+    message (`payouts.skippedCurrency` / `payouts.accountMissing`) au lieu d'un
+    simple `reload()`. **Limite** : si un hôte possède des bookings sur
+    plusieurs devises sans compte dans l'une d'elles, il doit ajouter un compte
+    pour cette devise pour déclencher son versement (comportement voulu, pas un
+    bug).
+  - **Export ledger des versements (P8/P9)** : la carte « Factures » affiche les
+    versements et son export (bouton header + icône `download` ligne) pointe
+    vers `GET /api/dashboard/billing/export-payouts` (CSV du ledger `payouts`,
+    host/admin, 500 lignes max, en-têtes localisés `billingCsv.*`), **et non**
+    vers l'export bookings `/api/dashboard/billing/export` (réservé à la carte
+    Réservations). **Limite** : l'export de versements est tronqué à 500 lignes
+    (garde-fou volume, même règle que l'export bookings) — au-delà, une
+    pagination/CSV streamé serait nécessaire (backlog).
 - **Mode invité limité.** Le checkout accepte un email non enregistré et crée
   un profil sans mot de passe. Un email déjà associé à un compte doit être
   utilisé après connexion pour éviter le rattachement de données.
