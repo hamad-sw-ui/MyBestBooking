@@ -232,6 +232,9 @@ export async function POST(request: NextRequest) {
       emailVerified: true,
       phone: "+33612345678",
       country: "FR",
+      // T-202 : le compte hôte de démo est déjà approuvé (sinon il ne pourrait
+      // pas publier — le seed préserve le comportement historique).
+      approvalStatus: "approved",
     }).returning();
 
     // Create customer user

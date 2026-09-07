@@ -3,7 +3,6 @@ import { db } from "@/db";
 import { bookings, paymentEventInbox } from "@/db/schema";
 import type { WebhookEvent } from "@/lib/payment";
 import { getPaymentProvider } from "@/lib/payment";
-import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
 import { releaseBookingBenefits } from "@/lib/booking-benefits";
 // T-154e (audit n°26, P3-10) : remboursements en unités mineures (zéro-décimal).
 import { toMinorUnits } from "@/lib/i18n";
@@ -114,8 +113,10 @@ export async function processPendingPaymentEvents(limit = 50): Promise<number> {
         updatedAt: new Date(),
       }).where(eq(bookings.id, booking.id));
     } else if (event.status === "succeeded" && booking.status === "pending" && booking.paymentStatus !== "paid") {
-      await db.update(bookings).set({ paymentStatus: "paid", status: "confirmed", paymentExpiresAt: null, updatedAt: new Date() }).where(eq(bookings.id, booking.id));
-      await sendBookingConfirmationIfNeeded(booking.id);
+      // T-202 : un paiement réussi ne force PLUS "confirmed" automatiquement —
+      // les états de réservation sont gérés à la main par l'hôte. On constate
+      // seulement le paiement (paymentStatus=paid) et on libère l'expiration.
+      await db.update(bookings).set({ paymentStatus: "paid", paymentExpiresAt: null, updatedAt: new Date() }).where(eq(bookings.id, booking.id));
     } else if (event.status === "succeeded" && booking.status === "cancelled") {
       // Le séjour annulé ne revient jamais à confirmed : son paiement est
       // compensé, y compris si l’expiration a déjà libéré le stock/promo.

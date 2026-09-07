@@ -33,7 +33,11 @@ export function transitionError(input: {
     return input.next === "cancelled" ? null : "Un voyageur peut uniquement annuler sa réservation";
   }
   if (input.actor === "host") {
+    // T-202 : l'hôte confirme la demande `pending` → `confirmed` à la main
+    // (plus de paiement automatique). Il peut aussi annuler, ou clôturer en
+    // no-show/terminé après le départ.
     if (input.next === "cancelled") return null;
+    if (input.next === "confirmed") return input.current === "pending" ? null : "Seule une réservation en attente peut être confirmée";
     if (input.next === "completed" || input.next === "no_show") {
       const today = input.today ?? new Date().toISOString().slice(0, 10);
       return toDate(input.checkOut) <= today ? null : "Le séjour ne peut être clôturé qu'après la date de départ";

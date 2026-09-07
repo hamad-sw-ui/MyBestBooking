@@ -49,6 +49,12 @@ export default async function UsersPage() {
         ? u.deletedAt.toISOString()
         : String(u.deletedAt)
       : null,
+    // T-202 : champs d'approbation hôte (présents seulement pour role=host)
+    approvalStatus: u.role === "host" ? u.approvalStatus : null,
+    commissionRate:
+      u.role === "host" && u.commissionRate !== null
+        ? String(u.commissionRate)
+        : null,
   }));
 
   return (

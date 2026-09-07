@@ -7,6 +7,7 @@ import { Mail } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
 import { UserSuspendActions } from "@/components/admin/user-suspend-actions";
+import { HostApproveActions } from "@/components/admin/host-approve-actions";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { countryLabel } from "@/lib/country-label";
 
@@ -23,6 +24,9 @@ export interface UserRow {
   createdAt: string;
   lastLoginAt: string | null;
   deletedAt: string | null;
+  // T-202 : validation hôte (approvalStatus + commission) — null pour non-hôtes.
+  approvalStatus: string | null;
+  commissionRate: string | null;
 }
 
 
@@ -220,6 +224,7 @@ export function UsersManager({ users, currentUserId }: Props) {
                 <th className="px-4 py-4 font-medium">{t("bulk.colUser")}</th>
                 <th className="px-4 py-4 font-medium">{t("bulk.colEmail")}</th>
                 <th className="px-4 py-4 font-medium">{t("bulk.colRole")}</th>
+                <th className="px-4 py-4 font-medium">{t("dash.hostApprovalStatus")}</th>
                 <th className="px-4 py-4 font-medium">BestRewards</th>
                 <th className="px-4 py-4 font-medium">{t("bulk.colSignedUp")}</th>
                 <th className="px-4 py-4 font-medium">{t("bulk.colLastLogin")}</th>
@@ -229,7 +234,7 @@ export function UsersManager({ users, currentUserId }: Props) {
             <tbody>
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="px-4 py-8 text-center text-sm text-gray-500">
+                  <td colSpan={9} className="px-4 py-8 text-center text-sm text-gray-500">
                     {t("bulk.noUsers")}
                   </td>
                 </tr>
@@ -285,6 +290,32 @@ export function UsersManager({ users, currentUserId }: Props) {
                       <Badge className={roleBadges[u.role] ?? "bg-gray-100 text-gray-800"}>
                         {roleLabels[u.role] ?? u.role}
                       </Badge>
+                    </td>
+                    <td className="px-4 py-4">
+                      {u.role === "host" ? (
+                        <div className="flex flex-col items-start gap-1">
+                          {u.approvalStatus === "approved" && (
+                            <Badge variant="default">{t("dash.hostApproved")}</Badge>
+                          )}
+                          {u.approvalStatus === "pending" && (
+                            <Badge variant="warning">{t("dash.hostPending")}</Badge>
+                          )}
+                          {u.approvalStatus === "rejected" && (
+                            <Badge variant="danger">{t("dash.hostRejected")}</Badge>
+                          )}
+                          {u.commissionRate !== null && (
+                            <span className="text-xs text-gray-500">{u.commissionRate}%</span>
+                          )}
+                          <HostApproveActions
+                            userId={u.id}
+                            approvalStatus={u.approvalStatus ?? "pending"}
+                            commissionRate={u.commissionRate}
+                            disabled={isSelf}
+                          />
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">—</span>
+                      )}
                     </td>
                     <td className="px-4 py-4">
                       {u.bestrewardsLevel && (

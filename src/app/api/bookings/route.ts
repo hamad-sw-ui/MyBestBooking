@@ -9,6 +9,7 @@ import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency } from "@/l
 import { applyWalletToTotal } from "@/lib/wallet-currency";
 import { getSetting } from "@/lib/settings";
 import { apiError } from "@/lib/api-error";
+import { resolveEffectiveCommissionRate } from "@/lib/commission";
 import {
   assertNotMaintenance,
   MaintenanceError,
@@ -47,6 +48,10 @@ const bookingSchema = z
     useWalletCredits: z.boolean().optional(),
     // Réservation sans compte : l'API reste l'autorité, jamais le proxy.
     isGuestBooking: z.boolean().optional(),
+    // T-202 : paiement manuel par défaut. `payOnline` (optionnel, false) force
+    // un paiement en ligne explicite (back-office). Une réservation sans
+    // paiement reste `pending` → l'hôte confirme à la main.
+    payOnline: z.boolean().optional(),
   })
   .refine((d) => d.checkOut > d.checkIn, {
     message: "La date de départ doit être postérieure à la date d'arrivée",
@@ -334,7 +339,8 @@ export async function POST(request: NextRequest) {
           lockedUser = createdGuest;
         }
 
-        const commissionRate = Number(property.commissionRate || "15");
+        // T-202 : priorité propriété > hôte > global (taux fixé à l'approbation).
+        const commissionRate = await resolveEffectiveCommissionRate(property.hostId, property.commissionRate);
         const commissionAmount = total * (commissionRate / 100);
         const netToHost = total - commissionAmount;
         const [inserted] = await tx
@@ -441,6 +447,21 @@ export async function POST(request: NextRequest) {
         // claim sans jamais exposer le token dans la réponse API.
         console.error("[booking] guest claim email failed:", claimError);
       }
+    }
+
+    // T-202 — paiement manuel par défaut : le client réserve sans payer en
+    // ligne, la réservation reste `pending` et l'hôte confirme à la main.
+    // `payOnline` (optionnel) déclenche un intent PSP explicite (back-office).
+    if (!data.payOnline) {
+      return NextResponse.json(
+        {
+          booking: createdBooking,
+          payment: null,
+          manualConfirmation: true,
+          ...(isGuestBooking ? { guestAccessPending: true } : {}),
+        },
+        { status: 201 },
+      );
     }
 
     // Effet externe hors transaction. La référence booking est la clé

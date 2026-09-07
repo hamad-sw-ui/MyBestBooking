@@ -56,6 +56,13 @@ export const users = pgTable("users", {
   referralRewardedAt: timestamp("referral_rewarded_at"),
   // T-026 : préférences alertes prix
   priceAlertEnabled: boolean("price_alert_enabled").default(false),
+  // Validation hôte (T-202) — l'admin doit approuver un hôte avant qu'il ne
+  // puisse publier ses hébergements. `pending` par défaut ; `approved` débloque
+  // la publication ; `rejected` est un refus. Additif, n'affecte pas les clients.
+  approvalStatus: varchar("approval_status", { length: 20 }).default("pending").notNull(),
+  // T-202 — pourcentage de commission fixé par l'admin à l'approbation de
+  // l'hôte. NULL = hérite du taux global (settings) ou du taux de propriété.
+  commissionRate: decimal("commission_rate", { precision: 10, scale: 2 }),
   lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
@@ -347,6 +354,11 @@ export const bookings = pgTable("bookings", {
   // Une attribution de fidélité doit être exactement une fois, après séjour.
   loyaltyAwardedAt: timestamp("loyalty_awarded_at"),
   cashbackAmount: decimal("cashback_amount", { precision: 10, scale: 2 }).default("0"),
+  // T-202 — paiement manuel : la réservation n'est plus auto-payée en ligne ;
+  // le règlement se fait hors plateforme (sur place) et l'hôte le constate.
+  paymentMethodOffline: boolean("payment_method_offline").default(false).notNull(),
+  // T-202 — qui a confirmé la réservation à la main (hôte ou admin). Additif.
+  confirmedBy: uuid("confirmed_by").references((): AnyPgColumn => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [

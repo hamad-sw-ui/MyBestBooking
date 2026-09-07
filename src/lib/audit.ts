@@ -63,6 +63,9 @@ export const AUDIT_ACTIONS = {
   payoutPaid: "payout.paid",
   payoutFailed: "payout.failed",
   payoutCron: "payout.cron",
+  // T-202 — approbation d'un hôte (validation admin + taux de commission)
+  hostApprove: "host.approve",
+  hostReject: "host.reject",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

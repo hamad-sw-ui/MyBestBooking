@@ -7,6 +7,34 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-09-07 — T-202 validation hôte + paiement manuel (statuts à la main)
+
+- **Demande** : l'inscription d'un hôte passe par la validation de l'admin avant de
+  publier ; l'admin fixe un % de commission à l'approbation ; le client ne fait plus
+  de paiement automatique ; les états de réservation sont gérés manuellement.
+  Implémenter sans régression, tout tester avant de s'arrêter.
+- 🔍 **Diagnostic** : pas de statut d'approbation hôte ni de taux hôte ; l'admin ne
+  pouvait fixer que le taux global/par propriété ; le POST bookings auto-confirmait
+  via le webhook Stripe ; `booking-lifecycle` réservait `pending→confirmed` à l'admin.
+- 🔨 **Correctifs** : colonnes additives (`users.approvalStatus`, `users.commissionRate`,
+  `bookings.paymentMethodOffline`, `bookings.confirmedBy` + migration 0019) ; helper
+  `host-approval` (gate) + `commission` (priorité propriété > hôte > global) ; routes
+  `/api/admin/hosts[/id]` (liste + approuver/rejeter avec %) ; gate de publication
+  dans `/validate` (un hôte non approuvé ne peut pas passer `active`) ; paiement
+  manuel (`POST /api/bookings` → `payment:null`, `manualConfirmation:true`, webhook ne
+  force plus `confirmed`) ; `booking-lifecycle` host_all (`pending→confirmed`) + UI
+  « Confirmer la demande » ; UI admin `HostApproveActions`.
+- 🧪 `vitest` **546/546** (82 files, +10 : 5 `admin/hosts`, 5 `commission`) · 🔨 tsc 0 ·
+  eslint 0 · build 64 pages · 🔍 i18n:check 0 (catalogue **1477**).
+- ▶️ **Runtime (serveur prod, base seedée)** : réservation sans paiement → `pending` /
+  `payment:null` / `manualConfirmation:true` ; confirmation manuelle par l'hôte →
+  `confirmedBy` ; hôte démo `approved` ; gate `validate` → 409 si hôte non approuvé ;
+  **base restaurée baseline** (0 compte `host-t202*`).
+- ✅ `ai:check` 19 OK · 0 fail (R7 STATE.md synchronisé — toléré en fin de session).
+- **Non-régression** : tunnel de réservation intact (booking `pending`), commissions
+  existantes conservées (taux propriété > hôte > global), hôte démo non bloqué.
+- **Prochaine** : G2 (Stripe Connect externe) = BACKLOG (hors sandbox).
+
 ## Session 2026-09-07 — T-195 versements + correctifs gaps P1–P9
 
 - **Demande** : implémenter les remarques sur les écarts restants (P1–P9) sans

@@ -33,7 +33,10 @@ describe("uiStrings (T-132)", () => {
     // T-195 (2026-09-06) : +17 clés payouts.* (section Versements du billing).
     //   1424 + 17 (payouts.*) + 11 (payout-account) + 2 (skippedCurrency, accountMissing)
     //   + 8 (billingCsv.* ledger: periodStart/End, gross, net, bookingsCount, status, paidAt, idempotencyKey) = 1462.
-    expect(Object.keys(fr)).toHaveLength(1462);
+    // T-202 (2026-09-07) : +15 clés (validation hôte + paiement manuel) :
+    //   +1 book.confirmRequest, +11 dash.* (approbation hôte), +2 host.* (gate),
+    //   +1 pay.manualConfirmed = 1477.
+    expect(Object.keys(fr)).toHaveLength(1477);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

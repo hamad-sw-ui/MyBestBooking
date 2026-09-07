@@ -7,6 +7,7 @@ import { isUuid, frenchZodMessage } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
+import { requireApprovedHost } from "@/lib/host-approval";
 
 const schema = z.object({
   action: z.enum(["approve", "reject", "suspend"]),
@@ -15,10 +16,11 @@ const schema = z.object({
 
 /**
  * POST /api/properties/[id]/validate — admin uniquement.
- * approve → status='active' + validatedAt/By.
+ * approve → status='active' + validatedAt/By. **Gate T-202** : le propriétaire
+ *           doit être un hôte approuvé, sinon l'annonce ne peut pas être active.
  * reject  → status='draft' (l'hôte peut re-soumettre).
  * suspend → status='suspended'.
- * (T-015)
+ * (T-015 + T-202)
  */
 export async function POST(
   request: NextRequest,
@@ -38,6 +40,23 @@ export async function POST(
 
     const [prop] = await db.select().from(properties).where(eq(properties.id, id));
     if (!prop) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
+
+    // T-202 : un hébergement ne peut JAMAIS être publié (`active`) tant que son
+    // hôte n'est pas approuvé par l'admin. On bloque l'approbation (pas le
+    // rejet ni la suspension) avec un message explicite.
+    if (action === "approve") {
+      const gate = await requireApprovedHost(prop.hostId);
+      if (!gate.ok) {
+        const suffix =
+          gate.messageKey === "host.pendingApproval"
+            ? " La commission et la validation du compte hôte doivent être définies avant publication."
+            : "";
+        return NextResponse.json(
+          { error: await apiError(gate.defaultMessage + suffix) },
+          { status: 409 },
+        );
+      }
+    }
 
     const updates: Partial<typeof properties.$inferInsert> = {};
     if (action === "approve") {

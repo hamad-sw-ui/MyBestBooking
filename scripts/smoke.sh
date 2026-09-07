@@ -452,10 +452,13 @@ if [ -n "$PROP" ] && [ -n "$ROOM" ]; then
   BODY=$(printf '%s' "$BODY" | sed 's/__HTTP__.*$//')
   ref=$(python3 -c "import sys,json;print(json.load(sys.stdin).get('booking',{}).get('bookingReference',''))" <<<"$BODY" 2>/dev/null || echo "")
   status=$(python3 -c "import sys,json;print(json.load(sys.stdin).get('booking',{}).get('status',''))" <<<"$BODY" 2>/dev/null || echo "")
-  if [ -n "$ref" ] && [ "$status" = "confirmed" ]; then
-    ok "POST /api/bookings → $code ref=$ref status=$status"
+  # T-202 : paiement manuel — la réservation naît `pending` (demande) et est
+  # confirmée à la main par l'hôte. Plus d'auto-confirmation via le paiement.
+  manual=$(python3 -c "import sys,json;print(json.load(sys.stdin).get('manualConfirmation',''))" <<<"$BODY" 2>/dev/null || echo "")
+  if [ -n "$ref" ] && [ "$status" = "pending" ] && [ "$manual" = "True" ]; then
+    ok "POST /api/bookings → $code ref=$ref status=$status (paiement manuel)"
   else
-    ko "POST /api/bookings → HTTP $code ref='$ref' status='$status' body='$(printf '%s' "$BODY" | head -c 160)' (attendu confirmed avec ref)"
+    ko "POST /api/bookings → HTTP $code ref='$ref' status='$status' manual='$manual' body='$(printf '%s' "$BODY" | head -c 160)' (attendu pending + manualConfirmation)"
   fi
 fi
 

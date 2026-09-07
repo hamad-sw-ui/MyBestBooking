@@ -116,6 +116,10 @@ export async function PUT(
     }
 
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
+    // T-202 : qui confirme la réservation à la main (hôte ou admin).
+    if (data.status === "confirmed") {
+      updateData.confirmedBy = user.id;
+    }
 
     const updatedBooking = await db.transaction(async (tx) => {
       const [lockedBooking] = await tx

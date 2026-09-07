@@ -4,7 +4,18 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : `f4af8f1` — **T-195 CORRIGÉ P6–P9** (2026-09-07) :
+- **HEAD Git** : (après commit T-202) — **T-202 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+  validation hôte par l'admin (`users.approvalStatus` + `users.commissionRate`,
+  routes `/api/admin/hosts[/id]`, gate de publication) + **paiement manuel**
+  (`POST /api/bookings` ne déclenche plus de paiement auto → `pending`,
+  `payment:null`, `manualConfirmation:true` ; webhook Stripe ne force plus
+  `confirmed`) + **statuts gérés à la main par l'hôte** (`pending→confirmed`
+  via `bookings/[id]` avec `confirmedBy` ; `booking-lifecycle` : host_all).
+  Preuves : 🔨 tsc 0 · eslint 0 · i18n **1477** · build 64 pages · 🧪 vitest
+  **546/546** · ▶️ runtime (réservation pending sans paiement, confirmation
+  manuelle par l'hôte, gate validate→409) · ✅ ai:check 19 OK · 0 fail.
+  **Précédent** :
+  **T-195 CORRIGÉ P6–P9** (2026-09-07) :
   versements hôtes/admins (Phase C, S1) + webhook `payout.*` + correctifs
   **P1–P9** (gaps) : P1 cron de versement réellement déclenché (`GET` sur
   `/api/cron/payouts` par le runner local ET le cron Vercel, `POST` conservé,

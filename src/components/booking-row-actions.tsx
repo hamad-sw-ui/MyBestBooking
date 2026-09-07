@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, CreditCard } from "lucide-react";
+import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, CreditCard, ThumbsUp } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
@@ -116,6 +116,27 @@ export function BookingRowActions({
     }
   }
 
+  // T-202 : l'hôte confirme manuellement une demande de réservation
+  // (`pending` → `confirmed`) — plus de paiement automatique.
+  async function confirmRequest() {
+    setError(null);
+    setBusyAction("confirmed");
+    try {
+      const r = await fetch(`/api/bookings/${bookingId}`, {
+        method: "PUT",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ status: "confirmed" }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error ?? t("settings.error"));
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("book.actionError").replace("{label}", t("book.confirmRequest")));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
   // T-130 : clôture du séjour par l'hôte/admin. Le serveur rejette toute
   // transition invalide (acteur non autorisé, avant la date de départ) avec un
   // message explicite ; on ne fait que relayer.
@@ -149,6 +170,23 @@ export function BookingRowActions({
         <MessageSquare className="w-4 h-4 mr-2" />
 {t("book.writeHost")}
       </Button>
+      {/* T-202 : l'hôte/admin confirme la demande (pending → confirmed) à la main. */}
+      {canManageStay && status === "pending" && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={confirmRequest}
+          disabled={busyAction !== null}
+          className="text-blue-700 hover:text-blue-800 hover:bg-blue-50"
+        >
+          {busyAction === "confirmed" ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <ThumbsUp className="w-4 h-4 mr-2" />
+          )}
+          {t("book.confirmRequest")}
+        </Button>
+      )}
       {canManageStay && status === "confirmed" && (
         <>
           <Button
