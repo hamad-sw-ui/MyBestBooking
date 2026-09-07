@@ -140,7 +140,17 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   `paymentStatus:"paid"`), et respecte le toggle `notifications.bookingConfirmation`
   (idempotence via `confirmationEmailSentAt` + eventKey outbox). La route
   `/api/bookings/[id]/payment` reste disponible (back-office) mais n'est plus
-  déclenchée par défaut. Un **hôte non approuvé** (`approvalStatus=pending`) peut
+  déclenchée par défaut. **P3 — machinerie Stripe orpheline (assumé, gardé).**
+  Le composant `StripePaymentForm` et l'état `pendingStripePayment` restent dans
+  `reservation-form.tsx`, mais ils ne sont plus atteignables par le flux par
+  défaut : le formulaire n'émet plus `payOnline` (donc pas de `clientSecret`),
+  et la reprise `/api/bookings/[id]/payment` sur un booking **manuel**
+  (`paymentExpiresAt:null` sans `paymentIntentId`) retourne **409**. Un **garde
+  UI** (`shouldShowStripeForm` dans `src/lib/booking-flow.ts`) interdit désormais
+  l'affichage de l'UI carte pour toute réponse `manualConfirmation:true`, même si
+  le serveur renvoyait un `payment` malgré tout (défense en profondeur, testée
+  par `booking-flow.test.ts`). Code inoffensif, non supprimé (hors périmètre),
+  mais inatteignable et prouvé. Un **hôte non approuvé** (`approvalStatus=pending`) peut
   créer/soumettre un hébergement mais il ne peut **pas** passer `active`
   (`validate→approve` → 409) tant que l'admin n'a pas approuvé son compte et fixé
   sa commission.

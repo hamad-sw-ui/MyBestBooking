@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { readReservationParams, describeIncompleteLink } from "@/lib/reservation-url";
+import { shouldShowStripeForm } from "@/lib/booking-flow";
 import { SmartImage } from "@/components/ui/smart-image";
 
 interface PropertyData {
@@ -384,7 +385,10 @@ function ReservationPageInner() {
         return;
       }
 
-      if (data.payment?.requiresConfirmation && data.payment.clientSecret) {
+      // P3 (garde de défense) : le flux manuel ne doit JAMAIS afficher l'UI
+      // Stripe, même si le serveur renvoyait `payment` malgré
+      // `manualConfirmation:true`.
+      if (shouldShowStripeForm(data)) {
         setPendingStripePayment({
           bookingId: data.booking.id,
           bookingReference: data.booking.bookingReference,
@@ -418,7 +422,8 @@ function ReservationPageInner() {
       const response = await fetch(`/api/bookings/${bookingId}/payment`, { method: "POST", headers: { "content-type": "application/json" } });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? t("reservation.resumePayFail"));
-      if (data.payment?.requiresConfirmation && data.payment.clientSecret) {
+      // P3 : reprise aussi protégée — un booking manuel n'affiche jamais l'UI carte.
+      if (shouldShowStripeForm(data)) {
         setPendingStripePayment({ bookingId: data.booking.id, bookingReference: data.booking.bookingReference, total: data.booking.total, clientSecret: data.payment.clientSecret });
         setResumeBookingId(null); setStep(3); return;
       }

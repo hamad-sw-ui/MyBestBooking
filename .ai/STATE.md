@@ -4,7 +4,11 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : `ca1a32d` — **T-203 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+- **HEAD Git** : `À METTRE À JOUR EN FIN DE SESSION` — **T-204 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+  **mise en œuvre des remarques de l'audit e-mails** — garde UI `shouldShowStripeForm`
+  (flux manuel → jamais d'UI carte, testé 5/5) ; e-mail annulation + price-alert
+  **prouvés runtime** (mails console réels, localisés fr/en, idempotents).
+  **Précédent T-203** :
   **fiabilisation du scénario « paiement manuel »** — un hôte/admin peut
   **constater le paiement sur place** (`PUT /api/bookings/[id]
   {markPaidOffline:true}` → `paymentStatus:"paid"` + `paymentMethodOffline:true`,

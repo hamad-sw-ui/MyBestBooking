@@ -6,6 +6,31 @@
 >
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
+## Session 2026-09-07 — T-204 mise en œuvre des remarques (garde P3 + preuves e-mails)
+
+- **Demande** : implémenter les remarques du framework `.ai/` sans régression et
+  sans casser l'existant ; vérifier que tout passe avant de s'arrêter.
+- **P3 — Garde UI Stripe (implémenté)** : le flux manuel (`manualConfirmation:true`)
+  n'affiche **jamais** l'UI de carte. Décision extraite dans
+  `src/lib/booking-flow.ts` → `shouldShowStripeForm` (priorité manuel) appliquée à
+  `handleSubmit` + `resumePaymentFor`. 🧪 `booking-flow.test.ts` **5/5**. La
+  machinerie Stripe reste mais est **inatteignable et prouvée** (reprise manuelle
+  → 409).
+- **E-mail annulation (re-testé runtime)** : 🧪 `booking-cancellation-mail.test.ts`
+  → **2 mails réels** (voyageur fr « Réservation annulée » + hôte en « Cancellation
+  of your booking », eventKeys distincts).
+- **E-mail price-alert (nouveau test runtime)** : 🧪 `price-alert-mail.test.ts` →
+  **1 mail fr réel** (« Alerte prix : Villa Test »), idempotent (2 enqueues → 1
+  ligne outbox, status `sent`).
+- **CI** : `npm run ci` **verte** (tsc 0 · lint 0 · i18n **1482** · ai:check 19 OK
+  · 0 fail (R7 warn fin de session) · vitest **554** (85 files, +8 tests T-203/T-204 ;
+  17 skip serveur-live `admin/bulk`+`admin/hosts` **re-testés 17/17 avec serveur
+  actif**) · build 64 pages · smoke **95/95**).
+- **Problèmes** : les 17 skip vitex sont des tests serveur-live qui ignorent le
+  serveur Next ; relancés avec le serveur actif → 17/17 PASS (aucune régression de
+  couverture).
+- **Étape suivante** : pipeline terminé — rapport final + commit.
+
 ## Session 2026-09-07 — T-203 audit d'intégralité + e-mails (P7/P3)
 
 - **Demande** : test de l'intégralité du site et vérification que les e-mails

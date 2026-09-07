@@ -5,6 +5,34 @@ en haut). Aucun format imposé — quelques lignes suffisent : ce qu'on a fait,
 ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 
 ---
+## 2026-09-07 — T-204 mise en œuvre des remarques (garde P3 + preuves e-mails)
+
+**Fait.** Après l'audit T-203, l'utilisateur a demandé d'implémenter les remarques
+restantes du framework `.ai/` sans régression. Deux points ouverts :
+
+1. **P3 — machinerie Stripe orpheline** (`StripePaymentForm`, `pendingStripePayment`).
+   Elle était jugée inatteignable par le flux manuel, mais **aucun garde** ne
+   l'interdisait formellement. → J'ai extrait la décision dans
+   `shouldShowStripeForm` (`src/lib/booking-flow.ts`) : une réponse
+   `manualConfirmation:true` ne peut jamais afficher l'UI carte, même si le serveur
+   renvoyait un `payment`. Appliqué à `handleSubmit` ET `resumePaymentFor`. Testé
+   5/5. La machinerie reste mais est désormais **inatteignable et prouvée** (reprise
+   d'un booking manuel sur `/api/bookings/[id]/payment` → 409).
+2. **E-mails non re-testés au runtime** (annulation + price-alert). → Re-testés :
+   annulation = **2 mails réels** (voyageur fr + hôte en, eventKeys distincts) ;
+   price-alert = **1 mail fr réel** (nouveau test d'intégration `price-alert-mail.test.ts`),
+   idempotent (2 enqueues → 1 ligne outbox).
+
+**Appris.** Les 17 tests vitex « skippés » dans `npm run ci` (`admin/bulk`,
+`admin/hosts`) sont des tests **serveur-live** : ils ignorent le serveur Next s'il
+n'est pas actif. En les relançant avec le serveur actif, ils passent 17/17 → le
+total réel est **554 tests**, identique à avant la session : **aucune régression de
+couverture**.
+
+**Laissé.** La machinerie Stripe n'est pas supprimée (hors périmètre) mais
+documentée dans `KNOWN_LIMITATIONS.md` comme inoffensive et gardée.
+
+---
 ## 2026-09-07 — T-203 audit e-mails (P7 : confirmation manuelle)
 
 **Fait.** L'utilisateur m'a demandé de tester l'intégralité du site et de dire

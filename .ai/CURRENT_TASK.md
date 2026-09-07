@@ -1,7 +1,7 @@
 # Tâche courante
 
-- **ID** : T-203
-- Titre : Correction des divergences du scénario « paiement manuel » (fiabilisation bout-en-bout)
+- **ID** : T-204
+- Titre : Mise en œuvre des remarques de l'audit e-mails (garde P3 + preuves annulation/price-alert)
 - **Statut** : IMPLEMENTÉ (VALIDÉ) ✅
 - **Niveau** : **S**
 
@@ -54,7 +54,7 @@ fonctionnement du flux « paiement manuel ». Toutes sont corrigées et prouvée
     `pending` (paiement sur place) reçoit bien son e-mail. La garde s'appuie sur
     `status === "confirmed"` + `confirmationEmailSentAt` (idempotence) + le
     toggle admin `notifications.bookingConfirmation` (désormais respecté).
-- **P3 — Écran de confirmation (corrigé)** : `reservation-form.tsx` affichait
+- **P3 (écran de confirmation, corrigé)** : `reservation-form.tsx` affichait
   « 🎉 C'est confirmé ! » / « Total payé » alors qu'une réservation manuelle est
   encore `pending` + paiement sur place. → Corrigé : quand le POST renvoie
   `manualConfirmation:true`, l'écran affiche « 📩 Demande envoyée » +
@@ -71,13 +71,31 @@ Test d'intégralité du site (`npm run ci`) + audit runtime de la couche e-mail 
   `:host` émis (statut `sent`) dès le `PUT status:"confirmed"` ; rappel J3 et
   demande d'avis émis par le cron (`reviewRequestsSent:1`).
 
+## Nouvelles corrections (implémentation des remarques — T-204)
+
+Les commentaires restants de l'audit T-203 (P3 + e-mails non re-testés runtime)
+sont implémentés **sans régression** :
+
+- **P3 — Garde UI Stripe (implémenté)** : le flux manuel ne doit **jamais**
+  afficher l'UI carte. Décision extraite dans `src/lib/booking-flow.ts` →
+  `shouldShowStripeForm` (priorité `manualConfirmation:true` → false, même si le
+  serveur renvoyait un `payment`). Appliqué aux deux points d'entrée
+  (`handleSubmit` + `resumePaymentFor`). Couvert par `booking-flow.test.ts` (5 cas).
+  La machinerie Stripe reste présente (back-office `/api/bookings/[id]/payment`)
+  mais est **inatteignable et prouvée** (reprise manuelle → 409).
+- **E-mail d'annulation (re-testé runtime)** : `booking-cancellation-mail.test.ts`
+  → **2 e-mails réels** (voyageur fr + hôte en, eventKeys distincts).
+- **E-mail price-alert (nouveau test runtime)** : `price-alert-mail.test.ts` →
+  **1 e-mail fr réel**, idempotent (eventKey unique), status `sent`.
+
 ## Gates de fermeture (tous ✅)
+
 
 - [x] 🔨 `tsc --noEmit` 0 · `eslint src --max-warnings 0` 0
 - [x] 🔨 `next build` compiled (64 pages)
 - [x] 🔍 `i18n:check` 0 candidat · catalogue **1482** (+3 clés reservation)
-- [x] 🧪 `vitest run` **554** (85 fichiers, -2 skip DB) — +3 tests T-203
-  (`booking-confirmation.test.ts` nominal + idempotence + garde status)
+- [x] 🧪 `vitest run` **554** (85 fichiers, +8 tests T-203/T-204 ; 17 skip =
+  serveur-live `admin/bulk`+`admin/hosts`, **re-testés 17/17 avec serveur actif**)
 - [x] ▶️ `npm run smoke` **95/95 PASS** (contrat `pending` + `manualConfirmation`)
 - [x] ✅ `npm run ci` **verte** (chaîne complète : typecheck 0 / lint 0 /
   i18n 0 / ai:check 19 OK · 1 warn R7 · 0 fail / vitest 554 / build 64 pages /
