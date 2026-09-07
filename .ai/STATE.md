@@ -4,7 +4,7 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : `a644dd1` — **T-203 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+- **HEAD Git** : `01d98b3` — **T-203 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
   **fiabilisation du scénario « paiement manuel »** — un hôte/admin peut
   **constater le paiement sur place** (`PUT /api/bookings/[id]
   {markPaidOffline:true}` → `paymentStatus:"paid"` + `paymentMethodOffline:true`,
