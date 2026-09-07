@@ -51,18 +51,35 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).
-- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1416** clés FR=EN ;
+- **i18n UI (T-167/T-172 VALIDÉ).** Catalogue **1452** clés FR=EN ;
   `i18n:check` **0 candidat** ; SSR cookie `en` prouvé (`html lang=en`,
   navbar/home/auth/recherche). T-168→T-171 ont depuis localisé facture
   HTML, placeholders réglages, messages JSON d’API et e-mails
   transactionnels ; T-172 a câblé les métadonnées localisées sur toutes
   les pages (incl. `/recherche`, auth, compte) avec `noindex` sur les
-  zones privées. Restent **hors périmètre** (pas des bugs) : termes métier
+  zones privées. **T-194** (+1 `auth.demoHint`) et **T-195** (+28
+  `payouts.*` dont 11 `payout-account`) ont porté le verrou à **1452**.
+  Restent **hors périmètre** (pas des bugs) : termes métier
   identiques FR/EN (« No-show »), contenus stockés en base (seed, avis,
   motifs d’annulation, corps d’e-mails personnalisés par l’admin), arabe
   `ar` (repli FR volontaire — défaut `supportedLocales` aligné fr/en).
   Pages légales et centre d’aide bilingues (T-162/T-158). Le sélecteur
   FR/EN n’agit que via `useT`/`makeT`.
+
+- **Exécution Stripe Connect réelle des versements = INSPECTION (T-195).** La
+  partie **interne** du versement est **validée** : ledger `payouts` /
+  `payoutAccounts` (migration additive 0018), agrégation multi-devise par
+  période (`createPayoutsForPeriod`, jamais de somme inter-devises),
+  route `POST/GET /api/host/payout-account` (référence chiffrée AES-GCM via
+  `provider-credentials`, jamais réaffichée), tâche cron idempotente
+  `/api/cron/payouts`, UI « Versements » + `webhook payout.*` idempotent.
+  La partie **externe** (création de l'account Connect, onboarding,
+  `transfer`/`payout` Stripe, destination SEPA réelle) **ne peut pas être
+  prouvée ici** faute de clés Connect : `StripePayoutProvider.executePayout`
+  lève explicitement sans clés (Jamais simulé comme réussi), et le sandbox
+  bascule sur le mock uniquement via `ALLOW_MOCK_PAYMENTS=true` (opt-in
+  explicite, jamais implicite). À re-valider avec un compte Connect de test
+  avant ouverture production.
 - **Devise multi : tunnel et totaux gérés, affichages secondaires non.** La
   table `bookings.currency` est multi-devises : le tunnel de réservation
   (T-152) et les totaux analytics/billing (T-152, `sumByCurrency` — jamais
@@ -70,6 +87,20 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   `€` dur (hors périmètre audit B) : wallet dans `mon-compte` et
   `bestrewards-status`, prix `/nuit` dans `dashboard/properties/[id]`,
   montants promo (`promo-code-input`, `promotion-form`).
+
+  **Versements (T-195) — garde-fous ajoutés :**
+  - **Un payout par devise** (`createPayoutsForPeriod`) : une période avec des
+    bookings EUR **et** XAF génère UN payout par devise, jamais une somme
+    inter-devises (clé d'idempotence `payout:host:period:currency`).
+  - **Garde-fou devise à l'exécution (P2)** : `POST /api/host/payouts` n'exécute
+    un versement que si `payout.currency` correspond à la devise du compte de
+    versement par défaut. Sinon le payout reste `pending` et est renvoyé dans
+    `skipped[]` (jamais transféré) — la règle « ne jamais mélanger les
+    devises » s'applique aussi au versement, pas seulement à l'affichage.
+  - **Chemin admin multi-hôte (P3)** : un admin voit/agrège par (hôte, devise)
+    mais **n'exécute jamais** le versement d'un autre hôte (garde d'appartenance
+    → `skipped`, reste `pending`). Seul l'hôte propriétaire exécute son
+    versement.
 - **Mode invité limité.** Le checkout accepte un email non enregistré et crée
   un profil sans mot de passe. Un email déjà associé à un compte doit être
   utilisé après connexion pour éviter le rattachement de données.

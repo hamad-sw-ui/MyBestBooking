@@ -14,6 +14,8 @@ import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { formatPrice } from "@/lib/utils";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { convertAmount, formatMoney, normalizeDisplayCurrency } from "@/lib/i18n";
 import { UserAvatar } from "@/components/user-avatar";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { TwoFactorSection } from "@/components/two-factor-section";
@@ -43,6 +45,7 @@ export default function MyAccountPage() {
   const router = useRouter();
   const t = useT();
   const locale = useUiLocale();
+  const { currency: displayCurrency } = useDisplayPreferences();
   const [user, setUser] = useState<UserData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -261,8 +264,20 @@ export default function MyAccountPage() {
                       <div>
                         <p className="text-sm text-gray-500">{t("account.availableBalance")}</p>
                         <p className="text-3xl font-bold text-[#1B3A6B]">
-                          {formatPrice(parseFloat(user.walletBalance || "0"), "EUR", locale)}
+                          {(() => {
+                            // T-195 — le solde wallet est libellé en EUR (crédits
+                            // BestRewards/parrainage). On convertit l'AFFICHAGE en
+                            // devise d'affichage ; la valeur débitée/restituée reste en EUR.
+                            const walletEur = parseFloat(user.walletBalance || "0");
+                            const target = normalizeDisplayCurrency(displayCurrency, "EUR");
+                            return target === "EUR"
+                              ? formatPrice(walletEur, "EUR", locale)
+                              : formatMoney(convertAmount(walletEur, "EUR", target), target, locale);
+                          })()}
                         </p>
+                        {Boolean(displayCurrency) && (displayCurrency ?? "EUR").toUpperCase() !== "EUR" && (
+                          <p className="text-xs text-gray-400">{t("wallet.convertedNote")}</p>
+                        )}
                       </div>
                       {/* T-153 (audit n°25, F) : flèche le scénario d'utilisation
                           du solde — la recherche affiche un bandeau rappelant

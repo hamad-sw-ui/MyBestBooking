@@ -25,6 +25,8 @@ import { useState } from "react";
 import type { User } from "@/db/schema";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
 import { useT } from "@/components/ui-locale-provider";
+import { LanguageSelector } from "@/components/language-selector";
+import { DashboardCurrencySelector } from "@/components/dashboard-currency-selector";
 
 interface DashboardSidebarProps {
   user: User;
@@ -98,6 +100,12 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
               <p className="text-sm font-medium truncate">{user.firstName} {user.lastName}</p>
               <p className="text-xs text-white/60 capitalize">{t(user.role === "admin" ? "nav.roleAdmin" : "nav.roleHost")}</p>
             </div>
+          </div>
+          {/* T-195 : langue + devise d'affichage de l'espace pro, persistées au niveau
+              du compte (PATCH /api/users/me). Affichage seulement, jamais transactionnel. */}
+          <div className="flex flex-col gap-2 mt-4">
+            <LanguageSelector user={user} />
+            <DashboardCurrencySelector compact />
           </div>
         </div>
       )}

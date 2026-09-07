@@ -7,15 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, formatDate } from "@/lib/utils";
-import { sumByCurrency, formatCurrencyBreakdown } from "@/lib/currency-summary";
+import { sumByCurrency, formatCurrencyBreakdown, formatCurrencyConverted, sumByCurrencyConverted, hasMixedCurrencies } from "@/lib/currency-summary";
+import { normalizeDisplayCurrency } from "@/lib/i18n";
 import { 
   CreditCard, Download, FileText, Calendar,
   TrendingUp, Wallet, ArrowRight, CheckCircle
 } from "lucide-react";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { listProjectedPayouts, listPersistedPayouts, getDefaultPayoutAccount } from "@/lib/payout-service";
+import { PayoutRequestButton } from "@/components/payout-request-button";
+import { PayoutAccountForm } from "@/components/payout-account-form";
+import { isSupportedCurrency } from "@/lib/i18n";
 
-async function getBillingData(userId: string, isAdmin: boolean) {
+async function getBillingData(userId: string, isAdmin: boolean, locale: string) {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -83,8 +88,11 @@ async function getBillingData(userId: string, isAdmin: boolean) {
     .orderBy(desc(bookings.createdAt))
     .limit(10);
 
-  // Les factures légales et exports ne sont pas encore produits par un
-  // moteur comptable. Ne jamais fabriquer un document qui semblerait réel.
+  // T-195 (G4) — « Factures » : on branche le ledger persistant des versements
+  // (payouts) plutôt qu'un tableau vide codé en dur. Ces documents sont des
+  // états de versements opérationnels, pas des factures fiscales (le moteur
+  // comptable reste hors périmètre, cf. ADR-009).
+  const persistedPayouts = await listPersistedPayouts(userId, isAdmin);
   const invoices: Array<{
     id: string;
     period: string;
@@ -92,9 +100,20 @@ async function getBillingData(userId: string, isAdmin: boolean) {
     revenue: number;
     commission: number;
     net: number;
+    currency: string;
     status: "pending" | "paid";
     paidAt: Date | null;
-  }> = [];
+  }> = persistedPayouts.map((p) => ({
+    id: p.id,
+    period: `${formatDate(p.periodStart, { month: "long", year: "numeric" }, locale)} – ${formatDate(p.periodEnd, { month: "long", year: "numeric" }, locale)}`,
+    bookingsCount: p.bookingsCount,
+    revenue: Number(p.grossAmount),
+    commission: Number(p.commissionAmount),
+    net: Number(p.netAmount),
+    currency: p.currency,
+    status: p.status === "paid" ? "paid" : p.status === "failed" ? "pending" : "pending",
+    paidAt: p.paidAt,
+  }));
 
   return {
     thisMonth: {
@@ -121,7 +140,15 @@ export default async function BillingPage() {
   if (!user) return null;
 
   const isAdmin = user.role === "admin";
-  const billing = await getBillingData(user.id, isAdmin);
+  const billing = await getBillingData(user.id, isAdmin, locale);
+  // T-195 — devise d'affichage (préférence compte, normalisée) pour les totaux
+  // convertis. Affichage uniquement ; aucun montant transactionnel converti.
+  const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
+  // T-195 — versements projetés (6 derniers mois) pour l'espace pro.
+  const projectedPayouts = await listProjectedPayouts(user.id, isAdmin);
+  // T-195 (G7) — un moyen de versement est-il configuré ? Si oui, on masque la
+  // note « Connect account requis » (elle reste vraie sans compte).
+  const hasPayoutAccount = Boolean(await getDefaultPayoutAccount(user.id));
 
   if (!billing) {
     return (
@@ -162,7 +189,10 @@ export default async function BillingPage() {
 <Badge className="bg-white/20 text-white">{t("billing.thisMonth")}</Badge>
             </div>
 <p className="text-white/70 text-sm">{t("billing.netRevenue")}</p>
-            <p className="text-3xl font-bold mt-1">{formatCurrencyBreakdown(billing.thisMonth.netByCurrency, locale)}</p>
+            <p className="text-3xl font-bold mt-1">{formatCurrencyConverted(billing.thisMonth.netByCurrency, displayCurrency, locale)}</p>
+            {hasMixedCurrencies(billing.thisMonth.netByCurrency) && (
+              <p className="text-white/60 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency)}</p>
+            )}
             <p className="text-white/60 text-sm mt-2">
 {(billing.thisMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.thisMonth.bookings))}
             </p>
@@ -176,7 +206,10 @@ export default async function BillingPage() {
 <span className="text-sm text-gray-500">{t("billing.lastMonth")}</span>
             </div>
 <p className="text-gray-500 text-sm">{t("billing.netRevenue")}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.lastMonth.netByCurrency, locale)}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyConverted(billing.lastMonth.netByCurrency, displayCurrency, locale)}</p>
+            {hasMixedCurrencies(billing.lastMonth.netByCurrency) && (
+              <p className="text-gray-400 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency)}</p>
+            )}
             <p className="text-gray-500 text-sm mt-2">
 {(billing.lastMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.lastMonth.bookings))}
             </p>
@@ -190,7 +223,10 @@ export default async function BillingPage() {
               <span className="text-sm text-gray-500">{t("bookings.total")}</span>
             </div>
 <p className="text-gray-500 text-sm">{t("billing.cumulated")}</p>
-            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyBreakdown(billing.total.netByCurrency, locale)}</p>
+            <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyConverted(billing.total.netByCurrency, displayCurrency, locale)}</p>
+            {hasMixedCurrencies(billing.total.netByCurrency) && (
+              <p className="text-gray-400 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency)}</p>
+            )}
             <p className="text-gray-500 text-sm mt-2">
 {(billing.total.bookings !== 1 ? t("billing.bookingsTotalMany") : t("billing.bookingsTotal")).replace("{n}", String(billing.total.bookings))}
             </p>
@@ -208,7 +244,9 @@ export default async function BillingPage() {
                 <a href="/api/dashboard/billing/export" className="inline-flex items-center px-3 py-1 rounded-lg border border-[#1B3A6B] text-xs text-[#1B3A6B] hover:bg-blue-50">
 <Download className="w-3 h-3 mr-1" /> {t("billing.exportCsv")}
                 </a>
+                {billing.invoices.length === 0 && (
 <span className="inline-flex items-center px-3 py-1 rounded-lg border border-gray-200 text-xs text-gray-500">{t("billing.invoicesUnavailable")}</span>
+                )}
               </div>
             </div>
           </CardHeader>
@@ -234,7 +272,7 @@ export default async function BillingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">{formatPrice(invoice.net, "EUR", locale)}</p>
+                      <p className="font-bold text-gray-900">{formatPrice(invoice.net, invoice.currency, locale)}</p>
                       <div className="flex items-center gap-2 mt-1">
                         {invoice.status === "paid" ? (
                           <Badge variant="success">
@@ -295,6 +333,57 @@ export default async function BillingPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Versements (T-195) — net reversable par période/devise + demande */}
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>{t("payouts.title")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-500 mb-4">{t("payouts.subtitle")}</p>
+          {projectedPayouts.length === 0 ? (
+            <p className="text-center text-gray-500 py-8">{t("payouts.noData")}</p>
+          ) : (
+            <div className="space-y-3">
+              {/* Note mock / Stripe Connect — affichée seulement sans compte configuré */}
+              {!hasPayoutAccount && (
+                <div className="space-y-3">
+                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                    {t("payouts.needConnect")}
+                  </p>
+                  {/* G1 : configurer un moyen de versement (référence chiffrée AES-GCM). */}
+                  <div className="border border-gray-200 rounded-lg p-4">
+                    <p className="font-medium text-gray-900 text-sm mb-1">{t("payouts.accountTitle")}</p>
+                    <p className="text-xs text-gray-500 mb-3">{t("payouts.setupHint")}</p>
+                    <PayoutAccountForm defaultCurrency={isSupportedCurrency(user.currency) ? user.currency : "EUR"} />
+                  </div>
+                </div>
+              )}
+              {projectedPayouts.map((p) => (
+                <div
+                  key={`${p.periodStart}-${p.currency}`}
+                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                >
+                  <div>
+                    <p className="font-medium text-gray-900">
+                      {formatDate(p.periodStart, { month: "long", year: "numeric" }, locale)}
+                      {" – "}
+                      {formatDate(p.periodEnd, { month: "long", year: "numeric" }, locale)}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {t("payouts.bookings").replace("{n}", String(p.bookingsCount))} · {p.currency} · {t("payouts.gross")} {formatPrice(p.gross, p.currency, locale)} · {t("payouts.commission")} {formatPrice(p.commission, p.currency, locale)}
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-[#1B3A6B]">{formatPrice(p.net, p.currency, locale)}</p>
+                    <PayoutRequestButton periodStart={p.periodStart} periodEnd={p.periodEnd} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Commission Info */}
       <Card className="mt-6 bg-blue-50 border-blue-200">

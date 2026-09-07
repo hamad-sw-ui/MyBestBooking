@@ -11,6 +11,8 @@ import Link from "next/link";
 import { PropertySubmitButton } from "@/components/property-submit-button";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
 import { formatPrice } from "@/lib/utils";
+import { convertAmount, formatMoney } from "@/lib/i18n";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
 import { AMENITIES, amenityLabel } from "@/lib/amenities";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
@@ -55,6 +57,7 @@ interface Room {
 export default function EditPropertyPage() {
   const t = useT();
   const locale = useUiLocale();
+  const { currency: displayCurrency } = useDisplayPreferences();
   const router = useRouter();
   const PROPERTY_TYPES = [
     { value: "hotel", label: t("search.type.hotel") },
@@ -537,7 +540,24 @@ export default function EditPropertyPage() {
                       </p>
                     </div>
                     <div className="flex items-center gap-4">
-                      <p className="font-bold">{formatPrice(parseFloat(room.basePrice), room.currency ?? "EUR", locale)}{t("price.perNight")}</p>
+                      {/* T-195 — prix/nuit en devise d'affichage (conversion indicative) ;
+                          le paiement reste dans la devise de la chambre. */}
+                      <div className="text-right">
+                        <p className="font-bold">
+                          {(() => {
+                            const src = room.currency ?? "EUR";
+                            const numeric = parseFloat(room.basePrice);
+                            const converted = Boolean(displayCurrency) && displayCurrency !== src.toUpperCase();
+                            const text = converted
+                              ? formatMoney(convertAmount(numeric, src, displayCurrency!), displayCurrency!, locale)
+                              : formatPrice(numeric, src, locale);
+                            return text;
+                          })()}{t("price.perNight")}
+                        </p>
+                        {Boolean(displayCurrency) && displayCurrency !== (room.currency ?? "EUR").toUpperCase() && (
+                          <p className="text-[10px] text-gray-400">{t("price.convertedNote")} {room.currency ?? "EUR"}</p>
+                        )}
+                      </div>
                       <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
                         <Button variant="ghost" size="sm">
                           {t("bulk.calendar")}

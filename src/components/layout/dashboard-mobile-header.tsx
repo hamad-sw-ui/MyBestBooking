@@ -13,6 +13,8 @@ import type { User } from "@/db/schema";
 import { UnreadMessagesBadge } from "@/components/unread-messages-badge";
 import { DarkModeToggle } from "@/components/dark-mode-toggle";
 import { useT } from "@/components/ui-locale-provider";
+import { LanguageSelector } from "@/components/language-selector";
+import { DashboardCurrencySelector } from "@/components/dashboard-currency-selector";
 
 interface DashboardMobileHeaderProps {
   user: User;
@@ -84,10 +86,15 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
                 <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white text-sm font-medium">
                   {user.firstName.charAt(0)}{user.lastName.charAt(0)}
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                   <p className="text-sm text-white font-medium truncate">{user.firstName} {user.lastName}</p>
                   <p className="text-xs text-white/60 capitalize">{user.role === "admin" ? t("dash.roleAdmin") : t("dash.roleHost")}</p>
                 </div>
+              </div>
+              {/* T-195 : langue + devise d'affichage de l'espace pro. */}
+              <div className="flex flex-col gap-2 mt-3">
+                <LanguageSelector user={user} />
+                <DashboardCurrencySelector compact />
               </div>
             </div>
 

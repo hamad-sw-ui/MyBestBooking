@@ -56,6 +56,13 @@ export const AUDIT_ACTIONS = {
   providerCredentialsRemove: "provider_credentials.remove",
   providerCredentialsRotate: "provider_credentials.rotate",
   providerConnectionTest: "provider_credentials.test",
+  // T-195 — versements hôtes/admins (ledger + moyen de versement)
+  payoutAccountCreate: "payout.account.create",
+  payoutAccountUpdate: "payout.account.update",
+  payoutRequest: "payout.request",
+  payoutPaid: "payout.paid",
+  payoutFailed: "payout.failed",
+  payoutCron: "payout.cron",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

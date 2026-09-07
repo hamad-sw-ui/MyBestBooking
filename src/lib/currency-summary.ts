@@ -1,4 +1,5 @@
 import { formatPrice } from "@/lib/utils";
+import { convertAmount, isDisplayCurrency } from "@/lib/i18n";
 
 /**
  * T-152 (finding C) — Agrégation de montants PAR DEVISE pour les totaux
@@ -68,4 +69,60 @@ export function formatCurrencyBreakdown(map: Record<string, number>, locale: str
   const currencies = currenciesOf(map);
   if (currencies.length === 0) return formatPrice(0, "EUR", locale);
   return currencies.map((currency) => formatPrice(map[currency], currency, locale)).join(" + ");
+}
+
+/**
+ * T-195 — Agrégat converti vers une devise d'affichage (AFFICHAGE UNIQUEMENT).
+ *
+ * Règle inchangée (T-132) : on ne convertit JAMAIS un montant transactionnel
+ * (paiement, remboursement, portefeuille). Cette fonction ne sert qu'à donner
+ * une lecture unifiée indicative du chiffre d'affaires total dans le dashboard,
+ * SANS masquer la répartition native par devise (voir `formatCurrencyBreakdown`).
+ * Les taux sont les taux figés `RATES_FROM_EUR` (même source que l'affichage
+ * public — conversion indicative documentée).
+ */
+export function sumByCurrencyConverted(
+  items: CurrencyAmount[],
+  targetCurrency: string,
+): { total: number; hasMixed: boolean } {
+  const map = sumByCurrency(items);
+  const cur = (targetCurrency || "EUR").toUpperCase();
+  const currencies = currenciesOf(map);
+  let total = 0;
+  let seen: Record<string, boolean> = {};
+  for (const [currency, amount] of Object.entries(map)) {
+    if (!Number.isFinite(amount) || amount === 0) continue;
+    seen[currency] = true;
+    if (currency === cur) {
+      total += amount;
+    } else if (isDisplayCurrency(currency)) {
+      total += convertAmount(amount, currency, cur);
+    }
+  }
+  return {
+    total: Math.round(total * 100) / 100,
+    hasMixed: Object.keys(seen).length > 1,
+  };
+}
+
+/**
+ * T-195 — Rendu d'un total converti en devise d'affichage. Si plusieurs devises
+ * sont mélangées, on affiche le total converti AU-DESSUS d'un fragment natif
+ * `formatCurrencyBreakdown` pour ne jamais masquer la réalité multi-devises.
+ */
+export function formatCurrencyConverted(
+  map: Record<string, number>,
+  targetCurrency: string,
+  locale: string = "fr-FR",
+): string {
+  const cur = (targetCurrency || "EUR").toUpperCase();
+  const currencies = currenciesOf(map);
+  if (currencies.length === 0) return formatPrice(0, cur, locale);
+  let total = 0;
+  for (const [currency, amount] of Object.entries(map)) {
+    if (!Number.isFinite(amount) || amount === 0) continue;
+    if (currency === cur) total += amount;
+    else if (isDisplayCurrency(currency)) total += convertAmount(amount, currency, cur);
+  }
+  return formatPrice(Math.round(total * 100) / 100, cur, locale);
 }

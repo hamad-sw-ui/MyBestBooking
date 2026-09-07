@@ -5,7 +5,8 @@ import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
-import { formatCurrencyBreakdown, sumByCurrency } from "@/lib/currency-summary";
+import { formatCurrencyBreakdown, sumByCurrency, formatCurrencyConverted } from "@/lib/currency-summary";
+import { normalizeDisplayCurrency } from "@/lib/i18n";
 import { 
   Building2, Calendar, Star, TrendingUp, 
   ArrowUpRight, ArrowDownRight, Users, DollarSign 
@@ -154,6 +155,7 @@ export default async function DashboardPage() {
   const recentBookings = await getRecentBookings(user.id, isAdmin);
   const locale = await getServerLocale();
   const t = makeT(locale);
+  const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
 
   const statCards = [
     {
@@ -174,8 +176,8 @@ export default async function DashboardPage() {
     },
     {
       title: t("dash.revenue"),
-      value: formatCurrencyBreakdown(stats.revenue.totalByCurrency, locale),
-      subValue: t("dash.revenueMonth").replace("{amount}", formatCurrencyBreakdown(stats.revenue.recentByCurrency, locale)),
+      value: formatCurrencyConverted(stats.revenue.totalByCurrency, displayCurrency, locale),
+      subValue: t("dash.revenueMonth").replace("{amount}", formatCurrencyConverted(stats.revenue.recentByCurrency, displayCurrency, locale)),
       icon: DollarSign,
       color: "bg-[#F5A623]",
       href: "/dashboard/billing",

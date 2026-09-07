@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Wallet, Award, Gift, Copy, Check } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import { convertAmount, formatMoney, normalizeDisplayCurrency } from "@/lib/i18n";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 /**
@@ -16,6 +18,7 @@ import { useT, useUiLocale } from "@/components/ui-locale-provider";
 export function BestRewardsStatus({ thresholds }: { thresholds: [number, number] }) {
   const t = useT();
   const locale = useUiLocale();
+  const { currency: displayCurrency } = useDisplayPreferences();
   const [state, setState] = useState<"loading" | "anon" | "ready">("loading");
   const [level, setLevel] = useState(1);
   const [bookings, setBookings] = useState(0);
@@ -80,9 +83,12 @@ export function BestRewardsStatus({ thresholds }: { thresholds: [number, number]
   const nextThreshold = level >= 3 ? null : level === 1 ? thresholds[0] : thresholds[1];
   const remaining = nextThreshold === null ? 0 : Math.max(0, nextThreshold - bookings);
   // T-153 (audit n°25, E) : le solde wallet est libellé en EUR (cagnotte
-  // BestRewards) — affichage toujours en euros, quelle que soit la devise
-  // d'affichage préférée.
-  const fmtWallet = formatPrice(Number(wallet), "EUR", locale);
+  // BestRewards). T-195 : l'AFFICHAGE est converti en devise d'affichage
+  // (indicatif) ; la valeur débitée/restituée reste en EUR.
+  const target = normalizeDisplayCurrency(displayCurrency, "EUR");
+  const fmtWallet = target === "EUR"
+    ? formatPrice(Number(wallet), "EUR", locale)
+    : formatMoney(convertAmount(Number(wallet), "EUR", target), target, locale);
 
   const copyReferral = async () => {
     if (!referral) return;

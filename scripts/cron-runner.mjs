@@ -45,14 +45,16 @@ if (!SECRET) {
 
 async function tick() {
   const at = new Date().toISOString();
-  try {
-    const res = await fetch(`${BASE_URL}/api/cron/price-alerts`, {
-      headers: { authorization: `Bearer ${SECRET}` },
-    });
-    const body = await res.text();
-    console.log(`[cron-runner] ${at} → HTTP ${res.status} ${body.slice(0, 200)}`);
-  } catch (err) {
-    console.warn(`[cron-runner] ${at} → échec appel (${err.message}) — prochain tick dans ${EVERY_MIN} min`);
+  for (const route of ["price-alerts", "payouts"]) {
+    try {
+      const res = await fetch(`${BASE_URL}/api/cron/${route}`, {
+        headers: { authorization: `Bearer ${SECRET}` },
+      });
+      const body = await res.text();
+      console.log(`[cron-runner] ${at} → /api/cron/${route} HTTP ${res.status} ${body.slice(0, 200)}`);
+    } catch (err) {
+      console.warn(`[cron-runner] ${at} → échec appel /api/cron/${route} (${err.message}) — prochain tick dans ${EVERY_MIN} min`);
+    }
   }
 }
 

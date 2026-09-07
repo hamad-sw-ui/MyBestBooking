@@ -496,6 +496,63 @@ export const appSettings = pgTable("app_settings", {
 });
 
 // ═══════════════════════════════════════════════
+// PAYOUT_ACCOUNTS (T-195) — moyen de versement d'un hôte/admin.
+// L'identifiant Stripe Connect ou l'IBAN est stocké CHIFFRÉ (AES-GCM via
+// provider-credentials) et jamais réaffiché. `provider` = stripe_connect | sepa.
+// Un utilisateur peut avoir plusieurs comptes ; `is_default` désigne l'actif.
+// ═══════════════════════════════════════════════
+export const payoutAccounts = pgTable("payout_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").references(() => users.id).notNull(),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  // Alias lisible (ex. « Stripe · •••• 4242 ») — ne contient JAMAIS le pan complet.
+  displayLabel: varchar("display_label", { length: 120 }),
+  // Vaultage : octets chiffrés AES-GCM de l'identifiant (account_id / IBAN).
+  ciphertext: text("ciphertext").notNull(),
+  iv: varchar("iv", { length: 32 }).notNull(),
+  authTag: varchar("auth_tag", { length: 32 }).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  currency: varchar("currency", { length: 3 }).default("EUR"),
+  isDefault: boolean("is_default").default(false).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_payout_accounts_user").on(table.userId),
+  uniqueIndex("uniq_payout_accounts_user_provider").on(table.userId, table.provider),
+]);
+
+// ═══════════════════════════════════════════════
+// PAYOUTS (T-195) — ledger de versement.
+// Un payout agrège les bookings `paid` d'une période pour un hôte, dans une
+// devise donnée. Idempotence par (host, period, currency) : le cron peut
+// repasser sans créer un doublon. `status` = pending | processing | paid | failed.
+// ═══════════════════════════════════════════════
+export const payouts = pgTable("payouts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  hostId: uuid("host_id").references(() => users.id).notNull(),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  currency: varchar("currency", { length: 3 }).notNull(),
+  grossAmount: decimal("gross_amount", { precision: 12, scale: 2 }).notNull(),
+  commissionAmount: decimal("commission_amount", { precision: 12, scale: 2 }).notNull(),
+  netAmount: decimal("net_amount", { precision: 12, scale: 2 }).notNull(),
+  bookingsCount: integer("bookings_count").default(0).notNull(),
+  status: varchar("status", { length: 20 }).default("pending").notNull(),
+  payoutAccountId: uuid("payout_account_id").references(() => payoutAccounts.id),
+  providerPayoutId: varchar("provider_payout_id", { length: 255 }),
+  idempotencyKey: varchar("idempotency_key", { length: 160 }).unique().notNull(),
+  processingAt: timestamp("processing_at"),
+  paidAt: timestamp("paid_at"),
+  failedAt: timestamp("failed_at"),
+  lastError: text("last_error"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_payouts_host_status").on(table.hostId, table.status),
+  index("idx_payouts_period").on(table.periodStart, table.periodEnd),
+]);
+
+// ═══════════════════════════════════════════════
 // AUDIT_LOG (T-024)
 // Journal centralisé des actions admin sensibles (settings, modération
 // d'avis, suspend user, validation property). Écrit en best-effort via
@@ -540,3 +597,7 @@ export type PaymentEventInbox = typeof paymentEventInbox.$inferSelect;
 export type ProviderTestLog = typeof providerTestLogs.$inferSelect;
 export type ProviderCredential = typeof providerCredentials.$inferSelect;
 export type NewProviderCredential = typeof providerCredentials.$inferInsert;
+export type PayoutAccount = typeof payoutAccounts.$inferSelect;
+export type NewPayoutAccount = typeof payoutAccounts.$inferInsert;
+export type Payout = typeof payouts.$inferSelect;
+export type NewPayout = typeof payouts.$inferInsert;

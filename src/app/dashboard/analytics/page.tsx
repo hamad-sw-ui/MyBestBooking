@@ -11,7 +11,9 @@ import {
   topCurrency,
   currenciesOf,
   formatCurrencyBreakdown,
+  formatCurrencyConverted,
 } from "@/lib/currency-summary";
+import { normalizeDisplayCurrency } from "@/lib/i18n";
 import { 
   TrendingUp, TrendingDown, DollarSign, Calendar, 
   Users, Star, Building2, Eye, BarChart3 
@@ -205,6 +207,8 @@ export default async function AnalyticsPage() {
   const analytics = await getAnalytics(user.id, isAdmin);
   const locale = await getServerLocale();
   const t = makeT(locale);
+  // T-195 — devise d'affichage (préférence compte) pour les totaux convertis.
+  const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
 
   if (!analytics) {
     return (
@@ -226,7 +230,7 @@ export default async function AnalyticsPage() {
   const metrics = [
     {
       title: t("analytics.revenue30"),
-      value: formatCurrencyBreakdown(analytics.currentRevenueByCurrency),
+      value: formatCurrencyConverted(analytics.currentRevenueByCurrency, displayCurrency, locale),
       change: analytics.revenueChange,
       icon: DollarSign,
       color: "bg-green-500",
@@ -240,7 +244,7 @@ export default async function AnalyticsPage() {
     },
     {
       title: t("analytics.avgBasket"),
-      value: formatCurrencyBreakdown(analytics.avgBookingValueByCurrency),
+      value: formatCurrencyConverted(analytics.avgBookingValueByCurrency, displayCurrency, locale),
       change: analytics.previousAvgBookingValue > 0 
         ? ((analytics.avgBookingValue - analytics.previousAvgBookingValue) / analytics.previousAvgBookingValue) * 100 
         : 0,

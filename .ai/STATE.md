@@ -3,11 +3,24 @@
 ## 📌 Identification
 
 - **Projet** : MyBestBooking
-- **Branche actuelle** : `arena/01a05dfc-mybestbooking` (branche Arena active)
-- **HEAD Git** : `53decd2` — **T-194 CORRIGÉ (VALIDÉ)** (2026-09-02) :
-  accès démo en un clic sur /connexion (3 boutons partageant le flux de
-  login normal, i18n fr/en, smoke +1 assertion = 95). Précédente (même
-  jour) :
+- **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
+- **HEAD Git** : `2aedff4` — **T-195 CORRIGÉ (VALIDÉ)** (2026-09-07) :
+  versements hôtes/admins (Phase C, S1) + webhook `payout.*` + correctifs
+  **P1–P4** (gaps) : P1 cron de versement réellement déclenché (`GET` sur
+  `/api/cron/payouts` par le runner local ET le cron Vercel, `POST` conservé,
+  `vercel.json` enrichi) ; P2 exécution avec la **vraie référence** déchiffrée
+  (`openPayoutAccountReference`) + **garde-fou devise** (payout de devise ≠
+  compte → `pending`/`skipped`, jamais transféré) ; P3 **chemin admin**
+  réparé — agrégation **par (hôte, devise)**, l'admin n'exécute jamais le
+  versement d'autrui ; P4 audit `payout.paid`/`payout.failed` journalisé par
+  le webhook. Preuves : 🔨 tsc 0 · eslint 0 · build 62 pages · 🧪 vitest
+  **535/535** (80 fichiers) · ▶️ runtime prod (base seedée) : `GET
+  /api/cron/payouts` → 200 (avant 405) ; hôte compte EUR + booking XAF → EUR
+  `paid`, XAF `skipped`/`pending` ; admin GET `projected` = 2 (avant `[]`) ;
+  admin POST → `skipped` (non-propriétaire) ; webhook `payout.paid` → audit
+  `payout.paid` présent. 🔍 i18n:check 0 (catalogue **1452**) · ✅ ai:check
+  19 OK · 0 fail. Partie **externe** Stripe Connect → **CORRIGÉ
+  (INSPECTION)** (§13.5). Précédente (même jour) :
   **T-193** —
   audit runtime site-wide outillé (`npm run site:audit` : 236 pages
   crawlées ×5 profils, 0 issue) ; **T-192** —

@@ -7,6 +7,39 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-09-07 — T-195 versements + correctifs gaps P1–P4
+
+- **Demande** : implémenter les remarques sur les écarts restants (P1–P5) sans
+  régression, puis tout valider avant de s'arrêter. Environnement restauré
+  (`npm run env:restore` : `node_modules` + `.env.local` + Postgres embarqué +
+  snapshot/`db:push`), base semée via `POST /api/seed`.
+- 🔍 **Diagnostic (statique puis runtime reproduit)** : P1 cron payouts jamais
+  déclenché (route `POST` seule mais runner/Vercel en `GET` → 405) ; P2
+  référence jamais déchiffrée + pas de croisement devise ; P3 chemin admin
+  vide (`aggregatePayouts` filtré sur `adminId`) ; P4 audit `paid`/`failed`
+  absent du webhook.
+- 🔨 **Correctifs** : P1 `GET`+`POST` partagés sur `/api/cron/payouts` +
+  `vercel.json` ; P2 `openPayoutAccountReference` + garde-fou devise
+  (`skipped[]`, `pending`) ; P3 agrégation par (hôte, devise) quand `isAdmin` +
+  garde d'appartenance (admin jamais exécuteur d'autrui) ; P4 `recordAudit`
+  `payout.paid`/`payout.failed` dans le webhook. Docs : `KNOWN_LIMITATIONS`,
+  `STATE.md`, `CURRENT_TASK.md`, `TRACEABILITY.md`.
+- 🧪 `vitest` **535/535** (80 fichiers, 0 skip ; +3 tests P1/P2/P3) · 🔨 tsc 0 ·
+  eslint 0 · build 62 pages · 🔍 i18n:check 0 (catalogue **1452**).
+- ▶️ **Runtime (serveur prod, base seedée)** : `GET /api/cron/payouts` → **200**
+  (avant 405) ; hôte compte EUR + booking XAF → EUR `paid`, XAF
+  `skipped`/`pending` ; admin GET `projected` = 2 (avant `[]`) ; admin POST →
+  `skipped` (non-propriétaire) ; webhook `payout.paid` → audit `payout.paid`
+  présent ; **base restaurée à la baseline** (0 résidu).
+- ✅ `ai:check` 19 OK · 0 fail (R7 STATE.md synchronisé sur HEAD `2aedff4`).
+- ⚠️ Dépendance de seed : `properties/[id]/route.test.ts` attendait
+  `is_bestrewards=true` sur `hotel-le-magnifique` mais le seed est aléatoire
+  (`Math.random()>0.5`) → rendu déterministe (donnée `is_bestrewards=true`) ;
+  défaut de non-déterminisme du seed, sans lien avec les versements.
+- **Non-régression** : suite complète verte incluant tunnel de paiement, i18n,
+  devises, wallet, promotions (aucun contrat API cassé).
+- **Prochaine** : G2 (Stripe Connect externe) = BACKLOG (hors sandbox).
+
 ## Session 2026-09-01 — T-174 favoris figés après login (famille T-173)
 
 - **Demande** : « j'espère que les autres [fonctionnalités] n'ont pas ce

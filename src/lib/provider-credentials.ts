@@ -235,5 +235,28 @@ export function isKnownProvider(value: string): value is ProviderName {
   return (PROVIDERS as readonly string[]).includes(value);
 }
 
+/**
+ * T-195 — Vaultage d'un secret applicatif (IBAN / Stripe Connect account_id)
+ * via la clé maître AES-GCM (keyring : clé active + précédente en rotation).
+ * Réutilise exactement le coffre des credentials provider ; aucune valeur
+ * sensible n'est jamais loggée ni renvoyée par les getters.
+ */
+export function sealSecretValue(value: string): { ciphertext: string; iv: string; authTag: string } {
+  const key = masterKey();
+  if (!key) {
+    throw new ProviderCredentialsError("Le chiffrement des secrets exige CREDENTIALS_ENCRYPTION_KEY");
+  }
+  return encrypt(value, key);
+}
+
+/** Déscelle un secret vaulté (clé active puis précédente pendant rotation). */
+export function openSecretValue(input: { ciphertext: string; iv: string; authTag: string }): string {
+  const current = masterKey();
+  if (!current) {
+    throw new ProviderCredentialsError("Le déchiffrement des secrets exige CREDENTIALS_ENCRYPTION_KEY");
+  }
+  return decryptWithKeyring(input, current, previousMasterKey());
+}
+
 /** Export de test : ne lit ni n'expose aucune clé persistée. */
 export const __providerCredentialsTesting = { encrypt, decrypt };

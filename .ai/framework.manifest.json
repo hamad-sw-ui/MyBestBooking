@@ -38,7 +38,8 @@
       "upload_objects": ["uploads", "messages"],
       "wishlist_items": ["wishlists"],
       "provider_credentials": ["admin/providers", "providers/stripe"],
-      "audit_log": ["admin/audit"]
+      "audit_log": ["admin/audit"],
+      "payout_accounts": ["host/payout-account"]
     },
     "expected_endpoint_tables": [],
     "ui_action_labels": [

@@ -26,6 +26,24 @@ const ROOT = resolve(import.meta.dirname, "..");
 const STRICT = process.argv.includes("--strict");
 
 const ACCENTS = /[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ]/;
+// T-195 — mots français SANS accent, purement français (aucun faux positif
+// anglais : « Payment » ≠ « Paiement », « View » ≠ « Voir »…). Complètent la
+// regex accents qui ne voit pas « Modifier », « Annuler », « Voir », etc.
+const FRENCH_WORDS = [
+  "Voir", "Modifier", "Supprimer", "Annuler", "Ajouter", "Rechercher",
+  "Toutes", "Tous", "Aucun", "Aucune", "Paiement", "Payer", "Voyageur",
+  "Voyageurs", "Hébergeur", "Hébergements", "Chambres", "Facturation",
+  "Utilisateurs", "Naviguer", "Retourner", "Continuer", "Valider", "Enregistrer",
+  "Ouvrir", "Fermer", "Afficher", "Masquer", "Rafraîchir", "Déconnecter",
+  "Connexion", "Inscription", "Mon", "Mes", "Votre", "Vos", "Ce", "Cette",
+];
+// frontière de mot pour éviter « Viewer/Modifier » en anglais technique ;
+// lookbehind `(?<!/)` pour ne pas flagger un segment d'URL de route
+// (« /connexion », « /inscription » ne sont pas des libellés UI).
+const FRENCH_WORD_RE = new RegExp(
+  `(?<!/)\\b(${FRENCH_WORDS.join("|")})\\b`,
+  "i",
+);
 const EXCLUDED_DIRS = new Set([".next", "node_modules", ".data", "dist", "coverage"]);
 // Périmètre : surface UI (routes publiques + dashboard + composants).
 // Les contenus métier (seed, mails, settings) et les API restent hors
@@ -66,9 +84,16 @@ for (const root of SCAN_ROOTS) {
     const lines = readFileSync(file, "utf8").split("\n");
     lines.forEach((line, i) => {
       if (SKIP_LINE.test(line)) return;
-      if (!ACCENTS.test(line)) return;
-      // Chaîne JS ou texte JSX contenant un accent français.
-      if (/"[^"\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^"\n]*"|'[^'\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^'\n]*'|>[^<>\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^<>\n]*</.test(line)) {
+      // Critère 1 (historique) : accent français dans une chaîne JS ou un JSX.
+      if (ACCENTS.test(line) &&
+          /"[^"\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^"\n]*"|'[^'\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^'\n]*'|>[^<>\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^<>\n]*</.test(line)) {
+        hits.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
+        return;
+      }
+      // Critère 2 (T-195) : mot français NON accentué dans une chaîne JS ou JSX.
+      if (FRENCH_WORD_RE.test(line) &&
+          /"[^"\n]*[a-zA-ZÀ-ÿ][^"\n]*"|'[^'\n]*[a-zA-ZÀ-ÿ][^'\n]*'|>[^<>\n]*[a-zA-ZÀ-ÿ][^<>\n]*</.test(line) &&
+          !/className|href=|style=|aria-|data-|placeholder=|title=|name=|id=|value=|type=|border|text-|bg-|px-|py-|w-|h-|max-w|flex|grid|rounded|items-|justify-|gap-|p-|m-|sm:|md:|lg:|hover:|focus:/i.test(line)) {
         hits.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
       }
     });
