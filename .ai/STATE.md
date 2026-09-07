@@ -4,7 +4,7 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : `fc5e861` — **T-195 CORRIGÉ P6–P9** (2026-09-07) :
+- **HEAD Git** : `f4af8f1` — **T-195 CORRIGÉ P6–P9** (2026-09-07) :
   versements hôtes/admins (Phase C, S1) + webhook `payout.*` + correctifs
   **P1–P9** (gaps) : P1 cron de versement réellement déclenché (`GET` sur
   `/api/cron/payouts` par le runner local ET le cron Vercel, `POST` conservé,
