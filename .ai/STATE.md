@@ -4,7 +4,7 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : (après commit T-202) — **T-202 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+- **HEAD Git** : `b2cd448` — **T-202 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
   validation hôte par l'admin (`users.approvalStatus` + `users.commissionRate`,
   routes `/api/admin/hosts[/id]`, gate de publication) + **paiement manuel**
   (`POST /api/bookings` ne déclenche plus de paiement auto → `pending`,
