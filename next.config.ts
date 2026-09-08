@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  allowedDevOrigins: ["127.0.0.1", "localhost", "*.e2b.app"],
   // T-008 (BUG-006) : autorise next/image à optimiser les images
   // hébergées sur Unsplash (utilisées par le seed et le hero).
   // T-186 : optimizer `/_next/image` ACTIVÉ — TOUTES les sources passant

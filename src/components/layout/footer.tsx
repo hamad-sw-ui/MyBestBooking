@@ -111,6 +111,13 @@ export async function Footer({ userRole }: { userRole?: string | null } = {}) {
                   🤝 partners@mybestbooking.com
                 </a>
               </li>
+              {process.env.MAIL_INBOX === "1" && !process.env.RESEND_API_KEY && (
+                <li>
+                  <Link href="/boite-mail" className="text-sm text-[#F5A623] hover:text-white transition-colors">
+                    Boîte mail (dev)
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
         </div>

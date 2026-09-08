@@ -9,3 +9,9 @@ process.env.DATABASE_URL ??=
 process.env.JWT_SECRET ??=
   "test-secret-64chars-abcdefghijklmnopqrstuvwxyz0123456789ABCDEF";
 process.env.NEXT_PUBLIC_APP_URL ??= "http://localhost:3000";
+process.env.MAIL_FROM ??= "MyBestBooking Tests <no-reply@test.mybestbooking.local>";
+// Les tests n'envoient jamais via Resend : le ConsoleMailer écrit .data/mails.
+delete process.env.RESEND_API_KEY;
+delete process.env.SMTP_HOST;
+delete process.env.SMTP_USER;
+delete process.env.SMTP_PASS;

@@ -475,8 +475,19 @@ describe("templates (T-013 + T-025)", () => {
 });
 
 describe("getMailer factory", () => {
-  beforeEach(() => { _resetMailer(); });
-  afterEach(() => { _resetMailer(); delete process.env.RESEND_API_KEY; });
+  beforeEach(() => {
+    _resetMailer();
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_USER;
+    delete process.env.SMTP_PASS;
+  });
+  afterEach(() => {
+    _resetMailer();
+    delete process.env.RESEND_API_KEY;
+    delete process.env.SMTP_HOST;
+    delete process.env.SMTP_USER;
+    delete process.env.SMTP_PASS;
+  });
 
   it("retourne ConsoleMailer si RESEND_API_KEY absent", async () => {
     delete process.env.RESEND_API_KEY;
