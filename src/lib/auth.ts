@@ -132,7 +132,11 @@ export async function getSession() {
     .from(users)
     .where(eq(users.id, session.userId));
 
-  if (!user || user.deletedAt) return null;
+  // T-230 (A10) : un compte supprimé (`deletedAt`) **ou** suspendu
+  // (`suspendedAt`) n'a plus de session valide. La suspension n'écrit plus dans
+  // `deletedAt` : les deux états sont désormais distincts et le message de
+  // connexion peut dire lequel s'applique.
+  if (!user || user.deletedAt || user.suspendedAt) return null;
 
   return { user, session };
 }

@@ -93,9 +93,11 @@ async function bulkUsers(
   for (const id of filtered) {
     try {
       if (effective === "suspend") {
+        // T-230 (A10) : la suspension n'écrit plus `deleted_at` (réservé à la
+        // suppression) — un compte suspendu reste distinct d'un compte effacé.
         const [row] = await db
           .update(users)
-          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .set({ suspendedAt: new Date(), updatedAt: new Date() })
           .where(and(eq(users.id, id), ne(users.role, "admin")))
           .returning({ id: users.id });
         if (!row) {
@@ -105,15 +107,24 @@ async function bulkUsers(
         await db.delete(sessions).where(eq(sessions.userId, id));
         r.succeeded++;
       } else if (effective === "reactivate") {
-        const [row] = await db
-          .update(users)
-          .set({ deletedAt: null, updatedAt: new Date() })
-          .where(eq(users.id, id))
-          .returning({ id: users.id });
-        if (!row) {
+        // T-230 : un compte anonymisé (supprimé) n'est pas réactivable — on le
+        // signale explicitement au lieu de le « ressusciter » sans identité.
+        const [target] = await db
+          .select({ deletedAt: users.deletedAt })
+          .from(users)
+          .where(eq(users.id, id));
+        if (!target) {
           r.skipped.push({ id, reason: "user introuvable" });
           continue;
         }
+        if (target.deletedAt) {
+          r.skipped.push({ id, reason: "compte supprimé (anonymisé) : non réactivable" });
+          continue;
+        }
+        await db
+          .update(users)
+          .set({ suspendedAt: null, suspendedReason: null, updatedAt: new Date() })
+          .where(eq(users.id, id));
         r.succeeded++;
       } else if (effective === "anonymize") {
         const [existing] = await db
@@ -144,7 +155,10 @@ async function bulkUsers(
             avatarUrl: null,
             twoFactorSecret: null,
             twoFactorPendingSecret: null,
+            twoFactorBackupCodes: null,
             twoFactorEnabled: false,
+            suspendedAt: null,
+            suspendedReason: null,
           })
           .where(eq(users.id, id));
         await db.delete(sessions).where(eq(sessions.userId, id));

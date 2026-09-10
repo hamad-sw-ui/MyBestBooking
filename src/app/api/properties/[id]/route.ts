@@ -13,6 +13,7 @@ import { apiError } from "@/lib/api-error";
 import { getSetting } from "@/lib/settings";
 import { PROPERTY_TYPE_VALUES } from "@/lib/property-types";
 import { requireApprovedHost } from "@/lib/host-approval";
+import { isValidTimezone } from "@/lib/timezone";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const updatePropertySchema = z.object({
@@ -37,7 +38,30 @@ const updatePropertySchema = z.object({
   // T-021 audit follow-up : commission par property, admin uniquement
   // (filtré côté handler ci-dessous).
   commissionRate: z.string().regex(/^\d{1,3}(\.\d{1,2})?$/, "Commission invalide").optional(),
+  // T-227 (A7) : horaires d'arrivée/départ et fuseau de l'hébergement.
+  checkInFrom: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure d'arrivée (début) invalide (HH:MM)").optional(),
+  checkInUntil: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure d'arrivée (fin) invalide (HH:MM)").optional(),
+  checkOutUntil: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure de départ invalide (HH:MM)").optional(),
+  timezone: z
+    .string()
+    .max(50)
+    .refine((value) => isValidTimezone(value), "Fuseau horaire inconnu")
+    .optional(),
+  // T-228 (A8) : labels/badges = décision éditoriale de la plateforme.
+  // Réservés à l'admin (même frontière que `commissionRate`/`status`).
+  isEcoCertified: z.boolean().optional(),
+  isBestrewards: z.boolean().optional(),
+  isPreferred: z.boolean().optional(),
 });
+// T-227 (A7) : la fenêtre d'arrivée ne peut pas être vide (début = fin). Une
+// fenêtre à cheval sur minuit (18:00 → 02:00) reste acceptée : c'est une
+// pratique hôtelière courante, là où `14:00 → 14:00` n'a aucun sens.
+function checkInWindowError(from: string | undefined, until: string | undefined): string | null {
+  if (from && until && from === until) {
+    return "La fenêtre d'arrivée est vide : le début et la fin doivent différer";
+  }
+  return null;
+}
 
 export async function GET(
   _request: NextRequest,
@@ -187,6 +211,30 @@ export async function PUT(
     if (data.commissionRate !== undefined && user.role !== "admin") {
       return NextResponse.json(
         { error: await apiError("Modification de commission réservée à l'admin") },
+        { status: 403 },
+      );
+    }
+    // T-228 (A8) : `isEcoCertified` (badge « Éco ») n'était écrit par aucun
+    // code — le badge était inatteignable — et `isBestrewards`/`isPreferred`
+    // n'étaient posés que par le seed aléatoire, alors qu'`isBestrewards`
+    // majore la remise BestRewards. Ces labels sont une décision éditoriale :
+    // un hôte ne peut pas se les attribuer lui-même.
+    // T-227 (A7) : le PUT est partiel → on valide l'état **résultant** de la
+    // fusion (sinon une mise à jour partielle pourrait produire une fenêtre
+    // d'arrivée incohérente avec l'existant).
+    const windowError = checkInWindowError(
+      data.checkInFrom ?? property.checkInFrom?.slice(0, 5),
+      data.checkInUntil ?? property.checkInUntil?.slice(0, 5),
+    );
+    if (windowError) {
+      return NextResponse.json({ error: await apiError(windowError) }, { status: 400 });
+    }
+
+    const LABEL_FIELDS = ["isEcoCertified", "isBestrewards", "isPreferred"] as const;
+    const attemptedLabel = LABEL_FIELDS.find((field) => data[field] !== undefined);
+    if (attemptedLabel && user.role !== "admin") {
+      return NextResponse.json(
+        { error: await apiError("Modification des labels réservée à l'administration") },
         { status: 403 },
       );
     }

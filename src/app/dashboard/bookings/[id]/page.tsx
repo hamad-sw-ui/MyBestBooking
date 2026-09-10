@@ -394,6 +394,9 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
                 paymentIntentId={booking.paymentIntentId}
                 messageArea="dashboard"
                 canManageStay={canManageStay}
+                // T-229 (A9) : rôle de l'observateur pour le libellé du fil.
+                viewerIsHost={property?.hostId === user.id}
+                viewerIsAdmin={isAdmin}
               />
             </CardContent>
           </Card>

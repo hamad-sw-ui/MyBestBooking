@@ -25,6 +25,10 @@ export interface UserRow {
   createdAt: string;
   lastLoginAt: string | null;
   deletedAt: string | null;
+  /** T-230 (A10) : suspension distincte de la suppression. */
+  suspendedAt: string | null;
+  /** T-231 (A11) : 2FA active → action support « réinitialiser ». */
+  twoFactorEnabled: boolean | null;
   // T-202 : validation hôte (approvalStatus + commission) — null pour non-hôtes.
   approvalStatus: string | null;
   commissionRate: string | null;
@@ -82,8 +86,9 @@ export function UsersManager({ users, currentUserId, globalCommissionRate }: Pro
     const ql = q.trim().toLowerCase();
     return users.filter((u) => {
       if (roleFilter !== "all" && u.role !== roleFilter) return false;
-      if (statusFilter === "active" && u.deletedAt) return false;
-      if (statusFilter === "suspended" && !u.deletedAt) return false;
+      if (statusFilter === "active" && (u.deletedAt || u.suspendedAt)) return false;
+      if (statusFilter === "suspended" && !u.suspendedAt) return false;
+      if (statusFilter === "deleted" && !u.deletedAt) return false;
       if (statusFilter === "verified" && !u.emailVerified) return false;
       if (statusFilter === "unverified" && u.emailVerified) return false;
       if (!ql) return true;
@@ -158,6 +163,8 @@ export function UsersManager({ users, currentUserId, globalCommissionRate }: Pro
           { value: "all", label: t("bulk.allStatuses") },
           { value: "active", label: t("bulk.active") },
           { value: "suspended", label: t("bulk.suspended") },
+          // T-230 (A10) : « supprimé » n'est plus confondu avec « suspendu ».
+          { value: "deleted", label: t("bulk.deleted") },
           { value: "verified", label: t("bulk.emailVerified") },
           { value: "unverified", label: t("bulk.emailUnverified") },
         ]}
@@ -247,14 +254,16 @@ export function UsersManager({ users, currentUserId, globalCommissionRate }: Pro
                 </tr>
               )}
               {filtered.map((u) => {
-                const suspended = Boolean(u.deletedAt);
+                // T-230 : états distincts (sanction réversible vs compte effacé).
+                const suspended = Boolean(u.suspendedAt);
+                const deleted = Boolean(u.deletedAt);
                 const isSelf = u.id === currentUserId;
                 const canSelect = !isSelf && u.role !== "admin";
                 return (
                   <tr
                     key={u.id}
                     className={`border-b border-gray-50 hover:bg-gray-50 ${
-                      suspended ? "opacity-60" : ""
+                      suspended || deleted ? "opacity-60" : ""
                     } ${selected.has(u.id) ? "bg-blue-50/50" : ""}`}
                   >
                     <td className="px-4 py-4">
@@ -354,10 +363,13 @@ export function UsersManager({ users, currentUserId, globalCommissionRate }: Pro
                     </td>
                     <td className="px-4 py-4 text-right">
                       <div className="flex flex-col items-end gap-1">
-                        {suspended && <Badge variant="danger">{t("bulk.suspendedBadge")}</Badge>}
+                        {deleted && <Badge variant="danger">{t("bulk.deletedBadge")}</Badge>}
+                        {!deleted && suspended && <Badge variant="warning">{t("bulk.suspendedBadge")}</Badge>}
                         <UserSuspendActions
                           userId={u.id}
                           suspended={suspended}
+                          deleted={deleted}
+                          twoFactorEnabled={Boolean(u.twoFactorEnabled)}
                           disabled={isSelf}
                         />
                         <RowDeleteButton

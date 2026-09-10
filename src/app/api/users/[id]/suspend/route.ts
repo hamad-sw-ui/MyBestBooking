@@ -15,8 +15,15 @@ const schema = z.object({
 
 /**
  * PATCH /api/users/[id]/suspend (T-016) — admin only.
- * suspended:true → deletedAt=now + supprime sessions actives
- * suspended:false → deletedAt=null (réactivation)
+ *
+ * T-230 (audit n°2, A10) : la suspension écrivait `deletedAt`, exactement comme
+ * la suppression — un compte anonymisé affichait donc « Suspendu » avec un
+ * bouton « Réactiver », et une réactivation le faisait réapparaître avec une
+ * adresse `deleted-…@anonymized.local`. Désormais :
+ *   - suspended:true  → `suspendedAt = now` (+ motif) et sessions révoquées ;
+ *   - suspended:false → `suspendedAt = null` (réactivation d'une sanction) ;
+ *   - un compte **supprimé** (`deletedAt` renseigné) ne peut pas être « réactivé »
+ *     → 409 explicite.
  * Ne peut pas se suspendre soi-même.
  */
 export async function PATCH(
@@ -41,14 +48,45 @@ export async function PATCH(
     }
 
     const { suspended, reason } = schema.parse(await request.json());
+
+    const [target] = await db
+      .select({ id: users.id, email: users.email, deletedAt: users.deletedAt, suspendedAt: users.suspendedAt })
+      .from(users)
+      .where(eq(users.id, id))
+      .limit(1);
+    if (!target) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
+
+    // T-230 : un compte supprimé (anonymisé) n'est pas réactivable — c'est le
+    // cas « zombie » relevé par l'audit (réactivation 200 sur un compte
+    // effacé). On demande explicitement une restauration de sauvegarde.
+    if (!suspended && target.deletedAt) {
+      return NextResponse.json(
+        { error: await apiError("Ce compte est supprimé (anonymisé) : il n'est pas réactivable. Restaurez une sauvegarde si nécessaire.") },
+        { status: 409 },
+      );
+    }
+    if (suspended && target.deletedAt) {
+      return NextResponse.json(
+        { error: await apiError("Ce compte est déjà supprimé (anonymisé) : aucune suspension à poser.") },
+        { status: 409 },
+      );
+    }
+
     const [updated] = await db
       .update(users)
       .set({
-        deletedAt: suspended ? new Date() : null,
+        suspendedAt: suspended ? new Date() : null,
+        suspendedReason: suspended ? (reason ?? null) : null,
         updatedAt: new Date(),
       })
       .where(eq(users.id, id))
-      .returning({ id: users.id, email: users.email, deletedAt: users.deletedAt });
+      .returning({
+        id: users.id,
+        email: users.email,
+        deletedAt: users.deletedAt,
+        suspendedAt: users.suspendedAt,
+        suspendedReason: users.suspendedReason,
+      });
 
     if (!updated) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
 

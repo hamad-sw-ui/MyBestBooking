@@ -46,6 +46,10 @@ export const users = pgTable("users", {
   // T-108 : rotation à deux phases; le facteur actif reste utilisable jusqu'à
   // validation du nouveau secret.
   twoFactorPendingSecret: varchar("two_factor_pending_secret", { length: 64 }),
+  // T-231 (audit n°2, A11) : codes de secours à usage unique, stockés HACHÉS
+  // (bcrypt) sous la forme [{ hash, usedAt }]. Un code consommé n'est jamais
+  // réutilisable ; la liste est purgée à la désactivation / au reset admin.
+  twoFactorBackupCodes: jsonb("two_factor_backup_codes"),
   // T-026 : code de parrainage personnel auto-généré
   referralCode: varchar("referral_code", { length: 12 }).unique(),
   // T-125 (P2) : parrain de cet utilisateur (code saisi à l'inscription).
@@ -67,6 +71,13 @@ export const users = pgTable("users", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   deletedAt: timestamp("deleted_at"),
+  // T-230 (audit n°2, A10) : la suspension et la suppression écrivaient toutes
+  // deux `deleted_at` — un compte anonymisé (supprimé) affichait « Suspendu »
+  // et pouvait être « réactivé ». Distinctes désormais :
+  //   - `deleted_at`  = compte supprimé (anonymisé), irréversible côté UI ;
+  //   - `suspended_at` = sanction temporaire, réversible.
+  suspendedAt: timestamp("suspended_at"),
+  suspendedReason: varchar("suspended_reason", { length: 500 }),
 });
 
 // T-026 : Alertes prix — Un user peut suivre une property et un prix

@@ -35,6 +35,9 @@ function host(overrides: Partial<UserRow> = {}): UserRow {
     createdAt: "2026-01-01T10:00:00.000Z",
     lastLoginAt: null,
     deletedAt: null,
+    // T-230/T-231 (A10/A11) : suspension distincte + état 2FA.
+    suspendedAt: null,
+    twoFactorEnabled: false,
     approvalStatus: "approved",
     commissionRate: null,
     inheritCount: 0,

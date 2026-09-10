@@ -64,7 +64,18 @@ describe("uiStrings (T-132)", () => {
     //   reçus), +5 bulk.* (pagination du journal d'audit) = 1559.
     // T-219 (2026-09-10) : -1 billing.exportCsv (remplacée) +2 libellés
     //   distincts billing.exportCsvPayouts / billing.exportCsvBookings = 1560.
-    expect(Object.keys(fr)).toHaveLength(1560);
+    // T-221/T-222 (2026-09-10) : +19 clés — 6 dash.pendingRequests*/dash.settlementsDue*
+  //   (cartes « Demandes à traiter » / « Règlements à constater »), 11 bulk.*
+  //   (colonne Règlement, constatation, filtre, échéance de demande) et
+  //   2 bookings.request* (bandeau voyageur) = 1579.
+  // T-223/T-224 (audit n°2) : +22 réglages (notifications + parrainage) = 1601.
+  // T-226 (audit n°2) : +16 libellés d'édition de chambre = 1617.
+  //   2 cal.remaining* (stock vendable, T-244) = 1619.
+  //   book.writeGuest (libellé du fil côté hôte, T-229) = 1620.
+  //   T-227/T-228 (A7/A8) : +11 (horaires, fuseau, labels) = 1631.
+  //   T-230/T-231 (A10/A11) : +9 (codes de secours, reset 2FA, comptes
+  //   supprimés distincts des suspendus) = 1640.
+  expect(Object.keys(fr)).toHaveLength(1640);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

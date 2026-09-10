@@ -7,10 +7,13 @@ import { getCurrentUser, verifyPassword } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
+import { consumeBackupCode, type StoredBackupCode } from "@/lib/backup-codes";
 
 const schema = z.object({
   password: z.string().min(1, "Mot de passe requis"),
-  code: z.string().regex(/^\d{6}$/, "Code TOTP à 6 chiffres attendu"),
+  // T-231 (A11) : soit un code TOTP à 6 chiffres, soit un code de secours
+  // `XXXXX-XXXXX` (perte du téléphone = plus de blocage définitif).
+  code: z.string().min(6).max(32),
 });
 
 /** Désactivation sensible : mot de passe courant + facteur TOTP actif. */
@@ -19,13 +22,38 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     const { password, code } = schema.parse(await request.json());
-    const [row] = await db.select({ secret: users.twoFactorSecret, enabled: users.twoFactorEnabled, passwordHash: users.passwordHash })
+    const [row] = await db.select({ secret: users.twoFactorSecret, enabled: users.twoFactorEnabled, passwordHash: users.passwordHash, backupCodes: users.twoFactorBackupCodes })
       .from(users).where(eq(users.id, user.id));
     if (!row?.enabled || !row.secret) return NextResponse.json({ error: await apiError("2FA non active") }, { status: 400 });
     if (!row.passwordHash || !await verifyPassword(password, row.passwordHash)) return NextResponse.json({ error: await apiError("Mot de passe incorrect") }, { status: 401 });
-    const valid = speakeasy.totp.verify({ secret: row.secret, encoding: "base32", token: code, window: 1 });
-    if (!valid) return NextResponse.json({ error: await apiError("Code invalide") }, { status: 400 });
-    await db.update(users).set({ twoFactorEnabled: false, twoFactorSecret: null, twoFactorPendingSecret: null, updatedAt: new Date() }).where(eq(users.id, user.id));
+
+    const isTotp = /^\d{6}$/.test(code);
+    if (isTotp) {
+      const valid = speakeasy.totp.verify({ secret: row.secret, encoding: "base32", token: code, window: 1 });
+      if (!valid) return NextResponse.json({ error: await apiError("Code invalide") }, { status: 400 });
+    } else {
+      const { outcome, next } = await consumeBackupCode(
+        row.backupCodes as StoredBackupCode[] | null,
+        code,
+      );
+      if (outcome === "already_used") {
+        return NextResponse.json({ error: await apiError("Ce code de secours a déjà été utilisé") }, { status: 400 });
+      }
+      if (outcome !== "consumed") {
+        return NextResponse.json({ error: await apiError("Code invalide") }, { status: 400 });
+      }
+      // Le code consommé est marqué avant la désactivation (usage unique).
+      await db.update(users).set({ twoFactorBackupCodes: next }).where(eq(users.id, user.id));
+    }
+
+    // T-231 : désactivation = purge du secret ET des codes de secours.
+    await db.update(users).set({
+      twoFactorEnabled: false,
+      twoFactorSecret: null,
+      twoFactorPendingSecret: null,
+      twoFactorBackupCodes: null,
+      updatedAt: new Date(),
+    }).where(eq(users.id, user.id));
     return NextResponse.json({ enabled: false });
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).

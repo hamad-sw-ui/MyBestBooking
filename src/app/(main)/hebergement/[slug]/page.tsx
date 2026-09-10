@@ -50,7 +50,7 @@ import { LocalizedRoomPrice } from "@/components/localized-room-price";
 import { LocalizedDescription } from "@/components/localized-description";
 import { ContactHostButton } from "@/components/contact-host-button";
 import { getServerLocale } from "@/lib/server-locale";
-import { makeT } from "@/lib/ui-strings";
+import { makeT, type UiStringKey } from "@/lib/ui-strings";
 // T-154e (audit n°26, P3-13) : libellés harmonisés avec la source unique.
 import { amenityLabel } from "@/lib/amenities";
 // T-154c (audit n°26, P2-5) : politique d'annulation réelle (au lieu du
@@ -436,6 +436,18 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                               {t("prop.persMax").replace("{n}", String(room.maxOccupancy))}
                             </span>
                             {room.sizeSqm && <span>{room.sizeSqm} m²</span>}
+                            {/* T-226 (A6) : la literie était stockée mais
+                                jamais affichée (champ inatteignable côté
+                                voyageur, donc invérifiable). */}
+                            {Array.isArray(room.bedConfiguration) && room.bedConfiguration.length > 0 && (
+                              <span>
+                                {(room.bedConfiguration as { type: string; count: number }[])
+                                  .map((bed) => t("room.bedSummary")
+                                    .replace("{count}", String(bed.count))
+                                    .replace("{type}", t(`room.bed.${bed.type}` as UiStringKey)))
+                                  .join(" · ")}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 mt-2">
                             <Badge variant="info">{cancellationPolicyLabel(property.cancellationPolicy, t)}</Badge>

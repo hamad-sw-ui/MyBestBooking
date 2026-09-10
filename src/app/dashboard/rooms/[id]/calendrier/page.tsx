@@ -8,6 +8,7 @@ import { isUuid } from "@/lib/http";
 import { AvailabilityCalendar } from "@/components/availability-calendar";
 import { RatePlansSection } from "@/components/rate-plans-section";
 import { RoomEditSection } from "@/components/room-edit-section";
+import { loadBookedCounts } from "@/lib/room-stock";
 import { formatPrice } from "@/lib/utils";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
@@ -54,6 +55,9 @@ export default async function RoomCalendarPage({
     );
 
   const plans = await db.select().from(ratePlans).where(eq(ratePlans.roomId, id));
+  // T-244 (audit n°4) : séjours en cours par jour, pour afficher le reste
+  // vendable à côté du stock déclaré (même règle que le tunnel).
+  const bookedCounts = await loadBookedCounts(id, from, to);
 
   return (
     <div className="max-w-5xl">
@@ -84,6 +88,7 @@ export default async function RoomCalendarPage({
         basePrice={formatPrice(Number(row.room.basePrice), row.room.currency ?? "EUR", locale)}
         initialFrom={from}
         initialTo={to}
+        initialBookedCounts={bookedCounts}
         initialDays={days.map((d) => ({
           date: typeof d.date === "string" ? d.date : new Date(d.date).toISOString().slice(0, 10),
           availableCount: d.availableCount,
@@ -93,14 +98,22 @@ export default async function RoomCalendarPage({
         }))}
       />
       <div id="room-edit" className="scroll-mt-24">
+        {/* T-226 (A6) : tous les champs éditables par l'API sont transmis au
+            formulaire (description, type, lits, surface, devise, équipements). */}
         <RoomEditSection room={{
           id,
           name: row.room.name,
+          description: row.room.description,
+          roomType: row.room.roomType,
+          bedConfiguration: row.room.bedConfiguration,
+          sizeSqm: row.room.sizeSqm != null ? Number(row.room.sizeSqm) : null,
           basePrice: row.room.basePrice,
+          currency: row.room.currency,
           quantity: row.room.quantity ?? 1,
           maxOccupancy: row.room.maxOccupancy,
           maxAdults: row.room.maxAdults,
           maxChildren: row.room.maxChildren,
+          amenities: row.room.amenities,
           isActive: row.room.isActive,
         }} />
       </div>

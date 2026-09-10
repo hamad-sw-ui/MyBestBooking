@@ -27,8 +27,16 @@ export function TwoFactorSection({ initiallyEnabled }: Props) {
   const [newCode, setNewCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // T-231 (A11) : codes de secours affichés UNE SEULE FOIS, juste après
+  // l'activation (seules leurs empreintes sont stockées côté serveur).
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
 
   function cleanCode(value: string) { return value.replace(/\D/g, "").slice(0, 6); }
+  /** T-231 : accepte un code de secours `XXXXX-XXXXX` pour la désactivation. */
+  function cleanSecretOrBackup(value: string) {
+    if (/^[0-9\s-]*$/.test(value)) return value.replace(/\D/g, "").slice(0, 6);
+    return value.toUpperCase().replace(/[^A-Z0-9-]/g, "").slice(0, 12);
+  }
 
   async function startSetup() {
     if (!password) { setError(t("tfa.needPassword")); return; }
@@ -56,19 +64,21 @@ export function TwoFactorSection({ initiallyEnabled }: Props) {
       const r = await fetch("/api/auth/2fa/verify", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ code: newCode }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error ?? t("auth.error"));
+      setBackupCodes(Array.isArray(j.backupCodes) ? j.backupCodes : []);
       setEnabled(true); setSetupState({ phase: "idle" }); setPassword(""); setCurrentCode(""); setNewCode(""); router.refresh();
     } catch (e) { setError(e instanceof Error ? e.message : t("auth.error")); }
     finally { setBusy(false); }
   }
 
   async function disable() {
-    if (!password || !/^\d{6}$/.test(currentCode)) { setError(t("tfa.needPasswordAndCode")); return; }
+    // T-231 : un code TOTP (6 chiffres) ou un code de secours est accepté.
+    if (!password || currentCode.length < 6) { setError(t("tfa.needPasswordAndCode")); return; }
     setError(null); setBusy(true);
     try {
       const r = await fetch("/api/auth/2fa/disable", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ password, code: currentCode }) });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error ?? t("auth.error"));
-      setEnabled(false); setSetupState({ phase: "idle" }); setPassword(""); setCurrentCode(""); router.refresh();
+      setEnabled(false); setSetupState({ phase: "idle" }); setPassword(""); setCurrentCode(""); setBackupCodes([]); router.refresh();
     } catch (e) { setError(e instanceof Error ? e.message : t("auth.error")); }
     finally { setBusy(false); }
   }
@@ -82,7 +92,7 @@ export function TwoFactorSection({ initiallyEnabled }: Props) {
           <div className="space-y-3">
             {enabled && <p className="flex items-center gap-2 text-sm font-medium text-green-700"><ShieldCheck className="w-4 h-4" />{t("tfa.enabled")}</p>}
             <Input label={t("account.currentPassword")} type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            {enabled && <Input label={t("tfa.activeCode")} value={currentCode} onChange={(e) => setCurrentCode(cleanCode(e.target.value))} placeholder="123456" inputMode="numeric" />}
+            {enabled && <Input label={t("tfa.activeCodeOrBackup")} value={currentCode} onChange={(e) => setCurrentCode(cleanSecretOrBackup(e.target.value))} placeholder="123456 / ABCDE-FGHIJ" />}
             <div className="flex flex-wrap gap-2">
               <Button onClick={startSetup} disabled={busy}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : enabled ? t("tfa.replace") : t("tfa.enable")}</Button>
               {enabled && <Button variant="danger" onClick={disable} disabled={busy}>{t("tfa.disable")}</Button>}
@@ -97,6 +107,16 @@ export function TwoFactorSection({ initiallyEnabled }: Props) {
             <p className="text-xs text-gray-600">{t("tfa.step2")}</p>
             <Input label={t("tfa.newCode")} value={newCode} onChange={(e) => setNewCode(cleanCode(e.target.value))} placeholder="123456" inputMode="numeric" />
             <div className="flex gap-2"><Button onClick={verify} disabled={busy}>{busy ? <Loader2 className="w-4 h-4 animate-spin" /> : t("tfa.verifyEnable")}</Button><Button variant="ghost" onClick={() => { setSetupState({ phase: "idle" }); setNewCode(""); }}>{t("action.cancel")}</Button></div>
+          </div>
+        )}
+        {backupCodes.length > 0 && (
+          <div className="border border-amber-300 bg-amber-50 rounded-lg p-4 space-y-2" role="status">
+            <p className="text-sm font-semibold text-amber-900">{t("tfa.backupCodesTitle")}</p>
+            <p className="text-xs text-amber-800">{t("tfa.backupCodesHint")}</p>
+            <ul className="grid grid-cols-2 gap-1 font-mono text-sm" data-testid="backup-codes">
+              {backupCodes.map((code) => <li key={code} className="select-all">{code}</li>)}
+            </ul>
+            <Button variant="ghost" onClick={() => setBackupCodes([])}>{t("tfa.backupCodesDone")}</Button>
           </div>
         )}
         {error && <p role="alert" className="text-sm text-red-600">{error}</p>}

@@ -8,8 +8,10 @@ import { cookies } from "next/headers";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { DISPLAY_CURRENCIES } from "@/lib/i18n";
 import { isUiLocale } from "@/lib/ui-strings";
+import { isValidTimezone } from "@/lib/timezone";
 import { apiError } from "@/lib/api-error";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
+import { anonymizeUserAccount, anonymizedEmailFor } from "@/lib/account-anonymization";
 
 // T-135 — langues de l'UI réellement traduites (fr/en). L'arabe n'a pas
 // de dictionnaire V1 : on le rejette ici plutôt que de stocker une
@@ -32,7 +34,13 @@ const schema = z.object({
     .toUpperCase()
     .refine((v) => DISPLAY_CURRENCIES.includes(v), "Devise non supportée")
     .optional(),
-  timezone: z.string().max(50).optional(),
+  // T-227 (A7) : un fuseau inventé était accepté puis stocké sans effet. On
+  // n'accepte plus que la base IANA reconnue par le runtime.
+  timezone: z
+    .string()
+    .max(50)
+    .refine((v) => isValidTimezone(v), "Fuseau horaire inconnu")
+    .optional(),
   avatarUrl: z.string().url().max(500).optional().nullable(),
   // T-030 : préférence user
   priceAlertEnabled: z.boolean().optional(),
@@ -156,29 +164,17 @@ export async function DELETE() {
     // mais on hash l'email et on efface firstName/lastName/phone.
     // Format hashé : "deleted-<sha256(email)[:16]>@anonymized.local"
     // → adresse non déchiffrable mais unique et déterministe.
-    const { createHash } = await import("node:crypto");
-    const emailHash = createHash("sha256")
-      .update(user.email)
-      .digest("hex")
-      .slice(0, 16);
-    const anonymizedEmail = `deleted-${emailHash}@anonymized.local`;
+    //
+    // T-242 (audit n°4) : l'effacement couvre désormais **toutes** les copies
+    // de l'identité (réservations, historique d'e-mails, journal d'audit) et
+    // non plus la seule table `users` — sans toucher aux agrégats comptables.
+    const anonymizedEmail = anonymizedEmailFor(user.email);
     await db.transaction(async (tx) => {
-      await tx
-        .update(users)
-        .set({
-          deletedAt: new Date(),
-          updatedAt: new Date(),
-          email: anonymizedEmail,
-          firstName: "Supprimé",
-          lastName: "Compte",
-          phone: null,
-          avatarUrl: null,
-          twoFactorSecret: null,
-          twoFactorPendingSecret: null,
-          twoFactorEnabled: false,
-        })
-        .where(eq(users.id, user.id));
-      await tx.delete(sessions).where(eq(sessions.userId, user.id));
+      await anonymizeUserAccount(tx, {
+        userId: user.id,
+        originalEmail: user.email,
+        anonymizedEmail,
+      });
     });
     const jar = await cookies();
     jar.delete("session");

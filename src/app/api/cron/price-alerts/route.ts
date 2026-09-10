@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { bookings, priceAlerts, promotions, properties, uploadObjects, users } from "@/db/schema";
-import { and, eq, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
+import { bookings, emailOutbox, priceAlerts, promotions, properties, uploadObjects, users } from "@/db/schema";
+import { and, eq, gte, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { deliverPendingEmails, enqueueEmail } from "@/lib/email-outbox";
 import { shouldNotifyPriceAlert, isStayExpired } from "@/lib/price-alert-rules";
 import { appBaseUrl } from "@/lib/app-url";
 import { quotePriceAlert } from "@/lib/price-alert-quote";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { getSetting } from "@/lib/settings";
+import { purgeTechnicalData } from "@/lib/technical-retention";
 import { calculateReferralReward } from "@/lib/referral";
 import { getUploader } from "@/lib/storage";
 import { getPaymentProvider } from "@/lib/payment";
@@ -34,7 +35,15 @@ function authorized(request: NextRequest): boolean {
  */
 async function completeEligibleBookings(today: string): Promise<number> {
   const candidates = await db
-    .select({ id: bookings.id })
+    .select({
+      id: bookings.id,
+      bookingReference: bookings.bookingReference,
+      guestEmail: bookings.guestEmail,
+      guestFirstName: bookings.guestFirstName,
+      checkIn: bookings.checkIn,
+      checkOut: bookings.checkOut,
+      propertyId: bookings.propertyId,
+    })
     .from(bookings)
     .where(and(
       eq(bookings.status, "confirmed"),
@@ -144,6 +153,140 @@ async function expirePendingBookings(): Promise<number> {
 }
 
 /**
+ * T-221 (audit n°2) — notification d'une demande expirée.
+ *
+ * Deux destinataires, deux `eventKey` déterministes : le cron peut être
+ * relancé sans doubler les envois. Respecte l'interrupteur admin
+ * `notifications.bookingRequestExpired` (défaut actif).
+ */
+async function notifyExpiredRequest(candidate: {
+  id: string;
+  bookingReference: string;
+  guestEmail: string;
+  guestFirstName: string;
+  checkIn: string | Date;
+  checkOut: string | Date;
+  propertyId: string;
+}): Promise<void> {
+  const notifications = await getSetting("notifications");
+  if (!notifications.bookingRequestExpired) return;
+  const [row] = await db
+    .select({
+      propertyName: properties.name,
+      propertyCity: properties.city,
+      hostEmail: users.email,
+      hostFirstName: users.firstName,
+      hostLanguage: users.language,
+    })
+    .from(properties)
+    .innerJoin(users, eq(properties.hostId, users.id))
+    .where(eq(properties.id, candidate.propertyId))
+    .limit(1);
+  if (!row) return;
+  const checkIn = String(candidate.checkIn).slice(0, 10);
+  const checkOut = String(candidate.checkOut).slice(0, 10);
+  const [guest] = await db
+    .select({ language: users.language })
+    .from(users)
+    .where(eq(users.email, candidate.guestEmail))
+    .limit(1);
+  const travelerMail = await templates.bookingRequestExpired({
+    firstName: candidate.guestFirstName,
+    bookingReference: candidate.bookingReference,
+    propertyName: row.propertyName,
+    city: row.propertyCity,
+    checkIn,
+    checkOut,
+    language: guest?.language ?? null,
+  });
+  await enqueueEmail({
+    eventKey: `booking-request-expired:${candidate.id}`,
+    to: candidate.guestEmail,
+    ...travelerMail,
+  });
+  const hostMail = await templates.bookingRequestExpiredHost({
+    hostFirstName: row.hostFirstName,
+    bookingReference: candidate.bookingReference,
+    propertyName: row.propertyName,
+    guestName: candidate.guestFirstName,
+    checkIn,
+    checkOut,
+    language: row.hostLanguage ?? null,
+  });
+  await enqueueEmail({
+    eventKey: `booking-request-expired-host:${candidate.id}`,
+    to: row.hostEmail,
+    ...hostMail,
+  });
+}
+
+/**
+ * T-222 (audit n°2) — relance des séjours terminés dont le règlement n'a pas
+ * été constaté. Un e-mail par séjour (idempotent), à l'hôte propriétaire.
+ *
+ * Sans cette relance, ni la clôture, ni les points de fidélité, ni
+ * l'invitation d'avis, ni la facture ne peuvent aboutir : le séjour reste
+ * `confirmed` indéfiniment et les indicateurs de revenu l'ignorent.
+ * Fenêtre bornée (30 jours) pour ne pas re-notifier un historique ancien.
+ */
+export async function sendPaymentReminders(now = new Date()): Promise<number> {
+  const notifications = await getSetting("notifications");
+  if (!notifications.bookingPaymentReminder) return 0;
+  const todayIso = now.toISOString().slice(0, 10);
+  const windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const rows = await db
+    .select({
+      id: bookings.id,
+      bookingReference: bookings.bookingReference,
+      guestFirstName: bookings.guestFirstName,
+      guestLastName: bookings.guestLastName,
+      checkOut: bookings.checkOut,
+      total: bookings.total,
+      currency: bookings.currency,
+      propertyName: properties.name,
+      hostEmail: users.email,
+      hostFirstName: users.firstName,
+      hostLanguage: users.language,
+    })
+    .from(bookings)
+    .innerJoin(properties, eq(bookings.propertyId, properties.id))
+    .innerJoin(users, eq(properties.hostId, users.id))
+    .where(and(
+      eq(bookings.status, "confirmed"),
+      lte(bookings.checkOut, todayIso),
+      gte(bookings.checkOut, windowStart),
+      isNull(bookings.paymentMethodOffline),
+      sql`${bookings.paymentStatus} IS DISTINCT FROM 'paid'`,
+      sql`NOT EXISTS (
+        SELECT 1 FROM ${emailOutbox} o
+        WHERE o.event_key = 'booking-payment-reminder:' || ${bookings.id}::text
+      )`,
+    ))
+    .limit(50);
+
+  let sent = 0;
+  for (const row of rows) {
+    const mail = await templates.bookingPaymentReminder({
+      hostFirstName: row.hostFirstName,
+      bookingReference: row.bookingReference,
+      propertyName: row.propertyName,
+      guestName: `${row.guestFirstName} ${row.guestLastName}`.trim(),
+      checkOut: String(row.checkOut).slice(0, 10),
+      total: String(row.total ?? "0"),
+      currency: row.currency ?? "EUR",
+      language: row.hostLanguage ?? null,
+    });
+    await enqueueEmail({
+      eventKey: `booking-payment-reminder:${row.id}`,
+      to: row.hostEmail,
+      ...mail,
+    });
+    sent += 1;
+  }
+  return sent;
+}
+
+/**
  * T-209/F1 — expire les demandes manuelles restées `pending` au-delà de leur
  * TTL métier. Conservateur contre le surbooking : les demandes bloquent bien le
  * stock pendant le délai, puis le cron les annule pour libérer la chambre.
@@ -152,7 +295,15 @@ async function expirePendingBookings(): Promise<number> {
  */
 export async function expireManualBookingRequests(now = new Date()): Promise<number> {
   const candidates = await db
-    .select({ id: bookings.id })
+    .select({
+      id: bookings.id,
+      bookingReference: bookings.bookingReference,
+      guestEmail: bookings.guestEmail,
+      guestFirstName: bookings.guestFirstName,
+      checkIn: bookings.checkIn,
+      checkOut: bookings.checkOut,
+      propertyId: bookings.propertyId,
+    })
     .from(bookings)
     .where(and(
       eq(bookings.status, "pending"),
@@ -216,7 +367,17 @@ export async function expireManualBookingRequests(now = new Date()): Promise<num
         .where(eq(bookings.id, booking.id));
       return true;
     });
-    if (changed) expired += 1;
+    if (changed) {
+      expired += 1;
+      // T-221 : informer le voyageur (et l'hôte) — l'annulation automatique
+      // ne doit jamais être silencieuse. Best-effort : un échec d'e-mail ne
+      // remet pas en cause l'expiration déjà committée.
+      try {
+        await notifyExpiredRequest(candidate);
+      } catch (mailErr) {
+        console.error("[cron] notification d'expiration impossible:", mailErr);
+      }
+    }
   }
   return expired;
 }
@@ -265,17 +426,28 @@ export async function GET(request: NextRequest) {
     const paymentIntentRecovery = await recoverPendingPaymentIntents();
     const expiredPendingBookings = await expirePendingBookings();
     const expiredManualBookingRequests = await expireManualBookingRequests();
+    const paymentRemindersSent = await sendPaymentReminders();
     const processedPaymentEvents = await processPendingPaymentEvents();
     const latePaymentRefunds = await reconcileLateCapturedPaymentRefunds();
     const orphanUploadsRemoved = await cleanupOrphanUploads();
+    // T-243 (audit n°4) : rétention des données techniques (sessions expirées,
+    // e-mails terminaux) — aucune donnée métier touchée.
+    const technicalPurge = await purgeTechnicalData();
     // T-161 : avant de quoter, on retire du périmètre les alertes expirées.
     const pastAlertsExpired = await expirePastStayAlerts(today);
-    const alerts = await db
-      .select({ alert: priceAlerts, user: users, property: properties })
-      .from(priceAlerts)
-      .leftJoin(users, eq(priceAlerts.userId, users.id))
-      .leftJoin(properties, eq(priceAlerts.propertyId, properties.id))
-      .where(and(eq(priceAlerts.active, true), eq(users.priceAlertEnabled, true)));
+    // T-223 (A3) : l'interrupteur global `notifications.priceAlerts` était
+    // stocké mais jamais appliqué (seuls les opt-in individuels `active` /
+    // `priceAlertEnabled` l'étaient). Défaut `true` : comportement inchangé
+    // tant qu'un admin ne coupe pas explicitement la fonctionnalité.
+    const notifications = await getSetting("notifications");
+    const alerts = notifications.priceAlerts
+      ? await db
+          .select({ alert: priceAlerts, user: users, property: properties })
+          .from(priceAlerts)
+          .leftJoin(users, eq(priceAlerts.userId, users.id))
+          .leftJoin(properties, eq(priceAlerts.propertyId, properties.id))
+          .where(and(eq(priceAlerts.active, true), eq(users.priceAlertEnabled, true)))
+      : [];
 
     let notified = 0;
     for (const entry of alerts) {
@@ -326,7 +498,7 @@ export async function GET(request: NextRequest) {
     }
 
     const alertEmailDelivery = await deliverPendingEmails();
-    return NextResponse.json({ ok: true, scanned: alerts.length, notified, pastAlertsExpired, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, expiredManualBookingRequests, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
+    return NextResponse.json({ ok: true, priceAlertsEnabled: notifications.priceAlerts, scanned: alerts.length, notified, pastAlertsExpired, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, expiredManualBookingRequests, paymentRemindersSent, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved, technicalPurge });
   } catch (error) {
     console.error("[cron price-alerts]", error);
     return NextResponse.json({ error: await apiError("Échec du traitement des alertes prix") }, { status: 500 });

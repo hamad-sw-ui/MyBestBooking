@@ -6,6 +6,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { isUuid, frenchZodMessage } from "@/lib/http";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
+import { loadBookedCounts } from "@/lib/room-stock";
 
 /**
  * GET /api/rooms/[id]/availability?from=&to=
@@ -92,6 +93,12 @@ export async function GET(
       ),
     );
 
+  // T-244 (audit n°4) : le calendrier affichait le stock DÉCLARÉ sans retirer
+  // les séjours en cours, alors que le tunnel de réservation applique les deux.
+  // `bookedCounts` est **additif** : `days` (stock saisi) reste inchangé, le
+  // client en dérive le reste vendable (cf. `remainingStock`).
+  const bookedCounts = await loadBookedCounts(id, from, to);
+
   return NextResponse.json({
     roomId: id,
     from,
@@ -99,6 +106,7 @@ export async function GET(
     quantity: row.room.quantity ?? 1,
     basePrice: row.room.basePrice,
     days: list,
+    bookedCounts,
   });
 }
 

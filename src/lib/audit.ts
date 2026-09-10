@@ -47,6 +47,9 @@ export const AUDIT_ACTIONS = {
   reviewModerate: "review.moderate",
   userSuspend: "user.suspend",
   userReactivate: "user.reactivate",
+  // T-231 (A11) : reset support de la 2FA (utilisateur ayant perdu son
+  // téléphone ET ses codes de secours).
+  user2faReset: "user.2fa.reset",
   propertyValidate: "property.validate",
   propertyReject: "property.reject",
   propertySuspend: "property.suspend",

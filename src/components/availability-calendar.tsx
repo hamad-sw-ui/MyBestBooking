@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
+// Règle pure (aucun accès base) : ce composant est rendu dans le navigateur.
+import { remainingStock } from "@/lib/room-stock-rules";
 
 interface Day {
   date: string;
@@ -24,6 +26,12 @@ interface Props {
   initialFrom: string;
   initialTo: string;
   initialDays: Day[];
+  /**
+   * T-244 (audit n°4) : séjours en cours par jour (`YYYY-MM-DD` → nombre de
+   * réservations actives couvrant la nuit). Optionnel : un appelant qui ne le
+   * fournit pas conserve l'affichage d'origine.
+   */
+  initialBookedCounts?: Record<string, number>;
 }
 
 /**
@@ -37,6 +45,7 @@ export function AvailabilityCalendar({
   initialFrom,
   initialTo,
   initialDays,
+  initialBookedCounts,
 }: Props) {
   const t = useT();
   const locale = useUiLocale();
@@ -48,6 +57,8 @@ export function AvailabilityCalendar({
     for (const d of initialDays) m[d.date] = d;
     return m;
   });
+  // T-244 : séjours en cours, rechargés avec le calendrier.
+  const [bookedCounts, setBookedCounts] = useState<Record<string, number>>(initialBookedCounts ?? {});
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -111,6 +122,7 @@ export function AvailabilityCalendar({
       const m: Record<string, Day> = {};
       for (const d of data.days ?? []) m[d.date] = d;
       setDays(m);
+      setBookedCounts(data.bookedCounts ?? {});
       setVisiblePage(0);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : t("cal.reloadError"));
@@ -263,6 +275,9 @@ export function AvailabilityCalendar({
             <tr>
               <th className="text-left px-3 py-2">{t("cal.date")}</th>
               <th className="text-left px-3 py-2">{t("cal.stockMax").replace("{n}", String(quantity))}</th>
+              {/* T-244 : le stock saisi est une limite déclarée par l'hôte ; le
+                  reste vendable en est déduit (séjours en cours). */}
+              <th className="text-left px-3 py-2">{t("cal.remaining")}</th>
               <th className="text-left px-3 py-2">{t("cal.priceOverride").replace("{price}", basePrice)}</th>
               <th className="text-left px-3 py-2">{t("cal.minStay")}</th>
               <th className="text-left px-3 py-2">{t("cal.stopSell")}</th>
@@ -286,6 +301,23 @@ export function AvailabilityCalendar({
                       className="w-16 px-2 py-1 border border-gray-200 rounded"
                       aria-label={t("cal.stockAria").replace("{date}", date)}
                     />
+                  </td>
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    {(() => {
+                      const booked = bookedCounts[date] ?? 0;
+                      const left = remainingStock(d.availableCount, quantity, booked);
+                      if (booked === 0 && left === Math.min(d.availableCount, quantity)) {
+                        return <span className="text-xs text-gray-400">—</span>;
+                      }
+                      return (
+                        <span
+                          className={`text-xs font-medium ${left === 0 ? "text-red-600" : "text-amber-700"}`}
+                          data-testid={`remaining-${date}`}
+                        >
+                          {t("cal.remainingValue").replace("{n}", String(left)).replace("{booked}", String(booked))}
+                        </span>
+                      );
+                    })()}
                   </td>
                   <td className="px-3 py-2">
                     <input

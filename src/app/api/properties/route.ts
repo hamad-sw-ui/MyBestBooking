@@ -9,6 +9,7 @@ import { eq, and, ilike, or, desc, asc, sql, min, count, gte, lte, lt, gt, ne, i
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
 import { PROPERTY_TYPE_VALUES } from "@/lib/property-types";
+import { isValidTimezone } from "@/lib/timezone";
 import { hasInvalidRequestedStay, parseFutureStay } from "@/lib/future-stay";
 import { priceBoundToStorage } from "@/lib/i18n";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
@@ -31,6 +32,22 @@ const propertySchema = z.object({
   amenities: z.array(z.string()).optional(),
   images: z.array(z.string()).optional(),
   mainImage: z.string().optional(),
+  // T-227 (A7) : horaires et fuseau étaient affichés sur la fiche (repli
+  // 14:00 / 23:00 / 11:00) mais absents des API et des formulaires.
+  checkInFrom: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure d'arrivée (début) invalide (HH:MM)").optional(),
+  checkInUntil: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure d'arrivée (fin) invalide (HH:MM)").optional(),
+  checkOutUntil: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Heure de départ invalide (HH:MM)").optional(),
+  timezone: z
+    .string()
+    .max(50)
+    .refine((value) => isValidTimezone(value), "Fuseau horaire inconnu")
+    .optional(),
+  // T-228 (A8) : labels/badges = décision éditoriale — un hôte ne peut pas se
+  // les attribuer (même frontière que le PUT). Refus explicite plutôt
+  // qu'ignorance silencieuse : l'hôte doit savoir que son envoi n'a pas été pris.
+  isEcoCertified: z.boolean().optional(),
+  isBestrewards: z.boolean().optional(),
+  isPreferred: z.boolean().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -373,6 +390,23 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const data = propertySchema.parse(body);
+
+    // T-227 (A7) : fenêtre d'arrivée non vide (début ≠ fin).
+    if (data.checkInFrom && data.checkInUntil && data.checkInFrom === data.checkInUntil) {
+      return NextResponse.json(
+        { error: await apiError("La fenêtre d'arrivée est vide : le début et la fin doivent différer") },
+        { status: 400 },
+      );
+    }
+
+    // T-228 (A8) : les labels sont une décision éditoriale de la plateforme.
+    const LABEL_FIELDS = ["isEcoCertified", "isBestrewards", "isPreferred"] as const;
+    if (user.role !== "admin" && LABEL_FIELDS.some((field) => data[field] !== undefined)) {
+      return NextResponse.json(
+        { error: await apiError("Modification des labels réservée à l'administration") },
+        { status: 403 },
+      );
+    }
 
     // Generate unique slug
     let slug = generateSlug(data.name);

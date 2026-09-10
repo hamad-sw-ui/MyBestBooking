@@ -488,4 +488,218 @@ export const templates = {
     `, loc);
     return { subject, html, text: stripHtml(html) };
   },
+  /**
+   * T-221 (audit n°2) — demande de réservation expirée faute de réponse de
+   * l'hôte. Gabarit entièrement géré par la plateforme (aucun bloc admin) :
+   * le cron d'expiration l'envoie au voyageur avec une issue de secours
+   * (relancer une recherche), jamais un simple constat d'échec.
+   */
+  bookingRequestExpired({
+    firstName, bookingReference, propertyName, city, checkIn, checkOut, language,
+  }: {
+    firstName: string; bookingReference: string; propertyName: string; city: string;
+    checkIn: string; checkOut: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(firstName)},` : `Bonjour ${escapeHtml(firstName)},`;
+    const subject = loc === "en"
+      ? `Booking request expired ${bookingReference}`
+      : `Demande de réservation expirée ${bookingReference}`;
+    const intro = loc === "en"
+      ? `Your request for <strong>${escapeHtml(propertyName)}</strong> (${escapeHtml(city)}) has expired: the host did not confirm it in time. No payment was requested and nothing is owed.`
+      : `Votre demande pour <strong>${escapeHtml(propertyName)}</strong> (${escapeHtml(city)}) a expiré : l'hôte ne l'a pas confirmée dans le délai. Aucun paiement n'a été demandé et rien ne vous est dû.`;
+    const next = loc === "en"
+      ? "The dates are available again — you can send a new request or explore similar properties."
+      : "Les dates sont de nouveau disponibles : vous pouvez envoyer une nouvelle demande ou explorer des hébergements similaires.";
+    const cta = loc === "en" ? "Search again" : "Relancer une recherche";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <p>${next}</p>
+      <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}, ${escapeHtml(city)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+      </table>
+      <p style="margin:24px 0;">${button(`${appBaseUrl()}/recherche`, cta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
+   * T-221 (audit n°2) — copie hôte : une demande a expiré et le stock est
+   * libéré. Informatif, aucun engagement : l'hôte sait ce qu'il a manqué.
+   */
+  bookingRequestExpiredHost({
+    hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut, language,
+  }: {
+    hostFirstName: string; bookingReference: string; propertyName: string;
+    guestName: string; checkIn: string; checkOut: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(hostFirstName)},` : `Bonjour ${escapeHtml(hostFirstName)},`;
+    const subject = loc === "en"
+      ? `Booking request expired ${bookingReference}`
+      : `Demande de réservation expirée ${bookingReference}`;
+    const intro = loc === "en"
+      ? `The request from <strong>${escapeHtml(guestName)}</strong> for <strong>${escapeHtml(propertyName)}</strong> expired before confirmation. The dates are available again; the traveller was informed.`
+      : `La demande de <strong>${escapeHtml(guestName)}</strong> pour <strong>${escapeHtml(propertyName)}</strong> a expiré avant confirmation. Les dates sont de nouveau disponibles et le voyageur a été informé.`;
+    const hint = loc === "en"
+      ? "Tip: requests expire automatically. You can confirm or decline them from your dashboard."
+      : "Astuce : les demandes expirent automatiquement. Vous pouvez les confirmer ou les refuser depuis votre tableau de bord.";
+    const cta = loc === "en" ? "Open bookings" : "Ouvrir les réservations";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblGuest}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+      </table>
+      <p>${hint}</p>
+      <p style="margin:24px 0;">${button(`${appBaseUrl()}/dashboard/bookings?status=pending`, cta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
+   * T-222 (audit n°2) — relance « séjour terminé, règlement non constaté ».
+   * Un e-mail par séjour (idempotence par `eventKey`), envoyé à l'hôte
+   * propriétaire : sans constatation, la clôture, la fidélité, l'invitation
+   * d'avis et la facture restent bloquées.
+   */
+  bookingPaymentReminder({
+    hostFirstName, bookingReference, propertyName, guestName, checkOut, total, currency, language,
+  }: {
+    hostFirstName: string; bookingReference: string; propertyName: string; guestName: string;
+    checkOut: string; total: string; currency: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(hostFirstName)},` : `Bonjour ${escapeHtml(hostFirstName)},`;
+    const subject = loc === "en"
+      ? `Settlement to confirm — ${bookingReference}`
+      : `Règlement à constater — ${bookingReference}`;
+    const intro = loc === "en"
+      ? `The stay booked by <strong>${escapeHtml(guestName)}</strong> at <strong>${escapeHtml(propertyName)}</strong> ended on ${escapeHtml(checkOut)} and the settlement is still marked as pending.`
+      : `Le séjour réservé par <strong>${escapeHtml(guestName)}</strong> à <strong>${escapeHtml(propertyName)}</strong> s'est terminé le ${escapeHtml(checkOut)} et le règlement est toujours en attente.`;
+    const why = loc === "en"
+      ? "Confirming it unlocks the stay closure, the traveller's loyalty credit, the review invitation and the invoice."
+      : "Le constater débloque la clôture du séjour, les points de fidélité du voyageur, l'invitation à laisser un avis et la facture.";
+    const cta = loc === "en" ? "Mark as settled" : "Constater le règlement";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblGuest}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblTotal}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(total)} ${escapeHtml(currency)}</td></tr>
+      </table>
+      <p>${why}</p>
+      <p style="margin:24px 0;">${button(`${appBaseUrl()}/dashboard/bookings?payment=due`, cta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
+   * T-225 (audit n°2) — nouvel avis publié : l'hôte en est informé (il peut
+   * répondre depuis son back-office). Gabarit plateforme localisé.
+   */
+  reviewPublished({
+    hostFirstName, propertyName, rating, comment, language,
+  }: {
+    hostFirstName: string; propertyName: string; rating: number;
+    comment?: string | null; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(hostFirstName)},` : `Bonjour ${escapeHtml(hostFirstName)},`;
+    const subject = loc === "en"
+      ? `New review for ${propertyName}`
+      : `Nouvel avis sur ${propertyName}`;
+    const intro = loc === "en"
+      ? `A verified traveller published a review for <strong>${escapeHtml(propertyName)}</strong>.`
+      : `Un voyageur vérifié a publié un avis sur <strong>${escapeHtml(propertyName)}</strong>.`;
+    const excerpt = comment
+      ? `<p style="border-left:3px solid #1B3A6B;padding-left:12px;color:#444;">${escapeHtml(comment.slice(0, 400))}</p>`
+      : "";
+    const cta = loc === "en" ? "View and reply" : "Voir et répondre";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <p style="font-size:20px;font-weight:700;margin:12px 0;">${escapeHtml(String(rating))}/10</p>
+      ${excerpt}
+      <p style="margin:24px 0;">${button(`${appBaseUrl()}/dashboard/reviews`, cta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
+   * T-225 (audit n°2) — issue de la modération communiquée à l'auteur de
+   * l'avis : sans ce message, un avis refusé disparaît silencieusement.
+   */
+  reviewModerated({
+    firstName, propertyName, bookingReference, approved, language,
+  }: {
+    firstName: string; propertyName: string; bookingReference: string;
+    approved: boolean; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(firstName)},` : `Bonjour ${escapeHtml(firstName)},`;
+    const subject = approved
+      ? (loc === "en" ? `Your review is published — ${propertyName}` : `Votre avis est publié — ${propertyName}`)
+      : (loc === "en" ? `Your review was not published — ${propertyName}` : `Votre avis n'a pas été publié — ${propertyName}`);
+    const intro = approved
+      ? (loc === "en"
+        ? `Your review for <strong>${escapeHtml(propertyName)}</strong> has been approved and is now visible on the property page. Thank you!`
+        : `Votre avis sur <strong>${escapeHtml(propertyName)}</strong> a été validé et est désormais visible sur la fiche de l'hébergement. Merci !`)
+      : (loc === "en"
+        ? `Your review for <strong>${escapeHtml(propertyName)}</strong> could not be published after moderation. Booking ${escapeHtml(bookingReference)} stays in your history.`
+        : `Votre avis sur <strong>${escapeHtml(propertyName)}</strong> n'a pas pu être publié après modération. La réservation ${escapeHtml(bookingReference)} reste dans votre historique.`);
+    const hint = loc === "en"
+      ? "If you think this is a mistake, contact support with your booking reference."
+      : "Si vous pensez qu'il s'agit d'une erreur, contactez le support en indiquant votre référence de réservation.";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <p style="font-size:13px;color:#666;">${hint}</p>
+      <p style="margin:24px 0;">${button(`${appBaseUrl()}/mes-reservations`, loc === "en" ? "My bookings" : "Mes réservations")}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
+   * T-231 (audit n°2, A11) — le support a réinitialisé la 2FA du compte.
+   * L'utilisateur doit le savoir immédiatement (facteur retiré + sessions
+   * coupées) et pouvoir réactiver la double authentification lui-même.
+   */
+  twoFactorReset({
+    firstName, url, language,
+  }: { firstName: string; url: string; language?: string | null }) {
+    const loc = toMailLocale(language);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(firstName)},` : `Bonjour ${escapeHtml(firstName)},`;
+    const subject = loc === "en"
+      ? "Two-factor authentication was reset"
+      : "Double authentification réinitialisée";
+    const intro = loc === "en"
+      ? "Our support team has reset the two-factor authentication on your account. Your active sessions have been signed out and your previous authenticator codes no longer work."
+      : "Notre support a réinitialisé la double authentification de votre compte. Vos sessions actives ont été déconnectées et vos anciens codes ne fonctionnent plus.";
+    const advice = loc === "en"
+      ? "If you did not request this, change your password immediately and contact support."
+      : "Si vous n'êtes pas à l'origine de cette demande, changez votre mot de passe immédiatement et contactez le support.";
+    const cta = loc === "en" ? "Sign in" : "Se connecter";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <p style="color:#B42318;">${advice}</p>
+      <p style="margin:24px 0;">${button(url, cta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
 };

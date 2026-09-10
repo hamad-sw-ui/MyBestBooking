@@ -71,6 +71,9 @@ export default async function MyBookingsPage() {
 
   const myBookings = await getMyBookings(user.id);
 
+  // T-221 : horloge lue une seule fois par rendu serveur (règle react-hooks/purity).
+  const nowMs = new Date().getTime();
+
   const statusLabels: Record<string, string> = {
     pending: t("status.pending"),
     confirmed: t("status.confirmed"),
@@ -173,6 +176,26 @@ export default async function MyBookingsPage() {
                               <p className="font-bold text-[#1B3A6B]">{formatPrice(booking.total, booking.currency, locale)}</p>
                             </div>
                           </div>
+
+                          {/* T-221 (audit n°2) : l'échéance d'une demande était
+                              invisible — le voyageur ne savait pas qu'elle pouvait
+                              expirer sans réponse, ni qu'il pouvait l'annuler. */}
+                          {booking.status === "pending" && booking.requestExpiresAt && (
+                            <p
+                              className={
+                                booking.requestExpiresAt.getTime() < nowMs
+                                  ? "text-sm text-amber-700 mt-4"
+                                  : "text-sm text-blue-700 mt-4"
+                              }
+                            >
+                              {booking.requestExpiresAt.getTime() < nowMs
+                                ? t("bookings.requestExpiredNote")
+                                : t("bookings.requestDeadlineHint").replace(
+                                    "{date}",
+                                    formatDate(booking.requestExpiresAt, { dateStyle: "medium", timeStyle: "short" }, locale),
+                                  )}
+                            </p>
+                          )}
 
                           <div className="flex items-center gap-3 mt-4">
                             <Link href={`/hebergement/${property?.slug}`}>

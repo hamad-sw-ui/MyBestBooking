@@ -66,6 +66,16 @@ export default async function EditPropertyPage({
         cancellationPolicy: row.cancellationPolicy,
         petsAllowed: row.petsAllowed,
         smokingAllowed: row.smokingAllowed,
+        // T-227 (A7) : horaires + fuseau de l'hébergement (jusqu'ici affichés
+        // sur la fiche publique avec des replis codés en dur, non éditables).
+        checkInFrom: row.checkInFrom,
+        checkInUntil: row.checkInUntil,
+        checkOutUntil: row.checkOutUntil,
+        timezone: row.timezone,
+        // T-228 (A8) : labels/badges (admin uniquement côté API).
+        isEcoCertified: row.isEcoCertified,
+        isBestrewards: row.isBestrewards,
+        isPreferred: row.isPreferred,
         amenities: Array.isArray(row.amenities) ? (row.amenities as string[]) : [],
         mainImage: row.mainImage,
         images: Array.isArray(row.images) ? (row.images as string[]) : [],

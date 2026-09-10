@@ -9,6 +9,7 @@ import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { frenchZodMessage } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 import { isDemoAccountEmail, serverDemoLoginEnabled } from "@/lib/demo-flags";
+import { consumeBackupCode, type StoredBackupCode } from "@/lib/backup-codes";
 
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -16,7 +17,10 @@ const loginSchema = z.object({
   rememberMe: z.boolean().optional(),
   // BUG-019 (Session 11 xtreme) : totpCode requis si user.twoFactorEnabled=true.
   // Si absent, la réponse renvoie 401 { twoFactorRequired: true }.
-  totpCode: z.string().regex(/^\d{6}$/).optional(),
+  //
+  // T-231 (A11) : le champ accepte aussi un **code de secours** (`XXXXX-XXXXX`)
+  // pour les utilisateurs ayant perdu leur application d'authentification.
+  totpCode: z.string().min(6).max(32).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -82,12 +86,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // T-120 (E2) : `deletedAt` est le soft-delete utilisé par la suspension
-    // admin **réversible**. Dire « supprimé » induisait l'utilisateur en
-    // erreur (il croyait son compte détruit). Message neutre et exact.
+    // T-230 (A10) : deux états distincts, deux messages distincts.
+    //   - `suspendedAt` : sanction réversible → message d'appel au support ;
+    //   - `deletedAt`   : compte supprimé et anonymisé → irréversible.
+    // Avant, la suspension écrivait `deletedAt` : impossible de dire à
+    // l'utilisateur lequel des deux s'appliquait, et le compte supprimé
+    // affichait « réactivable ».
+    if (user.suspendedAt) {
+      return NextResponse.json(
+        {
+          error: await apiError(
+            user.suspendedReason
+              ? `Ce compte est suspendu : ${user.suspendedReason}. Contactez le support.`
+              : "Ce compte est suspendu. Contactez le support pour le réactiver.",
+          ),
+        },
+        { status: 401 }
+      );
+    }
+
     if (user.deletedAt) {
       return NextResponse.json(
-        { error: await apiError("Ce compte est désactivé. Contactez le support pour le réactiver.") },
+        { error: await apiError("Ce compte a été supprimé. Il n'est pas réactivable.") },
         { status: 401 }
       );
     }
@@ -103,17 +123,37 @@ export async function POST(request: NextRequest) {
           { status: 401 }
         );
       }
-      const validTotp = speakeasy.totp.verify({
+      const isTotpShape = /^\d{6}$/.test(data.totpCode);
+      const validTotp = isTotpShape && speakeasy.totp.verify({
         secret: user.twoFactorSecret,
         encoding: "base32",
         token: data.totpCode,
         window: 1,
       });
+
       if (!validTotp) {
-        return NextResponse.json(
-          { error: await apiError("Code 2FA invalide"), twoFactorRequired: true },
-          { status: 401 }
+        // T-231 (A11) : un code de secours remplace le TOTP, une seule fois.
+        const { outcome, next } = await consumeBackupCode(
+          user.twoFactorBackupCodes as StoredBackupCode[] | null,
+          data.totpCode,
         );
+        if (outcome !== "consumed") {
+          return NextResponse.json(
+            {
+              error: await apiError(
+                outcome === "already_used"
+                  ? "Ce code de secours a déjà été utilisé"
+                  : "Code 2FA invalide",
+              ),
+              twoFactorRequired: true,
+            },
+            { status: 401 }
+          );
+        }
+        await db
+          .update(users)
+          .set({ twoFactorBackupCodes: next, updatedAt: new Date() })
+          .where(eq(users.id, user.id));
       }
     }
 

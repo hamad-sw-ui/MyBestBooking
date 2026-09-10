@@ -15,6 +15,7 @@ import { frenchZodMessage } from "@/lib/http";
 import { isReviewEligible, type BookingStatus } from "@/lib/booking-lifecycle";
 import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
 import { getSetting } from "@/lib/settings";
+import { notifyReviewPublished } from "@/lib/review-notifications";
 
 const reviewSchema = z.object({
   bookingId: z.string().uuid(),
@@ -148,6 +149,10 @@ export async function POST(request: NextRequest) {
       return review;
     });
     if (!created) return NextResponse.json({ error: await apiError("Vous avez déjà laissé un avis pour cette réservation") }, { status: 400 });
+    // T-225 (A5) : l'hôte est prévenu dès qu'un avis devient visible (jamais
+    // en attente de modération). Best-effort : un e-mail raté ne fait pas
+    // échouer la publication.
+    if (created.status === "approved") await notifyReviewPublished(created.id);
     return NextResponse.json({ review: created }, { status: 201 });
   } catch (error) {
     if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);

@@ -66,6 +66,7 @@ export function SettingsPanel({ initial, providers }: Props) {
       <BestrewardsSection initial={initial.bestrewards} />
       <CancellationSection initial={initial.cancellation} />
       <ReviewsSection initial={initial.reviews} />
+      <NotificationsSection initial={initial.notifications} />
       <EmailTemplatesSection initial={initial.emailTemplates} />
       <SecuritySection initial={initial.security} />
       <ProvidersSection providers={providers} />
@@ -360,6 +361,174 @@ function BestrewardsSection({ initial }: { initial: SettingValue<"bestrewards"> 
               }}
             />
           ))}
+        </div>
+        {/* T-224 (A4) : le programme de parrainage était affiché côté client
+            (`/mon-compte`, fiche BestRewards) sans aucun champ d'édition. */}
+        <div className="border-t pt-4 space-y-3">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-medium text-gray-900">{t("settings.referralEnabled")}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{t("settings.referralEnabledHint")}</p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                className="sr-only peer"
+                checked={v.referral.enabled}
+                onChange={(e) => setV({ ...v, referral: { ...v.referral, enabled: e.target.checked } })}
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]" />
+            </label>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Input
+              label={t("settings.referralReferrer")}
+              type="number"
+              min={0}
+              max={1000}
+              step={0.5}
+              value={v.referral.referrerAmount}
+              onChange={(e) => setV({
+                ...v,
+                referral: { ...v.referral, referrerAmount: parseFloat(e.target.value) || 0 },
+              })}
+            />
+            <Input
+              label={t("settings.referralReferee")}
+              type="number"
+              min={0}
+              max={1000}
+              step={0.5}
+              value={v.referral.refereeAmount}
+              onChange={(e) => setV({
+                ...v,
+                referral: { ...v.referral, refereeAmount: parseFloat(e.target.value) || 0 },
+              })}
+            />
+          </div>
+          <p className="text-xs text-gray-500">{t("settings.referralBody")}</p>
+        </div>
+      </CardContent>
+      <CardFooter className="flex items-center gap-3">
+        <Button onClick={save} disabled={isPending}>{t("action.save")}</Button>
+        <StatusPill status={status} error={error} />
+      </CardFooter>
+    </Card>
+  );
+}
+
+/* ─────────────────────────── NOTIFICATIONS (T-223) ─────────────────────────── */
+
+/**
+ * T-223 (audit n°2, A3) : `notificationsSchema` était lu par le serveur
+ * (confirmation, rappels, avis, flux demande → règlement) sans aucun moyen
+ * de le régler depuis le back-office. Cette section expose les interrupteurs
+ * réellement appliqués ; `newsletter` est affiché mais désactivé car aucun
+ * envoi n'est branché (choix explicite : transparence plutôt que réglage
+ * fantôme).
+ */
+const NOTIFICATION_SWITCHES = [
+  "welcomeEmail",
+  "bookingConfirmation",
+  "bookingReminderJ3",
+  "bookingReminderJ1",
+  "reviewRequest",
+  "priceAlerts",
+  "bookingRequestExpired",
+  "bookingPaymentReminder",
+  "reviewPublished",
+  "reviewModerated",
+] as const;
+
+function NotificationSwitch({
+  label,
+  hint,
+  checked,
+  disabled,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  checked: boolean;
+  disabled?: boolean;
+  onChange?: (next: boolean) => void;
+}) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b border-gray-100 pb-3 last:border-b-0 last:pb-0">
+      <div>
+        <p className="text-sm font-medium text-gray-900">{label}</p>
+        {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
+      </div>
+      <label className={`relative inline-flex items-center ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}>
+        <input
+          type="checkbox"
+          className="sr-only peer"
+          checked={checked}
+          disabled={disabled}
+          onChange={(e) => onChange?.(e.target.checked)}
+        />
+        <div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]" />
+      </label>
+    </div>
+  );
+}
+
+function NotificationsSection({ initial }: { initial: SettingValue<"notifications"> }) {
+  const t = useT();
+  const [v, setV] = useState(initial);
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const activeCount = NOTIFICATION_SWITCHES.filter((key) => v[key]).length;
+
+  function save() {
+    setError(null);
+    setStatus("saving");
+    startTransition(async () => {
+      try {
+        await saveSection("notifications", v, t("settings.saveError"));
+        setStatus("saved");
+      } catch (e) {
+        setStatus("error");
+        setError(e instanceof Error ? e.message : t("settings.error"));
+      }
+    });
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-3">
+          <Bell className="w-5 h-5 text-[#1B3A6B]" />
+          <CardTitle>{t("settings.notifications")}</CardTitle>
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-gray-600">{t("settings.notificationsBody")}</p>
+        <div className="space-y-3">
+          {NOTIFICATION_SWITCHES.map((key) => (
+            <NotificationSwitch
+              key={key}
+              label={t(`settings.notify.${key}` as UiStringKey)}
+              checked={v[key]}
+              onChange={(next) => setV({ ...v, [key]: next })}
+            />
+          ))}
+          <NotificationSwitch
+            label={t("settings.notify.newsletter")}
+            hint={t("settings.notify.newsletterHint")}
+            checked={v.newsletter}
+            disabled
+          />
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <Badge variant={activeCount === NOTIFICATION_SWITCHES.length ? "success" : "info"}>
+            {t("settings.notify.activeCount")
+              .replace("{on}", String(activeCount))
+              .replace("{total}", String(NOTIFICATION_SWITCHES.length))}
+          </Badge>
+          <Badge variant="default">{t("settings.notify.inactive")}</Badge>
         </div>
       </CardContent>
       <CardFooter className="flex items-center gap-3">

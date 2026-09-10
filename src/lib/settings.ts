@@ -132,6 +132,17 @@ export const notificationsSchema = z.object({
   bookingReminderJ1: z.boolean(),
   reviewRequest: z.boolean(),
   priceAlerts: z.boolean(),
+  // T-221/T-222 (audit n°2) : e-mails du flux « demande → règlement hors
+  // plateforme ». Ajoutés avec défaut `true` : les payloads stockés avant
+  // cette version restent valides (mergeDefaults complète les clés absentes)
+  // et le comportement observable ne change que par une décision d'admin.
+  bookingRequestExpired: z.boolean(),
+  bookingPaymentReminder: z.boolean(),
+  // T-225 (audit n°2) : notifications d'avis (hôte à la publication, auteur
+  // à l'issue de la modération).
+  reviewPublished: z.boolean(),
+  reviewModerated: z.boolean(),
+  /** T-223 : aucun envoi branché — exposé pour transparence, jamais lu ailleurs. */
   newsletter: z.boolean(),
 });
 
@@ -261,6 +272,12 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     bookingReminderJ1: true,
     reviewRequest: true,
     priceAlerts: true,
+    // T-221/T-222 : e-mails du flux manuel (expiration, relance) — actifs.
+    bookingRequestExpired: true,
+    bookingPaymentReminder: true,
+    // T-225 : nouvelles notifications d'avis — actives par défaut.
+    reviewPublished: true,
+    reviewModerated: true,
     newsletter: false,
   },
   // T-125 (P1) : par défaut, comportement historique (publication immédiate).

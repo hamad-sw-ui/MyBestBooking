@@ -7,9 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
 import { sumByCurrency, formatCurrencyConverted } from "@/lib/currency-summary";
 import { normalizeDisplayCurrency } from "@/lib/i18n";
-import { 
-  Building2, Calendar, Star, TrendingUp, 
-  ArrowUpRight, ArrowDownRight, Users, DollarSign 
+import {
+  Building2, Calendar, Star, TrendingUp,
+  ArrowUpRight, ArrowDownRight, Users, DollarSign, Clock, BadgeCheck
 } from "lucide-react";
 import Link from "next/link";
 import { getServerLocale } from "@/lib/server-locale";
@@ -18,6 +18,9 @@ import { makeT } from "@/lib/ui-strings";
 async function getDashboardStats(userId: string, isAdmin: boolean) {
   const thirtyDaysAgo = new Date();
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+  // T-222 : comparaison sur la date civile de départ (colonne `date`), au
+  // format ISO — même convention que les crons et la FSM.
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   // Get properties
   let propertiesQuery = db.select().from(properties);
@@ -30,15 +33,15 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
   const propertyIds = allProperties.map(p => p.id);
   let allBookings: typeof bookings.$inferSelect[] = [];
   let recentBookings: typeof bookings.$inferSelect[] = [];
-  
+
   if (propertyIds.length > 0 || isAdmin) {
-    const bookingsQuery = isAdmin 
+    const bookingsQuery = isAdmin
       ? db.select().from(bookings)
       : db.select().from(bookings).where(
           sql`${bookings.propertyId} IN ${propertyIds.length > 0 ? sql`(${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})` : sql`('')`}`
         );
     allBookings = await bookingsQuery;
-    
+
     const recentQuery = isAdmin
       ? db.select().from(bookings).where(gte(bookings.createdAt, thirtyDaysAgo))
       : db.select().from(bookings).where(
@@ -54,7 +57,7 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
   const totalRevenueByCurrency = sumByCurrency(allBookings
     .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
     .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })));
-  
+
   const recentRevenueByCurrency = sumByCurrency(recentBookings
     .filter(b => b.paymentStatus === "paid" && b.status !== "cancelled")
     .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })));
@@ -82,6 +85,21 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
       recent: recentBookings.length,
       confirmed: allBookings.filter(b => b.status === "confirmed").length,
       pending: allBookings.filter(b => b.status === "pending").length,
+      // T-221 (audit n°2) : demandes de réservation encore ouvertes, avec leur
+      // échéance — la carte « Demandes à traiter » les rend enfin visibles
+      // (le compteur `pending` existait mais n'était affiché nulle part).
+      pendingRequests: allBookings.filter(
+        (b) => b.status === "pending" && b.requestExpiresAt !== null,
+      ).length,
+      // T-222 (audit n°2) : séjours terminés dont le règlement n'est pas
+      // constaté → clôture, fidélité, invitation d'avis et facture bloquées.
+      settlementsDue: allBookings.filter(
+        (b) =>
+          b.status === "confirmed" &&
+          String(b.checkOut) <= todayIso &&
+          b.paymentStatus !== "paid" &&
+          b.paymentMethodOffline !== true,
+      ).length,
     },
     revenue: {
       totalByCurrency: totalRevenueByCurrency,
@@ -296,6 +314,61 @@ export default async function DashboardPage() {
       </Card>
 
       {/* Quick Actions */}
+      {/* T-221 : demandes de réservation à traiter (hôte/admin) — l'échéance
+          existait en base depuis T-209 mais aucune surface ne la montrait. */}
+      {stats.bookings.pendingRequests > 0 && (
+        <Card className="mt-6 border-blue-200 bg-blue-50">
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-blue-200 flex items-center justify-center">
+                <Clock className="w-5 h-5 text-blue-700" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-blue-800">
+                  {(stats.bookings.pendingRequests > 1
+                    ? t("dash.pendingRequestsMany")
+                    : t("dash.pendingRequestsOne")
+                  ).replace("{n}", String(stats.bookings.pendingRequests))}
+                </p>
+                <p className="text-sm text-blue-700">{t("dash.pendingRequestsSub")}</p>
+              </div>
+              <Link
+                href="/dashboard/bookings?status=pending"
+                className="px-4 py-2 bg-blue-200 text-blue-800 font-medium rounded-lg hover:bg-blue-300 transition-colors"
+              >
+                {t("dash.view")}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {/* T-222 : séjours échus dont le règlement n'est pas constaté. */}
+      {stats.bookings.settlementsDue > 0 && (
+        <Card className="mt-6 border-amber-200 bg-amber-50">
+          <CardContent>
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-full bg-amber-200 flex items-center justify-center">
+                <BadgeCheck className="w-5 h-5 text-amber-700" />
+              </div>
+              <div className="flex-1">
+                <p className="font-medium text-amber-800">
+                  {(stats.bookings.settlementsDue > 1
+                    ? t("dash.settlementsDueMany")
+                    : t("dash.settlementsDueOne")
+                  ).replace("{n}", String(stats.bookings.settlementsDue))}
+                </p>
+                <p className="text-sm text-amber-700">{t("dash.settlementsDueSub")}</p>
+              </div>
+              <Link
+                href="/dashboard/bookings?payment=due"
+                className="px-4 py-2 bg-amber-200 text-amber-800 font-medium rounded-lg hover:bg-amber-300 transition-colors"
+              >
+                {t("dash.view")}
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
+      )}
       {stats.properties.pending > 0 && isAdmin && (
         <Card className="mt-6 border-yellow-200 bg-yellow-50">
           <CardContent>

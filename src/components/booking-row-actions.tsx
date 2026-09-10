@@ -26,6 +26,15 @@ interface Props {
    * source de vérité (transitionError valide l'acteur et la date de départ).
    */
   canManageStay?: boolean;
+  /**
+   * T-229 (audit n°2, A9) : le libellé « Écrire à l'hébergeur » était affiché
+   * aussi dans le back-office, alors qu'il ouvre un fil **avec le voyageur**.
+   * `viewerIsHost` distingue l'hôte propriétaire (qui écrit au voyageur) de
+   * l'admin (qui n'est pas partie au fil : voir `viewerIsAdmin`).
+   */
+  viewerIsHost?: boolean;
+  /** T-229 : l'admin non propriétaire n'est pas participant au fil — le bouton est retiré. */
+  viewerIsAdmin?: boolean;
 }
 
 /**
@@ -45,6 +54,8 @@ export function BookingRowActions({
   paymentMethodOffline = false,
   messageArea = "traveler",
   canManageStay = false,
+  viewerIsHost,
+  viewerIsAdmin,
 }: Props) {
   const t = useT();
   const router = useRouter();
@@ -193,10 +204,16 @@ export function BookingRowActions({
 
   return (
     <>
-      <Button variant="ghost" size="sm" onClick={contactHost}>
-        <MessageSquare className="w-4 h-4 mr-2" />
-{t("book.writeHost")}
-      </Button>
+      {/* T-229 (A9) : libellé par acteur. Le voyageur écrit à l'hébergeur ; dans
+          le back-office, l'hôte écrit au voyageur. L'admin qui n'est pas l'hôte
+          n'est pas partie au fil : l'API refuse (403), le bouton est retiré
+          plutôt que d'offrir une action qui échouera. */}
+      {!(viewerIsAdmin && !viewerIsHost) && (
+        <Button variant="ghost" size="sm" onClick={contactHost}>
+          <MessageSquare className="w-4 h-4 mr-2" />
+          {messageArea === "dashboard" ? t("book.writeGuest") : t("book.writeHost")}
+        </Button>
+      )}
       {/* T-203 : badge « Payé sur place » — l'hôte a constaté le règlement manuel. */}
       {paymentMethodOffline && (
         <span className="inline-flex items-center text-sm px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 font-medium">

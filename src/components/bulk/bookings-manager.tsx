@@ -5,9 +5,10 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Calendar, Eye } from "lucide-react";
+import { Calendar, Eye, Clock } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { BookingStatusSelect } from "./booking-status-select";
+import { BookingSettlementCell } from "./booking-settlement-cell";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 export interface BookingRow {
@@ -26,6 +27,10 @@ export interface BookingRow {
     total: string;
     currency: string | null;
     createdAt: string;
+    /** T-221 : échéance d'une demande de réservation (null hors `pending`). */
+    requestExpiresAt?: string | null;
+    /** T-222 : règlement constaté sur place. */
+    paymentMethodOffline?: boolean;
   };
   property: {
     id: string;
@@ -82,7 +87,12 @@ interface Props {
   isAdmin: boolean;
 }
 
-export function BookingsManager({ bookings, isAdmin }: Props) {
+export function BookingsManager({
+  bookings,
+  isAdmin,
+  initialStatus = "all",
+  initialPaymentFilter = "all",
+}: Props & { initialStatus?: string; initialPaymentFilter?: "all" | "due" }) {
   const t = useT();
   const locale = useUiLocale();
   // T-216 : dans cette vue, l'utilisateur est l'hôte du bien ou un admin (le
@@ -97,14 +107,35 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
     no_show: t("status.no_show"),
   };
   const [q, setQ] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>(initialStatus);
+  // T-222 : « Règlements à constater » — séjours terminés non encaissés.
+  const [paymentFilter, setPaymentFilter] = useState<"all" | "due">(initialPaymentFilter);
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
+  // T-222 : un séjour est « à constater » quand il est terminé, non payé et
+  // non réglé sur place (mêmes critères que la carte du tableau de bord).
+  const today = new Date().toISOString().slice(0, 10);
+  function settlementDue(b: BookingRow): boolean {
+    return (
+      b.booking.status === "confirmed" &&
+      b.booking.checkOut.slice(0, 10) <= today &&
+      b.booking.paymentStatus !== "paid" &&
+      b.booking.paymentMethodOffline !== true
+    );
+  }
+
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
+    const isoToday = new Date().toISOString().slice(0, 10);
+    const isDue = (b: BookingRow) =>
+      b.booking.status === "confirmed" &&
+      b.booking.checkOut.slice(0, 10) <= isoToday &&
+      b.booking.paymentStatus !== "paid" &&
+      b.booking.paymentMethodOffline !== true;
     return bookings.filter((b) => {
+      if (paymentFilter === "due" && !isDue(b)) return false;
       if (statusFilter !== "all" && b.booking.status !== statusFilter)
         return false;
       if (dateFrom && b.booking.checkIn < dateFrom) return false;
@@ -119,7 +150,7 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
         (b.property?.city ?? "").toLowerCase().includes(ql)
       );
     });
-  }, [bookings, q, statusFilter, dateFrom, dateTo]);
+  }, [bookings, q, statusFilter, dateFrom, dateTo, paymentFilter]);
 
   // Bulk cancel : ne s'applique qu'aux bookings pending/confirmed (BUG-022 FSM)
   const cancellable = filtered.filter(
@@ -220,6 +251,34 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
         actions={bulkActions}
       />
 
+      {/* T-222 : bascule rapide vers les séjours terminés non encaissés. */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => setPaymentFilter("all")}
+          aria-pressed={paymentFilter === "all"}
+          className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+            paymentFilter === "all"
+              ? "border-[#1B3A6B] bg-[#1B3A6B]/5 text-[#1B3A6B] font-medium"
+              : "border-gray-300 text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          {t("bulk.filterAllPayments")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setPaymentFilter("due")}
+          aria-pressed={paymentFilter === "due"}
+          className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+            paymentFilter === "due"
+              ? "border-amber-500 bg-amber-50 text-amber-800 font-medium"
+              : "border-gray-300 text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          {t("bulk.filterSettlement")}
+        </button>
+      </div>
+
       {/* Filtre dates */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <label className="block">
@@ -283,6 +342,7 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                   <th className="px-4 py-4 font-medium">{t("dash.colDates")}</th>
                   <th className="px-4 py-4 font-medium">{t("dash.colAmount")}</th>
                   <th className="px-4 py-4 font-medium">{t("dash.colStatus")}</th>
+                  <th className="px-4 py-4 font-medium">{t("bulk.colSettlement")}</th>
                   <th className="px-4 py-4 font-medium">{t("bulk.colActions")}</th>
                 </tr>
               </thead>
@@ -338,6 +398,17 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                         <div className="text-xs text-gray-400">
                           → {fmt(booking.checkOut, locale)}
                         </div>
+                        {/* T-221 : échéance de la demande, visible par l'hôte
+                            et l'admin (elle existait en base sans affichage). */}
+                        {booking.status === "pending" && booking.requestExpiresAt && (
+                          <div className="mt-1 inline-flex items-center gap-1 text-xs text-blue-700">
+                            <Clock className="w-3 h-3" aria-hidden="true" />
+                            {t("bulk.requestDeadline").replace(
+                              "{date}",
+                              fmt(booking.requestExpiresAt, locale),
+                            )}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-4 text-sm font-medium">
                         {money(booking.total, booking.currency, locale)}
@@ -367,6 +438,16 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                               {statusLabels[booking.status] ?? booking.status}
                             </Badge>
                           }
+                        />
+                      </td>
+                      <td className="px-4 py-4">
+                        <BookingSettlementCell
+                          bookingId={booking.id}
+                          bookingReference={booking.bookingReference}
+                          paymentStatus={booking.paymentStatus}
+                          paymentMethodOffline={booking.paymentMethodOffline === true}
+                          canManage
+                          overdue={settlementDue({ booking } as BookingRow)}
                         />
                       </td>
                       <td className="px-4 py-4">

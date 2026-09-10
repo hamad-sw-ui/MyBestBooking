@@ -9,6 +9,7 @@ import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
 import { apiError } from "@/lib/api-error";
+import { notifyReviewModerated } from "@/lib/review-notifications";
 
 const schema = z.object({
   status: z.enum(["approved", "pending", "hidden", "rejected"]),
@@ -89,6 +90,11 @@ export async function PATCH(
       entityId: id,
       metadata: { from: result.previousStatus, to: status, ...(moderationReason ? { reason: moderationReason } : {}) },
     });
+    // T-225 (A5) : l'auteur est informé de l'issue (publié / refusé), une
+    // seule fois par transition. Best-effort : jamais bloquant.
+    if (result.previousStatus !== status) {
+      await notifyReviewModerated(id, status);
+    }
     return NextResponse.json({ review: result.review });
   } catch (error) {
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).

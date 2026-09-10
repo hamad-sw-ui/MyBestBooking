@@ -12,6 +12,7 @@ import { PhotoUploadButton } from "@/components/photo-upload-button";
 import { formatPrice } from "@/lib/utils";
 import { convertAmount, formatMoney } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { COMMON_TIMEZONES } from "@/lib/timezone";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
 import { AMENITIES, amenityLabel } from "@/lib/amenities";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
@@ -41,6 +42,15 @@ interface Property {
   totalReviews: number | null;
   // T-145 : commission spécifique à l'hébergement (admin uniquement).
   commissionRate?: string | null;
+  // T-227 (A7) : horaires d'arrivée/départ + fuseau de l'hébergement.
+  checkInFrom?: string | null;
+  checkInUntil?: string | null;
+  checkOutUntil?: string | null;
+  timezone?: string | null;
+  // T-228 (A8) : labels/badges, modifiables par l'admin uniquement.
+  isEcoCertified?: boolean | null;
+  isBestrewards?: boolean | null;
+  isPreferred?: boolean | null;
 }
 
 interface Room {
@@ -108,6 +118,20 @@ export default function PropertyEditClient({
           cancellationPolicy: property.cancellationPolicy,
           petsAllowed: property.petsAllowed,
           smokingAllowed: property.smokingAllowed,
+          // T-227 (A7) : les colonnes `time` sont rendues « HH:MM:SS » par
+          // PostgreSQL ; l'API attend « HH:MM ».
+          checkInFrom: (property.checkInFrom ?? "").slice(0, 5) || undefined,
+          checkInUntil: (property.checkInUntil ?? "").slice(0, 5) || undefined,
+          checkOutUntil: (property.checkOutUntil ?? "").slice(0, 5) || undefined,
+          timezone: property.timezone ?? undefined,
+          // T-228 (A8) : envoyés seulement par l'admin (l'API refuse sinon).
+          ...(isAdmin
+            ? {
+                isEcoCertified: property.isEcoCertified ?? false,
+                isBestrewards: property.isBestrewards ?? false,
+                isPreferred: property.isPreferred ?? false,
+              }
+            : {}),
           amenities: property.amenities,
           mainImage: property.mainImage,
           images: property.images,
@@ -683,6 +707,65 @@ export default function PropertyEditClient({
 <span className="text-sm text-gray-700">{t("prop.smoking")}</span>
               </label>
             </div>
+
+            {/* T-227 (A7) : horaires d'arrivée/départ et fuseau — affichés sur
+                la fiche publique, jusqu'ici impossibles à régler. */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-gray-100">
+              <Input
+                label={t("prop.checkInFrom")}
+                type="time"
+                value={(property.checkInFrom ?? "").slice(0, 5)}
+                onChange={(e) => setProperty({ ...property, checkInFrom: e.target.value || null })}
+              />
+              <Input
+                label={t("prop.checkInUntil")}
+                type="time"
+                value={(property.checkInUntil ?? "").slice(0, 5)}
+                onChange={(e) => setProperty({ ...property, checkInUntil: e.target.value || null })}
+              />
+              <Input
+                label={t("prop.checkOutUntil")}
+                type="time"
+                value={(property.checkOutUntil ?? "").slice(0, 5)}
+                onChange={(e) => setProperty({ ...property, checkOutUntil: e.target.value || null })}
+              />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Select
+                label={t("prop.timezone")}
+                options={COMMON_TIMEZONES.map((zone) => ({ value: zone, label: zone }))}
+                value={property.timezone ?? "UTC"}
+                onChange={(e) => setProperty({ ...property, timezone: e.target.value })}
+              />
+              <p className="text-xs text-gray-500 self-end pb-2">{t("prop.timezoneHint")}</p>
+            </div>
+
+            {/* T-228 (A8) : labels/badges — décision éditoriale de la
+                plateforme, modifiable par l'admin seul (l'API refuse sinon). */}
+            {isAdmin && (
+              <div className="pt-2 border-t border-gray-100">
+                <p className="text-sm font-medium text-gray-800">{t("prop.badges")}</p>
+                <p className="text-xs text-gray-500 mb-2">{t("prop.badgesHint")}</p>
+                <div className="flex flex-wrap gap-4">
+                  {([
+                    ["isEcoCertified", "prop.badgeEco"],
+                    ["isBestrewards", "prop.badgeBestrewards"],
+                    ["isPreferred", "prop.badgePreferred"],
+                  ] as const).map(([field, key]) => (
+                    <label key={field} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={property[field] || false}
+                        onChange={(e) => setProperty({ ...property, [field]: e.target.checked })}
+                        className="rounded border-gray-300"
+                      />
+                      <span className="text-sm text-gray-700">{t(key)}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">{t("prop.badgeBestrewardsHint")}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

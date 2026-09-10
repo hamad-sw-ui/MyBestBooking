@@ -73,11 +73,23 @@ async function getBookings(userId: string, isAdmin: boolean) {
     .orderBy(desc(bookings.createdAt));
 }
 
-export default async function BookingsPage() {
+export default async function BookingsPage({
+  searchParams,
+}: {
+  // T-221/T-222 : les cartes du tableau de bord relient directement aux vues
+  // filtrées (`?status=pending`, `?payment=due`).
+  searchParams: Promise<{ status?: string; payment?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
   const isAdmin = user.role === "admin";
   const t = makeT(await getServerLocale());
+  const params = await searchParams;
+  const initialStatus =
+    params.status && ["pending", "confirmed", "cancelled", "completed", "no_show"].includes(params.status)
+      ? params.status
+      : "all";
+  const initialPaymentFilter = params.payment === "due" ? "due" : "all";
   const rows = await getBookings(user.id, isAdmin);
 
   const serialized: BookingRow[] = rows.map((r) => ({
@@ -99,6 +111,14 @@ export default async function BookingsPage() {
         r.booking.createdAt instanceof Date
           ? r.booking.createdAt.toISOString()
           : String(r.booking.createdAt),
+      // T-221 : échéance de la demande (affichée pour les réservations en attente).
+      requestExpiresAt: r.booking.requestExpiresAt
+        ? r.booking.requestExpiresAt instanceof Date
+          ? r.booking.requestExpiresAt.toISOString()
+          : String(r.booking.requestExpiresAt)
+        : null,
+      // T-222 : règlement déjà constaté sur place.
+      paymentMethodOffline: r.booking.paymentMethodOffline === true,
     },
     property: r.property,
     room: r.room,
@@ -126,7 +146,12 @@ export default async function BookingsPage() {
           </a>
         )}
       </div>
-      <BookingsManager bookings={serialized} isAdmin={isAdmin} />
+      <BookingsManager
+        bookings={serialized}
+        isAdmin={isAdmin}
+        initialStatus={initialStatus}
+        initialPaymentFilter={initialPaymentFilter}
+      />
     </div>
   );
 }

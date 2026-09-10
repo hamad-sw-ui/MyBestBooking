@@ -90,6 +90,14 @@ export default async function UsersPage() {
         ? u.deletedAt.toISOString()
         : String(u.deletedAt)
       : null,
+    // T-230 (A10) : état de suspension distinct de la suppression.
+    suspendedAt: u.suspendedAt
+      ? u.suspendedAt instanceof Date
+        ? u.suspendedAt.toISOString()
+        : String(u.suspendedAt)
+      : null,
+    // T-231 (A11) : expose la 2FA pour proposer le reset support.
+    twoFactorEnabled: u.twoFactorEnabled,
     // T-202 : champs d'approbation hôte (présents seulement pour role=host)
     approvalStatus: u.role === "host" ? u.approvalStatus : null,
     commissionRate:
