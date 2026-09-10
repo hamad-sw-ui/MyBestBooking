@@ -38,6 +38,12 @@ audit plafonné à 100 lignes, navigation admin sans « Chambres ».
 9. **P9** — `/dashboard/audit` branché sur `GET /api/admin/audit` (« Charger
    plus ») ; composants orphelins `@deprecated` et documentés.
 10. **P10** — `/dashboard/rooms` ajouté aux `adminLinks` desktop et mobile.
+11. **Complément T-219** — libellés d'export distingués : « Export CSV
+    (versements) » (carte billing) vs « Export CSV (réservations) »
+    (`/dashboard/bookings`). T-218 (e-mail à la création d'un fil vide) **non
+    retenu** : `POST /api/messages` notifie déjà le destinataire, un e-mail sans
+    contenu serait du spam ; le rattrapage du fil non écrit est assuré par P7.
+    T-220 (préférences de notification par utilisateur) reste au backlog.
 
 ## Validation
 
@@ -48,6 +54,10 @@ audit plafonné à 100 lignes, navigation admin sans « Chambres ».
 - `npx next build` : ✅ 65 pages.
 - `npm run smoke` : ✅ **95/95** (assertion `/maintenance` corrigée).
 - Matrice production : ✅ 8 URL invalides → 404 · 18 pages valides → 200.
+- **Balayage exhaustif des 10 pages `notFound()`** : ✅ 14 sondes invalides → 404
+  en production ; contreparties valides → 200 (307 pour la redirection chambres).
+- **P4 bout en bout** : ✅ reçu voyageur 200 (référence présente) · autrui 403 ·
+  anonyme 401 · hôte/admin 200.
 - `npm run ai:check` : ✅ 19 OK / 1 warn R7 (levé par le commit `docs(state)`) / 0 fail.
 
 ## Rapports

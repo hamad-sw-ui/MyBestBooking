@@ -62,7 +62,9 @@ describe("uiStrings (T-132)", () => {
     //   +1 bulk.editUnit (édition d'unité en ancre), +12 promo.* (écran
     //   d'édition d'une promotion), +2 billing.receipts* (versements vs
     //   reçus), +5 bulk.* (pagination du journal d'audit) = 1559.
-    expect(Object.keys(fr)).toHaveLength(1559);
+    // T-219 (2026-09-10) : -1 billing.exportCsv (remplacée) +2 libellés
+    //   distincts billing.exportCsvPayouts / billing.exportCsvBookings = 1560.
+    expect(Object.keys(fr)).toHaveLength(1560);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

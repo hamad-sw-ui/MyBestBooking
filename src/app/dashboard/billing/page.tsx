@@ -236,7 +236,7 @@ export default async function BillingPage() {
                 {/* P8 : la carte affiche des VERSEMENTS (payouts) → l'export CSV
                     pointe sur le ledger `/export-payouts`, pas sur les bookings. */}
                 <a href="/api/dashboard/billing/export-payouts" className="inline-flex items-center px-3 py-1 rounded-lg border border-[#1B3A6B] text-xs text-[#1B3A6B] hover:bg-blue-50">
-<Download className="w-3 h-3 mr-1" /> {t("billing.exportCsv")}
+<Download className="w-3 h-3 mr-1" /> {t("billing.exportCsvPayouts")}
                 </a>
                 {billing.invoices.length === 0 && (
 <span className="inline-flex items-center px-3 py-1 rounded-lg border border-gray-200 text-xs text-gray-500">{t("billing.invoicesUnavailable")}</span>

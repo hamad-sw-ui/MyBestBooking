@@ -179,3 +179,64 @@ variation de schéma.
   conservé, la recherche API `?action=` existe pour un usage outillé).
 - P7 : fenêtre de rattrapage fixée à 7 jours (constante exportée), au lieu des
   24 h proposées dans l'analyse — décision documentée ci-dessus.
+
+---
+
+## 5. Addendum de clôture (même session) — complétude et sujets résiduels
+
+### 5.1 Vérification exhaustive des surfaces `notFound()` (production, port 3100)
+
+Les **10 pages** qui appellent `notFound()` ont été rejouées en production avec un
+identifiant invalide : toutes répondent **404** (14 sondes : chaîne non-UUID et
+UUID absent).
+
+| Surface | Invalide | Valide |
+|---|---|---|
+| `/hebergement/[slug]` | 404 (×2) | 200 |
+| `/mes-reservations/avis/[id]` | 404 (×2) | 200 |
+| `/messages/[id]` | 404 (×2) | — (aucun fil au seed) |
+| `/wishlists/share/[token]` | 404 | — (aucune wishlist au seed) |
+| `/dashboard/bookings/[id]` | 404 (×2) | 200 |
+| `/dashboard/messages/[id]` | 404 | — |
+| `/dashboard/promotions/[id]` | 404 | 200 |
+| `/dashboard/properties/[id]` | 404 | 200 |
+| `/dashboard/rooms/[id]/calendrier` | 404 | 200 |
+| `/dashboard/rooms/[id]` | 404 | 307 → calendrier |
+
+Aucun `loading.tsx` ne subsiste au-dessus de ces routes (les 11 squelettes sont
+sur des feuilles sans enfant dynamique) : le correctif P1 est **complet**, pas
+seulement échantillonné.
+
+### 5.2 P4 bout en bout : le justificatif est réellement accessible
+
+`GET /api/bookings/<id>/invoice` : voyageur sur **sa** réservation → **200**
+(document « REÇU / CONFIRMATION DE RÉSERVATION » portant la référence
+`MBB-2026-FV0IH5`) ; voyageur sur la réservation d'autrui → **403** ; anonyme →
+**401** ; hôte propriétaire et admin → **200**. Le lien est bien rendu dans
+`/mes-reservations` pour le séjour payé.
+
+### 5.3 P7 : le fil vide est aussi guidé sur sa page de détail
+
+`: `/messages/[id]`` affiche déjà « Envoyez votre premier message ci-dessous. »
+(`messages.emptyThread`) quand le fil est vide : la recommandation « bandeau de
+brouillon sur le détail » de l'analyse était donc déjà satisfaite — la liste est
+le seul endroit qui manquait, et il est corrigé.
+
+### 5.4 T-219 — exports CSV explicitement distingués (livré)
+
+Deux exports coexistaient sous le même libellé « Export CSV » : le ledger des
+versements (`/api/dashboard/billing/export-payouts`, carte billing) et les
+réservations (`/api/dashboard/billing/export`, liste des réservations). Les
+libellés deviennent **« Export CSV (versements) »** et
+**« Export CSV (réservations) »** (FR/EN) — aucune route, aucun calcul modifié.
+
+### 5.5 Sujets résiduels : décisions
+
+- **T-218 (notification à la création d'un fil vide) — NON RETENU, avec
+  justification** : `POST /api/messages` notifie déjà le destinataire par e-mail
+  (`enqueueEmail`, T-027). Envoyer un e-mail au seul *ouvrir* d'une conversation
+  vide produirait une notification sans contenu (spam) : le comportement actuel
+  est le bon. Le vrai rattrapage — retrouver le fil non écrit — est traité par P7.
+- **T-220 (préférences de notification par utilisateur)** : reste au backlog
+  (changement de schéma + écran, hors périmètre « correctifs sans régression »).
+

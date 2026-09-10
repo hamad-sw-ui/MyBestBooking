@@ -121,7 +121,7 @@ export default async function BookingsPage() {
           <a href="/api/dashboard/billing/export" download="MyBestBooking-reservations.csv">
             <Button variant="outline" className="w-full sm:w-auto">
               <Download className="w-4 h-4 mr-2" aria-hidden="true" />
-              {t("billing.exportCsv")}
+              {t("billing.exportCsvBookings")}
             </Button>
           </a>
         )}

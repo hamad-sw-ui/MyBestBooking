@@ -95,7 +95,9 @@ Deux colonnes du dashboard pro sont directement actionnables :
 - `/dashboard/audit` : bouton « Charger plus » (pagination API) et compteurs
   d'entrées chargées/filtrées.
 - `/dashboard/billing` : carte renommée « Versements et relevés » + pointeur
-  vers les reçus par réservation.
+  vers les reçus par réservation ; export « Export CSV (versements) ».
+- `/dashboard/bookings` : export « Export CSV (réservations) » (T-219) — les deux
+  exports ne partagent plus le même libellé.
 - `/messages` : un fil encore vide (7 jours) affiche « Conversation ouverte —
   écrivez votre premier message ».
 - `loading.tsx` **feuilles uniquement** (`components/page-loading.tsx`) :

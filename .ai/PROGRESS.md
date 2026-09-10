@@ -9,6 +9,19 @@
 
 ## Session 2026-09-10 — T-217 correctifs P1–P10 de l'audit runtime
 
+### Complément de session — complétude P1 + T-219 (2026-09-10)
+
+- **Vérification exhaustive** : les **10 pages** appelant `notFound()` ont été
+  rejouées en production (14 sondes d'identifiants invalides) → **404 partout**,
+  contreparties valides → 200 (307 pour la redirection chambres). Aucun
+  `loading.tsx` ne subsiste au-dessus d'une route dynamique.
+- **P4 bout en bout** : reçu téléchargeable par le voyageur (200, référence
+  présente), 403 pour la réservation d'autrui, 401 anonyme, 200 hôte/admin.
+- **T-219 livré** : « Export CSV (versements) » vs « Export CSV (réservations) ».
+- **T-218 non retenu** (déjà couvert par l'e-mail du premier message — décision
+  documentée) ; **T-220** reste au backlog.
+
+
 - **Demande** : « conformément aux règles du framework `.ai/`, mettez en place
   l'implémentation de vos remarques sans régression et sans casser les
   fonctionnalités existantes, tout testé avec succès avant de vous arrêter ».

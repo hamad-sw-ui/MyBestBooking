@@ -7,6 +7,25 @@ ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 ---
 ## 2026-09-10 — T-217 correctifs P1–P10 (audit runtime)
 
+### Complément T-217 (même journée)
+
+**Fait.** Balayage exhaustif des surfaces `notFound()` en production (10 pages,
+14 sondes → 404 ; contreparties valides → 200), vérification bout en bout du
+reçu voyageur (200 / 403 / 401 / 200), confirmation que la page de détail d'un
+fil vide guide déjà l'utilisateur, et clarification des deux exports CSV
+(« versements » vs « réservations »).
+
+**Appris.** Une correction de statut HTTP ne se prouve pas par échantillon :
+seules les 10 pages concernées, testées une par une, ferment le sujet. Autre
+point : les deux exports CSV partageaient leur libellé — un utilisateur ne
+pouvait pas savoir lequel il téléchargeait, alors que les routes étaient bien
+distinctes.
+
+**Non retenu.** Notifier l'hôte à la création d'un fil vide : le message lui
+envoyé suffit (aucun e-mail sans contenu) — le rattrapage du fil non écrit passe
+par la fenêtre de 7 jours de P7.
+
+
 **Fait.** Mise en œuvre des dix constats de
 `docs/analyse_2026-09-10_audit_runtime_fonctionnalites.md` : squelettes de
 chargement feuilles (fin du soft-404), édition d'hébergement rendue côté

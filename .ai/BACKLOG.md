@@ -415,12 +415,14 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 
 #### Sujets résiduels proposés (non bloquants, audit T-217)
 
-- 🟢 **T-218 (S/P3)** — Notifier l'hôte par e-mail à la création d'une
-  conversation (« Contacter l'hôte ») : `POST /api/conversations` n'enqueue rien,
-  l'hôte ne voit le fil qu'en ouvrant sa messagerie.
-- 🟢 **T-219 (S/P3)** — Clarifier l'export CSV de la carte billing (ledger
-  versements vs export réservations `GET /api/dashboard/billing/export`, appelé
-  uniquement depuis `/dashboard/bookings`).
+- ✅ ~~**T-219 (S/P3)** — Clarifier l'export CSV de la carte billing~~ **Livré
+  2026-09-10** : libellés « Export CSV (versements) » (carte billing) et
+  « Export CSV (réservations) » (liste des réservations) ; routes inchangées.
+- ⛔ **T-218 (S/P3)** — ~~Notifier l'hôte par e-mail à la création d'une
+  conversation~~ **Non retenu (2026-09-10)** : `POST /api/messages` notifie déjà
+  le destinataire (T-027) ; un e-mail au seul ouvrir d'un fil vide serait une
+  notification sans contenu. Le rattrapage du fil non écrit est traité par P7
+  (fenêtre de 7 jours dans `/messages`).
 - 🟢 **T-220 (S/P3)** — Préférences de notification par utilisateur
   (`user_notification_prefs`) : aujourd'hui seul `priceAlertEnabled` est
   individuel, le reste est global (`app_settings.notifications`).

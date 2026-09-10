@@ -390,3 +390,11 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
   T-206/F9.
 - **Journal d'audit paginé** : `/dashboard/audit` charge la suite via
   `GET /api/admin/audit` (« Charger plus »), sans recharger la page.
+
+## T-219 — Exports CSV distingués (2026-09-10)
+
+- Les deux exports portaient le même libellé « Export CSV » : ils sont
+  désormais explicites — « Export CSV (versements) » sur la carte billing
+  (ledger `export-payouts`) et « Export CSV (réservations) » sur
+  `/dashboard/bookings` (`/api/dashboard/billing/export`). Routes et contenus
+  inchangés.
