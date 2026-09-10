@@ -1,3 +1,5 @@
+import { civilToday, toCivilDate } from "@/lib/dates";
+
 export type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed" | "no_show";
 export type BookingActor = "customer" | "host" | "admin" | "system";
 
@@ -9,8 +11,16 @@ const transitions: Record<BookingStatus, BookingStatus[]> = {
   no_show: [],
 };
 
+/**
+ * T-232/T-240 (audit n°3) — lecture normalisée d'une date civile.
+ *
+ * Un `Date` issu d'une colonne `date` était converti par `toISOString()`, donc
+ * lu en UTC : c'était fortuit. La normalisation vit désormais dans
+ * `src/lib/dates.ts`, seule autorité, et les colonnes `date` sont lues en
+ * chaîne (voir `src/db/index.ts`).
+ */
 function toDate(value: string | Date): string {
-  return typeof value === "string" ? value.slice(0, 10) : value.toISOString().slice(0, 10);
+  return toCivilDate(value) ?? "";
 }
 
 /**
@@ -39,21 +49,21 @@ export function transitionError(input: {
     if (input.next === "cancelled") return null;
     if (input.next === "confirmed") return input.current === "pending" ? null : "Seule une réservation en attente peut être confirmée";
     if (input.next === "completed" || input.next === "no_show") {
-      const today = input.today ?? new Date().toISOString().slice(0, 10);
+      const today = input.today ?? civilToday();
       return toDate(input.checkOut) <= today ? null : "Le séjour ne peut être clôturé qu'après la date de départ";
     }
     return "Transition réservée à un administrateur";
   }
   if (input.actor === "system") {
     if (input.next !== "completed") return "La tâche système ne peut que clôturer un séjour";
-    const today = input.today ?? new Date().toISOString().slice(0, 10);
+    const today = input.today ?? civilToday();
     return toDate(input.checkOut) <= today ? null : "Le séjour n'est pas encore terminé";
   }
   return null;
 }
 
 export function isReviewEligible(status: BookingStatus, checkOut: string | Date, today?: string): boolean {
-  const reference = today ?? new Date().toISOString().slice(0, 10);
+  const reference = today ?? civilToday();
   return status === "completed" && toDate(checkOut) <= reference;
 }
 

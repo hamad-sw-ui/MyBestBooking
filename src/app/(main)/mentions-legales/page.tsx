@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 // T-162 (audit n°30) : page localisée selon la langue du visiteur.
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { civilToday, formatCivilDate } from "@/lib/dates";
 
 const CONTENT = {
   fr: {
@@ -144,7 +145,7 @@ export default async function MentionsLegalesPage() {
             </a>.
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            {c.updated} {new Date().toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR")}
+            {c.updated} {formatCivilDate(civilToday(), { day: "numeric", month: "long", year: "numeric" }, locale)}
           </p>
         </div>
       </section>

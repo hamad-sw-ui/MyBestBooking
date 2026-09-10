@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { civilToday } from "@/lib/dates";
 import { z } from "zod";
 import { db } from "@/db";
 import { priceAlerts, properties, users } from "@/db/schema";
@@ -60,7 +61,7 @@ export async function POST(request: NextRequest) {
     // T-161 (audit n°30) : une alerte « séjour » ne peut pas porter une
     // arrivée passée (elle ne pourrait jamais se réaliser → fake
     // notifications ou quote inutile à chaque cron).
-    const today = new Date().toISOString().slice(0, 10);
+    const today = civilToday();
     if (data.checkIn && isStayPast(data.checkIn, today)) {
       return NextResponse.json(
         { error: await apiError("La date d'arrivée de l'alerte ne peut pas être dans le passé") },

@@ -1,3 +1,5 @@
+import { civilToday } from "@/lib/dates";
+
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 export interface FutureStay {
@@ -6,7 +8,7 @@ export interface FutureStay {
 }
 
 export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return civilToday("UTC");
 }
 
 export function hasStayRequest(checkIn?: string | null, checkOut?: string | null): boolean {

@@ -1,7 +1,41 @@
 # Tâche courante
 
-- **ID** : T-221 → T-231 (audit n°2) + T-242 → T-244 (audit n°4)
-- **Titre** : Mise en œuvre des remarques d'audit — fonctionnalités inachevées, cycle de vie des données, stock vendable
+- **ID** : T-232 + T-233 + T-234 (audit n°3) + volet T-240
+- **Titre** : Dates de séjour et fuseaux, cascade de suspension d'hôte, expiration paresseuse des demandes
+- **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-10 : les constats F1/F9/F10 (T-232), F2 (T-233) et F3
+  (T-234) sont implémentés, testés et vérifiés au runtime ; reliquat de T-240 (tests multi-fuseaux)
+  couvert
+- **Niveau** : C (données personnelles persistées — cf. §15.0)
+- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (F1→F13)
+- **Rapport de cette tâche** : `REPORTS/validation_T232_T234_2026-09-10_dates_suspension_expiration.md`
+
+## Livraison T-232 / T-233 / T-234 (2026-09-10)
+
+**T-232 (F1 + F9 + F10) — dates et fuseaux.** Helper unique `src/lib/dates.ts` (date civile jamais
+décalée vs instant à fuseau explicite) ; `pg` lit les colonnes `date` en chaînes ; fenêtres civiles
+(analytics, calendriers, dashboard, tunnel, mon-compte, gestionnaire de réservations) ; les 7
+derniers `toLocaleDateString` remplacés — **0 occurrence** dans `src/` ; `users.timezone` validé et
+réellement lu comme fuseau d'affichage.
+
+**T-233 (F2) — suspension d'hôte.** `src/lib/host-suspension.ts` : cascade transactionnelle et
+idempotente `active ↔ suspended` depuis `PATCH /api/users/[id]/suspend` et `POST /api/admin/bulk` ;
+filtres publics (recherche, fiche dont `metadata`, tunnel) ; cache du catalogue ancré sur
+`globalThis` et invalidé à chaque changement, plus **garde de visibilité hors cache** sur la fiche.
+
+**T-234 (F3) — expiration paresseuse.** Purge extraite dans `src/lib/booking-request-expiration.ts`
+(le cron n'en garde que le branchement), exécutée **dans la transaction** de `POST /api/bookings` et
+de `GET /api/bookings/quote`, bornée à la chambre et à la fenêtre, notifications **après** commit ;
+`loadBookedCounts` ne compte plus une demande `pending` expirée (`now()` SQL).
+
+**Preuves.** `npm run ci` verte : typecheck 0 · lint 0/0 · i18n 1640 · ai:check 19 OK / 1 warn (R7) /
+0 fail · vitest **709 tests / 120 fichiers, 0 échec** · build · smoke **95/95**. Runtime : fiche
+`200 → 404 → 404 → 200`, total d'annonces `8 → 0 → 8`, réservation `400` (« Hébergement non
+disponible ») puis `201` ; demande expirée purgée par le tunnel (**201 au lieu de 409** — le `409`
+du constat est reproduit en retirant le correctif), disponibilité `0/1 → 1/0`. Base restaurée au
+seed exact (8 users / 8 annonces `active` / 34 réservations / 25 avis).
+
+## Étape précédente — T-221 → T-231 (audit n°2) + T-242 → T-244 (audit n°4)
+
 - **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-10 : les 14 constats A1→A11 et N1→N3 sont implémentés, testés et vérifiés au runtime
 - **Niveau** : C (données personnelles persistées — cf. §15.0 : en cas de doute, choisir le niveau le plus élevé)
 - **Analyses sources** : `docs/analyse_2026-09-10_audit_runtime_inacheves.md` (A1→A11) et

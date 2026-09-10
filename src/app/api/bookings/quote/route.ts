@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { expireRequestsInTransaction } from "@/lib/booking-request-expiration";
+import { notifyExpiredRequest } from "@/lib/booking-request-notifications";
+import { civilToday } from "@/lib/dates";
 import { and, eq, gt, gte, lt, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@/db";
@@ -70,7 +73,7 @@ export async function GET(request: NextRequest) {
       ratePlanId: url.searchParams.get("ratePlanId") || undefined,
     });
 
-    const today = new Date().toISOString().slice(0, 10);
+    const today = civilToday();
     if (data.checkIn < today) {
       return NextResponse.json({ error: await apiError("La date d'arrivée ne peut pas être dans le passé") }, { status: 400 });
     }
@@ -90,6 +93,23 @@ export async function GET(request: NextRequest) {
 
     if (!row || row.property.status !== "active" || !row.room.isActive) {
       return NextResponse.json({ error: await apiError("Chambre non disponible") }, { status: 400 });
+    }
+
+    // T-234 (audit n°3, F3) — un devis ne doit pas annoncer « indisponible »
+    // à cause d'une demande **déjà expirée** dont le cron n'a pas encore purgé
+    // le stock. On libère d'abord la fenêtre demandée (même règle que le
+    // tunnel), puis on évalue.
+    const expiredByQuote = await expireRequestsInTransaction(db as never, new Date(), {
+      roomId: data.roomId,
+      checkIn: data.checkIn,
+      checkOut: data.checkOut,
+    });
+    for (const expired of expiredByQuote) {
+      try {
+        await notifyExpiredRequest(expired);
+      } catch (mailError) {
+        console.error("[quote] notification d'expiration impossible :", mailError);
+      }
     }
 
     const [availability, overlaps, billing, bestrewardsSettings] = await Promise.all([

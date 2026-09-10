@@ -19,6 +19,8 @@ interface Props {
     language: string | null;
     currency: string | null;
     timezone?: string | null;
+    /** T-232 : fuseau courant, source des « maintenant » de l'UI. */
+    displayTimezone?: string | null;
     // T-133 (A4) : photo de profil (URL), optionnelle.
     avatarUrl?: string | null;
   };
@@ -43,6 +45,9 @@ export function ProfileForm({ initial }: Props) {
     // paiement des chambres.
     currency: initial.currency ?? "XAF",
     timezone: initial.timezone ?? "UTC",
+    // T-232 : le fuseau choisi n'est pas décoratif — il sert à exprimer les
+    // dates de saisie de l'utilisateur (voir `civilToday`).
+    displayTimezone: initial.displayTimezone ?? initial.timezone ?? "UTC",
     // T-133 (A4) : URL de la photo de profil (vide = aucune / initiales).
     avatarUrl: initial.avatarUrl ?? "",
   });

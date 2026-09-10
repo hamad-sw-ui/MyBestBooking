@@ -147,6 +147,7 @@ export default async function BookingsPage({
         )}
       </div>
       <BookingsManager
+        displayTimezone={user.timezone ?? null}
         bookings={serialized}
         isAdmin={isAdmin}
         initialStatus={initialStatus}

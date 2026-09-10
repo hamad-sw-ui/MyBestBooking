@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { civilToday } from "@/lib/dates";
 import { db } from "@/db";
 import { properties, bookings, reviews, users } from "@/db/schema";
 import { eq, and, desc, sql, gte } from "drizzle-orm";
@@ -20,7 +21,7 @@ async function getDashboardStats(userId: string, isAdmin: boolean) {
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
   // T-222 : comparaison sur la date civile de départ (colonne `date`), au
   // format ISO — même convention que les crons et la FSM.
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = civilToday();
 
   // Get properties
   let propertiesQuery = db.select().from(properties);

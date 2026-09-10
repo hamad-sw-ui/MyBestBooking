@@ -132,3 +132,95 @@ describe("availableTransitions (T-216)", () => {
     }
   });
 });
+
+/**
+ * T-232/T-240 (audit n°3, F1) — le cycle de vie ne doit jamais dépendre du
+ * fuseau du runtime.
+ *
+ * Avant : `checkOut` (colonne `date`) était lu via `toISOString()`, donc le jour
+ * civil dépendait de la façon dont `pg` avait construit le `Date` (minuit local
+ * du serveur). Ces tests exécutent les mêmes décisions sous quatre fuseaux
+ * (dont deux à cheval sur la ligne de changement de date) et exigent une
+ * réponse identique.
+ */
+describe("T-232 — cycle de vie indépendant du fuseau du runtime", () => {
+  const originalTz = process.env.TZ;
+  const ZONES = ["UTC", "Africa/Douala", "America/Los_Angeles", "Pacific/Kiritimati"];
+
+  function underAllTimeZones(fn: (tz: string) => void) {
+    for (const tz of ZONES) {
+      process.env.TZ = tz;
+      try {
+        fn(tz);
+      } finally {
+        process.env.TZ = originalTz;
+      }
+    }
+  }
+
+  it("clôture d'un séjour : même décision et même message sous 4 fuseaux", () => {
+    underAllTimeZones(() => {
+      expect(transitionError({
+        current: "confirmed",
+        next: "completed",
+        actor: "host",
+        checkOut: "2026-09-24",
+        today: "2026-09-24",
+      })).toBeNull();
+      expect(transitionError({
+        current: "confirmed",
+        next: "completed",
+        actor: "host",
+        checkOut: "2026-09-24",
+        today: "2026-09-23",
+      })).toBe("Le séjour ne peut être clôturé qu'après la date de départ");
+    });
+  });
+
+  it("un `Date` de colonne `date` (minuit UTC) est lu comme le jour voulu", () => {
+    underAllTimeZones(() => {
+      const checkOut = new Date("2026-09-24T00:00:00.000Z");
+      expect(transitionError({
+        current: "confirmed",
+        next: "completed",
+        actor: "system",
+        checkOut,
+        today: "2026-09-24",
+      })).toBeNull();
+      expect(transitionError({
+        current: "confirmed",
+        next: "completed",
+        actor: "system",
+        checkOut,
+        today: "2026-09-23",
+      })).toBe("Le séjour n'est pas encore terminé");
+    });
+  });
+
+  it("éligibilité à l'avis : identique sous 4 fuseaux", () => {
+    underAllTimeZones(() => {
+      expect(isReviewEligible("completed", "2026-09-24", "2026-09-24")).toBe(true);
+      expect(isReviewEligible("completed", "2026-09-25", "2026-09-24")).toBe(false);
+      expect(isReviewEligible("confirmed", "2026-09-24", "2026-09-24")).toBe(false);
+    });
+  });
+
+  it("sans `today` explicite, la référence est la date civile UTC (pas celle du runtime)", () => {
+    const utcToday = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "UTC",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date()); // YYYY-MM-DD
+    underAllTimeZones(() => {
+      expect(isReviewEligible("completed", utcToday, undefined)).toBe(true);
+      expect(isReviewEligible("completed", "2999-12-31", undefined)).toBe(false);
+      expect(transitionError({
+        current: "confirmed",
+        next: "completed",
+        actor: "host",
+        checkOut: utcToday,
+      })).toBeNull();
+    });
+  });
+});

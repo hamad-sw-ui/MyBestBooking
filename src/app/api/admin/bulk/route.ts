@@ -14,6 +14,8 @@ import {
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
+import { reactivateHostListings, suspendHostListings } from "@/lib/host-suspension";
+import { invalidatePublicCatalog } from "@/lib/read-cache";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq, inArray, and, ne, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
@@ -105,6 +107,17 @@ async function bulkUsers(
           continue;
         }
         await db.delete(sessions).where(eq(sessions.userId, id));
+        // T-233 : la sanction retire aussi les annonces du catalogue.
+        const suspendedListings = await suspendHostListings(db, id);
+        if (suspendedListings.length > 0) {
+          await recordAudit({
+            actorId: adminId,
+            action: AUDIT_ACTIONS.userSuspend,
+            entityType: "user",
+            entityId: id,
+            metadata: { listingsAffected: suspendedListings.length, source: "bulk" },
+          });
+        }
         r.succeeded++;
       } else if (effective === "reactivate") {
         // T-230 : un compte anonymisé (supprimé) n'est pas réactivable — on le
@@ -125,6 +138,18 @@ async function bulkUsers(
           .update(users)
           .set({ suspendedAt: null, suspendedReason: null, updatedAt: new Date() })
           .where(eq(users.id, id));
+        // T-233 : réactivation → les annonces suspendues republient (ou
+        // repassent en modération si l'hôte n'est pas approuvé).
+        const restored = await reactivateHostListings(db, id);
+        if (restored.length > 0) {
+          await recordAudit({
+            actorId: adminId,
+            action: AUDIT_ACTIONS.userReactivate,
+            entityType: "user",
+            entityId: id,
+            metadata: { listingsRestored: restored.length, source: "bulk" },
+          });
+        }
         r.succeeded++;
       } else if (effective === "anonymize") {
         const [existing] = await db
@@ -466,6 +491,8 @@ async function bulkPromotions(action: string, ids: string[]): Promise<Result> {
       });
     }
   }
+  // T-233 : purge du catalogue public si des annonces ont changé de statut.
+  if (r.succeeded > 0) invalidatePublicCatalog(`bulk:users:${action}`);
   return r;
 }
 

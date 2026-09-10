@@ -32,7 +32,25 @@ export interface TtlCache {
   wrap<T>(key: string, fn: () => Promise<T>): Promise<T>;
   /** Nombre d'entrées (diagnostics/tests). */
   size(): number;
+  /** Clés courantes (hors entrées expirées) — invalidation par préfixe. */
+  keys(): string[];
 }
+
+/**
+ * T-233 — le cache public doit être **partagé** entre les bundles de routes.
+ *
+ * En développement comme en production, Next.js compile les pages et les routes
+ * d'API dans des bundles distincts : deux copies du module `read-cache` = deux
+ * caches, donc une invalidation déclenchée depuis une route d'API qui n'atteint
+ * jamais la copie lue par la fiche publique. On ancre donc l'instance sur
+ * `globalThis` — exactement la même raison que le pool `pg` dans `src/db/index.ts`.
+ *
+ * Constaté au runtime : après suspension d'un hôte, la fiche restait servie
+ * depuis un cache que l'invalidation ne touchait pas.
+ */
+const globalForCache = globalThis as typeof globalThis & {
+  __mbbPublicCatalogCache?: TtlCache;
+};
 
 export function createTtlCache(opts: { ttlMs: number; cap?: number }): TtlCache {
   const { ttlMs } = opts;
@@ -85,6 +103,10 @@ export function createTtlCache(opts: { ttlMs: number; cap?: number }): TtlCache 
       purgeExpired(Date.now());
       return store.size;
     },
+    keys(): string[] {
+      purgeExpired(Date.now());
+      return [...store.keys()];
+    },
   };
 }
 
@@ -94,4 +116,35 @@ export function createTtlCache(opts: { ttlMs: number; cap?: number }): TtlCache 
  * chaque bundle (proxy/routes) a sa propre instance — acceptable : le TTL
  * borne la divergence (leçon T-179).
  */
-export const publicCatalogCache = createTtlCache({ ttlMs: 60_000 });
+export const publicCatalogCache: TtlCache =
+  globalForCache.__mbbPublicCatalogCache ?? createTtlCache({ ttlMs: 60_000 });
+
+// En production, l'instance est réutilisée entre invocations ; en développement,
+// elle survit au rechargement à chaud (sinon chaque édition repart d'un cache
+// vide et le comportement observé ne reflète pas la production).
+globalForCache.__mbbPublicCatalogCache = publicCatalogCache;
+
+/**
+ * T-233 (audit n°3, F2) — invalidation ciblée du catalogue public.
+ *
+ * Le cache de lecture a un TTL de 60 s : sans invalidation, une annonce d'hôte
+ * suspendu resterait servie jusqu'à une minute après la sanction. On purge donc
+ * les entrées concernées dès que le statut change.
+ *
+ * L'implémentation s'appuie sur `keys()` du cache (aucune réflexion sur la Map
+ * interne) : les fiches (`property:<slug>`) et les recherches (`search:<…>`)
+ * sont retirées par préfixe.
+ */
+export function invalidatePublicCatalog(reason: string): number {
+  let removed = 0;
+  for (const key of publicCatalogCache.keys()) {
+    if (key.startsWith("property:") || key.startsWith("search:")) {
+      publicCatalogCache.del(key);
+      removed += 1;
+    }
+  }
+  if (removed > 0) {
+    console.info(`[read-cache] catalogue public invalidé (${reason}) : ${removed} entrée(s)`);
+  }
+  return removed;
+}

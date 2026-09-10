@@ -19,7 +19,15 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   // un visiteur anonyme en EN — le SSR ne connaissait pas sa langue).
   const locale = await getServerLocale();
   const t = makeT(locale);
-  const [p] = await db.select().from(properties).where(and(eq(properties.slug, slug), eq(properties.status, "active"))).limit(1);
+  // T-233 (audit n°3, F2) : la fiche d'un hôte suspendu (ou supprimé) ne doit
+  // plus être servie — la sanction était jusqu'ici invisible côté voyageur.
+  const [p] = await db
+    .select({ property: properties })
+    .from(properties)
+    .innerJoin(users, eq(properties.hostId, users.id))
+    .where(and(eq(properties.slug, slug), eq(properties.status, "active"), activeHostCondition(users)))
+    .limit(1)
+    .then((rows) => rows.map((row) => row.property));
   if (!p) return { title: t("meta.notFound") };
   const place = `${p.city}, ${countryLabel(p.country, t)}`;
   const desc = `${p.name} — ${place}. ${p.description ? p.description.slice(0, 140) : t("meta.bookBestPrice")}`;
@@ -50,6 +58,7 @@ import { LocalizedRoomPrice } from "@/components/localized-room-price";
 import { LocalizedDescription } from "@/components/localized-description";
 import { ContactHostButton } from "@/components/contact-host-button";
 import { getServerLocale } from "@/lib/server-locale";
+import { activeHostCondition } from "@/lib/host-suspension";
 import { makeT, type UiStringKey } from "@/lib/ui-strings";
 // T-154e (audit n°26, P3-13) : libellés harmonisés avec la source unique.
 import { amenityLabel } from "@/lib/amenities";
@@ -74,13 +83,21 @@ interface PropertyPageProps {
 }
 
 async function getProperty(slug: string, viewerId?: string, isAdmin = false) {
-  const [property] = await db
-    .select()
+  // T-233 (audit n°3, F2) : l'hôte est joint pour connaître son état de compte.
+  // Une annonce publiée dont l'hôte est suspendu (ou supprimé) n'est plus
+  // servie publiquement — l'hôte lui-même et l'admin la voient encore, ce qui
+  // permet de comprendre la sanction sans la subir.
+  const [row] = await db
+    .select({ property: properties, hostSuspendedAt: users.suspendedAt, hostDeletedAt: users.deletedAt })
     .from(properties)
+    .innerJoin(users, eq(properties.hostId, users.id))
     .where(eq(properties.slug, slug));
 
-  if (!property) return null;
+  if (!row) return null;
+  const { property } = row;
   const canSeePrivate = isAdmin || property.hostId === viewerId;
+  const hostInactive = row.hostSuspendedAt !== null || row.hostDeletedAt !== null;
+  if (hostInactive && !canSeePrivate) return null;
   if (property.status !== "active" && !canSeePrivate) return null;
 
   // T-184 : rooms et avis dépendent de property.id mais pas l'un de
@@ -118,7 +135,28 @@ async function getProperty(slug: string, viewerId?: string, isAdmin = false) {
  * conversation) restent hors de ce bloc caché.
  */
 async function getPublicProperty(slug: string) {
+  // T-233 : la visibilité est vérifiée **hors cache** à chaque requête. Le
+  // contenu, lui, reste caché 60 s. Sans cette garde, une annonce suspendue
+  // resterait servie jusqu'à expiration du TTL (et l'invalidation, exécutée
+  // depuis un autre bundle de routes, pouvait ne pas l'atteindre).
+  if (!(await isPropertyPubliclyVisible(slug))) return null;
   return publicCatalogCache.wrap(`property:${slug}`, () => getProperty(slug));
+}
+
+/**
+ * T-233 (audit n°3, F2) — l'annonce est-elle publiée par un hôte actif ?
+ * Requête légère (une ligne, deux colonnes jointes), exécutée à chaque appel :
+ * c'est le prix d'une sanction visible immédiatement.
+ */
+async function isPropertyPubliclyVisible(slug: string): Promise<boolean> {
+  const [row] = await db
+    .select({ status: properties.status, suspendedAt: users.suspendedAt, deletedAt: users.deletedAt })
+    .from(properties)
+    .innerJoin(users, eq(properties.hostId, users.id))
+    .where(eq(properties.slug, slug))
+    .limit(1);
+  if (!row) return false;
+  return row.status === "active" && row.suspendedAt === null && row.deletedAt === null;
 }
 
 const AMENITY_ICONS: Record<string, React.ReactNode> = {

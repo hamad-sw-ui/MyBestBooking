@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { addCivilDays, civilToday } from "@/lib/dates";
 import Link from "next/link";
 import { db } from "@/db";
 import { rooms, properties, ratePlans, roomAvailability } from "@/db/schema";
@@ -39,9 +40,9 @@ export default async function RoomCalendarPage({
   if (!row) notFound();
   if (row.property?.hostId !== user.id && user.role !== "admin") redirect("/dashboard/rooms");
 
-  const today = new Date();
-  const from = today.toISOString().slice(0, 10);
-  const to = new Date(today.getTime() + 30 * 86400_000).toISOString().slice(0, 10);
+  // T-232 : fenêtre exprimée en dates civiles (jamais décalée par le fuseau).
+  const from = civilToday();
+  const to = addCivilDays(from, 30);
 
   const days = await db
     .select()

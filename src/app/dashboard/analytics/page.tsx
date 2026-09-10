@@ -1,4 +1,5 @@
 import { getCurrentUser } from "@/lib/auth";
+import { civilToday, formatCivilDate } from "@/lib/dates";
 import { db } from "@/db";
 import { bookings, properties, reviews, rooms, users } from "@/db/schema";
 import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
@@ -14,7 +15,7 @@ import {
   formatCurrencyConverted,
 } from "@/lib/currency-summary";
 import { normalizeDisplayCurrency } from "@/lib/i18n";
-import { 
+import {
   TrendingUp, TrendingDown, DollarSign, Calendar, 
   Users, Star, Building2, Eye, BarChart3 
 } from "lucide-react";
@@ -109,8 +110,9 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
         and(eq(rooms.isActive, true), sql`${rooms.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`),
       )
     : [];
-  const startDay = thirtyDaysAgo.toISOString().slice(0, 10);
-  const endDay = now.toISOString().slice(0, 10);
+  // T-232 : bornes de la fenêtre en dates civiles (indépendantes du fuseau).
+  const startDay = civilToday("UTC", thirtyDaysAgo);
+  const endDay = civilToday("UTC", now);
   const occupiedNights = allBookings
     .filter((booking) => booking.status !== "cancelled" && booking.checkIn <= endDay && booking.checkOut > startDay)
     .reduce((sum, booking) => {
@@ -326,7 +328,7 @@ export default async function AnalyticsPage() {
                     key={i}
                     className="flex-1 bg-[#1B3A6B] rounded-t transition-all hover:bg-[#152d54]"
                     style={{ height: `${Math.max(height, 2)}%` }}
-                    title={`${new Date(day.date).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR")}: ${formatPrice(day.revenue, day.currency, locale)}`}
+                    title={`${formatCivilDate(day.date, { day: "numeric", month: "numeric", year: "numeric" }, locale)}: ${formatPrice(day.revenue, day.currency, locale)}`}
                   />
                 );
               })}

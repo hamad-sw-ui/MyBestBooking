@@ -1,4 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { civilToday } from "@/lib/dates";
+import { expireRequestsInTransaction, type ExpiredRequest } from "@/lib/booking-request-expiration";
+import { notifyExpiredRequest } from "@/lib/booking-request-notifications";
 import { db } from "@/db";
 import { bookings, properties, promotions, ratePlans, reviews, rooms, roomAvailability, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
@@ -151,7 +154,7 @@ export async function POST(request: NextRequest) {
     const guestIdentity = bookingGuestIdentity(user);
 
     await assertNotMaintenance(user);
-    const today = new Date().toISOString().slice(0, 10);
+    const today = civilToday();
     if (data.checkIn < today) return NextResponse.json({ error: await apiError("La date d'arrivée ne peut pas être dans le passé") }, { status: 400 });
     if (!stayNightsWithinLimit(data.checkIn, data.checkOut)) return NextResponse.json({ error: await apiError("Un séjour doit compter entre 1 et 365 nuits") }, { status: 400 });
 
@@ -161,8 +164,18 @@ export async function POST(request: NextRequest) {
       : rateLimit(`bookings:guest-ip:${ipFromRequest(request)}`, { limit: 10, windowMs: 60 * 60 * 1000 });
     if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de tentatives, réessayez plus tard") }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
 
-    const [property] = await db.select().from(properties).where(eq(properties.id, data.propertyId));
-    if (!property || property.status !== "active") return NextResponse.json({ error: await apiError("Hébergement non disponible") }, { status: 400 });
+    // T-233 (audit n°3, F2) : dernier verrou avant l'écriture — un hôte suspendu
+    // ou supprimé ne peut plus recevoir de réservation, même si sa fiche était
+    // encore servie par un cache ou un lien direct.
+    const [listing] = await db
+      .select({ property: properties, hostSuspendedAt: users.suspendedAt, hostDeletedAt: users.deletedAt })
+      .from(properties)
+      .innerJoin(users, eq(properties.hostId, users.id))
+      .where(eq(properties.id, data.propertyId));
+    const property = listing?.property;
+    if (!property || property.status !== "active" || listing.hostSuspendedAt || listing.hostDeletedAt) {
+      return NextResponse.json({ error: await apiError("Hébergement non disponible") }, { status: 400 });
+    }
     const [room] = await db.select().from(rooms).where(and(eq(rooms.id, data.roomId), eq(rooms.propertyId, data.propertyId)));
     if (!room || !room.isActive) return NextResponse.json({ error: await apiError("Chambre non disponible") }, { status: 400 });
 
@@ -186,6 +199,9 @@ export async function POST(request: NextRequest) {
 
     const bookingReference = generateBookingReference();
     let createdBooking: typeof bookings.$inferSelect;
+    // T-234 : demandes expirées libérées par cette transaction — notifiées
+    // **après** le commit (jamais d'envoi d'e-mail dans une transaction).
+    const expiredRequests: ExpiredRequest[] = [];
 
     try {
       createdBooking = await db.transaction(async (tx) => {
@@ -217,6 +233,19 @@ export async function POST(request: NextRequest) {
             gte(roomAvailability.date, data.checkIn),
             lt(roomAvailability.date, data.checkOut),
           ));
+
+        // T-234 (audit n°3, F3) : une demande `pending` expirée bloquait les
+        // dates jusqu'au passage du cron (quotidien) — la 2ᵉ demande sur les
+        // mêmes dates recevait 409 alors que la première était morte. On purge
+        // donc les demandes expirées **dans cette transaction**, limitées à la
+        // chambre et à la fenêtre demandées, avant de compter les chevauchements.
+        // Les notifications partent après le commit (voir plus bas).
+        const expiredHere = await expireRequestsInTransaction(tx as never, new Date(), {
+          roomId: data.roomId,
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
+        });
+        expiredRequests.push(...expiredHere);
 
         const overlaps = await tx
           .select({ checkIn: bookings.checkIn, checkOut: bookings.checkOut })
@@ -424,6 +453,17 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: await apiError(error.message) }, { status: 409 });
       }
       throw error;
+    }
+
+    // T-234 : la nouvelle demande a libéré des dates occupées par des demandes
+    // expirées → leurs notifications partent maintenant (après commit), en
+    // best-effort : un échec d'e-mail ne remet pas en cause la réservation.
+    for (const expired of expiredRequests) {
+      try {
+        await notifyExpiredRequest(expired);
+      } catch (mailError) {
+        console.error("[bookings] notification d'expiration impossible :", mailError);
+      }
     }
 
     if (isGuestBooking) {

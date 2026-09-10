@@ -21,6 +21,13 @@ export { remainingStock } from "@/lib/room-stock-rules";
  * Nombre de séjours actifs couvrant chaque jour de `[from, to]` (bornes
  * incluses, format `YYYY-MM-DD`). Les réservations `cancelled` sont exclues
  * (même périmètre que le tunnel).
+ *
+ * T-234 (audit n°3, F3) : une **demande expirée** mais pas encore balayée par
+ * le cron ne réserve plus rien. Sans cela, le calendrier continuait d'afficher
+ * une unité occupée par une demande morte depuis des heures (et le tunnel
+ * devait, lui, purger avant de compter — voir `expireRequestsInTransaction`).
+ * Le test d'expiration est fait côté SQL avec `now()`, donc insensible au
+ * fuseau du process Node.
  */
 export async function loadBookedCounts(
   roomId: string,
@@ -34,6 +41,12 @@ export async function loadBookedCounts(
       LEFT JOIN bookings b
              ON b.room_id = ${roomId}::uuid
             AND b.status <> 'cancelled'
+            AND NOT (
+                  b.status = 'pending'
+              AND b.payment_intent_id IS NULL
+              AND b.request_expires_at IS NOT NULL
+              AND b.request_expires_at <= now()
+            )
             AND d::date >= b.check_in
             AND d::date <  b.check_out
      GROUP BY d

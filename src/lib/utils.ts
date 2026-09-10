@@ -2,6 +2,7 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { isZeroDecimalCurrency } from "@/lib/i18n";
 import { propertyTypeLabel } from "@/lib/property-types";
+import { formatCivilDate, formatTimestamp } from "@/lib/dates";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -25,26 +26,38 @@ export function intlLocale(ui?: string | null): string {
   return ui === "en" || (ui ?? "").toLowerCase().startsWith("en") ? "en-GB" : "fr-FR";
 }
 
+/**
+ * T-232 (audit n°3, F1/F10) — délègue à `src/lib/dates.ts`, qui distingue
+ * **date civile** (jamais décalée : affichée en UTC) et **instant** (affiché
+ * dans un fuseau explicite, UTC par défaut au lieu du fuseau du runtime).
+ *
+ * Avant, cette fonction formattoait sans `timeZone` : une colonne `date` lue à
+ * minuit local par `pg` s'affichait « 23 septembre » à Los Angeles pour un séjour
+ * du 24 septembre, et le rendu SSR pouvait différer du rendu client.
+ */
 export function formatDate(
   date: Date | string,
   options?: Intl.DateTimeFormatOptions,
   locale: string = "fr-FR",
 ): string {
-  const d = typeof date === "string" ? new Date(date) : date;
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    ...options,
-  }).format(d);
+  const isCivil = typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date.trim());
+  if (isCivil) return formatCivilDate(date, options, locale);
+  return formatTimestamp(date, { day: "numeric", month: "long", year: "numeric", ...options }, locale);
 }
 
 export function formatDateShort(date: Date | string, locale: string = "fr-FR"): string {
-  const d = typeof date === "string" ? new Date(date) : date;
+  const isCivil = typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date.trim());
+  if (isCivil) {
+    // `year: undefined` retire explicitement l'année héritée du défaut
+    // (`{...défauts, ...options}` conserve les clés, mais `Intl` ignore une
+    // composante `undefined`) — le format court ne montre que jour + mois.
+    return formatCivilDate(date, { day: "numeric", month: "short", year: undefined }, locale);
+  }
   return new Intl.DateTimeFormat(intlLocale(locale), {
     day: "numeric",
     month: "short",
-  }).format(d);
+    timeZone: "UTC",
+  }).format(typeof date === "string" ? new Date(date) : date);
 }
 
 export function generateBookingReference(): string {

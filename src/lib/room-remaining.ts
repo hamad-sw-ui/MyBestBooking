@@ -1,3 +1,5 @@
+import { civilToday } from "@/lib/dates";
+
 /**
  * T-177 — disponibilité restante d'une chambre sur la fiche hébergement.
  *
@@ -32,7 +34,7 @@ export function remainingRoomInventory(
 export function stayDatesFromPropertyQuery(
   checkIn: string | undefined | null,
   checkOut: string | undefined | null,
-  today: string = new Date().toISOString().slice(0, 10),
+  today: string = civilToday("UTC"),
 ): { checkIn: string; checkOut: string } | null {
   if (!checkIn || !checkOut) return null;
   if (!DATE_RE.test(checkIn) || !DATE_RE.test(checkOut)) return null;

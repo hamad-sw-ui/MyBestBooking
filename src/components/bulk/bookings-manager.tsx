@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { civilToday } from "@/lib/dates";
 import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +11,7 @@ import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { BookingStatusSelect } from "./booking-status-select";
 import { BookingSettlementCell } from "./booking-settlement-cell";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
+import { formatCivilDate, formatTimestamp } from "@/lib/dates";
 
 export interface BookingRow {
   booking: {
@@ -59,16 +61,18 @@ const statusBadgeColor: Record<string, string> = {
   no_show: "bg-gray-100 text-gray-800",
 };
 
+/**
+ * T-232 : `checkIn`/`checkOut` sont des dates **civiles** (`YYYY-MM-DD`) — les
+ * formater via `new Date(...)` les décalait d'un jour dans les fuseaux négatifs
+ * (le runtime du serveur ne doit jamais décider du jour affiché).
+ */
 function fmt(d: string, locale: string): string {
-  try {
-    return new Date(d).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return d;
-  }
+  return formatCivilDate(d, { day: "numeric", month: "short", year: "numeric" }, locale);
+}
+
+/** T-232 : `requestExpiresAt` est un instant → fuseau explicite (UTC). */
+function fmtInstant(d: string | Date, locale: string): string {
+  return formatTimestamp(d, { day: "numeric", month: "short", year: "numeric" }, locale);
 }
 function money(v: string, cur: string | null, locale: string): string {
   const n = parseFloat(v);
@@ -85,11 +89,18 @@ function money(v: string, cur: string | null, locale: string): string {
 interface Props {
   bookings: BookingRow[];
   isAdmin: boolean;
+  /**
+   * T-232 : fuseau de l'utilisateur connecté. Il fixe l'horizon « aujourd'hui »
+   * des vues dérivées (règlements à constater) pour que l'affichage ne dépende
+   * pas du fuseau du navigateur qui consulte l'écran.
+   */
+  displayTimezone?: string | null;
 }
 
 export function BookingsManager({
   bookings,
   isAdmin,
+  displayTimezone = null,
   initialStatus = "all",
   initialPaymentFilter = "all",
 }: Props & { initialStatus?: string; initialPaymentFilter?: "all" | "due" }) {
@@ -116,7 +127,11 @@ export function BookingsManager({
 
   // T-222 : un séjour est « à constater » quand il est terminé, non payé et
   // non réglé sur place (mêmes critères que la carte du tableau de bord).
-  const today = new Date().toISOString().slice(0, 10);
+  //
+  // T-232 : l'horizon est celui de **l'utilisateur** quand son fuseau est connu
+  // (`displayTimezone`), pas celui du navigateur ni du serveur — sinon le même
+  // séjour change de colonne selon qui regarde l'écran.
+  const today = civilToday(displayTimezone ?? undefined);
   function settlementDue(b: BookingRow): boolean {
     return (
       b.booking.status === "confirmed" &&
@@ -128,7 +143,7 @@ export function BookingsManager({
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    const isoToday = new Date().toISOString().slice(0, 10);
+    const isoToday = today;
     const isDue = (b: BookingRow) =>
       b.booking.status === "confirmed" &&
       b.booking.checkOut.slice(0, 10) <= isoToday &&
@@ -150,7 +165,7 @@ export function BookingsManager({
         (b.property?.city ?? "").toLowerCase().includes(ql)
       );
     });
-  }, [bookings, q, statusFilter, dateFrom, dateTo, paymentFilter]);
+  }, [bookings, q, statusFilter, dateFrom, dateTo, paymentFilter, today]);
 
   // Bulk cancel : ne s'applique qu'aux bookings pending/confirmed (BUG-022 FSM)
   const cancellable = filtered.filter(
@@ -405,7 +420,7 @@ export function BookingsManager({
                             <Clock className="w-3 h-3" aria-hidden="true" />
                             {t("bulk.requestDeadline").replace(
                               "{date}",
-                              fmt(booking.requestExpiresAt, locale),
+                              fmtInstant(booking.requestExpiresAt, locale),
                             )}
                           </div>
                         )}

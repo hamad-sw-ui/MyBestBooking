@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { civilToday } from "@/lib/dates";
 import { z } from "zod";
 import { db } from "@/db";
 import { rooms, properties, roomAvailability } from "@/db/schema";
@@ -30,7 +31,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_CALENDAR_DAYS = 366;
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return civilToday();
 }
 
 function inclusiveCalendarDays(from: string, to: string): number {
@@ -73,7 +74,7 @@ export async function GET(
   }
 
   const from = request.nextUrl.searchParams.get("from")
-    ?? new Date().toISOString().slice(0, 10);
+    ?? civilToday();
   const to = request.nextUrl.searchParams.get("to")
     ?? new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
 

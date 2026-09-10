@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense } from "react";
+import { civilToday } from "@/lib/dates";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PromoCodeInput } from "@/components/promo-code-input";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
@@ -85,7 +86,7 @@ interface BookingQuoteData {
 
 
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return civilToday();
 }
 
 function ReservationPageInner() {

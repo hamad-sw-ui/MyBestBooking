@@ -471,3 +471,38 @@ aucune route orpheline hormis le tombeau 410 du paiement en ligne (T-207).
 
 **Suites.** T-242 → T-244 au BACKLOG ; les confirmations enrichissent T-227, T-232 → T-236,
 T-241.
+
+## 2026-09-10 — T-232/T-233/T-234 (audit n°3) : dates, suspension d'hôte, expiration paresseuse
+
+**Demandé.** Poursuivre la mise en œuvre des audits après la livraison T-221→T-231 / T-242→T-244 :
+traiter les constats F1/F9/F10 (dates et fuseaux), F2 (suspension d'hôte sans effet sur ses annonces)
+et F3 (demande expirée bloquant les dates), « sans régression, sans casser l'existant, tout testé
+avec succès avant de s'arrêter ».
+
+**Fait.**
+
+1. **T-232 — dates civiles.** Un helper unique (`src/lib/dates.ts`) distingue date civile (jamais
+   décalée) et instant (fuseau explicite). `pg` renvoie désormais les colonnes `date` en chaînes
+   (`setTypeParser(1082)`), ce qui supprime la dérive d'un jour constatée avec `TZ=Africa/Douala`.
+   Les 7 derniers `toLocaleDateString` (pages légales, analytics, calendrier, gestionnaires en
+   masse) passent par ce helper : **0 occurrence restante** dans `src/`.
+2. **T-233 — cascade de suspension.** `src/lib/host-suspension.ts` bascule les annonces
+   `active ↔ suspended` en transaction, de façon idempotente, depuis la suspension unitaire et le
+   bulk ; recherche, fiche et tunnel filtrent sur un hôte actif. L'anomalie « la fiche reste en
+   200 » venait de **deux instances du module de cache** (bundles page et route distincts) :
+   le cache est ancré sur `globalThis`, et la fiche porte en plus une garde de visibilité hors cache.
+3. **T-234 — expiration paresseuse.** La purge d'expiration est extraite du cron vers une lib
+   partagée et s'exécute **dans la transaction** du tunnel et du devis, bornée à la chambre et à la
+   fenêtre demandées ; les notifications partent après le commit. La lecture de stock
+   (`loadBookedCounts`) cesse de compter une demande expirée non encore balayée.
+
+**Preuves.** `npm run ci` verte de bout en bout (vitest **709 tests / 120 fichiers**, smoke
+**95/95**) ; runtime réel : fiche `200 → 404 → 404 → 200`, total d'annonces `8 → 0 → 8`, réservation
+`400` puis `201` ; demande expirée : `201` au lieu de `409` (le `409` du constat F3 est reproduit en
+retirant le correctif), disponibilité `0/1 → 1/0`.
+
+**Base.** Restaurée à l'identique du seed (8 users / 8 annonces `active` / 34 réservations / 25 avis),
+aucun résidu de sonde.
+
+**Suites.** T-235 → T-239 et T-241 restent au BACKLOG (quota avant validation, heure d'arrivée,
+validation d'annonce notifiée, wishlist partagée, désabonnement, finitions d'admin).

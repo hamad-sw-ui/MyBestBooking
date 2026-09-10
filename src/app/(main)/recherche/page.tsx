@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/db";
-import { bookings, properties, rooms } from "@/db/schema";
+import { bookings, properties, rooms, users } from "@/db/schema";
 import { asc, count, eq, and, ilike, inArray, or, desc, sql, type SQL } from "drizzle-orm";
 import { PropertyCard } from "@/components/property-card";
 import { toPublicPropertyCard } from "@/lib/public-property";
@@ -23,6 +23,7 @@ import { publicCatalogCache } from "@/lib/read-cache";
 import { propertyTypeOptions } from "@/lib/property-types";
 import { countryOptions } from "@/lib/countries";
 import { hasInvalidRequestedStay, hasStayRequest, parseFutureStay, todayIso } from "@/lib/future-stay";
+import { ACTIVE_HOST_ALIAS, activeHostCondition } from "@/lib/host-suspension";
 
 /**
  * T-172 (audit UIT 2026-09-01) — les clés `search.meta.*` existaient depuis
@@ -151,7 +152,13 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
     return { total: 0, page: 1, totalPages: 1, results: [] };
   }
 
-  const conditions: SQL[] = [eq(properties.status, "active")];
+  // T-233 (audit n°3, F2) : une annonce publiée par un hôte suspendu (ou
+  // supprimé) ne doit pas rester dans les résultats — le filtre complète la
+  // cascade de statut, qui pourrait avoir été contournée.
+  const conditions: SQL[] = [
+    eq(properties.status, "active"),
+    activeHostCondition(ACTIVE_HOST_ALIAS),
+  ];
 
   if (params.city) {
     conditions.push(or(ilike(properties.city, `%${params.city}%`), ilike(properties.name, `%${params.city}%`))!);
@@ -197,9 +204,10 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
   // `page = min(requestedPage, totalPages)` est conservé : si la page
   // demandée dépasse, on relit au bon offset (cas rare, correct).
   const [countRes, firstRows] = await Promise.all([
-    db.select({ total: count() }).from(properties).where(and(...conditions)),
+    db.select({ total: count() }).from(properties).innerJoin(users, eq(properties.hostId, users.id)).where(and(...conditions)),
     db.select({ property: properties })
       .from(properties)
+      .innerJoin(users, eq(properties.hostId, users.id))
       .where(and(...conditions))
       .orderBy(...order)
       .limit(20)
@@ -213,6 +221,7 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
     : await db
         .select({ property: properties })
         .from(properties)
+        .innerJoin(users, eq(properties.hostId, users.id))
         .where(and(...conditions))
         .orderBy(...order)
         .limit(20)

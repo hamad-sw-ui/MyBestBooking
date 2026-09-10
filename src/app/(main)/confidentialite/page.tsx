@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 // plus voir le contenu FR (titre du navigateur + libellés visibles).
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { civilToday, formatCivilDate } from "@/lib/dates";
 
 const CONTENT = {
   fr: {
@@ -194,7 +195,7 @@ export default async function ConfidentialitePage() {
             </a>.
           </p>
           <p className="text-sm text-gray-500 mt-2">
-            {c.updated} {new Date().toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR")}
+            {c.updated} {formatCivilDate(civilToday(), { day: "numeric", month: "long", year: "numeric" }, locale)}
           </p>
         </div>
       </section>

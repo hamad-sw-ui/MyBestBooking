@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { civilToday } from "@/lib/dates";
 import { db } from "@/db";
 import { bookings, emailOutbox, priceAlerts, promotions, properties, uploadObjects, users } from "@/db/schema";
 import { and, eq, gte, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
@@ -15,7 +16,8 @@ import { getPaymentProvider } from "@/lib/payment";
 import { recoverPendingPaymentIntents } from "@/lib/payment-intents";
 import { processPendingPaymentEvents, reconcileLateCapturedPaymentRefunds } from "@/lib/payment-events";
 import { sendBookingReminders, sendReviewRequests } from "@/lib/booking-lifecycle-emails";
-import { BOOKING_REQUEST_EXPIRED_REASON } from "@/lib/booking-request-expiration";
+import { expireManualBookingRequests as expireRequestsNow } from "@/lib/booking-request-expiration";
+import { notifyExpiredRequest } from "@/lib/booking-request-notifications";
 import { templates } from "@/lib/mail";
 import { apiError } from "@/lib/api-error";
 
@@ -152,87 +154,10 @@ async function expirePendingBookings(): Promise<number> {
   return expired;
 }
 
-/**
- * T-221 (audit n°2) — notification d'une demande expirée.
- *
- * Deux destinataires, deux `eventKey` déterministes : le cron peut être
- * relancé sans doubler les envois. Respecte l'interrupteur admin
- * `notifications.bookingRequestExpired` (défaut actif).
- */
-async function notifyExpiredRequest(candidate: {
-  id: string;
-  bookingReference: string;
-  guestEmail: string;
-  guestFirstName: string;
-  checkIn: string | Date;
-  checkOut: string | Date;
-  propertyId: string;
-}): Promise<void> {
-  const notifications = await getSetting("notifications");
-  if (!notifications.bookingRequestExpired) return;
-  const [row] = await db
-    .select({
-      propertyName: properties.name,
-      propertyCity: properties.city,
-      hostEmail: users.email,
-      hostFirstName: users.firstName,
-      hostLanguage: users.language,
-    })
-    .from(properties)
-    .innerJoin(users, eq(properties.hostId, users.id))
-    .where(eq(properties.id, candidate.propertyId))
-    .limit(1);
-  if (!row) return;
-  const checkIn = String(candidate.checkIn).slice(0, 10);
-  const checkOut = String(candidate.checkOut).slice(0, 10);
-  const [guest] = await db
-    .select({ language: users.language })
-    .from(users)
-    .where(eq(users.email, candidate.guestEmail))
-    .limit(1);
-  const travelerMail = await templates.bookingRequestExpired({
-    firstName: candidate.guestFirstName,
-    bookingReference: candidate.bookingReference,
-    propertyName: row.propertyName,
-    city: row.propertyCity,
-    checkIn,
-    checkOut,
-    language: guest?.language ?? null,
-  });
-  await enqueueEmail({
-    eventKey: `booking-request-expired:${candidate.id}`,
-    to: candidate.guestEmail,
-    ...travelerMail,
-  });
-  const hostMail = await templates.bookingRequestExpiredHost({
-    hostFirstName: row.hostFirstName,
-    bookingReference: candidate.bookingReference,
-    propertyName: row.propertyName,
-    guestName: candidate.guestFirstName,
-    checkIn,
-    checkOut,
-    language: row.hostLanguage ?? null,
-  });
-  await enqueueEmail({
-    eventKey: `booking-request-expired-host:${candidate.id}`,
-    to: row.hostEmail,
-    ...hostMail,
-  });
-}
-
-/**
- * T-222 (audit n°2) — relance des séjours terminés dont le règlement n'a pas
- * été constaté. Un e-mail par séjour (idempotent), à l'hôte propriétaire.
- *
- * Sans cette relance, ni la clôture, ni les points de fidélité, ni
- * l'invitation d'avis, ni la facture ne peuvent aboutir : le séjour reste
- * `confirmed` indéfiniment et les indicateurs de revenu l'ignorent.
- * Fenêtre bornée (30 jours) pour ne pas re-notifier un historique ancien.
- */
 export async function sendPaymentReminders(now = new Date()): Promise<number> {
   const notifications = await getSetting("notifications");
   if (!notifications.bookingPaymentReminder) return 0;
-  const todayIso = now.toISOString().slice(0, 10);
+  const todayIso = civilToday("UTC", now);
   const windowStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const rows = await db
     .select({
@@ -287,100 +212,16 @@ export async function sendPaymentReminders(now = new Date()): Promise<number> {
 }
 
 /**
- * T-209/F1 — expire les demandes manuelles restées `pending` au-delà de leur
- * TTL métier. Conservateur contre le surbooking : les demandes bloquent bien le
- * stock pendant le délai, puis le cron les annule pour libérer la chambre.
- * Ne touche jamais aux anciens holds de paiement (`paymentIntentId` présent),
- * ni aux réservations confirmées/annulées.
+ * T-209/F1 + T-234 : purge des demandes expirées.
+ *
+ * La logique vit désormais dans `src/lib/booking-request-expiration.ts` afin
+ * d'être appelable **dans** la transaction du tunnel de réservation (le cron
+ * quotidien ne suffisait pas : une demande expirée bloquait les dates jusqu'au
+ * passage suivant). Ici, on ne fait que brancher la notification post-commit.
+ * Réexport conservé pour les tests d'intégration existants.
  */
-export async function expireManualBookingRequests(now = new Date()): Promise<number> {
-  const candidates = await db
-    .select({
-      id: bookings.id,
-      bookingReference: bookings.bookingReference,
-      guestEmail: bookings.guestEmail,
-      guestFirstName: bookings.guestFirstName,
-      checkIn: bookings.checkIn,
-      checkOut: bookings.checkOut,
-      propertyId: bookings.propertyId,
-    })
-    .from(bookings)
-    .where(and(
-      eq(bookings.status, "pending"),
-      eq(bookings.paymentStatus, "pending"),
-      isNull(bookings.paymentIntentId),
-      lte(bookings.requestExpiresAt, now),
-    ))
-    .limit(100);
-
-  let expired = 0;
-  for (const candidate of candidates) {
-    const changed = await db.transaction(async (tx) => {
-      const [booking] = await tx
-        .select()
-        .from(bookings)
-        .where(eq(bookings.id, candidate.id))
-        .for("update");
-      if (
-        !booking ||
-        booking.status !== "pending" ||
-        booking.paymentStatus !== "pending" ||
-        booking.paymentIntentId ||
-        !booking.requestExpiresAt ||
-        booking.requestExpiresAt > now
-      ) {
-        return false;
-      }
-      if (booking.promotionId) {
-        await tx
-          .update(promotions)
-          .set({ currentUses: sql`GREATEST(${promotions.currentUses} - 1, 0)` })
-          .where(eq(promotions.id, booking.promotionId));
-      }
-      const walletUsed = Number(booking.walletCreditsUsed ?? "0");
-      if (walletUsed > 0) {
-        const [user] = await tx
-          .select()
-          .from(users)
-          .where(eq(users.id, booking.userId))
-          .for("update");
-        if (user) {
-          await tx
-            .update(users)
-            .set({
-              walletBalance: (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2),
-              updatedAt: now,
-            })
-            .where(eq(users.id, user.id));
-        }
-      }
-      await tx
-        .update(bookings)
-        .set({
-          status: "cancelled",
-          cancelledAt: now,
-          cancellationReason: BOOKING_REQUEST_EXPIRED_REASON,
-          benefitsReleasedAt: now,
-          requestExpiresAt: null,
-          updatedAt: now,
-        })
-        .where(eq(bookings.id, booking.id));
-      return true;
-    });
-    if (changed) {
-      expired += 1;
-      // T-221 : informer le voyageur (et l'hôte) — l'annulation automatique
-      // ne doit jamais être silencieuse. Best-effort : un échec d'e-mail ne
-      // remet pas en cause l'expiration déjà committée.
-      try {
-        await notifyExpiredRequest(candidate);
-      } catch (mailErr) {
-        console.error("[cron] notification d'expiration impossible:", mailErr);
-      }
-    }
-  }
-  return expired;
-}
+export const expireManualBookingRequests = (now = new Date()) =>
+  expireRequestsNow(now, notifyExpiredRequest);
 
 /** T-161 (audit n°30) — désactive les alertes « séjour » dont le départ est
  *  déjà passé (elles ne peuvent plus jamais se réaliser ; re-quotées
@@ -414,7 +255,7 @@ export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = civilToday();
     const completedBookings = await completeEligibleBookings(today);
     // T-149 : e-mails de cycle de vie (rappels J-3/J-1 et demande d'avis),
     // idempotents via des eventKeys déterministes.

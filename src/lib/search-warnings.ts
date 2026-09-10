@@ -14,6 +14,7 @@
 
 import { priceBoundToStorage } from "@/lib/i18n";
 import type { UiStringKey } from "@/lib/ui-strings";
+import { civilToday } from "@/lib/dates";
 
 export type SearchWarning =
   /** checkIn/checkOut présents mais mal formés, incomplets ou inversés. */
@@ -38,7 +39,7 @@ const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** Date du jour au format YYYY-MM-DD (UTC — référence stable pour les tests). */
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return civilToday("UTC");
 }
 
 /** Warning → clé de dictionnaire (mapping explicite, type-safe). */

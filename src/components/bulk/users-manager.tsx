@@ -11,6 +11,7 @@ import { HostApproveActions } from "@/components/admin/host-approve-actions";
 import { HostCommissionEditor } from "@/components/admin/host-commission-editor";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { countryLabel } from "@/lib/country-label";
+import { formatTimestamp } from "@/lib/dates";
 
 export interface UserRow {
   id: string;
@@ -47,17 +48,12 @@ const roleBadges: Record<string, string> = {
   support: "bg-teal-100 text-teal-800",
 };
 
-function fmt(d: string | null, locale: string): string {
-  if (!d) return "—";
-  try {
-    return new Date(d).toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return "—";
-  }
+/**
+ * T-232 : `createdAt`/`lastLoginAt` sont des **instants** — formatés dans un
+ * fuseau explicite (UTC) plutôt que celui du runtime serveur.
+ */
+function fmt(d: string | Date | null, locale: string): string {
+  return formatTimestamp(d, { day: "numeric", month: "short", year: "numeric" }, locale);
 }
 
 interface Props {

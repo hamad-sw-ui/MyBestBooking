@@ -7,6 +7,29 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-10 — Audit n°3 : T-232 (dates/fuseaux), T-233 (suspension d'hôte), T-234 (expiration paresseuse) + volet T-240
+
+- **Livré** : les constats **F1/F9/F10** (T-232), **F2** (T-233) et **F3** (T-234) de
+  `docs/analyse_2026-09-10_audit_runtime_scenarios.md`, plus le reliquat de **T-240**.
+  T-232 : helper unique `src/lib/dates.ts` (date civile vs instant), `pg` rend les colonnes
+  `date` en chaînes, `users.timezone` réellement lu, **0** `toLocaleDateString` restant dans
+  `src/`. T-233 : cascade transactionnelle `active ↔ suspended` (`src/lib/host-suspension.ts`),
+  filtres publics (recherche, fiche, tunnel) et **cache partagé** (`globalThis`) invalidé à la
+  suspension comme au bulk, avec garde de visibilité hors cache sur la fiche. T-234 : purge
+  d'expiration extraite en lib partagée et exécutée **dans la transaction** du devis et du tunnel
+  (bornée chambre/fenêtre, notifications post-commit) ; `loadBookedCounts` ne compte plus une
+  demande morte. T-240 : tests multi-fuseaux `transitionError`/`isReviewEligible`, « aujourd'hui »
+  métier centralisé (`civilToday("UTC")`).
+- **Preuves** : `npm run ci` **verte** (typecheck 0 · lint 0/0 · i18n 1640 · ai:check 19 OK /
+  1 warn R7 / 0 fail · vitest **709 tests / 120 fichiers, 0 échec** · build · smoke **95/95**) ;
+  runtime réel : fiche 200→404→404→200, total d'annonces 8→0→8, réservation refusée 400 puis
+  acceptée 201 ; demande expirée purgée par le tunnel (201 au lieu de 409, **409 reproduit sans le
+  correctif**) ; disponibilité 0/1 → 1/0.
+- **Base** : remise à l'état seed exact (8 users / 8 annonces `active` / 34 réservations / 25 avis),
+  comptes et réservations de sonde supprimés.
+- **Rapport** : `REPORTS/validation_T232_T234_2026-09-10_dates_suspension_expiration.md`.
+- **Suite** : T-235 → T-239, T-241 au BACKLOG.
+
 ## Session 2026-09-10 — T-217 correctifs P1–P10 de l'audit runtime
 
 ### Complément de session — complétude P1 + T-219 (2026-09-10)

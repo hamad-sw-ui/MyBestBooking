@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/toast";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 // Règle pure (aucun accès base) : ce composant est rendu dans le navigateur.
 import { remainingStock } from "@/lib/room-stock-rules";
+import { formatCivilDate } from "@/lib/dates";
 
 interface Day {
   date: string;
@@ -291,7 +292,7 @@ export function AvailabilityCalendar({
               return (
                 <tr key={date} className={weekend ? "bg-amber-50/30" : ""}>
                   <td className="px-3 py-2 whitespace-nowrap">
-                    {dt.toLocaleDateString(locale === "en" ? "en-GB" : "fr-FR", { weekday: "short", day: "2-digit", month: "short" })}
+                    {formatCivilDate(date, { weekday: "short", day: "2-digit", month: "short" }, locale)}
                   </td>
                   <td className="px-3 py-2">
                     <input

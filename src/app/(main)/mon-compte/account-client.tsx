@@ -221,6 +221,9 @@ export default function MyAccountPage() {
                       language: user.language ?? null,
                       currency: user.currency ?? null,
                       timezone: user.timezone ?? null,
+                      // T-232 : fuseau utilisé pour exprimer les dates de
+                      // saisie (elles-mêmes stockées en UTC).
+                      displayTimezone: user.timezone ?? null,
                       avatarUrl: user.avatarUrl ?? null,
                     }} />
                   </CardContent>
