@@ -3,7 +3,7 @@
 - **ID** : T-242 → T-244 (analyse) — livrée ; chantier T-221 → T-231 en cours
 - **Titre** : Audit runtime n°4 (profondeur) puis implémentation des correctifs d'audit n°2
 - **Statut** : EN COURS (analyse livrée ; correctifs T-242 → T-244 à engager)
-- **Niveau** : M (trois correctifs issus de l'analyse, aucun changement de contrat d'API)
+- **Niveau** : C (données personnelles persistées — cf. §15.0 : en cas de doute, choisir le niveau le plus élevé)
 - **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie `REPORTS/analyse_runtime_n4_2026-09-10_profondeur.md`)
 
 ## Contexte
