@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { chooseMaintenanceGate } from "@/lib/maintenance-gate";
+import { reportSilentFetchIssue } from "@/lib/silent-fetch-observability";
 
 /**
  * T-128 (audit n°8, P1) — garde « page de maintenance » côté client.
@@ -22,14 +23,18 @@ export function MaintenanceGate({ isAdmin = false }: { isAdmin?: boolean }) {
     (async () => {
       try {
         const res = await fetch("/api/maintenance-status", { cache: "no-store" });
-        if (!res.ok) return; // ne jamais bloquer le site si la sonde échoue
+        if (!res.ok) {
+          reportSilentFetchIssue("maintenance-gate", { status: res.status });
+          return; // ne jamais bloquer le site si la sonde échoue
+        }
         const data = (await res.json()) as { active?: boolean };
         if (cancelled) return;
         const pathname = window.location.pathname;
         if (chooseMaintenanceGate(data.active === true, isAdmin, pathname)) {
           window.location.replace("/maintenance");
         }
-      } catch {
+      } catch (error) {
+        reportSilentFetchIssue("maintenance-gate", { error });
         // Réseau/erreur : on reste sur la page (les écritures API restent
         // bloquées par le serveur de toute façon). Pas d'effet de bord.
       }

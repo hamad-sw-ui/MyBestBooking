@@ -5,6 +5,79 @@ en haut). Aucun format imposé — quelques lignes suffisent : ce qu'on a fait,
 ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 
 ---
+## 2026-09-10 — T-208 audit fonctionnel/runtime post T-207
+
+**Fait.** Reprise de l'audit runtime demandé : build production, seed, smoke,
+site-audit, run_all_sims, dashboards_sim et probes ciblés sur `/connexion`,
+`/reservation`, `/mes-reservations`, billing/settings, stock pending et outbox.
+Rapport livré : `.ai/REPORTS/audit_fonctionnel_profond32_T208_2026-09-10.md`.
+Aucun code produit n'a été modifié dans cette passe.
+
+**Appris.** Le modèle sans paiement plateforme est bien fermé côté UI/runtime, mais
+il déplace le risque vers l'opérationnel : les demandes `pending` sans expiration
+peuvent bloquer l'inventaire indéfiniment, et la demande initiale n'envoie pas
+d'email aux parties. Deux autres sujets sont surtout gouvernance/produit : les
+identifiants démo publics (admin inclus) et le bouton seed public sur accueil vide.
+Le harnais `dashboards_sim.py` est en retard sur le soft-delete des chambres.
+
+**Contrôle final.** `npm run ai:check && git diff --check` vert : 20 OK / 0 warn /
+0 fail, aucune erreur whitespace.
+
+**Laissé.** Findings à implémenter par priorité : F1 TTL/stock des demandes,
+F2 notifications de demande, F3/F4 flags démo, F5 flag payout legacy, F6 QA,
+F7 feedback discret des fetchs silencieux.
+
+---
+## 2026-09-10 — T-207 réservations sans paiement plateforme
+
+**Fait.** Audit runtime orienté parcours : le tunnel `/reservation`, les actions
+`/mes-reservations`, l'API booking/payment, l'exposition Stripe navigateur, le
+wallet, les pages aide/compte/légal/RGPD et les surfaces billing/settings ont été
+alignés sur une politique unique : **MyBestBooking ne conduit plus le voyageur vers
+un paiement en ligne**. Le POST booking crée une demande `pending` sans intent PSP,
+la route legacy `/api/bookings/[id]/payment` répond `410`, le CTA « Payer
+maintenant » disparaît, `StripePaymentForm` est un stub et le wallet n'est plus
+débité dans le tunnel.
+
+**Appris.** Supprimer un paiement ne suffit pas côté UI : il faut également fermer
+les chemins de reprise et clients forgés. La garde serveur (`payOnline` ignoré,
+`payment:null`, `onlinePaymentDisabled:true`) est le vrai invariant ; la garde UI
+(`shouldShowStripeForm=false`) évite qu'une réponse legacy contenant un
+`clientSecret` réactive une carte. Les surfaces pro (billing/payout/settings) ne
+devraient plus suggérer des versements quand la plateforme n'encaisse pas.
+
+**Validé.** `typecheck`, `lint`, `i18n:check` (0 candidat), tests ciblés 23/23,
+`npm test` 558 pass / 17 skip, build 65 pages, smoke 95/95, site-audit 260 pages /
+0 issue, run_all_sims 399 OK / 4 WARN / 0 KO, DB reset, `ai:check` 20 OK / 0 warn / 0 fail et `git diff --check` OK. Un premier site-audit sous
+`next dev` a été interrompu par arrêt serveur ; la preuve retenue est le relancement
+sous `next start`.
+
+**Laissé.** Les modules Stripe/payment/payout historiques restent en compatibilité
+technique et tests legacy, mais ne sont plus exposés au parcours voyageur ni au
+billing actif.
+
+---
+## 2026-09-09 — T-206 audit fonctionnel/runtime profond post T-205
+
+**Fait.** Audit runtime/fonctionnel relancé après T-205 : build prod OK, crawl
+site-wide OK (242 pages / 0 issue), runner complet exécuté puis expliqué (surface
+KO car il attend encore `confirmed` alors que le flux manuel est `pending`, deep
+KO car il ne suit pas `account-client.tsx`). J'ai ajouté le rapport
+`.ai/REPORTS/audit_fonctionnel_profond31_T206_2026-09-09.md`.
+
+**Appris.** Les sondes ciblées ont révélé quatre sujets à traiter en priorité :
+(1) le calcul POST booking diverge du devis sur invité + rate plan + promo
+(BestRewards appliqué à tort à l'invité et remise rate plan absente du champ
+`discount` dès qu'une promo existe) ; (2) un hôte peut clôturer `completed` une
+réservation `paymentStatus=pending`, ce que le cron refuse pourtant ; (3) le
+`PUT` générique d'une property peut publier un bien d'hôte non approuvé ; (4) le
+mode maintenance protège les pages mais pas toutes les écritures API.
+
+**Laissé.** Aucun code T-206 n'est modifié pour l'instant : le prochain tour doit
+faire les analyses d'impact/conception de correction, puis traiter les lots F1-F4
+en premier sans casser T-205.
+
+---
 ## 2026-09-07 — T-204 mise en œuvre des remarques (garde P3 + preuves e-mails)
 
 **Fait.** Après l'audit T-203, l'utilisateur a demandé d'implémenter les remarques
@@ -165,3 +238,57 @@ d'un nouveau `.ai/` :
 
 **Pour la suite.** Voir `BACKLOG.md` — les items 🔴 sont les prérequis
 sécurité/exploitation avant tout déploiement réel.
+
+---
+
+## 2026-09-09 — T-205 audit fonctionnel/runtime
+
+T-205 livré et validé : corrections additifs des parcours runtime (réservation/paiement, disponibilité, hôte, modération, messagerie admin, billing, référentiels, calendrier, soft-delete chambres, wishlists/analytics). Point notable : ajout de `GET /api/bookings/quote` pour que le checkout affiche le même calcul que `POST /api/bookings` lorsque le calendrier surcharge les prix par nuit.
+
+Gates : `npm run typecheck` 0 · `npm run lint` 0 · `npm test` 455/455 (113 skipped DB-gated) · `npm test -- src/app/api/bookings/quote/route.test.ts` 2/2 avec DB locale · `npm run i18n:check` 0 · `npm run build` 65 pages · `npm run smoke` 95/95 · `npm run ai:check` 19 OK, 1 warn R7, 0 fail.
+
+## 2026-09-10 — T-206 implémentation findings runtime
+
+**Fait.** Implémentation des 13 remarques T-206 après impact/conception/débat niveau C.
+
+- **Finance/réservation** : correction du cumul `discount` (rate plan + promo), suppression de la remise BestRewards pour invités anonymes, verrou promo `FOR UPDATE` dans la transaction.
+- **Paiement/lifecycle** : confirmation manuelle préservée, online unpaid non confirmable, `completed` interdit tant que non payé pour éviter cashback/loyalty indus.
+- **Catalogue/recherche** : helper `future-stay`, 0 résultat sur séjour demandé impossible, API alignée sur SSR (`amenity`, amenities chambres, `displayCurrency`).
+- **Sécurité opérationnelle** : garde maintenance sur mutations non-admin, UUID invalides en 400, publication active soumise au gate hôte approuvé même via PUT générique.
+- **UX/ops** : enfants bornés sur fiche, conversations vides masquées, lien admin messagerie, suppression compte avec obligations, facture unpaid déclassée en reçu non soldé.
+- **QA** : simulations surface/deep/paranoid actualisées ; reset DB nettoie les artefacts T-206.
+
+**Validation.** `npm run typecheck` 0 · `npm run lint` 0 · `npm run i18n:check` 0 · tests ciblés T-206 12/12 · `npm test` 561 pass / 17 skip · `npm run build` 65 routes · `npm run smoke` 95/95 · `site:audit` 249/0 · `run_all_sims.py` 399 OK / 4 WARN / 0 KO · `npm run ai:check` 20 OK / 0 warn / 0 fail.
+
+---
+
+## 2026-09-10 — T-209 implémentation des remarques T-208
+
+**Fait.** Les 7 remarques issues de l'audit runtime T-208 ont été implémentées en conservant la contrainte T-207 : le parcours voyageur ne propose toujours aucun paiement plateforme.
+
+- **F1/F2 réservation** : migration additive `request_expires_at`, TTL configurable borné (24h par défaut), création `POST /api/bookings` en demande manuelle avec `payment:null` + emails outbox voyageur/hôte ; cron d'expiration conservateur qui ne cible que `pending` sans `payment_intent_id`.
+- **F3/F4 démo** : flags publics pour afficher les accès démo/seed, opt-in serveur obligatoire en production (`DEMO_LOGIN_ENABLED`, `DEMO_SEED_ENABLED`) et conservation de la garde `SEED_TOKEN`.
+- **F5 payouts** : les surfaces mutables legacy sont neutralisées par défaut (`410 PLATFORM_PAYOUTS_DISABLED` ou webhook accepté sans mutation) ; l'historique en lecture/export reste disponible.
+- **F6/F7 QA/obs** : simulation dashboards réalignée sur le soft-delete rooms ; fetchs silencieux client avec trace console discrète et dédupliquée.
+
+**Validation.** `npm run typecheck` 0 · `npm run lint` 0 · `npm run i18n:check` 0 · tests ciblés 43/43 · `npm run test` 575 pass / 17 skip · `npm run build` 65 pages · `npm run smoke` 95/95 · `python3 scripts/dashboards_sim.py` 68 OK / 0 KO · `python3 scripts/run_all_sims.py` 400 OK / 4 WARN / 0 KO · `npm run site:audit` 269 pages / 0 issue. Un premier smoke a révélé que le script ne relisait pas `SEED_TOKEN` depuis `.env.local` en production preview ; le harnais a été corrigé, sans assouplir la garde API. `run_all_sims.py` charge aussi `.env.local` pour ses sous-process Next et est désormais protégé par `if __name__ == "__main__"`.
+
+## 2026-09-10 — T-210 audit runtime complémentaire + filtre accueil
+
+**Fait.** Le filtre de la page d'accueil est maintenant une entrée rapide destination seule : suppression de `checkIn`, `checkOut`, `guests` et `home-guests` dans le hero, conservation de `action="/recherche"` + `city`.
+
+**Préservé.** `/recherche` garde les filtres avancés, la fiche garde la sélection de dates/voyageurs, `/reservation` garde le devis/demande sans paiement plateforme. T-207 reste intact : aucune carte, aucun Stripe public, aucun CTA « Payer maintenant ».
+
+**Audit.** Les parcours runtime repassent sans nouveau défaut bloquant : smoke 95/95, simulations 402 OK / 0 WARN / 0 KO, site-audit production 247 pages / 0 issue. Résiduels proposés au backlog : wrapper `site:audit:prod`, carte recherche optionnelle, staging providers réels, E2E navigateur.
+
+---
+
+## 2026-09-10 — T-211 wrapper `site:audit:prod`
+
+**Fait.** Ajout d'une commande QA reproductible pour éviter les faux rouges du long crawl sous `next dev`/Turbopack :
+
+- `scripts/site-audit-prod.mjs` orchestre `next build`, `next start`, l'attente `/api/health`, le crawl `scripts/site-audit.mjs`, puis le cleanup du serveur.
+- `package.json` expose `npm run site:audit:prod` sans modifier `npm run site:audit`.
+- Le port est configurable (`SITE_AUDIT_PROD_PORT`, `--port`) avec défaut 3100 et recherche automatique si le port par défaut est occupé ; `--skip-build` permet de réutiliser un build existant.
+
+**Validation.** `node --check scripts/site-audit-prod.mjs` OK · `npm run site:audit:prod` : build 65 pages, serveur `next start`, crawl 247 pages / 0 issue, serveur arrêté · `npm run lint` 0 · `npm run typecheck` 0 · `npm run i18n:check` 0 · `npm run test` 577 pass / 17 skip · `npm run ai:check` 20 OK / 0 warn / 0 fail · `git diff --check` OK.

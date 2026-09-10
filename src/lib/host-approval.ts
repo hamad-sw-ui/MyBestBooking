@@ -5,11 +5,13 @@ import { eq } from "drizzle-orm";
 export type HostApprovalStatus = "pending" | "approved" | "rejected";
 
 export interface HostApprovalState {
+  /** true si le compte cible existe encore en base. */
+  exists: boolean;
   /** true si le user est un hôte approuvé et peut publier sans gate. */
   approved: boolean;
   /** true si le user n'est pas (ou plus) un hôte. */
   notHost: boolean;
-  /** Statut d'approbation, ou null pour un non-hôte. */
+  /** Statut d'approbation, ou null pour un non-hôte / introuvable. */
   status: HostApprovalStatus | null;
 }
 
@@ -31,12 +33,12 @@ export async function getHostApprovalState(
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
-  if (!user) return { approved: false, notHost: true, status: null };
+  if (!user) return { exists: false, approved: false, notHost: false, status: null };
   if ((role ?? user.role) !== "host") {
-    return { approved: false, notHost: true, status: null };
+    return { exists: true, approved: false, notHost: true, status: null };
   }
   const status = user.approvalStatus as HostApprovalStatus;
-  return { approved: status === "approved", notHost: false, status };
+  return { exists: true, approved: status === "approved", notHost: false, status };
 }
 
 /**
@@ -56,10 +58,16 @@ export async function requireApprovedHost(userId: string, role?: string | null):
 }> {
   const state = await getHostApprovalState(userId, role);
   // Non-hôte (admin) → jamais bloqué (comportement historique : l'admin
-  // publie directement). Un hôte null/inexistant → bloqué par sécurité.
-  if (state.notHost && state.status === null) {
-    if (role === "admin" || role === undefined) return { ok: true };
+  // publie directement). Un compte introuvable est bloqué par sécurité.
+  if (!state.exists) {
+    return {
+      ok: false,
+      status: 404,
+      messageKey: "host.notFound",
+      defaultMessage: "Compte hôte introuvable.",
+    };
   }
+  if (state.notHost) return { ok: true };
   if (state.approved) return { ok: true };
   if (state.status === "rejected") {
     return {

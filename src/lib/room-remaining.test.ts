@@ -44,10 +44,11 @@ describe("stayDatesFromPropertyQuery", () => {
     expect(stayDatesFromPropertyQuery(null, null)).toBeNull();
     expect(stayDatesFromPropertyQuery("", "")).toBeNull();
   });
-  it("dates mal formées ou incohérentes → pas de calcul", () => {
+  it("dates mal formées, incohérentes ou passées → pas de calcul", () => {
     expect(stayDatesFromPropertyQuery("01/12/2026", "2026-12-04")).toBeNull();
     expect(stayDatesFromPropertyQuery("2026-12-04", "2026-12-01")).toBeNull(); // inversées
     expect(stayDatesFromPropertyQuery("2026-12-04", "2026-12-04")).toBeNull(); // nuit nulle
+    expect(stayDatesFromPropertyQuery("2026-09-08", "2026-09-10", "2026-09-09")).toBeNull();
     expect(stayDatesFromPropertyQuery("abc", "def")).toBeNull();
   });
 });

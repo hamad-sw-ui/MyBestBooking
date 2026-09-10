@@ -26,12 +26,14 @@ export function UserSuspendActions({ userId, suspended, disabled }: Props) {
     setError(null);
     const label = suspended ? t("user.verbReactivate") : t("user.verbSuspend");
     if (!confirm(t("user.confirmToggle").replace("{verb}", label))) return;
+    const reason = suspended ? "" : window.prompt(t("user.suspendReasonPrompt")) ?? null;
+    if (reason === null) return;
     startTransition(async () => {
       try {
         const res = await fetch(`/api/users/${userId}/suspend`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ suspended: !suspended }),
+          body: JSON.stringify({ suspended: !suspended, ...(reason.trim() ? { reason: reason.trim() } : {}) }),
         });
         if (!res.ok) {
           const j = await res.json().catch(() => ({ error: t("settings.error") }));

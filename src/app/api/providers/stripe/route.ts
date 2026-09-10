@@ -1,14 +1,11 @@
 import { NextResponse } from "next/server";
-import { resolveProviderCredentials } from "@/lib/provider-credentials";
 
-/** Expose uniquement la clé Stripe publiable, jamais les secrets serveur. */
+/**
+ * T-207 — Paiement en ligne retiré du parcours réservation.
+ *
+ * La route publique legacy ne renvoie plus jamais de clé publiable Stripe, afin
+ * qu'aucun composant navigateur ne puisse reconstruire un formulaire de carte.
+ */
 export async function GET() {
-  try {
-    const { publishableKey } = await resolveProviderCredentials("stripe");
-    if (!publishableKey) return NextResponse.json({ configured: false });
-    return NextResponse.json({ configured: true, publishableKey });
-  } catch (error) {
-    console.error("[providers/stripe]", error);
-    return NextResponse.json({ configured: false }, { status: 503 });
-  }
+  return NextResponse.json({ configured: false, onlinePaymentDisabled: true });
 }

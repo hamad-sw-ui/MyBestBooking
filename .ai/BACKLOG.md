@@ -18,6 +18,13 @@
 
 Voir `CURRENT_TASK.md` pour la tâche active.
 
+### Audit T-210 (2026-09-10) — suites non bloquantes proposées
+
+- ✅ ~~**T-211 (L/P3)** — Ajouter un wrapper `site:audit:prod` qui lance `next start`, attend `/api/health`, exécute `scripts/site-audit.mjs`, puis stoppe le serveur.~~ **Livré 2026-09-10** : `npm run site:audit:prod` exécute `build → next start → /api/health → site-audit → cleanup`, port configurable et `--skip-build` disponible. Preuve : 247 pages / 0 issue.
+- 🟢 **T-212 (S/P3)** — Ajouter une carte optionnelle sur `/recherche` à partir des coordonnées existantes. La liste et les filtres actuels restent la source principale ; la carte doit échouer en silence avec fallback liste.
+- 🟢 **T-213 (S/P3)** — Compléter les preuves HTTP par un pack Playwright navigateur quand Chromium est disponible : accueil → recherche, recherche → fiche, fiche → demande, hôte confirme/refuse, messagerie, dashboard mobile.
+- 🟠 **T-214 (S/P2)** — Préparer un environnement staging avec providers réels isolés (Resend, stockage objet, webhooks signés) pour valider les intégrations externes sans réactiver de paiement voyageur plateforme.
+
 ### Remédiations issues de l’audit post T-107 (à arbitrer avant implémentation)
 
 - 🔴 **T-108 (C)** — frontières publiques/RBAC, DTO RSC de recherche,

@@ -149,6 +149,7 @@ export async function PUT(
             paymentMethodOffline: true,
             paymentMethod: "offline",
             paymentExpiresAt: null,
+            requestExpiresAt: null,
             updatedAt: new Date(),
           })
           .where(eq(bookings.id, id))
@@ -168,10 +169,32 @@ export async function PUT(
       }
     }
 
+    // T-207 : le paiement en ligne est désactivé. Même une réservation legacy
+    // portant un ancien intent peut être reprise comme demande manuelle par
+    // l'hôte ; la clôture `completed` reste protégée par `paymentStatus=paid`.
+    if (data.status === "completed" && existing.booking.paymentStatus !== "paid") {
+      return NextResponse.json(
+        { error: await apiError("Le séjour ne peut être terminé qu'après paiement") },
+        { status: 409 },
+      );
+    }
+
     const updateData: Record<string, unknown> = { ...data, updatedAt: new Date() };
-    // T-202 : qui confirme la réservation à la main (hôte ou admin).
+    // T-209 : le TTL ne concerne que l'état `pending`. Toute sortie du pending
+    // (confirmation, annulation via cancelBooking, séjour terminé/no-show) le vide.
+    if (data.status && data.status !== "pending") {
+      updateData.requestExpiresAt = null;
+    }
+    // T-202/T-207 : qui confirme la réservation à la main (hôte ou admin).
+    // Si la demande portait un ancien intent, on le neutralise afin qu'aucun
+    // écran ou cron de paiement ne puisse la reprendre.
     if (data.status === "confirmed") {
       updateData.confirmedBy = user.id;
+      updateData.paymentExpiresAt = null;
+      if (existing.booking.paymentStatus !== "paid") {
+        updateData.paymentIntentId = null;
+        updateData.paymentMethod = null;
+      }
     }
 
     const updatedBooking = await db.transaction(async (tx) => {
@@ -191,6 +214,16 @@ export async function PUT(
         checkOut: lockedBooking.checkOut,
       });
       if (lockedTransition) throw new Error(`BOOKING_TRANSITION:${lockedTransition}`);
+      if (data.status === "confirmed") {
+        updateData.paymentExpiresAt = null;
+        if (lockedBooking.paymentStatus !== "paid") {
+          updateData.paymentIntentId = null;
+          updateData.paymentMethod = null;
+        }
+      }
+      if (data.status === "completed" && lockedBooking.paymentStatus !== "paid") {
+        throw new Error("BOOKING_PAYMENT_REQUIRED:Le séjour ne peut être terminé qu'après paiement");
+      }
 
       if (data.status === "completed" && !lockedBooking.loyaltyAwardedAt) {
         const [bookingUser] = await tx
@@ -256,6 +289,9 @@ export async function PUT(
     if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
     if (error instanceof Error && error.message.startsWith("BOOKING_TRANSITION:")) {
       return NextResponse.json({ error: await apiError(error.message.replace("BOOKING_TRANSITION:", "")) }, { status: 409 });
+    }
+    if (error instanceof Error && error.message.startsWith("BOOKING_PAYMENT_REQUIRED:")) {
+      return NextResponse.json({ error: await apiError(error.message.replace("BOOKING_PAYMENT_REQUIRED:", "")) }, { status: 409 });
     }
     if (error instanceof Error && error.message === "BOOKING_NOT_FOUND") {
       return NextResponse.json({ error: await apiError("Réservation non trouvée") }, { status: 404 });

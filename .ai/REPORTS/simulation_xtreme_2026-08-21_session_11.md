@@ -1,6 +1,6 @@
 # 🧪 Simulation EXTRÊME — Session 11 (2026-08-21)
 
-**Généré le** : 2026-08-30 23:32
+**Généré le** : 2026-09-10 07:37
 **Base URL** : `http://127.0.0.1:3000`
 
 Complète les simulations précédentes (`simulation_*.md`,
@@ -35,10 +35,10 @@ Complète les simulations précédentes (`simulation_*.md`,
 
 ## 🎯 Résumé
 
-- ✅ **83 OK**
-- ⚠️  **3 WARN** (observation ou gap non bloquant)
+- ✅ **84 OK**
+- ⚠️  **0 WARN** (observation ou gap non bloquant)
 - ❌ **0 KO** (défaillance à investiguer)
-- Total : **86 contrôles extrêmes**
+- Total : **84 contrôles extrêmes**
 
 Verdict : **✅ TOUT PASSE**
 
@@ -47,310 +47,306 @@ Verdict : **✅ TOUT PASSE**
 
 ## 1. Sécurité HTTP — headers de réponse
 
-- ✅ **Header X-Content-Type-Options présent et conforme**  
+- ✅ **Header X-Content-Type-Options présent et conforme**
   <sub>valeur : nosniff</sub>
 
-- ✅ **Header X-Frame-Options présent et conforme**  
+- ✅ **Header X-Frame-Options présent et conforme**
   <sub>valeur : SAMEORIGIN</sub>
 
-- ✅ **Header Referrer-Policy présent et conforme**  
+- ✅ **Header Referrer-Policy présent et conforme**
   <sub>valeur : strict-origin-when-cross-origin</sub>
 
-- ✅ **Header Strict-Transport-Security présent et conforme**  
+- ✅ **Header Strict-Transport-Security présent et conforme**
   <sub>valeur : max-age=31536000; includeSubDomains</sub>
 
-- ✅ **Header Content-Security-Policy présent et conforme**  
+- ✅ **Header Content-Security-Policy présent et conforme**
   <sub>valeur : default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; sc</sub>
 
-- ✅ **Header Permissions-Policy présent et conforme**  
+- ✅ **Header Permissions-Policy présent et conforme**
   <sub>valeur : camera=(), microphone=(), geolocation=(self)</sub>
 
-- ✅ **CSP img-src autorise https: (pour QR 2FA api.qrserver.com)**  
+- ✅ **CSP img-src autorise https: (pour QR 2FA api.qrserver.com)**
   <sub>default-src 'self'; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' 'unsafe-inline' 'unsafe-eval'; font-src 'self' data: https://fon</sub>
 
-- ✅ **Cookie session : HttpOnly présent dans jar curl**  
+- ✅ **Cookie session : HttpOnly présent dans jar curl**
   <sub>jar_lines : 1</sub>
 
-- ✅ **Cookie session : HttpOnly + SameSite + Path=/ (via login live)**  
-  <sub>cookie complet : set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIxNDQ4Mzk1Ny1kMTE1LTRhYTItYTU2Mi03ZGYxYWRlMTA2MzMiLCJyb2xlIjoiaG9zdCIsImp0aSI6IjUyN2I3MzcwLTA1ZmQtNGE2Ny1iMjQ1LWZkOWU5NzExZDMwNSIsImV4cCI6MTc4ODc</sub>
+- ✅ **Cookie session : HttpOnly + SameSite + Path=/ (via login live)**
+  <sub>cookie complet : set-cookie: session=eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiIyZmFlMTRjNC00NGQ3LTQ2OGUtOGJmMi0zMjRmNGMxZDI5MzIiLCJyb2xlIjoiaG9zdCIsImp0aSI6IjRkZjBiZDU2LTE0N2YtNGM3MC1hMjE1LTQ3Yjg4NzRiZmU5YyIsImV4cCI6MTc4OTY</sub>
 
 
 ## 2. Injections XSS — reviews, messages, register
 
-- ✅ **Reviews existants ne contiennent pas de HTML actif**  
+- ✅ **Reviews existants ne contiennent pas de HTML actif**
   <sub>20 reviews scannés, unsafe : []</sub>
 
-- ✅ **Register avec firstName='<script>alert(1)</script>Bob…' → code 200**  
+- ✅ **Register avec firstName='<script>alert(1)</script>Bob…' → code 200**
   <sub>firstName stocké : '<script>alert(1)</script>Bob'</sub>
 
-- ✅ **guestFirstName='<script>' → booking 201 (validé, doit être échappé à l'affichage)**  
-  <sub>body[:200]={"booking":{"id":"614546bb-f7b9-4748-aafe-b740f3b42303","bookingReference":"MBB-2026-8ZNM8B","userId":"031f4535-d8ff-49e3-9f51-382da59c7bf6","propertyId":"f2200919-dab8-4884-9e3c-456cbe119d22","roomId</sub>
+- ✅ **guestFirstName='<script>' → booking 201 (validé, doit être échappé à l'affichage)**
+  <sub>body[:200]={"booking":{"id":"a59eb04e-cbc7-4a62-b975-c54744023aed","bookingReference":"MBB-2026-NFLH8H","userId":"5285e822-5dca-4624-9cc8-462eb6ed2091","propertyId":"b1a1b9b8-39a2-4a82-a47c-c877cbc220df","roomId</sub>
 
 
 ## 3. SQL injection tentatives
 
-- ✅ **Login email='admin' OR 1=1--' → 400/401 (rejeté avant SQL)**  
+- ✅ **Login email='admin' OR 1=1--' → 400/401 (rejeté avant SQL)**
   <sub>code=400 body={"error":"Email invalide"}</sub>
 
-- ✅ **Search city SQL injection → réponse propre**  
+- ✅ **Search city SQL injection → réponse propre**
   <sub>code=200 body[:200]={"properties":[],"total":0,"limit":20,"offset":0}</sub>
 
-- ✅ **Table users toujours accessible après SQL injection attempt**  
+- ✅ **Table users toujours accessible après SQL injection attempt**
   <sub>code=200</sub>
 
 
 ## 4. Inputs extrêmes — très longs, unicode, contrôles
 
-- ✅ **Register password 100 000 chars → 200**  
-  <sub>body={"message":"Inscription réussie","user":{"id":"9e61fbb9-007c-45da-85ba-70be6609bf68","email":"long1788132729@t.local","firstName":"Long","lastName":"User","role":"customer","language":"fr"}}</sub>
+- ✅ **Register password 100 000 chars → 200**
+  <sub>body={"message":"Inscription réussie","user":{"id":"ad5d9717-93aa-468a-a5ba-c70b3c086ba9","email":"long1789025836@t.local","firstName":"Long","lastName":"User","role":"customer","language":"fr"}}</sub>
 
-- ✅ **Register firstName Unicode/emoji 'Marie🎉👋' → conservé intégralement**  
+- ✅ **Register firstName Unicode/emoji 'Marie🎉👋' → conservé intégralement**
   <sub>stocké : 'Marie🎉👋'</sub>
 
-- ✅ **Register email avec null byte → refusé**  
+- ✅ **Register email avec null byte → refusé**
   <sub>code=400 body={"error":"Email invalide"}</sub>
 
-- ✅ **Booking numAdults=999B → refusé (safe)**  
+- ✅ **Booking numAdults=999B → refusé (safe)**
   <sub>code=400 body={"error":"Ce champ est requis"}</sub>
 
 
 ## 5. Flow vérification email — bout-en-bout avec token réel
 
-- ✅ **Register verify1788132730@test.local → id créé, emailVerified=None**  
+- ✅ **Register verify1789025837@test.local → id créé, emailVerified=None**
 
-- ✅ **Email de vérification reçu (subject='Vérifiez votre email — MyBestBooking') + token extrait**  
-  <sub>token[:16]='c7fe7388-9bea-46…' fichier=console_c311499626ee9160b483f388.txt</sub>
+- ✅ **Email de vérification reçu (subject='Vérifiez votre email — MyBestBooking') + token extrait**
+  <sub>token[:16]='318d18d4-53ea-48…' fichier=console_8748be2de82d22ef2058bff4.txt</sub>
 
-- ✅ **GET /api/auth/verify?token=… → 307 (redirect)**  
+- ✅ **GET /api/auth/verify?token=… → 307 (redirect)**
   <sub>body[:200]=</sub>
 
-- ✅ **Après GET verify : /api/auth/me emailVerified=True**  
-  <sub>body[:200]={"user":{"id":"cbd29309-218d-4ae7-8b94-e4f679e75218","email":"verify1788132730@test.local","firstName":"Verify","lastName":"Me","phone":null,"country":null,"language":"fr","currency":"EUR","role":"cus</sub>
+- ✅ **Après GET verify : /api/auth/me emailVerified=True**
+  <sub>body[:200]={"user":{"id":"3f1826ed-9b24-416c-8fd9-451618f5e62c","email":"verify1789025837@test.local","firstName":"Verify","lastName":"Me","phone":null,"country":null,"language":"fr","currency":"EUR","role":"cus</sub>
 
 
 ## 6. Flow reset password — bout-en-bout avec token réel
 
-- ✅ **POST forgot-password → 200**  
+- ✅ **POST forgot-password → 200**
   <sub>body={"message":"Si un compte existe pour cet email, un lien vous a été envoyé."}</sub>
 
-- ✅ **Email reset reçu (subject='Réinitialiser votre mot de passe — MyBestBooking') + token extrait**  
-  <sub>token[:16]='dd7ce616-37d8-4f…'</sub>
+- ✅ **Email reset reçu (subject='Réinitialiser votre mot de passe — MyBestBooking') + token extrait**
+  <sub>token[:16]='ae53e262-ac0e-4a…'</sub>
 
-- ✅ **POST reset-password avec token valide → 200**  
+- ✅ **POST reset-password avec token valide → 200**
   <sub>body={"message":"Mot de passe réinitialisé. Vous pouvez vous connecter."}</sub>
 
-- ✅ **Login avec nouveau password → 200**  
-  <sub>body={"message":"Connexion réussie","user":{"id":"502d52bc-4fcf-4240-9188-1cd8a34437fd","email":"reset1788132732@test.local","firstName":"Reset","lastName"</sub>
+- ✅ **Login avec nouveau password → 200**
+  <sub>body={"message":"Connexion réussie","user":{"id":"ef06f4c6-f08f-4bc5-996e-4877088ab2db","email":"reset1789025839@test.local","firstName":"Reset","lastName"</sub>
 
-- ✅ **Login avec ancien password → 401**  
+- ✅ **Login avec ancien password → 401**
   <sub>body={"error":"Email ou mot de passe incorrect"}</sub>
 
-- ✅ **Rejouer le token de reset → refusé**  
+- ✅ **Rejouer le token de reset → refusé**
   <sub>body={"error":"Lien invalide ou expiré"}</sub>
 
 
 ## 7. Reviews cycle complet — post → reply → moderate → helpful
 
-- ✅ **POST /api/reviews/d7fd8f46…/reply (host) → 200**  
-  <sub>body={"review":{"id":"d7fd8f46-d9b8-44dc-9f9e-c31b8a472692","bookingId":"3407dcf4-8112-458a-9047-a116149288c0","userId":"5f96cd55-04a2-478c-803f-d7a75801fabb","propertyId":"3a1269e2-bc10-46b3-9c80-d1c00112</sub>
+- ✅ **POST /api/reviews/deecbb54…/reply (host) → 200**
+  <sub>body={"review":{"id":"deecbb54-09a0-4c3f-bcca-7bab1ae5bd60","bookingId":"41c76955-4728-4d33-82dc-5eafc16d6b13","userId":"d79ffcd9-cbd2-4cf2-9bc6-06bb63b75810","propertyId":"00a99acb-e53c-47ad-9c80-79f8b5a0</sub>
 
-- ✅ **PATCH /api/reviews/d7fd8f46…/moderate (admin, approved) → 200**  
-  <sub>body={"review":{"id":"d7fd8f46-d9b8-44dc-9f9e-c31b8a472692","bookingId":"3407dcf4-8112-458a-9047-a116149288c0","userId":"5f96cd55-04a2-478c-803f-d7a75801fabb","propertyId":"3a1269e2-bc10-46b3-9c80-d1c00112</sub>
+- ✅ **PATCH /api/reviews/deecbb54…/moderate (admin, approved) → 200**
+  <sub>body={"review":{"id":"deecbb54-09a0-4c3f-bcca-7bab1ae5bd60","bookingId":"41c76955-4728-4d33-82dc-5eafc16d6b13","userId":"d79ffcd9-cbd2-4cf2-9bc6-06bb63b75810","propertyId":"00a99acb-e53c-47ad-9c80-79f8b5a0</sub>
 
-- ✅ **POST /api/reviews/d7fd8f46…/helpful (customer) → 409**  
+- ✅ **POST /api/reviews/deecbb54…/helpful (customer) → 409**
   <sub>body={"error":"Vous avez déjà marqué cet avis comme utile"}</sub>
 
-- ✅ **POST helpful DOUBLE → refusé (déjà voté)**  
+- ✅ **POST helpful DOUBLE → refusé (déjà voté)**
   <sub>body={"error":"Vous avez déjà marqué cet avis comme utile"}</sub>
 
-- ✅ **PATCH moderate par customer → 403**  
+- ✅ **PATCH moderate par customer → 403**
   <sub>body={"error":"Accès admin requis"}</sub>
 
-- ✅ **POST reply par customer → 403**  
+- ✅ **POST reply par customer → 403**
   <sub>body={"error":"Accès refusé"}</sub>
 
 
 ## 8. Rooms availability + rate-plans (host-only)
 
-- ✅ **GET availability (host) → 200**  
-  <sub>body={"roomId":"032d5876-7964-4059-bdd5-045c3baac42f","from":"2028-12-01","to":"2028-12-10","quantity":5,"basePrice":"118.67","days":[{"id":"5d49fc94-95cf-4ed1-95f9-602f919ecb3a","roomId":"032d5876-7964-4059-bdd5-045c3baac42f</sub>
+- ✅ **GET availability (host) → 200**
+  <sub>body={"roomId":"6f63fade-b98b-4224-b6b4-30a54f5fcafc","from":"2028-12-01","to":"2028-12-10","quantity":3,"basePrice":"148.33","days":[{"id":"e98030e0-b6a2-410c-b189-01b38fe257fc","roomId":"6f63fade-b98b-4224-b6b4-30a54f5fcafc</sub>
 
-- ✅ **PUT availability (3 jours stopSell) → 200**  
+- ✅ **PUT availability (3 jours stopSell) → 200**
   <sub>body={"ok":true,"count":3}</sub>
 
-- ✅ **Booking sur dates bloquées stopSell → refusé (BUG-018 fix)**  
+- ✅ **Booking sur dates bloquées stopSell → refusé (BUG-018 fix)**
   <sub>code=409 body={"error":"Cette chambre n'est plus disponible pour ces dates"}</sub>
 
-- ✅ **PUT availability par customer → 403**  
+- ✅ **PUT availability par customer → 403**
   <sub>body={"error":"Accès refusé"}</sub>
 
-- ✅ **GET rate-plans → 200**  
-  <sub>body={"ratePlans":[{"id":"33a5bf5b-34a9-4639-942a-ed481ff9bff7","roomId":"032d5876-7964-4059-bdd5-045c3baac42f","name":"Sim Rate Plan","type":"non_refundable","discountPercentage":"15.00","includesBreakfas</sub>
+- ✅ **GET rate-plans → 200**
+  <sub>body={"ratePlans":[{"id":"76d72f1a-27bd-4730-99dc-7c226d0ae47d","roomId":"6f63fade-b98b-4224-b6b4-30a54f5fcafc","name":"Sim Rate Plan","type":"non_refundable","discountPercentage":"15.00","includesBreakfas</sub>
 
-- ✅ **POST rate-plan (host) → 201**  
-  <sub>body={"ratePlan":{"id":"d002ba7d-7e19-4ef9-9101-d6b712dc893f","roomId":"032d5876-7964-4059-bdd5-045c3baac42f","name":"Sim Rate Plan","type":"non_refundable","discountPercentage":"15.00","includesBreakfast":true,"cancellationPolicy":"non_refundable","cance</sub>
+- ✅ **POST rate-plan (host) → 201**
+  <sub>body={"ratePlan":{"id":"df8d4f91-ff75-47cf-9ac2-2ba60a35c4d4","roomId":"6f63fade-b98b-4224-b6b4-30a54f5fcafc","name":"Sim Rate Plan","type":"non_refundable","discountPercentage":"15.00","includesBreakfast":true,"cancellationPolicy":"non_refundable","cance</sub>
 
 
 ## 9. Promotions CRUD complet (admin — pas host)
 
-- ✅ **POST /api/promotions (host) code=SIMXTREME1788132740 → 201**  
-  <sub>body={"promotion":{"id":"a317473f-f2d5-49ae-b7fb-722f914e7db5","code":"SIMXTREME1788132740","name":"Test extrême","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"validFrom":"2026-01-01T00:00</sub>
+- ✅ **POST /api/promotions (host) code=SIMXTREME1789025847 → 201**
+  <sub>body={"promotion":{"id":"49a6cff6-812b-448f-9eae-a2a0dbcb9457","code":"SIMXTREME1789025847","name":"Test extrême","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"validFrom":"2026-01-01T00:00</sub>
 
-- ✅ **GET promotions/apply?code=SIMXTREME1788132740&amount=200 → discount 30**  
-  <sub>code=200 body={"ok":true,"promotion":{"code":"SIMXTREME1788132740","name":"Test extrême","type":"percentage","value":"15.00"},"discount":30,"finalTotal":170,"currency":"EUR"}</sub>
+- ✅ **GET promotions/apply?code=SIMXTREME1789025847&amount=200 → discount 30**
+  <sub>code=200 body={"ok":true,"promotion":{"code":"SIMXTREME1789025847","name":"Test extrême","type":"percentage","value":"15.00"},"discount":30,"finalTotal":170,"currency":"EUR"}</sub>
 
-- ✅ **PATCH /api/promotions/a317473f… (admin) → 200**  
-  <sub>body={"promotion":{"id":"a317473f-f2d5-49ae-b7fb-722f914e7db5","code":"SIMXTREME1788132740","name":"Test extrême updated","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"</sub>
+- ✅ **PATCH /api/promotions/49a6cff6… (admin) → 200**
+  <sub>body={"promotion":{"id":"49a6cff6-812b-448f-9eae-a2a0dbcb9457","code":"SIMXTREME1789025847","name":"Test extrême updated","type":"percentage","value":"15.00","minBookingAmount":"50.00","maxDiscount":null,"</sub>
 
-- ✅ **Apply promo désactivée → ok:false**  
+- ✅ **Apply promo désactivée → ok:false**
   <sub>code=400 body={"ok":false,"error":"Code inactif"}</sub>
 
-- ✅ **DELETE /api/promotions/a317473f… (admin) → 200/204**  
+- ✅ **DELETE /api/promotions/49a6cff6… (admin) → 200/204**
   <sub>body={"ok":true}</sub>
 
-- ✅ **Apply promo supprimée → 404**  
+- ✅ **Apply promo supprimée → 404**
   <sub>code=404 body={"ok":false,"error":"Code inconnu"}</sub>
 
-- ✅ **POST /api/promotions par customer → 403**  
+- ✅ **POST /api/promotions par customer → 403**
   <sub>body={"error":"Accès admin requis"}</sub>
 
 
 ## 10. Price alerts DELETE by id
 
-- ✅ **DELETE /api/price-alerts/3f16484c… → 200/204**  
+- ✅ **DELETE /api/price-alerts/228a63ce… → 200/204**
   <sub>body={"removed":true}</sub>
 
-- ✅ **DELETE alerte d'un autre user (host) → 403/404**  
+- ✅ **DELETE alerte d'un autre user (host) → 403/404**
   <sub>body={"error":"Alerte introuvable"}</sub>
 
 
 ## 11. Pages dynamiques /dashboard/[id] — accessibilité
 
-- ✅ **GET /dashboard/bookings/614546bb… (host) → 200**  
+- ✅ **GET /dashboard/bookings/a59eb04e… (host) → 200**
 
-- ✅ **GET /dashboard/bookings/614546bb… par customer → 200 (redirect RSC)**  
+- ✅ **GET /dashboard/bookings/a59eb04e… par customer → 200 (redirect RSC)**
 
-- ✅ **GET /dashboard/rooms/032d5876…/calendrier (host) → 200**  
+- ✅ **GET /dashboard/rooms/6f63fade…/calendrier (host) → 200**
 
-- ✅ **GET /wishlists/share/invalide → body contient not-found**  
+- ✅ **GET /wishlists/share/invalide → body contient not-found**
   <sub>code=404 has_notfound=True</sub>
 
-- ✅ **GET /hebergement/inexistant → body contient not-found**  
+- ✅ **GET /hebergement/inexistant → body contient not-found**
   <sub>code=200 has_notfound=True</sub>
 
 
 ## 12. Audit statique — chaque composant client (état loading/error)
 
-- ⚠️ **src/components/maintenance-gate.tsx (fait fetch) — manque : loading, feedback**  
-
-- ⚠️ **src/components/unread-messages-badge.tsx (fait fetch) — manque : loading, feedback**  
-
-- ⚠️ **Résumé : 2/36 composants avec fetch et ≥ 2 lacunes UX**  
-  <sub>voir ci-dessus</sub>
+- ✅ **Tous les 39 composants clients avec fetch ont ≥ 2 indicateurs UX**
+  <sub>loading + error + feedback</sub>
 
 
 ## 13. Intégrité du seed
 
-- ✅ **Customer courant : level=2 wallet=25.00€ bookings=7**  
+- ✅ **Customer courant : level=2 wallet=25.00€ bookings=7**
   <sub>seed initial : level=2 wallet=25 ; peut évoluer avec les bookings des tests</sub>
 
-- ✅ **Seed properties → types présents : ['apartment', 'bnb', 'guesthouse', 'hotel', 'resort', 'riad', 'villa']**  
+- ✅ **Seed properties → types présents : ['apartment', 'bnb', 'guesthouse', 'hotel', 'resort', 'riad', 'villa']**
   <sub>8 propriétés</sub>
 
-- ✅ **Seed : 8/8 propriétés avec rooms, 8/8 avec reviews**  
+- ✅ **Seed : 8/8 propriétés avec rooms, 8/8 avec reviews**
   <sub>cohérence seed</sub>
 
-- ✅ **Seed promotions : 12/12 active(s)**  
+- ✅ **Seed promotions : 6/6 active(s)**
 
 
 ## 14. Contenu des emails — subject, corps HTML, absence XSS
 
-- ✅ **console_927e56350e1e52e5dcbef902.txt — Subject='Réinitialiser votre mot de passe — MyBestBooking' HTML=True link=True**  
-  <sub>To=reset1788132732@test.local unsafe=False</sub>
+- ✅ **console_6bb40a53e2a710be2cac4beb.txt — Subject='Réinitialiser votre mot de passe — MyBestBooking' HTML=True link=True**
+  <sub>To=reset1789025839@test.local unsafe=False</sub>
 
-- ✅ **console_2b6b0131420feccdc1a6a336.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
-  <sub>To=reset1788132732@test.local unsafe=False</sub>
+- ✅ **console_c375e6e7322b0b0e4f36f054.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**
+  <sub>To=reset1789025839@test.local unsafe=False</sub>
 
-- ✅ **console_ab4f922d714d91c819ce008c.txt — Subject='Bienvenue sur MyBestBooking 🎉' HTML=True link=True**  
-  <sub>To=verify1788132730@test.local unsafe=False</sub>
+- ✅ **console_4f74f2e2224fb5824d9db6d8.txt — Subject='Bienvenue sur MyBestBooking 🎉' HTML=True link=True**
+  <sub>To=verify1789025837@test.local unsafe=False</sub>
 
-- ✅ **console_c311499626ee9160b483f388.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
-  <sub>To=verify1788132730@test.local unsafe=False</sub>
+- ✅ **console_8748be2de82d22ef2058bff4.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**
+  <sub>To=verify1789025837@test.local unsafe=False</sub>
 
-- ✅ **console_830590d68896d74c232edc25.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**  
-  <sub>To=emoji1788132729@t.local unsafe=False</sub>
+- ✅ **console_1e52f77756be56894dc996b1.txt — Subject='Vérifiez votre email — MyBestBooking' HTML=True link=True**
+  <sub>To=emoji1789025837@t.local unsafe=False</sub>
 
 
 ## 15. Webhook Stripe — signature mock
 
-- ✅ **GET /api/webhooks/stripe → 405 (POST-only)**  
+- ✅ **GET /api/webhooks/stripe → 405 (POST-only)**
   <sub>code=405 body=</sub>
 
-- ✅ **POST webhook sans signature stripe-signature → 400**  
+- ✅ **POST webhook sans signature stripe-signature → 400**
   <sub>code=400 body={"error":"Invalid signature"}</sub>
 
 
 ## 16. Fichiers publics — robots, sitemap, favicon
 
-- ✅ **GET /robots.txt → 200**  
+- ✅ **GET /robots.txt → 200**
   <sub>body[:100]=User-Agent: * Allow: / Disallow: /api/ Disallow: /dashboard/ Disallow: /mon-compte/ Disallow: /mes-r</sub>
 
-- ✅ **GET /sitemap.xml → 200**  
+- ✅ **GET /sitemap.xml → 200**
   <sub>body[:100]=<?xml version="1.0" encoding="UTF-8"?> <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"> </sub>
 
-- ✅ **GET /icon.svg → 200**  
+- ✅ **GET /icon.svg → 200**
   <sub>body[:100]=<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">   <rect width="32" height="32" rx="6" f</sub>
 
-- ✅ **GET /manifest.json → 200**  
+- ✅ **GET /manifest.json → 200**
   <sub>body[:100]={   "name": "MyBestBooking",   "short_name": "MBB",   "description": "Plateforme de réservation d'hé</sub>
 
-- ✅ **<link rel='icon' href='/icon.svg'> présent dans le HTML rendu**  
+- ✅ **<link rel='icon' href='/icon.svg'> présent dans le HTML rendu**
 
 
 ## 18. CORS / cross-origin — les endpoints n'exposent pas *
 
-- ✅ **Pas de header CORS (bon par défaut en Next 16 sans opt-in)**  
+- ✅ **Pas de header CORS (bon par défaut en Next 16 sans opt-in)**
 
 
 ## 19. Path traversal — uploads?key=../../etc/passwd
 
-- ✅ **DELETE ?key='../../etc/passwd' → refusé**  
+- ✅ **DELETE ?key='../../etc/passwd' → refusé**
   <sub>code=400 body={"error":"Key invalide"}</sub>
 
-- ✅ **DELETE ?key='../secret' → refusé**  
+- ✅ **DELETE ?key='../secret' → refusé**
   <sub>code=400 body={"error":"Key invalide"}</sub>
 
-- ✅ **DELETE ?key='%2E%2E%2Fetc%2Fpasswd' → refusé**  
+- ✅ **DELETE ?key='%2E%2E%2Fetc%2Fpasswd' → refusé**
   <sub>code=400 body={"error":"Key invalide"}</sub>
 
-- ✅ **DELETE ?key='test/../../../' → refusé**  
+- ✅ **DELETE ?key='test/../../../' → refusé**
   <sub>code=400 body={"error":"Key invalide"}</sub>
 
-- ✅ **GET /uploads/../../etc/passwd → refusé (pas de contenu système)**  
+- ✅ **GET /uploads/../../etc/passwd → refusé (pas de contenu système)**
   <sub>code=404 body[:100]=<!DOCTYPE html><html lang="fr" data-scroll-behavior="smooth"><head><meta charSet="utf-8"/><meta name</sub>
 
-- ✅ **GET /uploads/../.env.local → refusé (pas de contenu système)**  
+- ✅ **GET /uploads/../.env.local → refusé (pas de contenu système)**
   <sub>code=404 body[:100]=<!DOCTYPE html><html lang="fr" data-scroll-behavior="smooth"><head><meta charSet="utf-8"/><meta name</sub>
 
 
 ## 20. Cookie invalidation & session
 
-- ✅ **Login 200 → me OK (200) → logout (200) → me → 401 (401)**  
+- ✅ **Login 200 → me OK (200) → logout (200) → me → 401 (401)**
   <sub>flow cookie complet</sub>
 
-- ✅ **Cookie tamperisé (nom session→session_tampered) → 401**  
+- ✅ **Cookie tamperisé (nom session→session_tampered) → 401**
   <sub>code=401</sub>
 
 
 ## 21. Erreurs 404 / 500 propres
 
-- ✅ **GET /route-inconnue → 404**  
+- ✅ **GET /route-inconnue → 404**
   <sub>code=404</sub>
 
-- ✅ **GET /api/endpoint-inexistant → 404**  
+- ✅ **GET /api/endpoint-inexistant → 404**
   <sub>code=404</sub>
 
-- ✅ **DELETE /api/health → 405**  
+- ✅ **DELETE /api/health → 405**
   <sub>code=405 body=</sub>
 
 
@@ -360,10 +356,10 @@ Verdict : **✅ TOUT PASSE**
 
 | Verdict | Nombre |
 |---|---:|
-| ✅ OK | 83 |
-| ⚠️  WARN | 3 |
+| ✅ OK | 84 |
+| ⚠️  WARN | 0 |
 | ❌ KO | 0 |
-| **Total** | **86** |
+| **Total** | **84** |
 
 ## 🔁 Reproductibilité
 

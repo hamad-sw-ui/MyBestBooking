@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { notFound } from "next/navigation";
 import { db } from "@/db";
-import { properties, rooms, reviews, users, bookings } from "@/db/schema";
-import { eq, and, desc, inArray, lt, gt, ne, sql } from "drizzle-orm";
-import { remainingRoomInventory, stayDatesFromPropertyQuery } from "@/lib/room-remaining";
+import { properties, rooms, reviews, users, bookings, roomAvailability } from "@/db/schema";
+import { eq, and, desc, inArray, lt, gt, ne, gte } from "drizzle-orm";
+import { stayDatesFromPropertyQuery } from "@/lib/room-remaining";
+import { evaluateBookingRules } from "@/lib/booking-rules";
 import { publicCatalogCache } from "@/lib/read-cache";
 import { SmartImage } from "@/components/ui/smart-image";
 import { getCurrentUser } from "@/lib/auth";
@@ -148,35 +149,84 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
 
   const { property, rooms: propertyRooms, reviews: propertyReviews } = data;
 
-  // T-177 : quand la query porte un séjour VALIDE (checkIn/checkOut
-  // cohérents — sinon rendu strictement inchangé), on calcule l'inventaire
-  // restant de chaque chambre avec la règle EXACTE de POST /api/bookings
-  // (T-157) : toute réservation non annulée chevauchant le séjour consomme
-  // une unité de `rooms.quantity`. Chambre épuisée → CTA « Réserver »
-  // remplacé par « Complet » avant le tunnel, au lieu du 409 final.
+  // T-177/T-205 : quand la query porte un séjour VALIDE et non passé, on
+  // évalue chaque chambre avec la même brique métier que POST /api/bookings :
+  // stock journalier, stop-sell, min-stay et réservations chevauchantes. Avant
+  // T-205, la fiche ne regardait que le nombre de réservations, laissant passer
+  // des séjours bloqués par calendrier jusqu'au 409 du checkout.
   const stayDates = stayDatesFromPropertyQuery(query.checkIn, query.checkOut);
   const roomRemaining = new Map<string, number>();
+  const roomStayTotals = new Map<string, number>();
+  const parsedAdults = Number(query.adults ?? "2");
+  const parsedChildren = Number(query.children ?? "0");
+  const queryAdults = Number.isInteger(parsedAdults) && parsedAdults > 0 ? parsedAdults : 2;
+  const queryChildren = Number.isInteger(parsedChildren) && parsedChildren >= 0 ? parsedChildren : 0;
   if (stayDates && propertyRooms.length > 0) {
     const roomIds = propertyRooms.map((r) => r.id);
-    const usage = await db
-      .select({ roomId: bookings.roomId, used: sql<number>`count(*)::int` })
-      .from(bookings)
-      .where(and(
-        inArray(bookings.roomId, roomIds),
-        ne(bookings.status, "cancelled"),
-        lt(bookings.checkIn, stayDates.checkOut),
-        gt(bookings.checkOut, stayDates.checkIn),
-      ))
-      .groupBy(bookings.roomId);
-    const usedByRoom = new Map(usage.map((row) => [row.roomId, row.used]));
+    const [overlaps, calendarRules] = await Promise.all([
+      db
+        .select({ roomId: bookings.roomId, checkIn: bookings.checkIn, checkOut: bookings.checkOut })
+        .from(bookings)
+        .where(and(
+          inArray(bookings.roomId, roomIds),
+          ne(bookings.status, "cancelled"),
+          lt(bookings.checkIn, stayDates.checkOut),
+          gt(bookings.checkOut, stayDates.checkIn),
+        )),
+      db
+        .select({
+          roomId: roomAvailability.roomId,
+          date: roomAvailability.date,
+          availableCount: roomAvailability.availableCount,
+          price: roomAvailability.price,
+          stopSell: roomAvailability.stopSell,
+          minStay: roomAvailability.minStay,
+        })
+        .from(roomAvailability)
+        .where(and(
+          inArray(roomAvailability.roomId, roomIds),
+          gte(roomAvailability.date, stayDates.checkIn),
+          lt(roomAvailability.date, stayDates.checkOut),
+        )),
+    ]);
     for (const room of propertyRooms) {
-      roomRemaining.set(room.id, remainingRoomInventory(room.quantity, usedByRoom.get(room.id) ?? 0));
+      const rules = evaluateBookingRules({
+        room: {
+          maxOccupancy: room.maxOccupancy,
+          maxAdults: room.maxAdults,
+          maxChildren: room.maxChildren,
+          quantity: room.quantity ?? 1,
+          basePrice: room.basePrice,
+        },
+        checkIn: stayDates.checkIn,
+        checkOut: stayDates.checkOut,
+        numAdults: queryAdults,
+        numChildren: queryChildren,
+        availability: calendarRules.filter((rule) => rule.roomId === room.id),
+        overlappingBookings: overlaps.filter((booking) => booking.roomId === room.id),
+      });
+      roomRemaining.set(room.id, rules.ok ? 1 : 0);
+      if (rules.ok) {
+        roomStayTotals.set(room.id, rules.nightlyPrices.reduce((sum, price) => sum + price, 0));
+      }
     }
   }
-  // T-030 : chambre la moins chère pour le CTA "Voir dispo" et alerte prix
-  const cheapestRoom = propertyRooms.length > 0
-    ? [...propertyRooms].sort((a, b) => parseFloat(a.basePrice) - parseFloat(b.basePrice))[0]
+  // T-030/T-205 : chambre la moins chère pour le CTA "Voir dispo" et alerte
+  // prix. Si un séjour est renseigné, on ne choisit plus une chambre vendue ou
+  // stop-sell ; le seuil d'alerte suit le total réel du séjour.
+  const cheapestRoomCandidates = stayDates
+    ? propertyRooms.filter((room) => roomRemaining.get(room.id) !== 0)
+    : propertyRooms;
+  const cheapestRoom = cheapestRoomCandidates.length > 0
+    ? [...cheapestRoomCandidates].sort((a, b) => {
+        const aPrice = stayDates ? (roomStayTotals.get(a.id) ?? parseFloat(a.basePrice)) : parseFloat(a.basePrice);
+        const bPrice = stayDates ? (roomStayTotals.get(b.id) ?? parseFloat(b.basePrice)) : parseFloat(b.basePrice);
+        return aPrice - bPrice;
+      })[0]
     : null;
+  const alertDefaultMax = cheapestRoom
+    ? Math.round((stayDates ? (roomStayTotals.get(cheapestRoom.id) ?? parseFloat(cheapestRoom.basePrice)) : parseFloat(cheapestRoom.basePrice)) * 0.85)
+    : 100;
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
   const ratingInfo = rating ? getRatingLabel(rating, locale) : null;
   const amenities = (property.amenities as string[]) || [];
@@ -407,10 +457,10 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                           <Link href={buildReservationUrl({
                             propertyId: property.id,
                             roomId: room.id,
-                            checkIn: query.checkIn,
-                            checkOut: query.checkOut,
-                            numAdults: Number(query.adults ?? "2"),
-                            numChildren: Number(query.children ?? "0"),
+                            checkIn: stayDates?.checkIn,
+                            checkOut: stayDates?.checkOut,
+                            numAdults: queryAdults,
+                            numChildren: queryChildren,
                           })}>
                             <Button className="mt-2" size="sm">
                               {t("book.reserve")}
@@ -514,12 +564,13 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                   basePrice: cheapestRoom.basePrice,
                   currency: cheapestRoom.currency,
                   maxAdults: cheapestRoom.maxAdults,
+                  maxChildren: cheapestRoom.maxChildren,
                   maxOccupancy: cheapestRoom.maxOccupancy,
                 } : null}
-                initialCheckIn={query.checkIn}
-                initialCheckOut={query.checkOut}
-                initialAdults={Number(query.adults ?? "2") || 2}
-                initialChildren={Number(query.children ?? "0") || 0}
+                initialCheckIn={stayDates?.checkIn}
+                initialCheckOut={stayDates?.checkOut}
+                initialAdults={queryAdults}
+                initialChildren={queryChildren}
                 cancellationPolicy={property.cancellationPolicy}
               />
 
@@ -533,11 +584,11 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
                 <PriceAlertButton
                   propertyId={property.id}
                   currency={cheapestRoom?.currency ?? "EUR"}
-                  defaultMax={cheapestRoom ? Math.round(parseFloat(cheapestRoom.basePrice) * 0.85) : 100}
-                  checkIn={query.checkIn}
-                  checkOut={query.checkOut}
-                  numAdults={Number(query.adults ?? "") || undefined}
-                  numChildren={Number(query.children ?? "") || undefined}
+                  defaultMax={alertDefaultMax}
+                  checkIn={stayDates?.checkIn}
+                  checkOut={stayDates?.checkOut}
+                  numAdults={stayDates ? queryAdults : undefined}
+                  numChildren={stayDates ? queryChildren : undefined}
                 />
               </div>
 

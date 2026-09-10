@@ -14,6 +14,8 @@ interface Day {
 }
 
 const DAYS_PER_PAGE = 90;
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_CALENDAR_DAYS = 366;
 
 interface Props {
   roomId: string;
@@ -59,11 +61,13 @@ export function AvailabilityCalendar({
   });
 
   const dateList = useMemo(() => {
+    if (!DATE_RE.test(from) || !DATE_RE.test(to) || to < from) return [];
     const list: string[] = [];
-    const start = new Date(from);
-    const end = new Date(to);
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const start = new Date(`${from}T00:00:00.000Z`);
+    const end = new Date(`${to}T00:00:00.000Z`);
+    for (let d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) {
       list.push(d.toISOString().slice(0, 10));
+      if (list.length > MAX_CALENDAR_DAYS) break;
     }
     return list;
   }, [from, to]);
@@ -73,6 +77,9 @@ export function AvailabilityCalendar({
   // tranche vide sans synchroniser artificiellement un second state React.
   const currentPage = Math.min(visiblePage, pageCount - 1);
   const visibleDates = dateList.slice(currentPage * DAYS_PER_PAGE, (currentPage + 1) * DAYS_PER_PAGE);
+  const rangeError = !DATE_RE.test(from) || !DATE_RE.test(to) || to < from || dateList.length > MAX_CALENDAR_DAYS
+    ? t("cal.invalidRange")
+    : null;
 
   function getDay(date: string): Day {
     return (
@@ -92,6 +99,10 @@ export function AvailabilityCalendar({
   }
 
   async function reload() {
+    if (rangeError) {
+      setError(rangeError);
+      return;
+    }
     setError(null);
     try {
       const res = await fetch(`/api/rooms/${roomId}/availability?from=${from}&to=${to}`);
@@ -108,6 +119,10 @@ export function AvailabilityCalendar({
 
   /** Applique la valeur de masse à tous les jours de la plage (T-154e P3-12). */
   function applyBatch() {
+    if (rangeError) {
+      setError(rangeError);
+      return;
+    }
     setDays((prev) => {
       const next = { ...prev };
       for (const date of dateList) {
@@ -126,6 +141,10 @@ export function AvailabilityCalendar({
   }
 
   async function save() {
+    if (rangeError) {
+      setError(rangeError);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
@@ -180,13 +199,14 @@ export function AvailabilityCalendar({
           <label htmlFor="cal-to" className="block text-xs text-gray-500 mb-1">{t("cal.to")}</label>
           <input id="cal-to" type="date" value={to} onChange={(e) => { setTo(e.target.value); setVisiblePage(0); }} className="px-3 py-2 border border-gray-200 rounded-lg" />
         </div>
-        <button type="button" onClick={reload} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50">
+        <button type="button" onClick={reload} disabled={Boolean(rangeError)} className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50">
 {t("cal.reload")}
         </button>
         <div className="text-xs text-gray-500">
           {(dateList.length > 1 ? t("cal.daysViewMany") : t("cal.daysView")).replace("{n}", String(dateList.length)).replace("{page}", String(currentPage + 1)).replace("{pages}", String(pageCount))}
         </div>
       </div>
+      {rangeError && <p className="text-sm text-red-600" role="alert">{rangeError}</p>}
 
       {/* T-154e (audit n°26, P3-12) : application en masse (additif, même PUT). */}
       <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50/60 p-3">
@@ -229,7 +249,7 @@ export function AvailabilityCalendar({
             {t("cal.stopSell")}
           </label>
           <button
-            type="button" onClick={applyBatch} disabled={loading}
+            type="button" onClick={applyBatch} disabled={loading || Boolean(rangeError)}
             className="px-3 py-1.5 text-xs border border-[#1B3A6B] text-[#1B3A6B] rounded-lg hover:bg-[#1B3A6B] hover:text-white disabled:opacity-50"
           >
 {t("cal.apply")}
@@ -311,7 +331,7 @@ export function AvailabilityCalendar({
 
       <div className="flex items-center gap-3">
         <button
-          type="button" onClick={save} disabled={loading}
+          type="button" onClick={save} disabled={loading || Boolean(rangeError)}
           className="px-5 py-2 bg-[#1B3A6B] text-white font-medium rounded-lg hover:bg-[#0f2444] disabled:opacity-50"
         >
           {loading ? t("settings.saving") : t("rate.saveChanges")}

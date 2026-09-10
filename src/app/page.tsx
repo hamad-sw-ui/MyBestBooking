@@ -14,6 +14,7 @@ import { Star, Shield, MessageCircle, Zap, Award, ChevronRight, MapPin, Heart } 
 import { PropertyCard } from "@/components/property-card";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { publicDemoSeedEnabled } from "@/lib/demo-flags";
 
 async function getFeaturedProperties() {
   const results = await db
@@ -36,6 +37,7 @@ export default async function HomePage() {
   const user = await getCurrentUser();
   const locale = await getServerLocale();
   const t = makeT(locale);
+  const showDemoSeed = publicDemoSeedEnabled();
 
   // T-022 : mode maintenance — les non-admins sont redirigés vers
   // /maintenance. La page racine n'est pas dans le groupe (main),
@@ -45,7 +47,7 @@ export default async function HomePage() {
   }
 
   const featuredProperties = await getFeaturedProperties();
-  
+
   // T-186 : visuels locaux `public/seed-images/` dès que générés, sinon
   // URL Unsplash historique (rollout progressif, aucune 404).
   const destinations = [
@@ -79,6 +81,9 @@ export default async function HomePage() {
             
             {/* Search Box */}
             <div className="bg-white rounded-2xl p-4 md:p-6 shadow-xl">
+              {/* T-210 : l'accueil reste une entrée rapide. Les filtres avancés
+                  (dates, voyageurs) sont conservés sur /recherche et sur la
+                  fiche hébergement, où ils servent à la disponibilité réelle. */}
               <form action="/recherche" className="flex flex-col md:flex-row gap-4">
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.destination")}</label>
@@ -91,37 +96,6 @@ export default async function HomePage() {
                       className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-lg text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
                     />
                   </div>
-                </div>
-                <div className="flex gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">{t("book.checkIn")}</label>
-                    <input
-                      type="date"
-                      name="checkIn"
-                      className="px-4 py-3 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-500 mb-1">{t("book.checkOut")}</label>
-                    <input
-                      type="date"
-                      name="checkOut"
-                      className="px-4 py-3 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label htmlFor="home-guests" className="block text-xs font-medium text-gray-500 mb-1">{t("search.travelers")}</label>
-                  <select
-                    id="home-guests"
-                    name="guests"
-                    defaultValue="2"
-                    className="px-4 py-3 border border-gray-200 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
-                  >
-                    {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
-                      <option key={n} value={n}>{n} {n > 1 ? t("home.travelerMany") : t("home.travelerOne")}</option>
-                    ))}
-                  </select>
                 </div>
                 <div className="flex items-end">
                   <button
@@ -304,7 +278,7 @@ export default async function HomePage() {
       </section>
 
       {/* Seed data notice for demo */}
-      {featuredProperties.length === 0 && (
+      {featuredProperties.length === 0 && showDemoSeed && (
         <section className="py-16 bg-blue-50">
           <div className="max-w-3xl mx-auto px-4 text-center">
             <h2 className="text-xl font-bold text-gray-900 mb-4">

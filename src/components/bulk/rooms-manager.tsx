@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice } from "@/lib/utils";
+import { formatCurrencyBreakdown } from "@/lib/currency-summary";
 import { BedDouble, Users, Maximize, Plus } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
@@ -104,14 +105,22 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
     }
   }
 
+  const averagePriceByCurrency = rooms.reduce<Record<string, { total: number; count: number }>>((acc, room) => {
+    const currency = (room.currency ?? "EUR").toUpperCase();
+    const price = Number.parseFloat(room.basePrice);
+    if (!Number.isFinite(price)) return acc;
+    acc[currency] = acc[currency] ?? { total: 0, count: 0 };
+    acc[currency].total += price;
+    acc[currency].count += 1;
+    return acc;
+  }, {});
   const stats = {
     total: rooms.length,
     active: rooms.filter((r) => r.isActive).length,
     units: rooms.reduce((s, r) => s + (r.quantity ?? 0), 0),
-    avgPrice:
-      rooms.length > 0
-        ? rooms.reduce((s, r) => s + parseFloat(r.basePrice), 0) / rooms.length
-        : 0,
+    avgPriceByCurrency: Object.fromEntries(
+      Object.entries(averagePriceByCurrency).map(([currency, value]) => [currency, value.count > 0 ? value.total / value.count : 0]),
+    ),
   };
 
   const bulkActions = isAdmin
@@ -130,7 +139,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
         },
         {
           key: "delete",
-          label: t("bulk.delete"),
+          label: t("bulk.deactivate"),
           icon: BulkIcons.delete,
           variant: "danger" as const,
           confirmMessage: t("bulk.confirmDeleteRooms").replace("{n}", String(selected.size)),
@@ -169,7 +178,9 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
           { label: t("bulk.units"), value: stats.units, color: "text-blue-600" },
           {
             label: t("bulk.avgPrice"),
-            value: stats.avgPrice > 0 ? formatPrice(stats.avgPrice, "EUR", locale) : "—",
+            value: Object.keys(stats.avgPriceByCurrency).length > 0
+              ? formatCurrencyBreakdown(stats.avgPriceByCurrency, locale)
+              : "—",
             color: "text-[#1B3A6B]",
           },
         ].map((s) => (
@@ -338,6 +349,7 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                         entity="rooms"
                         id={room.id}
                         label={t("bulk.roomLabel").replace("{name}", room.name)}
+                        verb="deactivate"
                       />
                     )}
                   </div>

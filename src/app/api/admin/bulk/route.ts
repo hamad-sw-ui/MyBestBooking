@@ -10,21 +10,16 @@ import {
   sessions,
   rooms,
   promotions,
-  wishlistItems,
-  priceAlerts,
-  ratePlans,
-  roomAvailability,
-  conversations,
-  messages,
   reviewVotes,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
-import { eq, inArray, and, ne, or, sql, gte } from "drizzle-orm";
+import { eq, inArray, and, ne, sql } from "drizzle-orm";
 import { createHash } from "node:crypto";
 import { BookingCancellationError, cancelBooking, notifyBookingCancellation } from "@/lib/booking-cancellation";
 import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
+import { requireApprovedHost } from "@/lib/host-approval";
 
 /**
  * POST /api/admin/bulk (T-033, étendu T-034)
@@ -202,6 +197,25 @@ async function bulkProperties(
   }
   for (const id of ids) {
     try {
+      // T-205 : l'action groupée doit respecter le même gate que
+      // /api/properties/[id]/validate. On traite le refus item par item via
+      // skipped[] afin de ne pas casser le contrat bulk existant.
+      if (action === "approve") {
+        const [existing] = await db
+          .select({ id: properties.id, hostId: properties.hostId })
+          .from(properties)
+          .where(eq(properties.id, id))
+          .limit(1);
+        if (!existing) {
+          r.skipped.push({ id, reason: "property introuvable" });
+          continue;
+        }
+        const gate = await requireApprovedHost(existing.hostId);
+        if (!gate.ok) {
+          r.skipped.push({ id, reason: gate.defaultMessage });
+          continue;
+        }
+      }
       const updates: Record<string, unknown> = {
         status: targetStatus,
         updatedAt: new Date(),
@@ -328,32 +342,14 @@ async function bulkRooms(action: string, ids: string[]): Promise<Result> {
     throw new Error(`Action invalide pour rooms : ${action}`);
   }
   if (action === "delete") {
-    const today = new Date().toISOString().slice(0, 10);
     for (const id of ids) {
       try {
-        // Refus si des bookings futurs (checkOut >= aujourd'hui) sur cette room
-        const [act] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(bookings)
-          .where(
-            and(
-              eq(bookings.roomId, id),
-              gte(bookings.checkOut, today),
-              or(eq(bookings.status, "pending"), eq(bookings.status, "confirmed")),
-            ),
-          );
-        if ((act?.count ?? 0) > 0) {
-          r.skipped.push({
-            id,
-            reason: `${act.count} réservation(s) future(s) — impossible de supprimer`,
-          });
-          continue;
-        }
-        // Nettoyer FK
-        await db.delete(roomAvailability).where(eq(roomAvailability.roomId, id));
-        await db.delete(ratePlans).where(eq(ratePlans.roomId, id));
+        // T-205 : « supprimer » une chambre devient un soft-delete
+        // opérationnel. On masque la chambre des nouveaux bookings sans
+        // effacer rate plans, calendrier ni historique de réservations.
         const [row] = await db
-          .delete(rooms)
+          .update(rooms)
+          .set({ isActive: false, updatedAt: new Date() })
           .where(eq(rooms.id, id))
           .returning({ id: rooms.id });
         if (!row) {

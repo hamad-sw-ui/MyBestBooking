@@ -764,7 +764,10 @@ function ProvidersSection({ providers }: { providers: Providers }) {
             <Button size="sm" className="mt-3" variant="outline" onClick={rotateCredentials} disabled={busy !== null}>{busy === "rotation" ? t("settings.reencrypting") : t("settings.reencrypt")}</Button>
           </div>
         )}
-        {(Object.keys(PROVIDER_UI) as ProviderKey[]).map((provider) => {
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          {t("settings.stripeDisabled")}
+        </div>
+        {(Object.keys(PROVIDER_UI) as ProviderKey[]).filter((provider) => provider !== "stripe").map((provider) => {
           const meta = metadata?.find((item) => item.provider === provider);
           const fallbackConfigured = providers[provider];
           return (

@@ -56,10 +56,12 @@ export default async function DashboardConversationPage({
     .where(eq(messages.conversationId, id))
     .orderBy(messages.createdAt);
 
-  await db
-    .update(conversations)
-    .set({ unreadByHost: 0 })
-    .where(eq(conversations.id, id));
+  if (isHostOwner) {
+    await db
+      .update(conversations)
+      .set({ unreadByHost: 0 })
+      .where(eq(conversations.id, id));
+  }
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -85,7 +87,7 @@ export default async function DashboardConversationPage({
           <p className="text-center text-gray-500 py-12">{t("messages.noMessageYet")}</p>
         )}
         {msgs.map((m) => {
-          const mine = m.senderType === "host";
+          const mine = m.senderId === user.id || (user.role === "host" && m.senderType === "host");
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div

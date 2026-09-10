@@ -46,40 +46,45 @@ describe("POST /api/seed — garde d'accès (T-002, §13.5)", () => {
     expect(res.status).toBe(200); // early-exit "déjà présentes" via mock
   });
 
-  it("en prod sans SEED_TOKEN défini côté serveur → 404", async () => {
+  it("en prod avec flag démo mais sans SEED_TOKEN défini côté serveur → 404", async () => {
     (process.env as Record<string,string>).NODE_ENV = "production";
+    process.env.DEMO_SEED_ENABLED = "true";
     delete process.env.SEED_TOKEN;
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ "x-seed-token": "anything" }));
     expect(res.status).toBe(404);
   });
 
-  it("en prod avec SEED_TOKEN défini mais aucun header → 404", async () => {
+  it("en prod avec flag+SEED_TOKEN mais aucun header → 404", async () => {
     (process.env as Record<string,string>).NODE_ENV = "production";
+    process.env.DEMO_SEED_ENABLED = "true";
     process.env.SEED_TOKEN = "correct-token-value";
     const { POST } = await import("./route");
     const res = await POST(makeRequest());
     expect(res.status).toBe(404);
   });
 
-  it("en prod avec mauvais token → 404", async () => {
+  it("en prod avec flag+SEED_TOKEN mais mauvais token → 404", async () => {
     (process.env as Record<string,string>).NODE_ENV = "production";
+    process.env.DEMO_SEED_ENABLED = "true";
     process.env.SEED_TOKEN = "correct-token-value";
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ "x-seed-token": "wrong-token-value" }));
     expect(res.status).toBe(404);
   });
 
-  it("en prod avec token de longueur différente → 404 sans crash", async () => {
+  it("en prod avec flag+SEED_TOKEN mais token de longueur différente → 404 sans crash", async () => {
     (process.env as Record<string,string>).NODE_ENV = "production";
+    process.env.DEMO_SEED_ENABLED = "true";
     process.env.SEED_TOKEN = "correct-token-value";
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ "x-seed-token": "short" }));
     expect(res.status).toBe(404);
   });
 
-  it("en prod avec le bon token → autorisé (passe la garde)", async () => {
+  it("en prod avec flag démo + bon token → autorisé (passe la garde)", async () => {
     (process.env as Record<string,string>).NODE_ENV = "production";
+    process.env.DEMO_SEED_ENABLED = "true";
     process.env.SEED_TOKEN = "correct-token-value";
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ "x-seed-token": "correct-token-value" }));
@@ -87,8 +92,18 @@ describe("POST /api/seed — garde d'accès (T-002, §13.5)", () => {
     expect(res.status).toBe(200);
   });
 
+  it("en prod avec bon token mais flag démo absent → 404", async () => {
+    (process.env as Record<string,string>).NODE_ENV = "production";
+    delete process.env.DEMO_SEED_ENABLED;
+    process.env.SEED_TOKEN = "correct-token-value";
+    const { POST } = await import("./route");
+    const res = await POST(makeRequest({ "x-seed-token": "correct-token-value" }));
+    expect(res.status).toBe(404);
+  });
+
   it("le corps de la réponse 404 ne révèle rien de sensible", async () => {
     (process.env as Record<string,string>).NODE_ENV = "production";
+    process.env.DEMO_SEED_ENABLED = "true";
     process.env.SEED_TOKEN = "correct-token-value";
     const { POST } = await import("./route");
     const res = await POST(makeRequest({ "x-seed-token": "wrong" }));

@@ -53,6 +53,7 @@ export interface InvoiceBooking {
 
 export interface InvoiceData {
   isInvoice: boolean; // false → reçu/confirmation
+  invoiceBlockedReason: "legal_missing" | "unpaid" | null;
   invoiceNumber: string;
   issuedOn: string;
   legal: InvoiceLegal;
@@ -116,8 +117,13 @@ export function buildInvoiceData(
   // et l'année pour éviter un doublon quand le préfixe contient déjà 2026.
   const refTail = booking.bookingReference.replace(/^MBB-/, "").replace(/^\d{4}-/, "");
   const invoiceNumber = `${legal.invoicePrefix || "FAC-"}${refTail}`;
+  const isPaid = booking.paymentStatus === "paid";
   return {
-    isInvoice: hasLegal,
+    // T-206/F11 : une facture fiscale n'est émise que si les mentions légales
+    // sont présentes ET que le paiement est soldé. Avant, un booking unpaid
+    // pouvait afficher une « FACTURE » numérotée.
+    isInvoice: hasLegal && isPaid,
+    invoiceBlockedReason: hasLegal ? (isPaid ? null : "unpaid") : "legal_missing",
     invoiceNumber,
     issuedOn,
     legal,
@@ -283,7 +289,7 @@ export function renderInvoiceHtml(d: InvoiceData): string {
   ${
     d.isInvoice
       ? ""
-      : `<div class="note">${t("inv.receiptNote")}</div>`
+      : `<div class="note">${t(d.invoiceBlockedReason === "unpaid" ? "inv.unpaidNote" : "inv.receiptNote")}</div>`
   }
 
   <div style="margin-top:24px; font-size:13px; color:#374151;">

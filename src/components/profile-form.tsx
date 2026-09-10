@@ -8,6 +8,7 @@ import { PhotoUploadButton } from "@/components/photo-upload-button";
 // T-154d (audit n°26, P2-8) : feedback global via ToastProvider.
 import { useToast } from "@/components/ui/toast";
 import { SmartImage } from "@/components/ui/smart-image";
+import { countryOptions, isSupportedCountry } from "@/lib/countries";
 
 interface Props {
   initial: {
@@ -45,6 +46,13 @@ export function ProfileForm({ initial }: Props) {
     // T-133 (A4) : URL de la photo de profil (vide = aucune / initiales).
     avatarUrl: initial.avatarUrl ?? "",
   });
+  const countryChoices = [
+    { value: "", label: "—" },
+    ...countryOptions(t),
+    ...(form.country && !isSupportedCountry(form.country)
+      ? [{ value: form.country, label: form.country }]
+      : []),
+  ];
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -93,7 +101,7 @@ export function ProfileForm({ initial }: Props) {
         currency: form.currency,
         timezone: form.timezone,
       };
-      if (form.country) body.country = form.country;
+      body.country = form.country || null;
       // T-133 (A4) : photo de profil. Une URL non valide est rejetée par
       // l'API (z.string().url()) ; on envoie null quand le champ est vide
       // pour permettre de retirer la photo.
@@ -133,7 +141,16 @@ export function ProfileForm({ initial }: Props) {
         </div>
         <div>
           <label htmlFor="pf-country" className="block text-sm font-medium text-gray-700 mb-1">{t("account.country")}</label>
-          <input id="pf-country" maxLength={2} value={form.country} onChange={(e) => set("country", e.target.value.toUpperCase())} placeholder="FR" className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]" />
+          <select
+            id="pf-country"
+            value={form.country}
+            onChange={(e) => set("country", e.target.value)}
+            className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B] bg-white"
+          >
+            {countryChoices.map((country) => (
+              <option key={country.value || "empty"} value={country.value}>{country.label}</option>
+            ))}
+          </select>
         </div>
         <div className="md:col-span-2">
           <label htmlFor="pf-avatar" className="block text-sm font-medium text-gray-700 mb-1">{t("account.avatar")}</label>

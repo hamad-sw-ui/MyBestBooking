@@ -5,7 +5,6 @@ import { rooms, properties, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid, frenchZodMessage } from "@/lib/http";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
-import { stayNightsWithinLimit } from "@/lib/booking-rules";
 import { apiError } from "@/lib/api-error";
 
 /**
@@ -25,6 +24,28 @@ const dayEntry = z.object({
 const batchSchema = z.object({
   days: z.array(dayEntry).min(1).max(90),
 });
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_CALENDAR_DAYS = 366;
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function inclusiveCalendarDays(from: string, to: string): number {
+  if (!DATE_RE.test(from) || !DATE_RE.test(to) || to < from) return 0;
+  const start = new Date(`${from}T00:00:00.000Z`).getTime();
+  const end = new Date(`${to}T00:00:00.000Z`).getTime();
+  return Math.floor((end - start) / 86_400_000) + 1;
+}
+
+function validateCalendarRange(from: string, to: string): string | null {
+  const days = inclusiveCalendarDays(from, to);
+  if (days === 0) return "La fenêtre availability doit être au format YYYY-MM-DD, avec une date de fin égale ou postérieure au début";
+  if (from < todayIso()) return "Le calendrier ne peut pas être modifié sur des dates passées";
+  if (days > MAX_CALENDAR_DAYS) return "La fenêtre availability doit couvrir au maximum 366 jours";
+  return null;
+}
 
 async function checkOwnership(userId: string, roomId: string) {
   const [row] = await db
@@ -55,8 +76,9 @@ export async function GET(
   const to = request.nextUrl.searchParams.get("to")
     ?? new Date(Date.now() + 30 * 86400_000).toISOString().slice(0, 10);
 
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || !stayNightsWithinLimit(from, new Date(`${to}T00:00:00Z`).getTime() === new Date(`${from}T00:00:00Z`).getTime() ? to : new Date(new Date(`${to}T00:00:00Z`).getTime() + 86_400_000).toISOString().slice(0, 10))) {
-    return NextResponse.json({ error: await apiError("La fenêtre availability doit couvrir au maximum 365 jours") }, { status: 400 });
+  const rangeError = validateCalendarRange(from, to);
+  if (rangeError) {
+    return NextResponse.json({ error: await apiError(rangeError) }, { status: 400 });
   }
 
   const list = await db
@@ -96,6 +118,13 @@ export async function PUT(
     }
 
     const { days } = batchSchema.parse(await request.json());
+    const invalidDay = days.find((day) => !DATE_RE.test(day.date) || day.date < todayIso());
+    if (invalidDay) {
+      return NextResponse.json(
+        { error: await apiError("Le calendrier ne peut pas être modifié sur des dates passées") },
+        { status: 400 },
+      );
+    }
     const roomCapacity = row.room.quantity ?? 1;
     if (days.some((day) => day.availableCount > roomCapacity)) {
       return NextResponse.json(

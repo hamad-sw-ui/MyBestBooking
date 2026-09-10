@@ -500,11 +500,22 @@ if prop and isinstance(prop, list) and prop:
         record(S, f"Bulk delete 2 rooms → succeeded={succ}",
                "OK" if code == 200 and succ == 2 else "KO", body[:250])
 
-        # Vérifier DB : rooms n'existent plus
-        chk = db_query(f"SELECT count(*) as n FROM rooms WHERE id = ANY(ARRAY[{','.join([repr(x) for x in room_ids])}]::uuid[])")
-        n = int(chk[0]["n"]) if chk and isinstance(chk, list) else 999
-        record(S, f"DB check : rooms supprimées (count=0)",
-               "OK" if n == 0 else "KO", f"count={n}")
+        # Vérifier DB : depuis T-208 le delete rooms est un soft-delete
+        # contractuel (`is_active=false`) afin de préserver bookings/FK et
+        # disponibilité historique. La QA ne doit donc plus attendre count=0.
+        chk = db_query(f"""SELECT count(*) as total,
+                   count(*) FILTER (WHERE is_active=false) as inactive,
+                   count(*) FILTER (WHERE is_active=true) as active
+            FROM rooms WHERE id = ANY(ARRAY[{','.join([repr(x) for x in room_ids])}]::uuid[])""")
+        if chk and isinstance(chk, list):
+            total = int(chk[0]["total"])
+            inactive = int(chk[0]["inactive"])
+            active = int(chk[0]["active"])
+        else:
+            total = inactive = active = 999
+        ok_soft_delete = total == len(room_ids) and inactive == len(room_ids) and active == 0
+        record(S, "DB check : rooms soft-supprimées (is_active=false)",
+               "OK" if ok_soft_delete else "KO", f"total={total}, inactive={inactive}, active={active}")
 
 # Créer 2 promotions test
 ts = int(time.time())

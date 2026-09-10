@@ -73,6 +73,13 @@ interface MailStrings {
   bookingConfirmBody: string;
   hostNotifSubject: string;
   hostNotifBody: string;
+  requestTravelerSubject: string;
+  requestTravelerBody: string;
+  requestHostSubject: string;
+  requestHostBody: string;
+  lblRequestExpires: string;
+  requestCtaTraveler: string;
+  requestCtaHost: string;
   cancelSubject: string;
   cancelBody: string;
   reminderSubject: string;
@@ -157,6 +164,18 @@ const FR: MailStrings = {
   hostNotifBody:
     "Bonjour {hostFirstName},\n\n" +
     "Une nouvelle réservation vient d'être confirmée sur votre hébergement.",
+  requestTravelerSubject: "Demande de réservation reçue {bookingReference}",
+  requestTravelerBody:
+    "Bonjour {firstName},\n\n" +
+    "Votre demande de réservation a bien été transmise à l'hôte. Elle n'est pas encore confirmée.\n\n" +
+    "Vous recevrez une confirmation dès que l'hôte aura validé la demande. Aucun paiement n'est demandé sur MyBestBooking.",
+  requestHostSubject: "Nouvelle demande de réservation {bookingReference}",
+  requestHostBody:
+    "Bonjour {hostFirstName},\n\n" +
+    "Une nouvelle demande de réservation attend votre validation. Confirmez-la depuis votre tableau de bord si vous pouvez accueillir le voyageur.",
+  lblRequestExpires: "Date limite de réponse",
+  requestCtaTraveler: "Voir ma demande",
+  requestCtaHost: "Traiter la demande",
   cancelSubject: "Réservation annulée {bookingReference}",
   cancelBody:
     "Bonjour {firstName},\n\n" +
@@ -249,6 +268,18 @@ const EN: MailStrings = {
   hostNotifBody:
     "Hi {hostFirstName},\n\n" +
     "A new booking has just been confirmed on your property.",
+  requestTravelerSubject: "Booking request received {bookingReference}",
+  requestTravelerBody:
+    "Hi {firstName},\n\n" +
+    "Your booking request has been sent to the host. It is not confirmed yet.\n\n" +
+    "You will receive a confirmation as soon as the host accepts the request. No payment is requested on MyBestBooking.",
+  requestHostSubject: "New booking request {bookingReference}",
+  requestHostBody:
+    "Hi {hostFirstName},\n\n" +
+    "A new booking request is waiting for your approval. Confirm it from your dashboard if you can host the guest.",
+  lblRequestExpires: "Response deadline",
+  requestCtaTraveler: "View my request",
+  requestCtaHost: "Handle the request",
   cancelSubject: "Booking cancelled {bookingReference}",
   cancelBody:
     "Hi {firstName},\n\n" +

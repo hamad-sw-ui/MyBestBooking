@@ -27,8 +27,8 @@ export function RowDeleteButton(props: {
   label: string;
   disabled?: boolean;
   onDeleted?: () => void;
-  /** Une property conserve son historique : l’action est un archivage. */
-  verb?: "delete" | "archive";
+  /** Certaines entités conservent leur historique : archivage ou désactivation. */
+  verb?: "delete" | "archive" | "deactivate";
 }) {
   const { entity, id, label, disabled, onDeleted, verb = "delete" } = props;
   const t = useT();
@@ -36,11 +36,16 @@ export function RowDeleteButton(props: {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isArchive = verb === "archive";
-  const verbLabel = isArchive ? t("bulk.archive") : t("bulk.delete");
+  const isDeactivate = verb === "deactivate";
+  const verbLabel = isArchive ? t("bulk.archive") : isDeactivate ? t("bulk.deactivate") : t("bulk.delete");
 
   async function handleClick() {
     if (busy || disabled) return;
-    const suffix = isArchive ? t("bulk.archiveKeepHistory") : t("bulk.deleteIrreversible");
+    const suffix = isArchive
+      ? t("bulk.archiveKeepHistory")
+      : isDeactivate
+        ? t("bulk.deactivateKeepHistory")
+        : t("bulk.deleteIrreversible");
     const confirmText = `${t("bulk.confirmVerb").replace("{verb}", verbLabel).replace("{label}", label)} ${suffix}`;
     if (!window.confirm(confirmText)) {
       return;

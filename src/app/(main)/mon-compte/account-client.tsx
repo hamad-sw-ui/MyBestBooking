@@ -3,12 +3,9 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { 
-  User, Mail, Phone, Globe, Award, Wallet, 
-  Shield, Bell, LogOut, Trash2, ChevronRight 
+  User, Award, Wallet, Shield, Bell, LogOut
 } from "lucide-react";
 import Link from "next/link";
 import { ProfileForm } from "@/components/profile-form";
@@ -33,11 +30,15 @@ interface UserData {
   country: string | null;
   language: string | null;
   currency: string | null;
+  role: string;
+  approvalStatus: string | null;
   bestrewardsLevel: number | null;
   bestrewardsBookingsCount: number | null;
   walletBalance: string | null;
   emailVerified: boolean | null;
   twoFactorEnabled: boolean | null;
+  timezone?: string | null;
+  priceAlertEnabled?: boolean | null;
   avatarUrl?: string | null;
 }
 
@@ -112,6 +113,13 @@ export default function MyAccountPage() {
   const currentLevel = bestrewardsLevels.find((l) => l.level === user.bestrewardsLevel) || bestrewardsLevels[0];
   const nextLevel = bestrewardsLevels.find((l) => l.level === (user.bestrewardsLevel || 1) + 1);
   const bookingsToNextLevel = nextLevel ? nextLevel.bookings - (user.bestrewardsBookingsCount || 0) : 0;
+  const hostApproval = user.role === "host"
+    ? {
+        label: t(user.approvalStatus === "approved" ? "dash.hostApproved" : user.approvalStatus === "rejected" ? "dash.hostRejected" : "dash.hostPending"),
+        description: t(user.approvalStatus === "approved" ? "account.hostApprovedDesc" : user.approvalStatus === "rejected" ? "account.hostRejectedDesc" : "account.hostPendingDesc"),
+        variant: (user.approvalStatus === "approved" ? "success" : user.approvalStatus === "rejected" ? "danger" : "warning") as "success" | "danger" | "warning",
+      }
+    : null;
 
   const tabs = [
     { id: "profile", label: t("account.tabProfile"), icon: User },
@@ -196,14 +204,23 @@ export default function MyAccountPage() {
                         {t("account.emailReadonly")}
                       </span>
                     </div>
+                    {hostApproval && (
+                      <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm text-gray-700">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="font-medium text-gray-900">{t("account.hostApprovalTitle")}</span>
+                          <Badge variant={hostApproval.variant}>{hostApproval.label}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-gray-500">{hostApproval.description}</p>
+                      </div>
+                    )}
                     <ProfileForm initial={{
                       firstName: user.firstName,
                       lastName: user.lastName,
                       phone: user.phone,
-                      country: null,
+                      country: user.country ?? null,
                       language: user.language ?? null,
                       currency: user.currency ?? null,
-                      timezone: (user as unknown as { timezone?: string | null }).timezone ?? null,
+                      timezone: user.timezone ?? null,
                       avatarUrl: user.avatarUrl ?? null,
                     }} />
                   </CardContent>
@@ -279,11 +296,10 @@ export default function MyAccountPage() {
                           <p className="text-xs text-gray-400">{t("wallet.convertedNote")}</p>
                         )}
                       </div>
-                      {/* T-153 (audit n°25, F) : flèche le scénario d'utilisation
-                          du solde — la recherche affiche un bandeau rappelant
-                          de cocher « Utiliser mes crédits » au paiement. */}
+                      {/* T-207 : le wallet reste informatif ; le CTA n'envoie
+                          plus vers un tunnel de déduction/paiement. */}
                       <Link
-                        href="/recherche?wallet=1"
+                        href="/recherche"
                         className="inline-flex items-center px-4 py-2 rounded-lg border border-[#1B3A6B] text-[#1B3A6B] font-medium hover:bg-[#1B3A6B] hover:text-white transition"
                       >
                         {t("account.useBalance")}
@@ -360,7 +376,7 @@ export default function MyAccountPage() {
                 {/* T-030 : préférence user réellement branchée */}
                 <NotificationPrefsSection
                   initial={{
-                    priceAlertEnabled: (user as unknown as { priceAlertEnabled?: boolean }).priceAlertEnabled ?? false,
+                    priceAlertEnabled: user.priceAlertEnabled ?? false,
                   }}
                 />
                 {/* T-130 : le parrainage est disponible (T-125) ; on renvoie vers l'onglet BestRewards */}

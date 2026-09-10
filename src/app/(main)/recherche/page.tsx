@@ -20,6 +20,9 @@ import { formatPrice } from "@/lib/utils";
 import { AMENITIES, amenityLabel } from "@/lib/amenities";
 import { searchFilterWarnings, SEARCH_WARNING_KEY } from "@/lib/search-warnings";
 import { publicCatalogCache } from "@/lib/read-cache";
+import { propertyTypeOptions } from "@/lib/property-types";
+import { countryOptions } from "@/lib/countries";
+import { hasInvalidRequestedStay, hasStayRequest, parseFutureStay, todayIso } from "@/lib/future-stay";
 
 /**
  * T-172 (audit UIT 2026-09-01) — les clés `search.meta.*` existaient depuis
@@ -61,12 +64,7 @@ interface SearchPageProps {
 
 
 function validStay(params: Awaited<SearchPageProps["searchParams"]>): params is Awaited<SearchPageProps["searchParams"]> & { checkIn: string; checkOut: string } {
-  return Boolean(
-    params.checkIn && params.checkOut
-    && /^\d{4}-\d{2}-\d{2}$/.test(params.checkIn)
-    && /^\d{4}-\d{2}-\d{2}$/.test(params.checkOut)
-    && params.checkOut > params.checkIn,
-  );
+  return parseFutureStay(params.checkIn, params.checkOut) !== null;
 }
 
 /** Taux de conversion EUR d'une devise de chambre (mêmes taux figés que
@@ -145,6 +143,14 @@ function minEligiblePriceEur(alias: "r2", params: Awaited<SearchPageProps["searc
 }
 
 async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>) {
+  // T-206/F6 : si l'utilisateur demande explicitement un séjour impossible
+  // (dates passées, incomplètes, mal formées ou inversées), on renvoie une
+  // liste vide au lieu d'afficher des disponibilités qui seront refusées plus
+  // tard par la fiche ou le checkout. Sans dates, comportement historique.
+  if (hasInvalidRequestedStay(params.checkIn, params.checkOut)) {
+    return { total: 0, page: 1, totalPages: 1, results: [] };
+  }
+
   const conditions: SQL[] = [eq(properties.status, "active")];
 
   if (params.city) {
@@ -264,7 +270,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   // disponibilité reste calculée en temps réel — jamais cachée (zéro
   // risque de surbooking). Le payload caché est le résultat brut (EUR,
   // avant formatage) : indépendant de la locale et de l'utilisateur.
-  const cacheable = !validStay(params);
+  const requestedStay = hasStayRequest(params.checkIn, params.checkOut);
+  const today = todayIso();
+  const cacheable = !requestedStay;
   const cacheKey = cacheable
     ? JSON.stringify({
         city: params.city?.trim().toLowerCase() ?? null,
@@ -282,10 +290,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     ? await publicCatalogCache.wrap(`search:${cacheKey}`, () => searchProperties(params))
     : await searchProperties(params);
   const { results, total, page: currentPage, totalPages } = search;
-  // T-175 — bandeau avertissements : signale chaque paramètre saisi mais
-  // ignoré/incohérent (bornes prix inversées, dates invalides/passées,
-  // voyageurs non entiers). AUCUN impact sur le filtrage : lecture seule des
-  // mêmes règles que le moteur (validStay, priceBounds, guests entier).
+  // T-206/F6 — bandeau avertissements : signale chaque paramètre saisi mais
+  // incohérent (bornes prix inversées, dates invalides/passées, voyageurs non
+  // entiers). Les dates explicitement impossibles neutralisent désormais les
+  // résultats pour éviter un parcours contradictoire jusqu'au checkout.
   const filterWarnings = searchFilterWarnings(params);
   const pageQuery = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) if (value && key !== "page") pageQuery.set(key, value);
@@ -300,13 +308,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const propertyTypes = [
     { value: "", label: t("search.allTypes") },
-    { value: "hotel", label: t("search.type.hotel") },
-    { value: "apartment", label: t("search.type.apartment") },
-    { value: "villa", label: t("search.type.villa") },
-    { value: "hostel", label: t("search.type.hostel") },
-    { value: "guesthouse", label: t("search.type.guesthouse") },
-    { value: "riad", label: t("search.type.riad") },
-    { value: "resort", label: t("search.type.resort") },
+    ...propertyTypeOptions(t),
+  ];
+  const countries = [
+    { value: "", label: t("search.allCountries") },
+    ...countryOptions(t),
   ];
 
   return (
@@ -343,6 +349,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 type="date"
                 name="checkIn"
                 defaultValue={params.checkIn}
+                min={today}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
               />
             </div>
@@ -352,6 +359,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 type="date"
                 name="checkOut"
                 defaultValue={params.checkOut}
+                min={params.checkIn && params.checkIn >= today ? params.checkIn : today}
                 className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
               />
             </div>
@@ -366,6 +374,18 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                   <option key={type.value} value={type.value}>
                     {type.label}
                   </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-[150px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.country")}</label>
+              <select
+                name="country"
+                defaultValue={params.country ?? ""}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+              >
+                {countries.map((country) => (
+                  <option key={country.value} value={country.value}>{country.label}</option>
                 ))}
               </select>
             </div>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generatePendingPayoutsForPeriod, previousMonthRange } from "@/lib/payout-service";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { apiError } from "@/lib/api-error";
+import { platformPayoutsEnabled } from "@/lib/platform-flags";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +35,16 @@ export async function POST(request: NextRequest) {
 async function runPayoutCron(request: NextRequest) {
   if (!authorized(request)) {
     return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
+  }
+  if (!platformPayoutsEnabled()) {
+    return NextResponse.json(
+      {
+        error: await apiError("Cron versements désactivé : les paiements plateforme ne sont pas actifs"),
+        code: "PLATFORM_PAYOUTS_DISABLED",
+        platformPayoutsDisabled: true,
+      },
+      { status: 410 },
+    );
   }
   try {
     const url = new URL(request.url);

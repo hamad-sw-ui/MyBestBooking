@@ -77,17 +77,16 @@ def find_page(route):
             return c
     return None
 
-# T-162/T-163 (audit n°30) : certaines pages publiques ont été scindées
-# en wrapper RSC (page.tsx : generateMetadata/notFound) + composant
-# client sibling (ex. `reservation-form.tsx`). Le contrôle statique lit
-# alors les DEUX fichiers pour vérifier que l'UI client est bien branchée
-# et le tag devient "client (sibling)" — l'intention du check (composants
-# clés présents) est conservée, seule la localisation du code a bougé.
+# T-162/T-163/T-206-F13 : certaines pages publiques/profil sont scindées
+# en wrapper RSC (page.tsx : generateMetadata/notFound) + composant client
+# voisin (`reservation-form.tsx`, `account-client.tsx`). Le contrôle statique
+# lit ces fichiers connus pour vérifier que l'UI client est branchée.
 def read_page_bundle(page):
     content = read_page(page)
-    sibling = os.path.join(os.path.dirname(page), "reservation-form.tsx")
-    if os.path.exists(sibling):
-        content += "\n" + read_page(sibling)
+    for name in ("reservation-form.tsx", "account-client.tsx"):
+        sibling = os.path.join(os.path.dirname(page), name)
+        if os.path.exists(sibling):
+            content += "\n" + read_page(sibling)
     return content
 
 results = []
@@ -156,7 +155,7 @@ CLIENT_PAGES = [
     ("/mes-favoris", ["PriceAlertsSection", "WishlistActions"], "favoris + alertes"),
     ("/mes-reservations", ["BookingRowActions"], "réservations + actions"),
     ("/messages", ["MessageComposer|conversation"], "messagerie"),
-    ("/reservation", ["wallet|useWalletCredits", "isGuestBooking|guest"], "checkout"),
+    ("/reservation", ["reservation.noOnlinePayment|onlinePaymentDisabled", "isGuestBooking|guest"], "demande sans paiement plateforme"),
     ("/hebergement/[slug]", ["PriceAlertButton"], "page hébergement"),
 ]
 for route, expected, label in CLIENT_PAGES:
@@ -166,8 +165,8 @@ for route, expected, label in CLIENT_PAGES:
         continue
     client = is_client_page(page)
     content = read_page_bundle(page)  # T-162 : wrapper RSC + sibling client
-    sibling = os.path.join(os.path.dirname(page), "reservation-form.tsx")
-    client_bundle = client or (os.path.exists(sibling) and is_client_page(sibling))
+    sibling_paths = [os.path.join(os.path.dirname(page), name) for name in ("reservation-form.tsx", "account-client.tsx")]
+    client_bundle = client or any(os.path.exists(sibling) and is_client_page(sibling) for sibling in sibling_paths)
     ok, missing = contains_all(content, expected)
     tag = "client (sibling)" if client_bundle and not client else ("client" if client_bundle else "server")
     if ok:
@@ -459,9 +458,9 @@ if active:
         total = float(b["total"])
         math_ok = abs((subtot + tax + fee_ - disc) - total) < 0.02
     except: subtot = disc = total = 0; math_ok = False
-    record(S, f"Booking wallet+BR+promo{code_pr} : subtotal={subtot} disc={disc} total={total}",
+    record(S, f"Booking promo+BR (wallet ignoré T-207){code_pr} : subtotal={subtot} disc={disc} total={total}",
            "OK" if code == 201 and disc > 0 and math_ok else "KO",
-           f"code={code} math_ok={math_ok} body={body[:250]}")
+           f"code={code} math_ok={math_ok} walletCreditsUsed={json.loads(body).get('booking', {}).get('walletCreditsUsed') if body else '?'} body={body[:250]}")
 else:
     record(S, "Aucune promo active dans le seed", "WARN",
            f"{len(promos)} promos, 0 active")

@@ -4,6 +4,7 @@ import { processPendingPaymentEvents, recordPaymentEvent } from "@/lib/payment-e
 import { getPayoutProvider, webhookEventType } from "@/lib/payout-provider";
 import { markPayoutPaidByProviderId, markPayoutFailedByProviderId } from "@/lib/payout-service";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
+import { platformPayoutsEnabled } from "@/lib/platform-flags";
 
 /**
  * Webhook Stripe unifié (T-020 / T-195).
@@ -23,6 +24,9 @@ export async function POST(request: NextRequest) {
 
   // Versements : route dédiée, signature vérifiée par le PayoutProvider.
   if (type?.startsWith("payout.")) {
+    if (!platformPayoutsEnabled()) {
+      return NextResponse.json({ received: true, kind: "payout", status: "disabled", platformPayoutsDisabled: true });
+    }
     const payoutProvider = await getPayoutProvider();
     const event = await payoutProvider.verifyWebhook(payload, signature);
     if (!event) return NextResponse.json({ error: "Invalid signature" }, { status: 400 });

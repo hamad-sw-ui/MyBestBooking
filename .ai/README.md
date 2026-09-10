@@ -24,6 +24,10 @@ npm run db:dev
 npm run db:push
 # Preuve runtime HTTP (≥ 40 assertions, ADR-008)
 npm run smoke
+# Crawl runtime multi-profils sur une instance déjà servie
+npm run site:audit -- http://127.0.0.1:3000
+# Crawl runtime fiable en serveur production (build + next start + cleanup)
+npm run site:audit:prod
 ```
 
 > La CI (`.github/workflows/ci.yml`) exécute automatiquement

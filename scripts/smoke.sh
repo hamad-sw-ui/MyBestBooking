@@ -161,6 +161,12 @@ sect "1. Seed"
 # volontaire). Si le token est présent dans l'environnement du smoke, on le
 # transmet ; sinon comportement historique inchangé (dev sans token = 200).
 seed_headers=()
+# T-209/F4 : en production preview le seed exige toujours SEED_TOKEN. Le smoke
+# peut être lancé depuis un shell qui n'a pas sourcé .env.local ; on relit donc
+# le token local (si présent) sans l'afficher.
+if [ -z "${SEED_TOKEN:-}" ] && [ -f .env.local ]; then
+  SEED_TOKEN=$(grep '^SEED_TOKEN=' .env.local 2>/dev/null | head -1 | sed -E 's/^SEED_TOKEN="?([^"]*)"?$/\1/')
+fi
 if [ -n "${SEED_TOKEN:-}" ]; then seed_headers=(-H "x-seed-token: $SEED_TOKEN"); fi
 seed_body=$(curl -s -X POST "$BASE_URL/api/seed" "${seed_headers[@]}" || true)
 if echo "$seed_body" | grep -qE '"(message|success)"'; then

@@ -1,6 +1,6 @@
 # 🎛️ Simulation dashboards — filtres / sélection / actions groupées
 
-**Généré le** : 2026-08-21 13:40
+**Généré le** : 2026-09-10 05:53
 **T-033 (Session 12) + T-034 (Session 13)**
 
 Vérifie l'implémentation des raccourcis dashboards :
@@ -12,10 +12,10 @@ Vérifie l'implémentation des raccourcis dashboards :
 
 ## 🎯 Résumé
 
-- ✅ **69 OK**
+- ✅ **68 OK**
 - ⚠️ **0 WARN**
 - ❌ **0 KO**
-- Total : **69**
+- Total : **68**
 
 Verdict : **✅ TOUT PASSE**
 
@@ -97,19 +97,19 @@ Verdict : **✅ TOUT PASSE**
 ## 4. API bulk : validation payload
 
 - ✅ **entity manquante → 400**
-  <sub>{"error":"Invalid option: expected one of \"users\"|\"properties\"|\"reviews\"|\"bookings\"|\"rooms\"|\"promotions\""}</sub>
+  <sub>{"error":"Valeur invalide"}</sub>
 
 - ✅ **entity invalide → 400**
-  <sub>{"error":"Invalid option: expected one of \"users\"|\"properties\"|\"reviews\"|\"bookings\"|\"rooms\"|\"promotions\""}</sub>
+  <sub>{"error":"Valeur invalide"}</sub>
 
 - ✅ **ids=[] → 400**
-  <sub>{"error":"Too small: expected array to have >=1 items"}</sub>
+  <sub>{"error":"Texte trop court"}</sub>
 
 - ✅ **ids > 100 → 400**
-  <sub>{"error":"Invalid UUID"}</sub>
+  <sub>{"error":"Identifiant invalide"}</sub>
 
 - ✅ **UUID invalide → 400**
-  <sub>{"error":"Invalid UUID"}</sub>
+  <sub>{"error":"Identifiant invalide"}</sub>
 
 - ✅ **action=kill sur users → 400**
   <sub>{"error":"Action invalide pour users : kill"}</sub>
@@ -124,16 +124,16 @@ Verdict : **✅ TOUT PASSE**
 ## 6. Admin auto-protection : impossible de se suspendre soi-même
 
 - ✅ **admin tente self-suspend → skipped avec raison**
-  <sub>body={"entity":"users","action":"suspend","requested":1,"succeeded":0,"skipped":[{"id":"957172b3-2ba3-4d50-bc05-425ee16dc0e4","reason":"L'admin ne peut pas s'auto-modifier via bulk"}],"failed":[]}</sub>
+  <sub>body={"entity":"users","action":"suspend","requested":1,"succeeded":0,"skipped":[{"id":"c56dae10-817f-4e65-90c9-bd07d725d8a6","reason":"L'admin ne peut pas s'auto-modifier via bulk"}],"failed":[]}</sub>
 
 - ✅ **bulk suspend sur un autre admin → skipped (ne(role, admin))**
-  <sub>body={"entity":"users","action":"suspend","requested":1,"succeeded":0,"skipped":[{"id":"ca34c43f-e690-4ab8-8874-87279a9ce0ab","reason":"user introuvable ou est admin"}],"failed":[]}</sub>
+  <sub>body={"entity":"users","action":"suspend","requested":1,"succeeded":0,"skipped":[{"id":"bbfbaf9a-d424-432f-aef4-2276d7d4f394","reason":"user introuvable ou est admin"}],"failed":[]}</sub>
 
 
 ## 7. Bulk users : suspend → réactivate cycle complet
 
 - ✅ **Créer 3 users test : 3/3**
-  <sub>ids: ['848fc0d2', 'c07b2d66', '69fb8698']</sub>
+  <sub>ids: ['6e4c8c6d', 'cb098448', '55815db2']</sub>
 
 - ✅ **Bulk suspend 3 users → succeeded=3**
   <sub>{"entity":"users","action":"suspend","requested":3,"succeeded":3,"skipped":[],"failed":[]}</sub>
@@ -164,16 +164,10 @@ Verdict : **✅ TOUT PASSE**
   <sub>{"entity":"reviews","action":"approve","requested":3,"succeeded":3,"skipped":[],"failed":[]}</sub>
 
 
-## 10. Bulk bookings : cancel respecte la machine à états
-
-- ✅ **Bulk cancel mix (1 valide + 1 déjà cancelled) → 1×OK + 1×skipped**
-  <sub>succ=1 skipped=[{'id': '5afdd5c0-2394-47ba-98b2-d3382f638446', 'reason': "transition invalide depuis 'cancelled'"}]</sub>
-
-
 ## 11. Audit log : bulk.action enregistré
 
-- ✅ **GET /api/admin/audit contient 16 entrée(s) 'bulk.action'**
-  <sub>actions récentes : [('bookings', 'cancel'), ('reviews', 'approve'), ('reviews', 'hide'), ('properties', 'approve'), ('users', 'anonymize')]</sub>
+- ✅ **GET /api/admin/audit contient 9 entrée(s) 'bulk.action'**
+  <sub>actions récentes : [('reviews', 'approve'), ('reviews', 'hide'), ('properties', 'approve'), ('users', 'anonymize'), ('users', 'reactivate')]</sub>
 
 
 ## 12. Pages dashboards HTTP 200 pour l'admin
@@ -234,8 +228,8 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **Bulk delete 2 rooms → succeeded=2**
   <sub>{"entity":"rooms","action":"delete","requested":2,"succeeded":2,"skipped":[],"failed":[]}</sub>
 
-- ✅ **DB check : rooms supprimées (count=0)**
-  <sub>count=0</sub>
+- ✅ **DB check : rooms soft-supprimées (is_active=false)**
+  <sub>total=2, inactive=2, active=0</sub>
 
 - ✅ **Bulk deactivate 2 promotions → succeeded=2**
   <sub>{"entity":"promotions","action":"deactivate","requested":2,"succeeded":2,"skipped":[],"failed":[]}</sub>
@@ -247,7 +241,7 @@ Verdict : **✅ TOUT PASSE**
   <sub>{"entity":"promotions","action":"delete","requested":2,"succeeded":2,"skipped":[],"failed":[]}</sub>
 
 - ✅ **Bulk delete promotion déjà utilisée → skipped**
-  <sub>{"entity":"promotions","action":"delete","requested":1,"succeeded":0,"skipped":[{"id":"a7e9519a-09ac-4299-96a6-66f978af48c7","reason":"promotion déjà utilisée (3× ) — désactivez plutôt"}],"failed":[]}</sub>
+  <sub>{"entity":"promotions","action":"delete","requested":1,"succeeded":0,"skipped":[{"id":"bb92a1d7-e2f6-44e0-bc7f-d7e0fef2a3c2","reason":"promotion déjà utilisée (3× ) — désactivez plutôt"}],"failed":[]}</sub>
 
 
 ## 12quater. T-034 : action=delete sur users/reviews/properties
@@ -261,8 +255,8 @@ Verdict : **✅ TOUT PASSE**
 - ✅ **Bulk delete 1 user (alias anonymize) → succeeded=1**
   <sub>{"entity":"users","action":"delete","requested":1,"succeeded":1,"skipped":[],"failed":[]}</sub>
 
-- ✅ **DB check : user email anonymisé → deleted-3e4f59dbc6df2869@anonymized.local**
-  <sub>deleted-3e4f59dbc6df2869@anonymized.local</sub>
+- ✅ **DB check : user email anonymisé → deleted-19aa5ae2f0e586ec@anonymized.local**
+  <sub>deleted-19aa5ae2f0e586ec@anonymized.local</sub>
 
 - ✅ **Bulk delete 1 property sans booking → succeeded=1**
   <sub>{"entity":"properties","action":"delete","requested":1,"succeeded":1,"skipped":[],"failed":[]}</sub>
@@ -271,7 +265,7 @@ Verdict : **✅ TOUT PASSE**
 ## 13. Bulk API : audit log inclut metadata complète
 
 - ✅ **Audit metadata contient operation+requested+succeeded+ids**
-  <sub>metadata: {'ids': ['0da70397-df38-49a4-86b7-20ced8e21bc7'], 'failed': 0, 'skipped': 0, 'operation': 'suspend', 'requested': 1, 'succeeded': 1}</sub>
+  <sub>metadata: {'ids': ['21f638de-beb5-49ce-aeb6-a73049cb389e'], 'failed': 0, 'skipped': 0, 'operation': 'suspend', 'requested': 1, 'succeeded': 1}</sub>
 
 
 ---

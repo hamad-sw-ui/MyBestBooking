@@ -328,6 +328,9 @@ export const bookings = pgTable("bookings", {
   paymentMethod: varchar("payment_method", { length: 20 }),
   paymentIntentId: varchar("payment_intent_id", { length: 255 }),
   paymentExpiresAt: timestamp("payment_expires_at"),
+  // T-209 : TTL propre aux demandes manuelles sans paiement plateforme.
+  // Distinct de paymentExpiresAt pour ne pas réactiver la sémantique PSP.
+  requestExpiresAt: timestamp("request_expires_at"),
   promotionId: uuid("promotion_id"),
   walletCreditsUsed: decimal("wallet_credits_used", { precision: 10, scale: 2 }).default("0"),
   // Marque de compensation des avantages (promo/wallet) libérés après un
@@ -366,6 +369,8 @@ export const bookings = pgTable("bookings", {
   index("idx_bookings_property").on(table.propertyId, table.checkIn, table.checkOut),
   // T-012 : index dédié aux vérifications de disponibilité par chambre.
   index("idx_bookings_room_dates").on(table.roomId, table.checkIn, table.checkOut),
+  // T-209 : accélère l'expiration cron des demandes manuelles pending.
+  index("idx_bookings_request_expires").on(table.status, table.requestExpiresAt),
   // T-006 (BUG-011) : garantit une réservation d'au moins 1 nuit.
   check("bookings_dates_check", sql`${table.checkOut} > ${table.checkIn}`),
   check("bookings_nights_positive", sql`${table.numNights} > 0`),

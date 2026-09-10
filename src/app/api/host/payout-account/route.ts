@@ -12,6 +12,7 @@ import {
 } from "@/lib/payout-service";
 import { AUDIT_ACTIONS, recordAudit } from "@/lib/audit";
 import { ProviderCredentialsError } from "@/lib/provider-credentials";
+import { platformPayoutsEnabled } from "@/lib/platform-flags";
 
 /**
  * /api/host/payout-account — moyen de versement d'un hôte/admin (T-195, C2/G1).
@@ -62,6 +63,16 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     if (user.role !== "host" && user.role !== "admin") {
       return NextResponse.json({ error: await apiError("Accès hébergeur ou admin requis") }, { status: 403 });
+    }
+    if (!platformPayoutsEnabled()) {
+      return NextResponse.json(
+        {
+          error: await apiError("Configuration de versement désactivée tant que les paiements plateforme sont hors service"),
+          code: "PLATFORM_PAYOUTS_DISABLED",
+          platformPayoutsDisabled: true,
+        },
+        { status: 410 },
+      );
     }
 
     const rl = rateLimit(`host:payout-account:${user.id}`, { limit: 20, windowMs: 60_000 });

@@ -27,6 +27,8 @@ export function HostApproveActions({ userId, approvalStatus, commissionRate, dis
 
   const isPending = approvalStatus === "pending";
   const isRejected = approvalStatus === "rejected";
+  const canApprove = isPending || isRejected;
+  const canReject = approvalStatus !== "rejected";
   const isLoading = pending;
 
   function submit(action: "approve" | "reject") {
@@ -62,9 +64,9 @@ export function HostApproveActions({ userId, approvalStatus, commissionRate, dis
 
   return (
     <div className="flex flex-col items-end gap-1">
-      {(isPending || isRejected) && (
+      {(canApprove || canReject) && (
         <div className="flex items-center gap-1">
-          {approvalStatus === "pending" && (
+          {canApprove && (
             <>
               <input
                 type="number"
@@ -85,20 +87,22 @@ export function HostApproveActions({ userId, approvalStatus, commissionRate, dis
                 className="text-green-700 hover:bg-green-50"
               >
                 {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsUp className="w-4 h-4" />}
-                {t("dash.approveHost")}
+                {isRejected ? t("dash.reapproveHost") : t("dash.approveHost")}
               </Button>
             </>
           )}
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => submit("reject")}
-            disabled={isLoading || disabled}
-            className="text-red-600 hover:bg-red-50"
-          >
-            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
-            {t("dash.rejectHost")}
-          </Button>
+          {canReject && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => submit("reject")}
+              disabled={isLoading || disabled}
+              className="text-red-600 hover:bg-red-50"
+            >
+              {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <ThumbsDown className="w-4 h-4" />}
+              {t("dash.rejectHost")}
+            </Button>
+          )}
         </div>
       )}
       {error && <span className="text-xs text-red-600" role="alert">{error}</span>}

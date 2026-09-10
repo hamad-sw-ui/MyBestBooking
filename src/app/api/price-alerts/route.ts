@@ -8,6 +8,7 @@ import { and, eq, desc } from "drizzle-orm";
 import { isStayPast } from "@/lib/price-alert-rules";
 import { apiError } from "@/lib/api-error";
 import { isSupportedCurrency } from "@/lib/i18n";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const schema = z.object({
   propertyId: z.string().uuid(),
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
+    await assertNotMaintenance(user);
     const data = schema.parse(await request.json());
     // T-127 (P1) : on vérifie que la propriété existe avant d'insérer
     // (propertyId est une clé étrangère NOT NULL) ; sinon la base lèverait une
@@ -106,6 +108,7 @@ export async function POST(request: NextRequest) {
     await db.update(users).set({ priceAlertEnabled: true, updatedAt: new Date() }).where(eq(users.id, user.id));
     return NextResponse.json({ alert }, { status: 201 });
   } catch (e) {
+    if (e instanceof MaintenanceError) return maintenanceResponse(e.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (e instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });

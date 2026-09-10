@@ -52,6 +52,31 @@ function payoutEvent(type: string, payoutId: string, status: string) {
   };
 }
 
+describe("T-209/F5 — webhook payout legacy non actionnable", () => {
+  let POST: typeof import("./route").POST;
+  let prevPayoutFlag: string | undefined;
+
+  beforeAll(async () => {
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    POST = (await import("./route")).POST;
+  });
+
+  afterAll(() => {
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
+  });
+
+  it("accepte l'événement sans muter quand les payouts plateforme sont désactivés", async () => {
+    const res = await POST(await makeReq(payoutEvent("payout.paid", "po_disabled", "paid")));
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.kind).toBe("payout");
+    expect(body.status).toBe("disabled");
+    expect(body.platformPayoutsDisabled).toBe(true);
+  });
+});
+
 dbTest("T-195 — webhook Stripe /payout.* (confirmation idempotente)", () => {
   let POST: typeof import("./route").POST;
   let db: typeof import("@/db").db;
@@ -62,8 +87,11 @@ dbTest("T-195 — webhook Stripe /payout.* (confirmation idempotente)", () => {
   // Suffixe unique par exécution : évite le conflit sur l'UNIQUE idempotency_key
   // si le test est relancé (le nettoyage afterAll étant best-effort).
   const runKey = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  let prevPayoutFlag: string | undefined;
 
   beforeAll(async () => {
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    process.env.PLATFORM_PAYOUTS_ENABLED = "true";
     const routeMod = await import("./route");
     POST = routeMod.POST;
     db = (await import("@/db")).db;
@@ -116,6 +144,8 @@ dbTest("T-195 — webhook Stripe /payout.* (confirmation idempotente)", () => {
     if (audit.length) {
       await db.delete(schema.auditLog).where(inArray(schema.auditLog.id, audit.map((a) => a.id)));
     }
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
   });
 
   it("payout.paid → confirme le versement (pending/processing → paid, idempotent)", async () => {

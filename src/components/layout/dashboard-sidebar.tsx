@@ -59,6 +59,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     { href: "/dashboard/bookings", icon: Calendar, label: t("dash.bookings") },
     { href: "/dashboard/users", icon: Users, label: t("dash.users") },
     { href: "/dashboard/reviews", icon: Star, label: t("dash.reviews") },
+    { href: "/dashboard/messages", icon: MessageSquare, label: t("dash.messages") },
     { href: "/dashboard/promotions", icon: Tag, label: t("dash.promotions") },
     { href: "/dashboard/analytics", icon: BarChart3, label: t("dash.analytics") },
     { href: "/dashboard/billing", icon: CreditCard, label: t("dash.billing") },

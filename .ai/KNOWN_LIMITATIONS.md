@@ -124,36 +124,19 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
     Réservations). **Limite** : l'export de versements est tronqué à 500 lignes
     (garde-fou volume, même règle que l'export bookings) — au-delà, une
     pagination/CSV streamé serait nécessaire (backlog).
-- **Paiement manuel + validation hôte (T-202 + T-203).** Depuis T-202, le client
-  réserve **sans paiement automatique** (`POST /api/bookings` → `status:"pending"`,
-  `payment:null`, `manualConfirmation:true`) et les états de réservation sont
-  **gérés à la main** par l'hôte (`pending→confirmed` etc.). Limite assumée : un
-  séjour n'est plus "payé en ligne" à la réservation — le règlement se fait hors
-  plateforme, et l'hôte confirme la demande. **T-203** complète le flux : l'hôte
-  ou l'admin **constate le paiement sur place** (`PUT /api/bookings/[id]
-  {markPaidOffline:true}` → `paymentStatus:"paid"` + `paymentMethodOffline:true`),
-  ce qui rend le séjour éligible au **versement** et aux **revenus** ; les demandes
-  **manuelles ne sont plus expirées** après 15 min (`paymentExpiresAt:null` sans
-  `payOnline`, cron limité aux `paymentIntentId`). L'e-mail de **confirmation
-  manuelle** est désormais envoyé : `PUT /api/bookings/[id] {status:"confirmed"}`
-  appelle `sendBookingConfirmationIfNeeded` (qui ne conditionne plus l'envoi à
-  `paymentStatus:"paid"`), et respecte le toggle `notifications.bookingConfirmation`
-  (idempotence via `confirmationEmailSentAt` + eventKey outbox). La route
-  `/api/bookings/[id]/payment` reste disponible (back-office) mais n'est plus
-  déclenchée par défaut. **P3 — machinerie Stripe orpheline (assumé, gardé).**
-  Le composant `StripePaymentForm` et l'état `pendingStripePayment` restent dans
-  `reservation-form.tsx`, mais ils ne sont plus atteignables par le flux par
-  défaut : le formulaire n'émet plus `payOnline` (donc pas de `clientSecret`),
-  et la reprise `/api/bookings/[id]/payment` sur un booking **manuel**
-  (`paymentExpiresAt:null` sans `paymentIntentId`) retourne **409**. Un **garde
-  UI** (`shouldShowStripeForm` dans `src/lib/booking-flow.ts`) interdit désormais
-  l'affichage de l'UI carte pour toute réponse `manualConfirmation:true`, même si
-  le serveur renvoyait un `payment` malgré tout (défense en profondeur, testée
-  par `booking-flow.test.ts`). Code inoffensif, non supprimé (hors périmètre),
-  mais inatteignable et prouvé. Un **hôte non approuvé** (`approvalStatus=pending`) peut
-  créer/soumettre un hébergement mais il ne peut **pas** passer `active`
-  (`validate→approve` → 409) tant que l'admin n'a pas approuvé son compte et fixé
-  sa commission.
+- **Réservations sans paiement plateforme (T-207).** Le client réserve via une
+  **demande transmise à l'hôte**, sans choix "payer en ligne", sans formulaire
+  carte/Stripe, sans reprise `/reservation?booking=...` et sans débit wallet.
+  `POST /api/bookings` force le flux demande (`status:"pending"`,
+  `payment:null`, `manualConfirmation:true`, `onlinePaymentDisabled:true`) même
+  si un client legacy forge `payOnline:true` ou `useWalletCredits:true` ;
+  `/api/bookings/[id]/payment` répond `410 ONLINE_PAYMENT_DISABLED` après
+  contrôle auth/propriété. Le wallet reste informatif. L'hôte/admin conserve les
+  transitions métier (`pending→confirmed`, annulation, constat hors plateforme si
+  utilisé en legacy), et les e-mails de confirmation manuelle restent envoyés. Un
+  **hôte non approuvé** (`approvalStatus=pending`) peut créer/soumettre un
+  hébergement mais il ne peut **pas** passer `active` (`validate→approve` → 409)
+  tant que l'admin n'a pas approuvé son compte et fixé sa commission.
 - **Mode invité limité.** Le checkout accepte un email non enregistré et crée
   un profil sans mot de passe. Un email déjà associé à un compte doit être
   utilisé après connexion pour éviter le rattachement de données.

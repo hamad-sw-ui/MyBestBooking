@@ -18,7 +18,7 @@ describe("uiStrings (T-132)", () => {
     expect(uiStrings("en")["book.paymentAwaitingHost"]).toBe("Awaiting host confirmation");
     expect(uiStrings("en")["reservation.manualRequestSent"]).toBe("📩 Request sent");
     expect(uiStrings("en")["reservation.manualRequestBody"]).toMatch(/booking request was sent to the host/i);
-    expect(uiStrings("en")["reservation.manualAmountOnSite"]).toBe("Amount to pay on site");
+    expect(uiStrings("en")["reservation.manualAmountOnSite"]).toBe("Estimated stay amount");
   });
 
   it("isUiLocale n'accepte que fr/en", () => {
@@ -46,7 +46,12 @@ describe("uiStrings (T-132)", () => {
     // T-203 (2026-09-07) : +3 clés reservation manuelle (écran de confirmation) :
     //   +1 reservation.manualRequestSent, +1 reservation.manualRequestBody,
     //   +1 reservation.manualAmountOnSite = 1482.
-    expect(Object.keys(fr)).toHaveLength(1482);
+    // T-205 (2026-09-09) : +20 clés (mode de paiement, statut hôte compte,
+    //   filtres pays/types partagés, raisons audit, calendrier, soft-delete room) = 1502.
+    // T-206 (2026-09-10) : +1 clé inv.unpaidNote (facture bloquée tant que non payée) = 1503.
+    // T-207 (2026-09-10) : +12 clés pour la réservation sans paiement plateforme
+    //   (reservation.* demande-only, host.bookingConfirmed, settings.stripeDisabled, payouts.platformDisabled*) = 1516.
+    expect(Object.keys(fr)).toHaveLength(1516);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {
@@ -86,7 +91,7 @@ describe("uiStrings (T-132)", () => {
     expect(en["billingCsv.reference"]).toBe("Reference");
     expect(fr["billingCsv.netToHost"]).toBe("Net hôte");
     expect(en["billingCsv.netToHost"]).toBe("Host net");
-    expect(fr["billingCsv.paymentStatus"]).toBe("Statut paiement");
-    expect(en["billingCsv.paymentStatus"]).toBe("Payment status");
+    expect(fr["billingCsv.paymentStatus"]).toBe("Statut règlement");
+    expect(en["billingCsv.paymentStatus"]).toBe("Settlement status");
   });
 });

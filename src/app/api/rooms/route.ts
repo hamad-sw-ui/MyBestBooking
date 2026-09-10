@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { rooms, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { frenchZodMessage, isUuid } from "@/lib/http";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
 import { apiError } from "@/lib/api-error";
 import { isSupportedCurrency } from "@/lib/i18n";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const roomSchema = z.object({
   propertyId: z.string().uuid(),
@@ -40,6 +41,12 @@ export async function GET(request: NextRequest) {
         { status: 400 }
       );
     }
+    if (!isUuid(propertyId)) {
+      return NextResponse.json(
+        { error: await apiError("propertyId invalide") },
+        { status: 400 },
+      );
+    }
 
     const propertyRooms = await db
       .select()
@@ -65,6 +72,7 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     const body = await request.json();
     const data = roomSchema.parse(body);
@@ -114,6 +122,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ room: newRoom }, { status: 201 });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });

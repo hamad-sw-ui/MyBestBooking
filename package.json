@@ -22,7 +22,8 @@
     "cron:local": "node scripts/cron-runner.mjs",
     "ci": "bash scripts/ci.sh",
     "env:restore": "bash scripts/restore-env.sh",
-    "site:audit": "node scripts/site-audit.mjs"
+    "site:audit": "node scripts/site-audit.mjs",
+    "site:audit:prod": "node scripts/site-audit-prod.mjs"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^5.6.1",

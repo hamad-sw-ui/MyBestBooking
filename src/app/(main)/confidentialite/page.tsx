@@ -12,7 +12,7 @@ const CONTENT = {
     collectedItems: [
       ["Compte", "email, nom, prénom, mot de passe (haché bcrypt coût 12)."],
       ["Profil optionnel", "téléphone, pays, langue, devise, fuseau horaire."],
-      ["Réservations", "dates, hébergement, montant, mode de paiement (jamais le numéro complet de carte)."],
+      ["Réservations", "dates, hébergement, montant estimé, suivi de statut (aucune donnée de carte bancaire dans le tunnel)."],
       ["Traçabilité", "IP au moment du login (pour la sécurité), dernière connexion."],
       ["Communication", "messages échangés avec les hôtes."],
     ],
@@ -43,7 +43,6 @@ const CONTENT = {
     processorsIntro: "Pour fournir le service, MyBestBooking peut faire appel aux prestataires suivants (activation par variables d'environnement) :",
     processorsItems: [
       "Hébergement infra (Vercel / AWS / OVH selon déploiement)",
-      "Paiement (Stripe)",
       "Email transactionnel (Resend)",
       "Stockage d'images (S3-compatible)",
     ],
@@ -59,7 +58,7 @@ const CONTENT = {
     collectedItems: [
       ["Account", "email, first name, last name, password (hashed, bcrypt cost 12)."],
       ["Optional profile", "phone, country, language, currency, timezone."],
-      ["Bookings", "dates, accommodation, amount, payment method (never the full card number)."],
+      ["Bookings", "dates, accommodation, estimated amount, status tracking (no card data in the booking flow)."],
       ["Traceability", "IP at login (for security), last connection."],
       ["Communication", "messages exchanged with hosts."],
     ],
@@ -90,7 +89,6 @@ const CONTENT = {
     processorsIntro: "To provide the service, MyBestBooking may use the following providers (enabled through environment variables):",
     processorsItems: [
       "Infrastructure hosting (Vercel / AWS / OVH depending on deployment)",
-      "Payment (Stripe)",
       "Transactional email (Resend)",
       "Image storage (S3-compatible)",
     ],

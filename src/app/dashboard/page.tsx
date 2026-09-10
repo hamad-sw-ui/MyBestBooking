@@ -5,7 +5,7 @@ import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
-import { formatCurrencyBreakdown, sumByCurrency, formatCurrencyConverted } from "@/lib/currency-summary";
+import { sumByCurrency, formatCurrencyConverted } from "@/lib/currency-summary";
 import { normalizeDisplayCurrency } from "@/lib/i18n";
 import { 
   Building2, Calendar, Star, TrendingUp, 

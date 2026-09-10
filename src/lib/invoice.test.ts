@@ -63,6 +63,20 @@ describe("invoice i18n (T-168)", () => {
     expect(invoiceFilename(data)).toBe("recu-MBB-2026-ABCDEF.html");
   });
 
+
+
+  it("reste un reçu si les mentions légales sont prêtes mais le paiement non soldé", () => {
+    const unpaidBooking = { ...booking, paymentStatus: "pending" };
+    const data = buildInvoiceData(unpaidBooking, legalFull, "fr");
+    const html = renderInvoiceHtml(data);
+    expect(data.isInvoice).toBe(false);
+    expect(data.invoiceBlockedReason).toBe("unpaid");
+    expect(html).toContain("REÇU / CONFIRMATION DE RÉSERVATION");
+    expect(html).toContain("réservation non soldée");
+    expect(html).not.toContain("FACTURE");
+    expect(invoiceFilename(data)).toBe("recu-MBB-2026-ABCDEF.html");
+  });
+
   it("facture EN quand la locale est en", () => {
     const data = buildInvoiceData(booking, legalFull, "en");
     const html = renderInvoiceHtml(data);

@@ -23,6 +23,7 @@ interface Props {
     basePrice: string;
     currency: string | null;
     maxAdults?: number | null;
+    maxChildren?: number | null;
     maxOccupancy?: number | null;
   } | null;
   initialCheckIn?: string;
@@ -47,10 +48,28 @@ export function PropertyBookingCard({
   initialChildren = 0,
   cancellationPolicy = null,
 }: Props) {
-  const [checkIn, setCheckIn] = useState(initialCheckIn);
-  const [checkOut, setCheckOut] = useState(initialCheckOut);
-  const [adults, setAdults] = useState(initialAdults);
-  const [children, setChildren] = useState(initialChildren);
+  const today = new Date().toISOString().slice(0, 10);
+  const safeInitialCheckIn = initialCheckIn >= today ? initialCheckIn : "";
+  const safeInitialCheckOut = safeInitialCheckIn && initialCheckOut > safeInitialCheckIn ? initialCheckOut : "";
+  const positive = (value: number | null | undefined) => {
+    const n = Number(value);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
+  const roomMaxAdults = positive(room?.maxAdults);
+  const roomMaxChildren = positive(room?.maxChildren);
+  const roomMaxOccupancy = positive(room?.maxOccupancy);
+  const adultsLimit = Math.max(1, Math.min(6, roomMaxAdults && roomMaxAdults > 0 ? roomMaxAdults : 6, roomMaxOccupancy && roomMaxOccupancy > 0 ? roomMaxOccupancy : 6));
+  const clampChildrenForAdults = (adultCount: number, childCount: number) => {
+    const byChildren = roomMaxChildren !== null ? roomMaxChildren : 4;
+    const byOccupancy = roomMaxOccupancy !== null && roomMaxOccupancy > 0 ? Math.max(0, roomMaxOccupancy - adultCount) : 4;
+    return Math.max(0, Math.min(childCount, 4, byChildren, byOccupancy));
+  };
+  const safeInitialAdults = Math.max(1, Math.min(initialAdults, adultsLimit));
+  const safeInitialChildren = clampChildrenForAdults(safeInitialAdults, initialChildren);
+  const [checkIn, setCheckIn] = useState(safeInitialCheckIn);
+  const [checkOut, setCheckOut] = useState(safeInitialCheckOut);
+  const [adults, setAdults] = useState(safeInitialAdults);
+  const [children, setChildren] = useState(safeInitialChildren);
   // T-131/T-132 : prix d'aperçu converti dans la devise d'affichage (XAF par
   // défaut plateforme) et libellés localisés. Le paiement reste dans la devise
   // de la chambre.
@@ -64,13 +83,16 @@ export function PropertyBookingCard({
         : formatMoney(convertAmount(Number(room.basePrice), roomCurrency, displayCurrency), displayCurrency, intlLocale(locale)))
     : "—";
   const isConverted = Boolean(room && displayCurrency && displayCurrency !== roomCurrency.toUpperCase());
-  // T-119 (B1) : capacité d'accueil connue → on borne les adultes à la
-  // chambre ; sinon on garde le sélecteur 1–6 d'origine.
-  const adultsLimit =
-    room?.maxAdults && Number.isFinite(Number(room.maxAdults)) && Number(room.maxAdults) > 0
-      ? Math.min(6, Number(room.maxAdults))
-      : 6;
+  // T-119/T-206-F8 : capacité d'accueil connue → on borne adultes ET
+  // enfants à la chambre choisie, avant d'arriver au checkout serveur.
   const adultOptions = Array.from({ length: adultsLimit }, (_, i) => i + 1);
+  const childrenLimit = clampChildrenForAdults(adults, 4);
+  const childrenOptions = Array.from({ length: childrenLimit + 1 }, (_, i) => i);
+  const onAdultsChange = (value: number) => {
+    const nextAdults = Math.max(1, Math.min(value, adultsLimit));
+    setAdults(nextAdults);
+    setChildren((current) => clampChildrenForAdults(nextAdults, current));
+  };
   const href = useMemo(
     () => room ? buildReservationUrl({ propertyId, roomId: room.id, checkIn, checkOut, numAdults: adults, numChildren: children }) : "/recherche",
     [propertyId, room, checkIn, checkOut, adults, children],
@@ -96,24 +118,24 @@ export function PropertyBookingCard({
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label htmlFor="property-check-in" className="block text-xs font-medium text-gray-500 mb-1">{t("book.checkIn")}</label>
-              <input id="property-check-in" type="date" value={checkIn} min={new Date().toISOString().slice(0, 10)} onChange={(event) => setCheckIn(event.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <input id="property-check-in" type="date" value={checkIn} min={today} onChange={(event) => setCheckIn(event.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
             </div>
             <div>
               <label htmlFor="property-check-out" className="block text-xs font-medium text-gray-500 mb-1">{t("book.checkOut")}</label>
-              <input id="property-check-out" type="date" value={checkOut} min={checkIn || new Date().toISOString().slice(0, 10)} onChange={(event) => setCheckOut(event.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
+              <input id="property-check-out" type="date" value={checkOut} min={checkIn || today} onChange={(event) => setCheckOut(event.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="text-xs font-medium text-gray-500">
               {t("book.adults")}
-              <select value={adults} onChange={(event) => setAdults(Number(event.target.value))} className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900">
+              <select value={adults} onChange={(event) => onAdultsChange(Number(event.target.value))} className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900">
                 {adultOptions.map((count) => <option key={count} value={count}>{count}</option>)}
               </select>
             </label>
             <label className="text-xs font-medium text-gray-500">
               {t("book.children")}
               <select value={children} onChange={(event) => setChildren(Number(event.target.value))} className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg text-sm text-gray-900">
-                {[0, 1, 2, 3, 4].map((count) => <option key={count} value={count}>{count}</option>)}
+                {childrenOptions.map((count) => <option key={count} value={count}>{count}</option>)}
               </select>
             </label>
           </div>

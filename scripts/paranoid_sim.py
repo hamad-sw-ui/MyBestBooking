@@ -590,9 +590,9 @@ wallet_now = float(json.loads(me_body).get("user", {}).get("walletBalance", "0")
 record(S, f"Wallet réinitialisé à 500€ pour tests : mesuré {wallet_now}€",
        "OK" if wallet_now == 500 else "WARN", "")
 
-# Booking avec wallet > total
-# Prix ~ 89€/nuit × 2 nuits = 178 subtotal + taxes ~17.80 = 195€
-# Wallet 500 devrait couvrir intégralement
+# Booking avec wallet > total (T-207)
+# Le solde wallet reste informatif : même avec useWalletCredits forgé, il ne
+# doit plus réduire ni débiter une demande de réservation sans paiement en ligne.
 if room_id and prop_id:
     # Dates dynamiques pour éviter les conflits inter-runs
     wallet_day = (int(time.time()) % 20) + 1
@@ -610,18 +610,18 @@ if room_id and prop_id:
         booking = json.loads(b).get("booking", {})
         total = float(booking.get("total", 0))
         discount = float(booking.get("discount", 0))
-    except: total = discount = 0
-    record(S, f"Booking avec wallet 500€ > total : total_final={total}€ discount={discount}€",
-           "OK" if c == 201 and discount > 0 else "KO",
-           f"code={c} body={b[:250]}")
+        wallet_used = float(booking.get("walletCreditsUsed", 0))
+    except: total = discount = wallet_used = 0
+    record(S, f"Booking avec wallet 500€ ignoré T-207 : total_final={total}€ wallet_used={wallet_used}€",
+           "OK" if c == 201 and wallet_used == 0 else "KO",
+           f"code={c} discount={discount} body={b[:250]}")
 
     # Wallet restant en DB
     remaining = db_query(f"SELECT wallet_balance FROM users WHERE email='{wallet_email}'")
     if remaining and isinstance(remaining, list):
         wb = float(remaining[0].get("wallet_balance", 0))
-        # Le wallet a été débité de min(wallet, discount lié au wallet)
-        record(S, f"Wallet après booking : {wb}€ (500€ initial - discount wallet appliqué)",
-               "OK" if wb < 500 else "WARN",
+        record(S, f"Wallet après booking : {wb}€ (solde informatif non débité T-207)",
+               "OK" if abs(wb - 500) < 0.001 else "KO",
                f"wallet_debit = {500 - wb}€")
 
 # ═══════════════════════════════════════════════════════════════
@@ -1130,15 +1130,18 @@ if prop_id and room_id:
 # ═══════════════════════════════════════════════════════════════
 S = "24. GDPR — DELETE user cascade + wipe des données personnelles"
 
-# Créer user, faire 1 booking, delete user, vérifier ce qui reste
+# Créer user, faire 1 booking, vérifier le blocage obligations T-206/F10,
+# puis résoudre l'obligation (annulation) et valider le soft-delete RGPD.
 gdpr_ts = int(time.time())
 gdpr_email = f"gdpr{gdpr_ts}@t.local"
 curl(BASE + "/api/auth/register", "POST",
      data=json.dumps({"email":gdpr_email,"password":"GdprTest123!",
                       "firstName":"Gdpr","lastName":"Test"}))
 raw_login(gdpr_email, "GdprTest123!", "gdprjar")
+user_lookup = db_query(f"SELECT id FROM users WHERE email='{gdpr_email}'")
+gdpr_user_id = user_lookup[0]["id"] if user_lookup and isinstance(user_lookup, list) else None
 
-# Booking
+# Booking actif : la suppression doit d'abord être refusée (obligation ouverte).
 payload = json.dumps({
     "propertyId": prop_id, "roomId": room_id,
     "checkIn": "2039-04-01", "checkOut": "2039-04-03",
@@ -1147,25 +1150,38 @@ payload = json.dumps({
     "guestEmail": gdpr_email,
 })
 c, b = curl(BASE + "/api/bookings", "POST", jar="gdprjar", data=payload)
-# DELETE self
-curl(BASE + "/api/users/me", "DELETE", jar="gdprjar")
+booking_id = None
+try:
+    booking_id = json.loads(b).get("booking", {}).get("id")
+except Exception:
+    booking_id = None
+c_block, block_body = curl(BASE + "/api/users/me", "DELETE", jar="gdprjar")
+record(S, "DELETE user avec booking actif → 409 obligations",
+       "OK" if c_block == 409 else "KO",
+       f"code={c_block} body={block_body[:120]}")
 
-# Vérifier user en DB → soft-deleted
-u = db_query(f"SELECT id, email, deleted_at FROM users WHERE email='{gdpr_email}'")
+# Résolution de l'obligation : le voyageur annule sa demande manuelle, le
+# booking reste en historique, puis la suppression RGPD peut anonymiser.
+if booking_id:
+    curl(BASE + f"/api/bookings/{booking_id}", "PUT", jar="gdprjar",
+         data=json.dumps({"status":"cancelled", "cancellationReason":"Test RGPD résolu"}))
+
+c_delete, delete_body = curl(BASE + "/api/users/me", "DELETE", jar="gdprjar")
+
+# Vérifier user en DB par id (l'email change au soft-delete)
+u = db_query(f"SELECT id, email, deleted_at FROM users WHERE id='{gdpr_user_id}'") if gdpr_user_id else None
 if u and isinstance(u, list) and u:
     user_row = u[0]
     is_soft = user_row.get("deleted_at") is not None
-    record(S, f"DELETE user → soft-delete (deleted_at IS NOT NULL)",
-           "OK" if is_soft else "KO",
-           f"deleted_at={user_row.get('deleted_at')}")
+    record(S, f"DELETE user après résolution → soft-delete (deleted_at IS NOT NULL)",
+           "OK" if c_delete == 200 and is_soft else "KO",
+           f"code={c_delete} deleted_at={user_row.get('deleted_at')} body={delete_body[:120]}")
     # Vérifier le booking existe encore (traçabilité)
     b_after = db_query(f"SELECT count(*) as n FROM bookings WHERE user_id='{user_row['id']}'")
     n_b = int(b_after[0]["n"]) if b_after and isinstance(b_after, list) else -1
     record(S, f"Bookings du user supprimé conservés : {n_b}",
            "OK" if n_b >= 1 else "WARN",
            "traçabilité historique préservée")
-    # Email doit-il rester en clair ? RGPD dit non idéalement, mais soft-delete
-    # accepte que l'email reste pour audit
     still_email = user_row.get("email")
     # BUG-025 fix (Session 11 quinquies) : au soft-delete, l'email est
     # remplacé par "deleted-<sha256(email)[:16]>@anonymized.local"
@@ -1178,6 +1194,8 @@ if u and isinstance(u, list) and u:
     record(S, f"RGPD : email anonymisé après soft-delete → '{still_email}'",
            "OK" if is_anonymized else "KO",
            "attendu : deleted-<hash>@anonymized.local (BUG-025 fix)")
+else:
+    record(S, "DELETE user → lookup user id", "KO", f"gdpr_user_id={gdpr_user_id}")
 
 # ═══════════════════════════════════════════════════════════════
 S = "25. Cookie session — attributs sécurité complets"

@@ -39,6 +39,14 @@ CREDENTIALS_ENCRYPTION_KEY="0123456789abcdef0123456789abcdef0123456789abcdef0123
 SEED_TOKEN="arena-seed-token-2026"
 CRON_SECRET="arena-preview-cron-2026"
 ALLOW_MOCK_PAYMENTS="true"
+# Flags de PREVIEW uniquement : en production réelle, ne pas les définir sauf
+# environnement de démonstration contrôlé.
+NEXT_PUBLIC_ENABLE_DEMO_LOGIN="true"
+DEMO_LOGIN_ENABLED="true"
+NEXT_PUBLIC_ENABLE_DEMO_SEED="true"
+DEMO_SEED_ENABLED="true"
+BOOKING_REQUEST_TTL_HOURS="24"
+PLATFORM_PAYOUTS_ENABLED="false"
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
 MAIL_FROM="MyBestBooking <no-reply@mybestbooking.local>"
 ENV

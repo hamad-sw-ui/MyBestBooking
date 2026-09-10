@@ -25,6 +25,8 @@ dbTest("GET /api/wishlists/shared/[token] (T-019, §13.5)", () => {
   let privateWishId = "";
   let publicWishId = "";
   let userId = "";
+  const propertyIds: string[] = [];
+  const itemIds: string[] = [];
 
   beforeAll(async () => {
     GET = (await import("./route")).GET;
@@ -47,6 +49,41 @@ dbTest("GET /api/wishlists/shared/[token] (T-019, §13.5)", () => {
       .returning({ id: schema.wishlists.id });
     publicWishId = pub.id;
 
+    const stamp = Date.now();
+    const [activeProp] = await db
+      .insert(schema.properties)
+      .values({
+        hostId: userId,
+        name: "T-205 Wishlist Active",
+        slug: `t205-wishlist-active-${stamp}`,
+        type: "hotel",
+        city: "Paris",
+        country: "FR",
+        status: "active",
+      })
+      .returning({ id: schema.properties.id });
+    const [archivedProp] = await db
+      .insert(schema.properties)
+      .values({
+        hostId: userId,
+        name: "T-205 Wishlist Archived",
+        slug: `t205-wishlist-archived-${stamp}`,
+        type: "hotel",
+        city: "Paris",
+        country: "FR",
+        status: "archived",
+      })
+      .returning({ id: schema.properties.id });
+    propertyIds.push(activeProp.id, archivedProp.id);
+    const insertedItems = await db
+      .insert(schema.wishlistItems)
+      .values([
+        { wishlistId: publicWishId, propertyId: activeProp.id },
+        { wishlistId: publicWishId, propertyId: archivedProp.id },
+      ])
+      .returning({ id: schema.wishlistItems.id });
+    itemIds.push(...insertedItems.map((item) => item.id));
+
     const [priv] = await db
       .insert(schema.wishlists)
       .values({ userId, name: "T-019 Private", isPublic: false })
@@ -56,7 +93,9 @@ dbTest("GET /api/wishlists/shared/[token] (T-019, §13.5)", () => {
 
   afterAll(async () => {
     const { inArray } = await import("drizzle-orm");
+    if (itemIds.length) await db.delete(schema.wishlistItems).where(inArray(schema.wishlistItems.id, itemIds));
     await db.delete(schema.wishlists).where(inArray(schema.wishlists.id, [publicWishId, privateWishId]));
+    if (propertyIds.length) await db.delete(schema.properties).where(inArray(schema.properties.id, propertyIds));
   });
 
   async function call(token: string): Promise<Response> {

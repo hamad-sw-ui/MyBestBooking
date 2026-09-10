@@ -43,6 +43,35 @@ vi.mock("@/lib/auth", async () => {
   return { ...actual, getCurrentUser: vi.fn() };
 });
 
+describe("T-209/F5 — payouts legacy non actionnables", () => {
+  let POST: typeof import("./route").POST;
+  let getCurrentUser: ReturnType<typeof vi.fn>;
+  let prevPayoutFlag: string | undefined;
+
+  beforeAll(async () => {
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    const routeMod = await import("./route");
+    POST = routeMod.POST;
+    const auth = await import("@/lib/auth");
+    getCurrentUser = (auth as any).getCurrentUser;
+  });
+
+  afterAll(() => {
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
+  });
+
+  it("refuse le POST host quand les paiements plateforme sont désactivés", async () => {
+    getCurrentUser.mockResolvedValue({ id: "host-id", role: "host", currency: "EUR" });
+    const res = await POST(await makeReq({ periodStart: "2026-01-01", periodEnd: "2026-01-31" }));
+    const body = await res.json();
+    expect(res.status).toBe(410);
+    expect(body.code).toBe("PLATFORM_PAYOUTS_DISABLED");
+    expect(body.platformPayoutsDisabled).toBe(true);
+  });
+});
+
 dbTest("T-195 — POST /api/host/payouts (versement idempotent)", () => {
   let POST: typeof import("./route").POST;
   let getCurrentUser: ReturnType<typeof vi.fn>;
@@ -50,8 +79,11 @@ dbTest("T-195 — POST /api/host/payouts (versement idempotent)", () => {
   let periodStart = "";
   let periodEnd = "";
   let seededBookingId = "";
+  let prevPayoutFlag: string | undefined;
 
   beforeAll(async () => {
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    process.env.PLATFORM_PAYOUTS_ENABLED = "true";
     const routeMod = await import("./route");
     POST = routeMod.POST;
     const auth = await import("@/lib/auth");
@@ -136,6 +168,8 @@ dbTest("T-195 — POST /api/host/payouts (versement idempotent)", () => {
     if (seededBookingId) {
       await db.delete(schema.bookings).where(eq(schema.bookings.id, seededBookingId));
     }
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
   });
 
   it("customer → 403 (accès hébergeur/admin requis)", async () => {
@@ -193,9 +227,12 @@ dbTest("T-195/P2P3 — garde-fou devise + projection admin (multi-hôte)", () =>
   let seededBookingIds: string[] = [];
   let accountId = "";
   let prevKey: string | undefined;
+  let prevPayoutFlag: string | undefined;
 
   beforeAll(async () => {
     prevKey = process.env.CREDENTIALS_ENCRYPTION_KEY;
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    process.env.PLATFORM_PAYOUTS_ENABLED = "true";
     process.env.CREDENTIALS_ENCRYPTION_KEY = TEST_KEY;
     const routeMod = await import("./route");
     POST = routeMod.POST;
@@ -250,6 +287,8 @@ dbTest("T-195/P2P3 — garde-fou devise + projection admin (multi-hôte)", () =>
     if (audit.length) await db.delete(schema.auditLog).where(inArray(schema.auditLog.id, audit.map((a) => a.id)));
     if (prevKey === undefined) delete process.env.CREDENTIALS_ENCRYPTION_KEY;
     else process.env.CREDENTIALS_ENCRYPTION_KEY = prevKey;
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
   });
 
   it("host avec compte EUR → le payout XAF est SKIPPED (devise incompatible), EUR exécuté", async () => {

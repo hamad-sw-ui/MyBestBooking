@@ -326,13 +326,18 @@ if props:
             discount = b.get("discount", "?")
         except Exception:
             ref = total = status = discount = "?"
+        manual = False
+        try:
+            manual = bool(json.loads(body).get("manualConfirmation"))
+        except Exception:
+            manual = False
         sec.add(url="/api/bookings",
                 story=f"Le voyageur réserve la '{room['name']}' 15→18 fév 2027 pour 2 pers. "
-                      f"Le serveur applique BestRewards (level 2 = 15% remise) + le wallet 25 €.",
-                method="POST", jar="cust", expected="201 + confirmed",
+                      f"Par défaut T-205, le serveur crée une demande en attente de confirmation manuelle.",
+                method="POST", jar="cust", expected="201 + pending + manualConfirmation",
                 code=code, title="(JSON)",
-                text=f"ref={ref} · status={status} · discount={discount} € · total={total} €",
-                verdict="OK" if code == 201 and status == "confirmed" else f"KO (code={code})")
+                text=f"ref={ref} · status={status} · manual={manual} · discount={discount} € · total={total} €",
+                verdict="OK" if code == 201 and status == "pending" and manual else f"KO (code={code})")
 
         # POST wishlist item
         if wl_id:

@@ -780,12 +780,13 @@ for f in sorted(glob.glob(f"{REPO}/src/components/**/*.tsx", recursive=True)):
     # T-155 (audit n°27) : patterns élargis aux conventions réelles du
     # codebase — `busy`/`aria-busy`, `catch {` (sans parenthèse),
     # `state === "…"` des machines d'état, `router.push/replace`
-    # (feedback = navigation), `role="status"`. Les composants
-    # volontairement silencieux (badge, maintenance-gate) restent à 1
-    # lacune → non critiques (fail-open documenté).
+    # (feedback = navigation), `role="status"` et l'observabilité discrète
+    # `reportSilentFetchIssue` (T-209). Les composants volontairement
+    # silencieux (badge, maintenance-gate) peuvent rester sans loading visuel :
+    # fail-open documenté, pas une lacune critique.
     has_loading = bool(re.search(r"[Ll]oading|isPending|isSubmitting|pending|useTransition|Chargement|En cours|setLoading|aria-busy|busy|sending|state\s*===\s*\"loading\"", content))
     has_error   = bool(re.search(r"setError|catch\s*\{|catch\s*\(|throw|\.catch\(|[Ee]rror\s*[:=<]|state\s*===\s*\"error\"", content))
-    has_feedback = bool(re.search(r"toast|alert|Toast|success|Success|setStatus|setMessage|showMessage|router\.(refresh|push|replace)|state\s*===\s*\"(done|ready|error|anon)\"|role=\"status\"|aria-live", content))
+    has_feedback = bool(re.search(r"toast|alert|Toast|success|Success|setStatus|setMessage|showMessage|reportSilentFetchIssue|router\.(refresh|push|replace)|state\s*===\s*\"(done|ready|error|anon)\"|role=\"status\"|aria-live", content))
     issues = []
     if not has_loading: issues.append("loading")
     if not has_error: issues.append("error")

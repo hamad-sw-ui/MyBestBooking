@@ -11,20 +11,16 @@ export interface BookingSubmitResult {
     provider?: string | null;
   } | null;
   manualConfirmation?: boolean;
+  onlinePaymentDisabled?: boolean;
 }
 
 /**
- * P3 — Décide si l'UI de carte (Stripe) doit être affichée après une
- * création/reprise de réservation.
+ * T-207 — Aucun formulaire Stripe/carte ne doit être affiché dans le produit.
  *
- * Une réservation **manuelle** (paiement sur place, `manualConfirmation:true`)
- * ne doit **jamais** afficher l'UI Stripe, même si le serveur renvoyait un
- * `payment` malgré tout — le flux manuel affiche l'écran « Demande envoyée /
- * Montant à régler sur place ». Ce garde protège en profondeur contre une
- * régression serveur qui recréerait un intent en ligne pour un booking manuel.
+ * Le helper reste en place comme garde défensive pour les anciennes réponses
+ * `payment` : même si une intégration legacy renvoie `clientSecret`, le tunnel
+ * de réservation ne doit plus mener vers un paiement dans la plateforme.
  */
-export function shouldShowStripeForm(result: BookingSubmitResult): boolean {
-  // Priorité manuel : jamais d'UI carte pour un paiement sur place.
-  if (result.manualConfirmation) return false;
-  return Boolean(result.payment?.requiresConfirmation && result.payment.clientSecret);
+export function shouldShowStripeForm(_result: BookingSubmitResult): boolean {
+  return false;
 }

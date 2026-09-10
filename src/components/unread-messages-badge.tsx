@@ -1,6 +1,7 @@
 "use client";
 
 import { useT } from "@/components/ui-locale-provider";
+import { reportSilentFetchIssue } from "@/lib/silent-fetch-observability";
 import { useEffect, useState } from "react";
 
 /**
@@ -20,7 +21,10 @@ export function UnreadMessagesBadge({ viewerRole, userId }: { viewerRole?: strin
     async function load() {
       try {
         const res = await fetch("/api/conversations", { cache: "no-store" });
-        if (!res.ok) return; // 401 anonyme ou autre : pas de badge
+        if (!res.ok) {
+          reportSilentFetchIssue("unread-messages-badge", { status: res.status });
+          return; // 401 anonyme ou autre : pas de badge
+        }
         const data = await res.json();
         const convs = Array.isArray(data?.conversations) ? data.conversations : [];
         let total = 0;
@@ -30,13 +34,18 @@ export function UnreadMessagesBadge({ viewerRole, userId }: { viewerRole?: strin
           // Un hôte consulte les conversations de ses biens ; un voyageur les
           // siennes. On choisit le compteur selon que l'utilisateur est
           // l'hôte de la propriété sous-jacente.
+          if (viewerRole === "admin") {
+            total += Number(conv?.unreadByHost ?? 0) + Number(conv?.unreadByUser ?? 0);
+            continue;
+          }
           const isHostView = Boolean(userId && hostId && hostId === userId);
           total += isHostView
             ? Number(conv?.unreadByHost ?? 0)
             : Number(conv?.unreadByUser ?? 0);
         }
         if (!cancelled) setCount(total);
-      } catch {
+      } catch (error) {
+        reportSilentFetchIssue("unread-messages-badge", { error });
         // silencieux : la navigation doit rester fonctionnelle
       }
     }

@@ -22,12 +22,14 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
 
   async function run(action: "approve" | "reject" | "suspend") {
     setError(null);
+    const reason = action === "approve" ? "" : window.prompt(t("mod.reasonPrompt")) ?? null;
+    if (reason === null) return;
     setLoading(action);
     try {
       const res = await fetch(`/api/properties/${propertyId}/validate`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ action }),
+        body: JSON.stringify({ action, ...(reason.trim() ? { reason: reason.trim() } : {}) }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? t("auth.genericError"));

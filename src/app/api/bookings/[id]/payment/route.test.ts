@@ -1,13 +1,8 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 
 /**
- * Test d'intégration — T-152 (audit n°24, finding A) : la reprise de
- * paiement d'une réservation `pending` par POST /api/bookings/[id]/payment.
- *
- * `getCurrentUser` et `resumePaymentIntentForBooking` sont mockés (le
- * provider PSP et next/headers `cookies()` ne sont pas disponibles en test
- * node) ; la persistance (booking pending en base, propriétaire) est réelle.
- * Skip automatique si la DB de test n'est pas accessible.
+ * T-207 — POST /api/bookings/[id]/payment ne reprend plus aucun paiement.
+ * La route legacy reste protégée par auth/propriété puis répond 410 explicite.
  */
 
 let dbAvailable = false;
@@ -34,22 +29,16 @@ vi.mock("@/lib/auth", async () => {
   return { ...actual, getCurrentUser: vi.fn() };
 });
 
-vi.mock("@/lib/payment-intents", () => ({
-  resumePaymentIntentForBooking: vi.fn(),
-}));
-
-dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
+dbTest("T-207 — POST /api/bookings/[id]/payment désactivé", () => {
   let POST: typeof import("./route").POST;
   let db: typeof import("@/db").db;
   let schema: typeof import("@/db/schema");
   let getCurrentUser: ReturnType<typeof vi.fn>;
-  let resumePaymentIntentForBooking: ReturnType<typeof vi.fn>;
   let userId = "";
   let otherUserId = "";
   let propId = "";
   let roomId = "";
   let bookingId = "";
-  let bookingRef = "";
 
   beforeAll(async () => {
     const routeMod = await import("./route");
@@ -59,22 +48,12 @@ dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
     schema = await import("@/db/schema");
     const authMod = await import("@/lib/auth");
     getCurrentUser = authMod.getCurrentUser as unknown as ReturnType<typeof vi.fn>;
-    const paymentMod = await import("@/lib/payment-intents");
-    resumePaymentIntentForBooking = paymentMod.resumePaymentIntentForBooking as unknown as ReturnType<typeof vi.fn>;
 
     const { eq } = await import("drizzle-orm");
-    const [customer] = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, "customer@mybestbooking.com"))
-      .limit(1);
+    const [customer] = await db.select().from(schema.users).where(eq(schema.users.email, "customer@mybestbooking.com")).limit(1);
     if (!customer) throw new Error("Seed non appliqué (customer introuvable)");
     userId = customer.id;
-    const [host] = await db
-      .select()
-      .from(schema.users)
-      .where(eq(schema.users.email, "host@mybestbooking.com"))
-      .limit(1);
+    const [host] = await db.select().from(schema.users).where(eq(schema.users.email, "host@mybestbooking.com")).limit(1);
     if (!host) throw new Error("Seed non appliqué (host introuvable)");
     otherUserId = host.id;
 
@@ -83,8 +62,8 @@ dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
       .insert(schema.properties)
       .values({
         hostId: host.id,
-        name: "T-152 Payment Test Property",
-        slug: generateSlug(`t152-payment-${Date.now()}`),
+        name: "T-207 Payment Disabled Property",
+        slug: generateSlug(`t207-payment-disabled-${Date.now()}`),
         type: "hotel",
         city: "TestCity",
         country: "FR",
@@ -96,7 +75,7 @@ dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
       .insert(schema.rooms)
       .values({
         propertyId: prop.id,
-        name: "T-152 Payment Test Room",
+        name: "T-207 Payment Disabled Room",
         roomType: "double",
         maxOccupancy: 2,
         maxAdults: 2,
@@ -122,7 +101,7 @@ dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
         numAdults: 2,
         numChildren: 0,
         guestFirstName: "Test",
-        guestLastName: "Payment",
+        guestLastName: "PaymentDisabled",
         guestEmail: customer.email,
         subtotal: "200.00",
         taxes: "20.00",
@@ -130,6 +109,7 @@ dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
         total: "220.00",
         currency: "EUR",
         paymentStatus: "pending",
+        paymentIntentId: "pi_legacy_disabled",
         paymentExpiresAt: new Date(Date.now() + 15 * 60 * 1000),
         commissionRate: "15.00",
         commissionAmount: "33.00",
@@ -137,7 +117,6 @@ dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
       })
       .returning();
     bookingId = booking.id;
-    bookingRef = booking.bookingReference;
   });
 
   afterAll(async () => {
@@ -147,39 +126,18 @@ dbTest("T-152 — POST /api/bookings/[id]/payment (reprise pending)", () => {
     if (propId) await db.delete(schema.properties).where(eq(schema.properties.id, propId));
   });
 
-  it("réservation pending reprise → 200, paiement prêt à confirmer", async () => {
+  it("propriétaire → 410 ONLINE_PAYMENT_DISABLED, aucun PSP appelé", async () => {
     getCurrentUser.mockResolvedValue({ id: userId, role: "customer" });
-    resumePaymentIntentForBooking.mockResolvedValue({
-      booking: { id: bookingId, bookingReference: bookingRef, total: "220.00", status: "pending" },
-      provider: "mock",
-      clientSecret: null,
-      status: "succeeded",
-    });
     const res = await POST(new Request("http://localhost/api/bookings") as never, { params: Promise.resolve({ id: bookingId }) } as never);
     const body = await res.json();
-    expect(res.status).toBe(200);
-    expect(body.payment?.requiresConfirmation).toBe(false);
-    expect(body.booking?.id).toBe(bookingId);
+    expect(res.status).toBe(410);
+    expect(body.code).toBe("ONLINE_PAYMENT_DISABLED");
+    expect(String(body.error)).toContain("paiement en ligne est désactivé");
   });
 
-  it("intent expiré / non reprenable → 409 (aucune fausse promesse)", async () => {
-    getCurrentUser.mockResolvedValue({ id: userId, role: "customer" });
-    resumePaymentIntentForBooking.mockResolvedValue(null);
-    const res = await POST(new Request("http://localhost/api/bookings") as never, { params: Promise.resolve({ id: bookingId }) } as never);
-    const body = await res.json();
-    expect(res.status).toBe(409);
-    expect(body.error).toContain("ne peut plus");
-  });
-
-  it("non-propriétaire → 403 avant tout appel PSP", async () => {
+  it("non-propriétaire → 403 avant le message fonctionnel", async () => {
     getCurrentUser.mockResolvedValue({ id: otherUserId, role: "host" });
-    resetPaymentMock();
     const res = await POST(new Request("http://localhost/api/bookings") as never, { params: Promise.resolve({ id: bookingId }) } as never);
     expect(res.status).toBe(403);
-    expect(resumePaymentIntentForBooking).not.toHaveBeenCalled();
   });
-
-  function resetPaymentMock() {
-    resumePaymentIntentForBooking.mockReset();
-  }
 });

@@ -129,8 +129,11 @@ async function getAnalytics(userId: string, isAdmin: boolean) {
         sql`${reviews.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`
       );
   const allReviews = await reviewsQuery;
-  const avgRating = allReviews.length > 0
-    ? allReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0) / allReviews.length
+  // T-205 : la note moyenne du dashboard doit rester alignée avec la fiche
+  // publique et `properties.averageRating` : seuls les avis approuvés comptent.
+  const approvedReviews = allReviews.filter((review) => review.status === "approved");
+  const avgRating = approvedReviews.length > 0
+    ? approvedReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0) / approvedReviews.length
     : 0;
 
   // Revenue by day (last 30 days) — T-152 (C) : une SEULE devise par série

@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { db } from "@/db";
-import { users, sessions } from "@/db/schema";
+import { bookings, properties, users, sessions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { frenchZodMessage } from "@/lib/http";
 import { cookies } from "next/headers";
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { DISPLAY_CURRENCIES } from "@/lib/i18n";
 import { isUiLocale } from "@/lib/ui-strings";
 import { apiError } from "@/lib/api-error";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 // T-135 — langues de l'UI réellement traduites (fr/en). L'arabe n'a pas
 // de dictionnaire V1 : on le rejette ici plutôt que de stocker une
@@ -46,6 +47,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
+    await assertNotMaintenance(user);
 
     const data = schema.parse(await request.json());
     const [updated] = await db
@@ -74,6 +76,7 @@ export async function PATCH(request: NextRequest) {
       },
     });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
@@ -95,42 +98,94 @@ export async function PATCH(request: NextRequest) {
  * par un autre admin).
  */
 export async function DELETE() {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
-  if (user.role === "admin") {
-    return NextResponse.json(
-      { error: await apiError("Un admin ne peut pas se supprimer lui-même") },
-      { status: 400 },
-    );
+  try {
+    const user = await getCurrentUser();
+    if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
+    await assertNotMaintenance(user);
+    if (user.role === "admin") {
+      return NextResponse.json(
+        { error: await apiError("Un admin ne peut pas se supprimer lui-même") },
+        { status: 400 },
+      );
+    }
+
+    // T-206/F10 : empêcher une suppression qui laisserait des obligations
+    // opérationnelles orphelines (séjours client actifs ou annonces hôte non
+    // archivées). Le soft-delete RGPD reste disponible dès que l'utilisateur a
+    // annulé/terminé ses réservations et archivé/transféré ses hébergements.
+    const [activeCustomerBooking] = await db
+      .select({ id: bookings.id })
+      .from(bookings)
+      .where(and(eq(bookings.userId, user.id), inArray(bookings.status, ["pending", "confirmed"])))
+      .limit(1);
+    if (activeCustomerBooking) {
+      return NextResponse.json(
+        { error: await apiError("Impossible de supprimer le compte tant qu'une réservation est en attente ou confirmée") },
+        { status: 409 },
+      );
+    }
+
+    if (user.role === "host") {
+      const [activeProperty] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(and(eq(properties.hostId, user.id), ne(properties.status, "archived")))
+        .limit(1);
+      if (activeProperty) {
+        return NextResponse.json(
+          { error: await apiError("Archivez ou transférez vos hébergements avant de supprimer votre compte") },
+          { status: 409 },
+        );
+      }
+      const [activeHostBooking] = await db
+        .select({ id: bookings.id })
+        .from(bookings)
+        .innerJoin(properties, eq(bookings.propertyId, properties.id))
+        .where(and(eq(properties.hostId, user.id), inArray(bookings.status, ["pending", "confirmed"])))
+        .limit(1);
+      if (activeHostBooking) {
+        return NextResponse.json(
+          { error: await apiError("Impossible de supprimer le compte tant que vos hébergements ont des réservations actives") },
+          { status: 409 },
+        );
+      }
+    }
+
+    // BUG-025 (Session 11 quinquies) : RGPD — anonymiser les données
+    // personnelles au soft-delete. On garde l'ID (FK bookings/reviews)
+    // mais on hash l'email et on efface firstName/lastName/phone.
+    // Format hashé : "deleted-<sha256(email)[:16]>@anonymized.local"
+    // → adresse non déchiffrable mais unique et déterministe.
+    const { createHash } = await import("node:crypto");
+    const emailHash = createHash("sha256")
+      .update(user.email)
+      .digest("hex")
+      .slice(0, 16);
+    const anonymizedEmail = `deleted-${emailHash}@anonymized.local`;
+    await db.transaction(async (tx) => {
+      await tx
+        .update(users)
+        .set({
+          deletedAt: new Date(),
+          updatedAt: new Date(),
+          email: anonymizedEmail,
+          firstName: "Supprimé",
+          lastName: "Compte",
+          phone: null,
+          avatarUrl: null,
+          twoFactorSecret: null,
+          twoFactorPendingSecret: null,
+          twoFactorEnabled: false,
+        })
+        .where(eq(users.id, user.id));
+      await tx.delete(sessions).where(eq(sessions.userId, user.id));
+    });
+    const jar = await cookies();
+    jar.delete("session");
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
+    console.error("users/me DELETE error:", error);
+    return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
-  // BUG-025 (Session 11 quinquies) : RGPD — anonymiser les données
-  // personnelles au soft-delete. On garde l'ID (FK bookings/reviews)
-  // mais on hash l'email et on efface firstName/lastName/phone.
-  // Format hashé : "deleted-<sha256(email)[:16]>@anonymized.local"
-  // → adresse non déchiffrable mais unique et déterministe.
-  const { createHash } = await import("node:crypto");
-  const emailHash = createHash("sha256")
-    .update(user.email)
-    .digest("hex")
-    .slice(0, 16);
-  const anonymizedEmail = `deleted-${emailHash}@anonymized.local`;
-  await db
-    .update(users)
-    .set({
-      deletedAt: new Date(),
-      updatedAt: new Date(),
-      email: anonymizedEmail,
-      firstName: "Supprimé",
-      lastName: "Compte",
-      phone: null,
-      avatarUrl: null,
-      twoFactorSecret: null,
-      twoFactorPendingSecret: null,
-      twoFactorEnabled: false,
-    })
-    .where(eq(users.id, user.id));
-  await db.delete(sessions).where(eq(sessions.userId, user.id));
-  const jar = await cookies();
-  jar.delete("session");
-  return NextResponse.json({ deleted: true });
 }

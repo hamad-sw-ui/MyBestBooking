@@ -23,6 +23,7 @@ export async function GET() {
       language: user.language,
       currency: user.currency,
       role: user.role,
+      approvalStatus: user.role === "host" ? user.approvalStatus : null,
       bestrewardsLevel: user.bestrewardsLevel,
       bestrewardsBookingsCount: user.bestrewardsBookingsCount,
       walletBalance: user.walletBalance,

@@ -16,6 +16,31 @@ REPO = "/home/user/MyBestBooking"
 LOGDIR = "/tmp/sim-runs"
 os.makedirs(LOGDIR, exist_ok=True)
 
+ENV = os.environ.copy()
+
+def load_dotenv(path):
+    """Charge les variables .env.local du sandbox pour les process Next.
+
+    Le runner redémarre Next via `subprocess.Popen` : selon l'environnement
+    appelant, Next peut démarrer sans avoir `DATABASE_URL` dans son process,
+    ce qui fait échouer `/api/health`. On injecte donc explicitement les
+    constantes de preview déjà restaurées par `npm run env:restore`.
+    """
+    if not os.path.exists(path):
+        return
+    with open(path) as f:
+        for raw in f:
+            line = raw.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            key = key.strip()
+            value = value.strip().strip('"').strip("'")
+            if key and (key not in ENV or ENV.get(key) == ""):
+                ENV[key] = value
+
+load_dotenv(os.path.join(REPO, ".env.local"))
+
 def log(msg): print(f"\n\033[1;36m═══ {msg} ═══\033[0m", flush=True)
 def ok(msg):  print(f"  \033[32m✅ {msg}\033[0m", flush=True)
 def ko(msg):  print(f"  \033[31m❌ {msg}\033[0m", flush=True)
@@ -28,7 +53,7 @@ def _run(args, timeout=15):
     faire planter le runner.
     """
     try:
-        return subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+        return subprocess.run(args, capture_output=True, text=True, timeout=timeout, env=ENV)
     except subprocess.TimeoutExpired:
         return type("R", (), {"stdout": "", "stderr": "", "returncode": -1})()
 
@@ -56,7 +81,7 @@ def cleanup_db():
     # Wallet + BR level customer
     db_query("UPDATE users SET wallet_balance='25.00', bestrewards_bookings_count=7, bestrewards_level=2 WHERE email='customer@mybestbooking.com'")
     # Effacer les bookings de test des runs précédents
-    db_query("DELETE FROM bookings WHERE guest_first_name IN ('Racer','ParaFix','RaceFix','Trans','Calc','Wallet','Anonymous','Blocked','Deep','Sim','BlockTest','FreeTest','Combo','Simulation','Delete','Verify','Reset','Gdpr','Suspend','Cookie','Emoji','Long','Xss') OR guest_first_name LIKE 'Race%' OR guest_first_name LIKE 'Trans%' OR guest_first_name LIKE 'Chevauchement%' OR guest_first_name LIKE 'Rate%' OR guest_first_name LIKE 'Wallet%'")
+    db_query("DELETE FROM bookings WHERE guest_first_name IN ('Racer','ParaFix','RaceFix','Trans','Calc','Wallet','Anonymous','Blocked','Deep','Sim','BlockTest','FreeTest','Combo','Simulation','Delete','Verify','Reset','Gdpr','Suspend','Cookie','Emoji','Long','Xss') OR guest_first_name LIKE 'Race%' OR guest_first_name LIKE 'Trans%' OR guest_first_name LIKE 'Chevauchement%' OR guest_first_name LIKE 'Rate%' OR guest_first_name LIKE 'Wallet%' OR guest_email LIKE 't206-%@test.local'")
     # T-157 (audit n°29) : un compte connecté réserve sous SON identité — les
     # sims qui bookent avec le cookie customer sont donc enregistrés avec
     # guest_email=customer@mybestbooking.com, quel que soit le nom envoyé.
@@ -97,6 +122,7 @@ def restart_next():
         ["npx","next","dev","-H","0.0.0.0","-p","3000"],
         cwd=REPO, stdout=log_f, stderr=log_f,
         start_new_session=True,
+        env=ENV,
     )
 
     # Attendre health OK
@@ -116,7 +142,7 @@ def run_sim(name, cmd):
         return (False, 0, 0, 1)
     log_path = f"{LOGDIR}/{name}.log"
     with open(log_path, "w") as f:
-        p = subprocess.run(cmd, shell=True, cwd=REPO, stdout=f, stderr=subprocess.STDOUT, timeout=300)
+        p = subprocess.run(cmd, shell=True, cwd=REPO, stdout=f, stderr=subprocess.STDOUT, timeout=300, env=ENV)
     with open(log_path) as f:
         content = f.read()
 
@@ -169,37 +195,41 @@ def run_sim(name, cmd):
     return (False, 0, 0, 1)
 
 # ─── Séquence ─────────────────────────────────────────────────
-sims = [
-    ("smoke",    "SMOKE_KEEP_ALIVE=1 SMOKE_BASE_URL=http://127.0.0.1:3000 bash scripts/smoke.sh"),
-    ("surface",  "python3 scripts/simulate.py"),
-    ("deep",     "python3 scripts/deep_sim.py"),
-    ("xtreme",   "python3 scripts/xtreme_sim.py"),
-    ("paranoid", "python3 scripts/paranoid_sim.py"),
-]
+def main():
+    sims = [
+        ("smoke",    "SMOKE_KEEP_ALIVE=1 SMOKE_BASE_URL=http://127.0.0.1:3000 bash scripts/smoke.sh"),
+        ("surface",  "python3 scripts/simulate.py"),
+        ("deep",     "python3 scripts/deep_sim.py"),
+        ("xtreme",   "python3 scripts/xtreme_sim.py"),
+        ("paranoid", "python3 scripts/paranoid_sim.py"),
+    ]
 
-results = []
-for name, cmd in sims:
-    passed, n_ok, n_warn, n_ko = run_sim(name, cmd)
-    results.append((name, passed, n_ok, n_warn, n_ko))
+    results = []
+    for name, cmd in sims:
+        passed, n_ok, n_warn, n_ko = run_sim(name, cmd)
+        results.append((name, passed, n_ok, n_warn, n_ko))
 
-# ─── Bilan ─────────────────────────────────────────────────────
-log("BILAN FINAL")
-total_ok = sum(r[2] for r in results)
-total_warn = sum(r[3] for r in results)
-total_ko = sum(r[4] for r in results)
-all_pass = all(r[1] for r in results)
+    # ─── Bilan ─────────────────────────────────────────────────────
+    log("BILAN FINAL")
+    total_ok = sum(r[2] for r in results)
+    total_warn = sum(r[3] for r in results)
+    total_ko = sum(r[4] for r in results)
+    all_pass = all(r[1] for r in results)
 
-print(f"\n  {'Simulation':<12} {'OK':>6} {'WARN':>6} {'KO':>6}  Status")
-print(f"  {'-'*12} {'-'*6} {'-'*6} {'-'*6}  {'-'*10}")
-for name, passed, n_ok, n_warn, n_ko in results:
-    status = "✅ PASS" if passed else "❌ FAIL"
-    print(f"  {name:<12} {n_ok:>6} {n_warn:>6} {n_ko:>6}  {status}")
-print(f"  {'-'*12} {'-'*6} {'-'*6} {'-'*6}  {'-'*10}")
-print(f"  {'TOTAL':<12} {total_ok:>6} {total_warn:>6} {total_ko:>6}")
+    print(f"\n  {'Simulation':<12} {'OK':>6} {'WARN':>6} {'KO':>6}  Status")
+    print(f"  {'-'*12} {'-'*6} {'-'*6} {'-'*6}  {'-'*10}")
+    for name, passed, n_ok, n_warn, n_ko in results:
+        status = "✅ PASS" if passed else "❌ FAIL"
+        print(f"  {name:<12} {n_ok:>6} {n_warn:>6} {n_ko:>6}  {status}")
+    print(f"  {'-'*12} {'-'*6} {'-'*6} {'-'*6}  {'-'*10}")
+    print(f"  {'TOTAL':<12} {total_ok:>6} {total_warn:>6} {total_ko:>6}")
 
-if all_pass:
-    print(f"\n\033[1;32m✅ TOUTES les simulations passent · 0 KO ({total_ok} assertions cumulées)\033[0m")
-    sys.exit(0)
-else:
-    print(f"\n\033[1;31m❌ {sum(1 for r in results if not r[1])}/{len(results)} simulations en échec\033[0m")
-    sys.exit(1)
+    if all_pass:
+        print(f"\n\033[1;32m✅ TOUTES les simulations passent · 0 KO ({total_ok} assertions cumulées)\033[0m")
+        sys.exit(0)
+    else:
+        print(f"\n\033[1;31m❌ {sum(1 for r in results if not r[1])}/{len(results)} simulations en échec\033[0m")
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

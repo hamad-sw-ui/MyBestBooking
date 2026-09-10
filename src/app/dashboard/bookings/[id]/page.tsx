@@ -9,8 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
 import { countryLabel } from "@/lib/country-label";
-import { 
-  ArrowLeft, Calendar, User, Mail, Phone, MapPin, 
+import {
+  ArrowLeft, Calendar, User, Mail, Phone, MapPin,
   CreditCard, MessageSquare, Download, Clock, Star,
   CheckCircle, XCircle, AlertCircle
 } from "lucide-react";
@@ -103,29 +103,29 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
   };
 
   const timeline = [
-    { 
-      label: t("host.created"), 
-      date: booking.createdAt, 
-      icon: Calendar, 
-      completed: true 
+    {
+      label: t("host.created"),
+      date: booking.createdAt,
+      icon: Calendar,
+      completed: true
     },
-    { 
-      label: t("host.paymentConfirmed"), 
-      date: booking.createdAt, 
-      icon: CreditCard, 
-      completed: booking.paymentStatus === "paid" 
+    {
+      label: t("host.bookingConfirmed"),
+      date: booking.updatedAt ?? booking.createdAt,
+      icon: CheckCircle,
+      completed: booking.status === "confirmed" || booking.status === "completed"
     },
-    { 
-      label: t("book.checkIn"), 
-      date: new Date(booking.checkIn), 
-      icon: CheckCircle, 
+    {
+      label: t("book.checkIn"),
+      date: new Date(booking.checkIn),
+      icon: CheckCircle,
       completed: booking.status === "completed" || new Date(booking.checkIn) < new Date()
     },
-    { 
-      label: t("book.checkOut"), 
-      date: new Date(booking.checkOut), 
-      icon: CheckCircle, 
-      completed: booking.status === "completed" 
+    {
+      label: t("book.checkOut"),
+      date: new Date(booking.checkOut),
+      icon: CheckCircle,
+      completed: booking.status === "completed"
     },
   ];
 

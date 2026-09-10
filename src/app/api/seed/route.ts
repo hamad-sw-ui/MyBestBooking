@@ -7,16 +7,22 @@ import { eq } from "drizzle-orm";
 import { timingSafeEqual } from "node:crypto";
 import { apiError } from "@/lib/api-error";
 import { seedImageUrl } from "@/lib/seed-images";
+import { serverDemoSeedEnabled } from "@/lib/demo-flags";
 
 /**
  * Vérifie qu'une requête POST /api/seed est autorisée.
- * — En dev/test : toujours autorisée.
- * — En prod : exige l'en-tête `x-seed-token` égal à `SEED_TOKEN` (env var)
- *   avec comparaison en temps constant. Retourne `null` si autorisé, une
+ * — En dev/test : autorisée seulement si le flag démo n'est pas désactivé.
+ * — En prod : exige un opt-in serveur + l'en-tête `x-seed-token` égal à
+ *   `SEED_TOKEN` (env var) avec comparaison en temps constant. Retourne `null` si autorisé, une
  *   Response 404 sinon (on cache l'existence de la route).
  * Voir ADR-004, BUG-002.
  */
 function checkSeedAuthorization(request: NextRequest): NextResponse | null {
+  // T-209/F4 : le seed de démonstration est masqué côté UI et neutralisé côté
+  // API hors environnement explicitement opt-in. En production, ce flag ne
+  // remplace pas ADR-004 : le SEED_TOKEN reste obligatoire.
+  if (!serverDemoSeedEnabled()) return new NextResponse("Not Found", { status: 404 });
+
   const isProd = process.env.NODE_ENV === "production";
   if (!isProd) return null;
 

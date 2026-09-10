@@ -11,14 +11,11 @@ import { sumByCurrency, formatCurrencyBreakdown, formatCurrencyConverted, sumByC
 import { normalizeDisplayCurrency } from "@/lib/i18n";
 import { 
   CreditCard, Download, FileText, Calendar,
-  TrendingUp, Wallet, ArrowRight, CheckCircle
+  TrendingUp, Wallet, CheckCircle
 } from "lucide-react";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
-import { listProjectedPayouts, listPersistedPayouts, getDefaultPayoutAccount } from "@/lib/payout-service";
-import { PayoutRequestButton } from "@/components/payout-request-button";
-import { PayoutAccountForm } from "@/components/payout-account-form";
-import { isSupportedCurrency } from "@/lib/i18n";
+import { listPersistedPayouts } from "@/lib/payout-service";
 
 async function getBillingData(userId: string, isAdmin: boolean, locale: string) {
   const now = new Date();
@@ -33,21 +30,19 @@ async function getBillingData(userId: string, isAdmin: boolean, locale: string) 
   const allProperties = await propertiesQuery;
   const propertyIds = allProperties.map(p => p.id);
 
-  if (propertyIds.length === 0 && !isAdmin) {
-    return null;
-  }
-
-  // Get all paid bookings
-  const paidBookingsQuery = isAdmin
-    ? db.select().from(bookings).where(and(eq(bookings.paymentStatus, "paid"), ne(bookings.status, "cancelled")))
-    : db.select().from(bookings).where(
-        and(
-          sql`${bookings.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`,
-          eq(bookings.paymentStatus, "paid"),
-          ne(bookings.status, "cancelled"),
-        )
-      );
-  const paidBookings = await paidBookingsQuery;
+  // Get all paid bookings. Un hôte sans hébergement garde l'accès aux cartes
+  // vides et surtout au setup payout (T-205), sans construire de IN ().
+  const paidBookings = !isAdmin && propertyIds.length === 0
+    ? []
+    : await (isAdmin
+      ? db.select().from(bookings).where(and(eq(bookings.paymentStatus, "paid"), ne(bookings.status, "cancelled")))
+      : db.select().from(bookings).where(
+          and(
+            sql`${bookings.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(bookings.paymentStatus, "paid"),
+            ne(bookings.status, "cancelled"),
+          )
+        ));
 
   // This month — T-152 (audit n°24, C) : totaux PAR DEVISE. On n'affiche
   // jamais une somme de devises mélangées ; les lignes de transactions
@@ -67,26 +62,28 @@ async function getBillingData(userId: string, isAdmin: boolean, locale: string) 
   const totalNetByCurrency = sumNetByCurrency(paidBookings);
 
   // Recent transactions (bookings)
-  const recentTransactions = await db
-    .select({
-      booking: bookings,
-      property: {
-        name: properties.name,
-      },
-    })
-    .from(bookings)
-    .leftJoin(properties, eq(bookings.propertyId, properties.id))
-    .where(
-      isAdmin
-        ? and(eq(bookings.paymentStatus, "paid"), ne(bookings.status, "cancelled"))
-        : and(
-            sql`${bookings.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`,
-            eq(bookings.paymentStatus, "paid"),
-            ne(bookings.status, "cancelled"),
-          )
-    )
-    .orderBy(desc(bookings.createdAt))
-    .limit(10);
+  const recentTransactions = !isAdmin && propertyIds.length === 0
+    ? []
+    : await db
+      .select({
+        booking: bookings,
+        property: {
+          name: properties.name,
+        },
+      })
+      .from(bookings)
+      .leftJoin(properties, eq(bookings.propertyId, properties.id))
+      .where(
+        isAdmin
+          ? and(eq(bookings.paymentStatus, "paid"), ne(bookings.status, "cancelled"))
+          : and(
+              sql`${bookings.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`,
+              eq(bookings.paymentStatus, "paid"),
+              ne(bookings.status, "cancelled"),
+            )
+      )
+      .orderBy(desc(bookings.createdAt))
+      .limit(10);
 
   // T-195 (G4) — « Factures » : on branche le ledger persistant des versements
   // (payouts) plutôt qu'un tableau vide codé en dur. Ces documents sont des
@@ -144,12 +141,6 @@ export default async function BillingPage() {
   // T-195 — devise d'affichage (préférence compte, normalisée) pour les totaux
   // convertis. Affichage uniquement ; aucun montant transactionnel converti.
   const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
-  // T-195 — versements projetés (6 derniers mois) pour l'espace pro.
-  const projectedPayouts = await listProjectedPayouts(user.id, isAdmin);
-  // T-195 (G7) — un moyen de versement est-il configuré ? Si oui, on masque la
-  // note « Connect account requis » (elle reste vraie sans compte).
-  const hasPayoutAccount = Boolean(await getDefaultPayoutAccount(user.id));
-
   if (!billing) {
     return (
       <div>
@@ -336,54 +327,14 @@ export default async function BillingPage() {
         </Card>
       </div>
 
-      {/* Versements (T-195) — net reversable par période/devise + demande */}
-      <Card className="mt-6">
+      {/* T-207 : pas de versement depuis la plateforme quand les réservations
+          ne sont pas encaissées en ligne. Les montants restent informatifs. */}
+      <Card className="mt-6 border-amber-200 bg-amber-50">
         <CardHeader>
-          <CardTitle>{t("payouts.title")}</CardTitle>
+          <CardTitle>{t("payouts.platformDisabledTitle")}</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-gray-500 mb-4">{t("payouts.subtitle")}</p>
-          {projectedPayouts.length === 0 ? (
-            <p className="text-center text-gray-500 py-8">{t("payouts.noData")}</p>
-          ) : (
-            <div className="space-y-3">
-              {/* Note mock / Stripe Connect — affichée seulement sans compte configuré */}
-              {!hasPayoutAccount && (
-                <div className="space-y-3">
-                  <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                    {t("payouts.needConnect")}
-                  </p>
-                  {/* G1 : configurer un moyen de versement (référence chiffrée AES-GCM). */}
-                  <div className="border border-gray-200 rounded-lg p-4">
-                    <p className="font-medium text-gray-900 text-sm mb-1">{t("payouts.accountTitle")}</p>
-                    <p className="text-xs text-gray-500 mb-3">{t("payouts.setupHint")}</p>
-                    <PayoutAccountForm defaultCurrency={isSupportedCurrency(user.currency) ? user.currency : "EUR"} />
-                  </div>
-                </div>
-              )}
-              {projectedPayouts.map((p) => (
-                <div
-                  key={`${p.periodStart}-${p.currency}`}
-                  className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
-                >
-                  <div>
-                    <p className="font-medium text-gray-900">
-                      {formatDate(p.periodStart, { month: "long", year: "numeric" }, locale)}
-                      {" – "}
-                      {formatDate(p.periodEnd, { month: "long", year: "numeric" }, locale)}
-                    </p>
-                    <p className="text-sm text-gray-500">
-                      {t("payouts.bookings").replace("{n}", String(p.bookingsCount))} · {p.currency} · {t("payouts.gross")} {formatPrice(p.gross, p.currency, locale)} · {t("payouts.commission")} {formatPrice(p.commission, p.currency, locale)}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-[#1B3A6B]">{formatPrice(p.net, p.currency, locale)}</p>
-                    <PayoutRequestButton periodStart={p.periodStart} periodEnd={p.periodEnd} currency={p.currency} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <p className="text-sm text-amber-900">{t("payouts.platformDisabledBody")}</p>
         </CardContent>
       </Card>
 

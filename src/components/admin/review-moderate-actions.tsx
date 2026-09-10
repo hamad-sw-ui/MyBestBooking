@@ -37,12 +37,14 @@ export function ReviewModerateActions({ reviewId, currentStatus }: Props) {
   function moderate(next: Status, verb: string) {
     setError(null);
     if (!confirm(t("mod.confirm").replace("{verb}", verb))) return;
+    const reason = next === "approved" ? "" : window.prompt(t("mod.reasonPrompt")) ?? null;
+    if (reason === null) return;
     startTransition(async () => {
       try {
         const res = await fetch(`/api/reviews/${reviewId}/moderate`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: next }),
+          body: JSON.stringify({ status: next, ...(reason.trim() ? { moderationReason: reason.trim() } : {}) }),
         });
         if (!res.ok) {
           const j = await res.json().catch(() => ({ error: t("settings.error") }));

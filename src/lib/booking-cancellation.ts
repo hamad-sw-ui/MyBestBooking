@@ -68,6 +68,7 @@ export async function cancelBooking(
       cancellationFee: cancellationFee.toFixed(2),
       refundAmount: refundAmount.toFixed(2),
       refundStatus: needsRefund ? "pending" : "none",
+      requestExpiresAt: null,
       updatedAt: new Date(),
     }).where(eq(bookings.id, bookingId)).returning();
     return updated;

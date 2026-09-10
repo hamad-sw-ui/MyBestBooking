@@ -67,6 +67,17 @@ function bodyToHtml(body: string): string {
     .join("\n");
 }
 
+function formatMailDateTime(value: Date | string | null | undefined, locale: MailLocale): string {
+  if (!value) return "";
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${new Intl.DateTimeFormat(locale === "en" ? "en-GB" : "fr-FR", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "UTC",
+  }).format(date)} UTC`;
+}
+
 type EditableBlock = { subject: string; body: string };
 
 /**
@@ -150,6 +161,64 @@ export const templates = {
       <p>${s.guestClaimAction} <strong>${escapeHtml(bookingReference)}</strong> ${s.guestClaimSaved}</p>
       <p style="margin:24px 0;">${button(url, s.activateAccess)}</p>
       <p style="font-size:13px;color:#666;">${s.personalLink24h}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  bookingRequestTraveler({
+    firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency, requestExpiresAt, language,
+  }: {
+    firstName: string; bookingReference: string; propertyName: string;
+    city: string; checkIn: string; checkOut: string; total: string; currency: string;
+    requestExpiresAt?: Date | string | null; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency };
+    const subject = renderTemplate(s.requestTravelerSubject, vars);
+    const bodyRendered = renderTemplate(bodyToHtml(s.requestTravelerBody), vars);
+    const url = `${appBaseUrl()}/mes-reservations`;
+    const expires = formatMailDateTime(requestExpiresAt, loc);
+    const html = layout(`
+      ${bodyRendered}
+      <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}, ${escapeHtml(city)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblTotal}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(total)} ${escapeHtml(currency)}</td></tr>
+        ${expires ? `<tr><td style="padding:8px 0;color:#666;">${s.lblRequestExpires}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(expires)}</td></tr>` : ""}
+      </table>
+      <p style="margin:24px 0;">${button(url, s.requestCtaTraveler)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  bookingRequestHost({
+    hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut, requestExpiresAt, language,
+  }: {
+    hostFirstName: string; bookingReference: string; propertyName: string;
+    guestName: string; checkIn: string; checkOut: string;
+    requestExpiresAt?: Date | string | null; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut };
+    const subject = renderTemplate(s.requestHostSubject, vars);
+    const bodyRendered = renderTemplate(bodyToHtml(s.requestHostBody), vars);
+    const dashboardUrl = `${appBaseUrl()}/dashboard/bookings`;
+    const expires = formatMailDateTime(requestExpiresAt, loc);
+    const html = layout(`
+      ${bodyRendered}
+      <table style="width:100%;margin:24px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblGuest}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(guestName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+        ${expires ? `<tr><td style="padding:8px 0;color:#666;">${s.lblRequestExpires}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(expires)}</td></tr>` : ""}
+      </table>
+      <p style="margin:24px 0;">${button(dashboardUrl, s.requestCtaHost)}</p>
     `, loc);
     return { subject, html, text: stripHtml(html) };
   },

@@ -42,29 +42,29 @@ const HELP_ARTICLES: HelpArticle[] = [
     },
   },
   {
-    id: "payment",
+    id: "booking-request",
     fr: {
-      category: "Paiement",
-      title: "Paiement et confirmation",
-      body: "Votre réservation est confirmée immédiatement après validation du paiement. En production avec un prestataire (Stripe), la confirmation suit le statut du paiement ; en mode démonstration, aucun débit réel n'est effectué.",
+      category: "Réservations",
+      title: "Réservation sans paiement en ligne",
+      body: "MyBestBooking transmet une demande de réservation à l'hébergeur. La plateforme ne demande pas de carte bancaire et ne déclenche aucun débit en ligne ; l'hôte confirme ensuite la demande.",
     },
     en: {
-      category: "Payment",
-      title: "Payment and confirmation",
-      body: "Your booking is confirmed right after the payment is validated. In production with a provider (Stripe), confirmation follows the payment status; in demo mode, no real charge is made.",
+      category: "Bookings",
+      title: "Booking without online payment",
+      body: "MyBestBooking sends a booking request to the host. The platform does not ask for card details and does not trigger any online charge; the host then confirms the request.",
     },
   },
   {
-    id: "refund",
+    id: "cancel-followup",
     fr: {
-      category: "Paiement",
-      title: "Remboursement",
-      body: "Après annulation, le montant et le statut de remboursement sont visibles dans Mes réservations. Les délais dépendent du moyen de paiement.",
+      category: "Réservations",
+      title: "Suivi après annulation",
+      body: "Après annulation, le statut reste visible dans Mes réservations. Pour toute question de règlement hors plateforme, utilisez la conversation avec l'hébergeur.",
     },
     en: {
-      category: "Payment",
-      title: "Refund",
-      body: "After a cancellation, the amount and refund status are visible in My bookings. Delays depend on the payment method.",
+      category: "Bookings",
+      title: "Follow-up after cancellation",
+      body: "After cancellation, the status remains visible in My bookings. For any off-platform settlement question, use the conversation with the host.",
     },
   },
   {

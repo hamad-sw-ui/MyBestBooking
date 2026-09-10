@@ -1,6 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { isZeroDecimalCurrency } from "@/lib/i18n";
+import { propertyTypeLabel } from "@/lib/property-types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -76,32 +77,7 @@ export function getRatingLabel(rating: number, locale: string = "fr"): { label: 
 }
 
 export function getPropertyTypeLabel(type: string, locale: string = "fr"): string {
-  const fr: Record<string, string> = {
-    hotel: "Hôtel",
-    apartment: "Appartement",
-    house: "Maison",
-    villa: "Villa",
-    hostel: "Auberge",
-    resort: "Resort",
-    bnb: "B&B",
-    guesthouse: "Maison d'hôtes",
-    riad: "Riad",
-    camping: "Camping",
-  };
-  const en: Record<string, string> = {
-    hotel: "Hotel",
-    apartment: "Apartment",
-    house: "House",
-    villa: "Villa",
-    hostel: "Hostel",
-    resort: "Resort",
-    bnb: "B&B",
-    guesthouse: "Guesthouse",
-    riad: "Riad",
-    camping: "Camping",
-  };
-  const types = locale === "en" || locale.startsWith("en") ? en : fr;
-  return types[type] || type;
+  return propertyTypeLabel(type, locale);
 }
 
 export function getStatusBadgeColor(status: string): string {

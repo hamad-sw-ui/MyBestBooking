@@ -3,8 +3,8 @@
 ## 📌 Identification
 
 - **Projet** : MyBestBooking
-- **Branche actuelle** : `arena/01a078c0-mybestbooking` (branche Arena active)
-- **HEAD Git** : `À METTRE À JOUR EN FIN DE SESSION` — **T-204 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
+- **Branche actuelle** : `arena/01a08747-mybestbooking` (branche Arena active)
+- **HEAD Git** : `bd97e09` — workspace courant : **T-211 CORRIGÉ (VALIDÉ)** (2026-09-10), wrapper `site:audit:prod` pour audit runtime en serveur production. Livré : `scripts/site-audit-prod.mjs` + script npm `site:audit:prod`, séquence `next build` → `next start -H 0.0.0.0` → attente `/api/health` → `scripts/site-audit.mjs` → cleanup du serveur lancé ; port configurable `SITE_AUDIT_PROD_PORT`/`--port`, défaut 3100 avec recherche de port libre, option `--skip-build`. Preuves : 🔨 `node --check scripts/site-audit-prod.mjs` OK · ▶️ `npm run site:audit:prod` build 65 pages + crawl 247 pages / 0 issue + cleanup OK · lint 0 · typecheck 0 · i18n 0 · 🧪 npm test 577 pass / 17 skip · ✅ ai:check 20 OK / 0 warn / 0 fail · git diff --check OK · aucun serveur Next persistant. Tâche précédente : **T-210 CORRIGÉ (VALIDÉ)** (2026-09-10), audit runtime complémentaire + filtre d'accueil destination seule : suppression de `checkIn`, `checkOut`, `guests` et `home-guests` du formulaire hero `/`, conservation de `action="/recherche"` + `city`, `/recherche` et fiche/réservation inchangées pour dates/voyageurs/disponibilité. Base précédente : **T-207 CORRIGÉ (VALIDÉ)** (2026-09-10), réservations sans paiement plateforme : aucun paiement voyageur plateforme, pas de carte/Stripe public, pas de CTA « Payer maintenant ». Historique précédent : **T-204 IMPLEMENTÉ (VALIDÉ)** (2026-09-07) :
   **mise en œuvre des remarques de l'audit e-mails** — garde UI `shouldShowStripeForm`
   (flux manuel → jamais d'UI carte, testé 5/5) ; e-mail annulation + price-alert
   **prouvés runtime** (mails console réels, localisés fr/en, idempotents).

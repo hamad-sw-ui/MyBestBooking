@@ -3,13 +3,14 @@ import { z } from "zod";
 import { db } from "@/db";
 import { conversations, messages, properties, uploadObjects, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { frenchZodMessage, isUuid } from "@/lib/http";
 import { and, eq, sql } from "drizzle-orm";
 import { templates } from "@/lib/mail";
 import { makeT } from "@/lib/ui-strings";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { rateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-error";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const schema = z.object({
   conversationId: z.string().uuid(),
@@ -28,7 +29,7 @@ const schema = z.object({
  * (T-015)
  */
 
-async function checkParticipant(userId: string, conversationId: string) {
+async function checkParticipant(userId: string, conversationId: string, role?: string | null) {
   const [row] = await db
     .select({ conversation: conversations, property: properties })
     .from(conversations)
@@ -38,8 +39,9 @@ async function checkParticipant(userId: string, conversationId: string) {
   if (!row) return null;
   const isGuest = row.conversation.userId === userId;
   const isHost = row.property?.hostId === userId;
-  if (!isGuest && !isHost) return null;
-  return { conversation: row.conversation, isGuest, isHost };
+  const isAdmin = role === "admin";
+  if (!isGuest && !isHost && !isAdmin) return null;
+  return { conversation: row.conversation, isGuest, isHost, isAdmin };
 }
 
 export async function GET(request: NextRequest) {
@@ -50,7 +52,10 @@ export async function GET(request: NextRequest) {
   if (!conversationId) {
     return NextResponse.json({ error: await apiError("conversationId requis") }, { status: 400 });
   }
-  const ok = await checkParticipant(user.id, conversationId);
+  if (!isUuid(conversationId)) {
+    return NextResponse.json({ error: await apiError("conversationId invalide") }, { status: 400 });
+  }
+  const ok = await checkParticipant(user.id, conversationId, user.role);
   if (!ok) return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
 
   const list = await db
@@ -60,10 +65,12 @@ export async function GET(request: NextRequest) {
     .orderBy(messages.createdAt);
 
   // Marque lu du côté de l'utilisateur courant
-  await db
-    .update(conversations)
-    .set(ok.isGuest ? { unreadByUser: 0 } : { unreadByHost: 0 })
-    .where(eq(conversations.id, conversationId));
+  if (!ok.isAdmin) {
+    await db
+      .update(conversations)
+      .set(ok.isGuest ? { unreadByUser: 0 } : { unreadByHost: 0 })
+      .where(eq(conversations.id, conversationId));
+  }
 
   return NextResponse.json({ messages: list });
 }
@@ -72,11 +79,12 @@ export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
+    await assertNotMaintenance(user);
 
     const data = schema.parse(await request.json());
     const rl = rateLimit(`messages:user:${user.id}`, { limit: 60, windowMs: 60 * 60 * 1000 });
     if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de messages, réessayez plus tard") }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
-    const ok = await checkParticipant(user.id, data.conversationId);
+    const ok = await checkParticipant(user.id, data.conversationId, user.role);
     if (!ok) return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
 
     // T-144 (audit n°20) : un message d'espaces sans pièce jointe est un
@@ -174,6 +182,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ message: msg }, { status: 201 });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     if (error instanceof Error && error.message === "ATTACHMENT_UNAVAILABLE") {
       return NextResponse.json({ error: await apiError("Pièce jointe introuvable ou déjà utilisée") }, { status: 400 });
     }

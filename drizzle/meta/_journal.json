@@ -141,6 +141,13 @@
       "when": 1788783851506,
       "tag": "0019_host_approval_manual_payment",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1789018703479,
+      "tag": "0020_booking_request_expiration",
+      "breakpoints": true
     }
   ]
 }

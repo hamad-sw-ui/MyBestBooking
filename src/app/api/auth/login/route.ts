@@ -8,6 +8,7 @@ import { z } from "zod";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { frenchZodMessage } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
+import { isDemoAccountEmail, serverDemoLoginEnabled } from "@/lib/demo-flags";
 
 const loginSchema = z.object({
   email: z.string().email("Email invalide"),
@@ -68,6 +69,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: await apiError("Email ou mot de passe incorrect") },
         { status: 401 }
+      );
+    }
+
+    // T-209/F3 : les comptes de démonstration (surtout admin) sont refusés en
+    // production réelle hors opt-in serveur. Le mot de passe a déjà été vérifié
+    // pour conserver le message générique en cas de mauvaise saisie.
+    if (isDemoAccountEmail(user.email) && !serverDemoLoginEnabled()) {
+      return NextResponse.json(
+        { error: await apiError("Les comptes de démonstration sont désactivés sur cet environnement") },
+        { status: 403 },
       );
     }
 

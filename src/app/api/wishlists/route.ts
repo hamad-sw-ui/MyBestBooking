@@ -2,12 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { wishlists, wishlistItems, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { frenchZodMessage, isUuid } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "@/lib/api-error";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const createWishlistSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
@@ -78,6 +79,7 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     // T-028 : rate-limit — 60 ops wishlist/min/user (permet la
     // navigation rapide + ajout multiple, empêche le hammer).
@@ -167,6 +169,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ wishlist: newWishlist }, { status: 201 });
     }
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
@@ -189,6 +192,7 @@ export async function PATCH(request: NextRequest) {
   try {
     const user = await getCurrentUser();
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
+    await assertNotMaintenance(user);
     const data = updateWishlistSchema.parse(await request.json());
     const [wishlist] = await db
       .select()
@@ -208,6 +212,7 @@ export async function PATCH(request: NextRequest) {
       .returning();
     return NextResponse.json({ wishlist: updated });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
@@ -227,6 +232,7 @@ export async function DELETE(request: NextRequest) {
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     const { searchParams } = new URL(request.url);
     const wishlistId = searchParams.get("wishlistId");
@@ -236,6 +242,12 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json(
         { error: await apiError("wishlistId requis") },
         { status: 400 }
+      );
+    }
+    if (!isUuid(wishlistId) || (propertyId !== null && !isUuid(propertyId))) {
+      return NextResponse.json(
+        { error: await apiError("Identifiant invalide") },
+        { status: 400 },
       );
     }
 
@@ -270,6 +282,7 @@ export async function DELETE(request: NextRequest) {
 
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     console.error("Error deleting wishlist:", error);
     return NextResponse.json(
       { error: await apiError("Une erreur est survenue") },

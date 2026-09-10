@@ -71,9 +71,13 @@ async function getConversations(userId: string, search = "") {
     })
   );
 
+  // T-206/F9 : masquer les conversations sans aucun message dans les listes
+  // générales. Le fil direct reste accessible juste après création, mais la
+  // boîte de réception n'est plus polluée si l'utilisateur repart sans écrire.
+  const visibleConversations = conversationsWithMessages.filter(({ lastMessage }) => Boolean(lastMessage));
   const needle = search.trim().toLocaleLowerCase("fr");
-  if (!needle) return conversationsWithMessages;
-  return conversationsWithMessages.filter(({ property, lastMessage }) =>
+  if (!needle) return visibleConversations;
+  return visibleConversations.filter(({ property, lastMessage }) =>
     [property?.name, property?.city, lastMessage?.content]
       .filter((value): value is string => Boolean(value))
       .some((value) => value.toLocaleLowerCase("fr").includes(needle)),

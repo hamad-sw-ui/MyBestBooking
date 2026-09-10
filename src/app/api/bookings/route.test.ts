@@ -505,14 +505,18 @@ dbTest("POST /api/bookings — wallet EUR × total USD + promo (T-153, findings 
 
   afterAll(async () => {
     const { eq, inArray } = await import("drizzle-orm");
-    if (bookingIds.length) await db.delete(schema.bookings).where(inArray(schema.bookings.id, bookingIds));
+    if (bookingIds.length) {
+      const eventKeys = bookingIds.flatMap((id) => [`booking-request:${id}:traveler`, `booking-request:${id}:host`]);
+      await db.delete(schema.emailOutbox).where(inArray(schema.emailOutbox.eventKey, eventKeys));
+      await db.delete(schema.bookings).where(inArray(schema.bookings.id, bookingIds));
+    }
     if (promoId) await db.delete(schema.promotions).where(eq(schema.promotions.id, promoId));
     if (roomId) await db.delete(schema.rooms).where(eq(schema.rooms.id, roomId));
     if (propId) await db.delete(schema.properties).where(eq(schema.properties.id, propId));
     if (userId) await db.delete(schema.users).where(eq(schema.users.id, userId));
   });
 
-  it("convertisse la promo et le wallet (EUR) pour un total USD, et débite le wallet en EUR", async () => {
+  it("convertit la promo pour un total USD mais n'utilise plus le wallet dans le tunnel T-207", async () => {
     const { getSetting } = await import("@/lib/settings");
     const billing = await getSetting("billing");
     const bestr = await getSetting("bestrewards");
@@ -527,11 +531,10 @@ dbTest("POST /api/bookings — wallet EUR × total USD + promo (T-153, findings 
     total = Math.round((total - promoDiscountUsd) * 100) / 100;
     const bestRewardsDiscount = Math.round(total * (bestr.discounts[0] / 100) * 100) / 100;
     total = Math.round((total - bestRewardsDiscount) * 100) / 100;
-    const walletUsedUsd = 27; // 25 € × 1,08 = 27,00 $
-    const finalTotal = Math.round(Math.max(0, total - walletUsedUsd) * 100) / 100;
-    const expectedDiscount = Math.round(
-      (promoDiscountUsd + bestRewardsDiscount + walletUsedUsd) * 100,
-    ) / 100;
+    // T-207 : le wallet reste accepté en entrée legacy, mais il n'est plus
+    // consommé dans le tunnel de réservation sans paiement plateforme.
+    const finalTotal = total;
+    const expectedDiscount = Math.round((promoDiscountUsd + bestRewardsDiscount) * 100) / 100;
 
     const res = await POST(new Request("http://localhost/api/bookings", {
       method: "POST",
@@ -561,25 +564,49 @@ dbTest("POST /api/bookings — wallet EUR × total USD + promo (T-153, findings 
         discount: string;
         walletCreditsUsed: string;
         promotionId: string | null;
+        paymentIntentId: string | null;
+        paymentExpiresAt: string | null;
+        requestExpiresAt: string | null;
       };
+      payment: null;
     };
     bookingIds.push(body.booking.id);
 
-    // Cœur du finding A : `walletCreditsUsed` est le débit EUR réel (25,00 €),
-    // pas 25,00 « USD » ; le total est bien déduit de 27,00 $ ≈ 25 €.
+    // T-207 : la promo et BestRewards restent appliqués, mais `useWalletCredits`
+    // ne provoque plus de débit wallet ni de réduction assimilable à un paiement.
     expect(body.booking.currency).toBe("USD");
-    expect(Number(body.booking.walletCreditsUsed)).toBeCloseTo(25, 2);
+    expect(Number(body.booking.walletCreditsUsed)).toBeCloseTo(0, 2);
     expect(Number(body.booking.total)).toBeCloseTo(finalTotal, 2);
     expect(Number(body.booking.discount)).toBeCloseTo(expectedDiscount, 2);
     expect(body.booking.promotionId).toBe(promoId);
 
-    // Wallet débité en EUR : 25,00 − 25,00 = 0,00 (jamais 25 − 27).
+    // T-209/F1+F2 : la demande reste sans paiement plateforme, mais porte un
+    // TTL métier et enfile deux notifications idempotentes (voyageur + hôte).
+    expect(body.payment).toBeNull();
+    expect(body.booking.paymentIntentId).toBeNull();
+    expect(body.booking.paymentExpiresAt).toBeNull();
+    expect(body.booking.requestExpiresAt).toBeTruthy();
+    expect(new Date(body.booking.requestExpiresAt!).getTime()).toBeGreaterThan(Date.now());
+    const { inArray } = await import("drizzle-orm");
+    const events = await db
+      .select({ eventKey: schema.emailOutbox.eventKey })
+      .from(schema.emailOutbox)
+      .where(inArray(schema.emailOutbox.eventKey, [
+        `booking-request:${body.booking.id}:traveler`,
+        `booking-request:${body.booking.id}:host`,
+      ]));
+    expect(events.map((event) => event.eventKey).sort()).toEqual([
+      `booking-request:${body.booking.id}:host`,
+      `booking-request:${body.booking.id}:traveler`,
+    ]);
+
+    // Wallet conservé en EUR : 25,00 reste 25,00.
     const { eq } = await import("drizzle-orm");
     const [after] = await db
       .select({ walletBalance: schema.users.walletBalance })
       .from(schema.users)
       .where(eq(schema.users.id, userId));
-    expect(Number(after!.walletBalance)).toBeCloseTo(0, 2);
+    expect(Number(after!.walletBalance)).toBeCloseTo(25, 2);
   });
 
   it("sans wallet ni promo : un total USD n'est pas modifié (contre-preuve 1:1 interdit)", async () => {

@@ -5,8 +5,9 @@ import {
   properties,
   users,
   bookings,
+  messages,
 } from "@/db/schema";
-import { eq, desc, or } from "drizzle-orm";
+import { and, eq, desc, or, sql } from "drizzle-orm";
 import {
   MessagesManager,
   type ConversationRow,
@@ -17,12 +18,14 @@ import {
  * qui délègue au <MessagesManager> client (recherche + filtre lu/non-lu).
  */
 
-async function getHostConversations(userId: string): Promise<ConversationRow[]> {
-  const hostProperties = await db
-    .select({ id: properties.id, name: properties.name })
-    .from(properties)
-    .where(eq(properties.hostId, userId));
-  if (hostProperties.length === 0) return [];
+async function getDashboardConversations(userId: string, isAdmin: boolean): Promise<ConversationRow[]> {
+  const hostProperties = isAdmin
+    ? []
+    : await db
+        .select({ id: properties.id, name: properties.name })
+        .from(properties)
+        .where(eq(properties.hostId, userId));
+  if (!isAdmin && hostProperties.length === 0) return [];
 
   const result = await db
     .select({
@@ -39,7 +42,11 @@ async function getHostConversations(userId: string): Promise<ConversationRow[]> 
     .leftJoin(properties, eq(conversations.propertyId, properties.id))
     .leftJoin(users, eq(conversations.userId, users.id))
     .leftJoin(bookings, eq(conversations.bookingId, bookings.id))
-    .where(or(...hostProperties.map((p) => eq(conversations.propertyId, p.id))))
+    .where(and(
+      // T-206/F9 : les listes de messagerie n'affichent plus les fils vides.
+      sql`EXISTS (SELECT 1 FROM ${messages} msg WHERE msg.conversation_id = ${conversations.id})`,
+      ...(isAdmin ? [] : [or(...hostProperties.map((p) => eq(conversations.propertyId, p.id)))!]),
+    ))
     .orderBy(desc(conversations.lastMessageAt));
 
   return result.map((r) => ({
@@ -69,7 +76,6 @@ async function getHostConversations(userId: string): Promise<ConversationRow[]> 
 export default async function DashboardMessagesPage() {
   const user = await getCurrentUser();
   if (!user) return null;
-  const list =
-    user.role === "admin" ? [] : await getHostConversations(user.id);
+  const list = await getDashboardConversations(user.id, user.role === "admin");
   return <MessagesManager conversations={list} />;
 }

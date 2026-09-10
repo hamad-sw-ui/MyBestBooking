@@ -6,7 +6,6 @@ import { generateBookingReference } from "@/lib/utils";
 import { eq, and, or, desc, lt, gt, gte, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency } from "@/lib/promotions";
-import { applyWalletToTotal } from "@/lib/wallet-currency";
 import { getSetting } from "@/lib/settings";
 import { apiError } from "@/lib/api-error";
 import { resolveEffectiveCommissionRate } from "@/lib/commission";
@@ -16,13 +15,14 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { ipFromRequest, rateLimit } from "@/lib/rate-limit";
-import { frenchZodMessage } from "@/lib/http";
+import { frenchZodMessage, isUuid } from "@/lib/http";
 import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules";
 import { bookingGuestIdentity } from "@/lib/booking-identity";
-import { createPaymentIntentForBooking } from "@/lib/payment-intents";
 import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
+import { bookingRequestExpiresAt } from "@/lib/booking-request-expiration";
+import { sendBookingRequestCreatedIfNeeded } from "@/lib/booking-request-notification";
 
 const bookingSchema = z
   .object({
@@ -48,9 +48,8 @@ const bookingSchema = z
     useWalletCredits: z.boolean().optional(),
     // Réservation sans compte : l'API reste l'autorité, jamais le proxy.
     isGuestBooking: z.boolean().optional(),
-    // T-202 : paiement manuel par défaut. `payOnline` (optionnel, false) force
-    // un paiement en ligne explicite (back-office). Une réservation sans
-    // paiement reste `pending` → l'hôte confirme à la main.
+    // T-207 : champ legacy accepté pour compatibilité, mais ignoré.
+    // Toutes les réservations sont désormais des demandes sans paiement plateforme.
     payOnline: z.boolean().optional(),
   })
   .refine((d) => d.checkOut > d.checkIn, {
@@ -60,7 +59,7 @@ const bookingSchema = z
 
 class BookingRuleError extends Error {}
 /** T-155 (audit n°27, P2) : code promo inconnu = entrée invalide → 400
- *  (les conflits d'état — expiré, épuisé, règles dispo, wallet — restent 409). */
+ *  (les conflits d'état — expiré, épuisé, règles dispo — restent 409). */
 class PromoCodeNotFoundError extends Error {}
 
 /**
@@ -93,7 +92,12 @@ export async function GET(request: NextRequest) {
       conditions.push(or(...propertyIds.map((id) => eq(bookings.propertyId, id)))!);
     }
     if (status) conditions.push(eq(bookings.status, status));
-    if (propertyId) conditions.push(eq(bookings.propertyId, propertyId));
+    if (propertyId) {
+      if (!isUuid(propertyId)) {
+        return NextResponse.json({ error: await apiError("Identifiant hébergement invalide") }, { status: 400 });
+      }
+      conditions.push(eq(bookings.propertyId, propertyId));
+    }
 
     const results = await db
       .select({
@@ -274,7 +278,8 @@ export async function POST(request: NextRequest) {
             .select()
             .from(promotions)
             .where(eq(promotions.code, data.promoCode.toUpperCase()))
-            .limit(1);
+            .limit(1)
+            .for("update");
           if (!promo) throw new PromoCodeNotFoundError("Code promo : Code promo inconnu");
           const usable = isPromoUsable(promo);
           if (usable !== true) throw new BookingRuleError(`Code promo : ${usable}`);
@@ -286,44 +291,39 @@ export async function POST(request: NextRequest) {
             total,
           );
           if ("error" in result) throw new BookingRuleError(`Code promo : ${result.error}`);
-          discount = result.discount;
+          // T-206/F1 : la remise promo s'ajoute à la remise du rate plan ;
+          // elle ne remplace pas le discount déjà calculé.
+          discount += result.discount;
           total = result.finalTotal;
           appliedPromoId = promo.id;
         }
 
-        const level = lockedUser?.bestrewardsLevel ?? 1;
-        let bestrewardsPercent = level >= 3
-          ? bestrewardsSettings.discounts[2]
-          : level >= 2
-            ? bestrewardsSettings.discounts[1]
-            : bestrewardsSettings.discounts[0];
-        if (property.isBestrewards && level >= 2) bestrewardsPercent = Math.min(30, bestrewardsPercent + 2);
-        if (bestrewardsPercent > 0) {
-          const benefit = Math.round(total * (bestrewardsPercent / 100) * 100) / 100;
-          discount += benefit;
-          total = Math.max(0, total - benefit);
-        }
-
-        // T-153 (audit n°25, A) : le wallet est libellé EUR, le total est
-        // dans la devise de la chambre. `applyWalletToTotal` convertit la
-        // déduction (taux figés) et retourne le débit réel en EUR
-        // (`walletUsedEur`) pour un stockage/restitution exacts.
-        let walletUsed = 0;
-        let walletUsedEur = 0;
-        if (data.useWalletCredits && lockedUser) {
-          const wallet = Number(lockedUser.walletBalance ?? "0");
-          if (wallet > 0) {
-            const app = applyWalletToTotal(wallet, total, room.currency || "EUR");
-            if ("error" in app) throw new BookingRuleError(`Wallet : ${app.error}`);
-            walletUsed = app.walletUsed;
-            walletUsedEur = app.walletUsedEur;
-            total = app.totalAfter;
-            discount += walletUsed;
+        // T-206/F1 : BestRewards est un avantage de compte existant. En mode
+        // invité, le profil est créé plus bas seulement après les validations :
+        // il ne doit donc pas recevoir une remise niveau 1 invisible dans le
+        // devis public. Les clients connectés conservent la logique T-205.
+        if (lockedUser && user) {
+          const level = lockedUser.bestrewardsLevel ?? 1;
+          let bestrewardsPercent = level >= 3
+            ? bestrewardsSettings.discounts[2]
+            : level >= 2
+              ? bestrewardsSettings.discounts[1]
+              : bestrewardsSettings.discounts[0];
+          if (property.isBestrewards && level >= 2) bestrewardsPercent = Math.min(30, bestrewardsPercent + 2);
+          if (bestrewardsPercent > 0) {
+            const benefit = Math.round(total * (bestrewardsPercent / 100) * 100) / 100;
+            discount += benefit;
+            total = Math.max(0, total - benefit);
           }
         }
 
+        // T-207 : le wallet n'est plus consommé dans le tunnel de réservation.
+        // Le champ `useWalletCredits` reste accepté pour compatibilité API,
+        // mais aucune déduction ni écriture de solde n'est effectuée.
+        const walletUsedEur = 0;
+
         // Le profil invité n’est créé qu’après toutes les validations métier
-        // (stock, promo, taux, wallet). Une demande rejetée n’écrit aucun user.
+        // (stock, promo, taux). Une demande rejetée n’écrit aucun user.
         if (!lockedUser) {
           const [createdGuest] = await tx.insert(users).values({
             email: data.guestEmail.toLowerCase(),
@@ -343,6 +343,7 @@ export async function POST(request: NextRequest) {
         const commissionRate = await resolveEffectiveCommissionRate(property.hostId, property.commissionRate);
         const commissionAmount = total * (commissionRate / 100);
         const netToHost = total - commissionAmount;
+        const requestExpiresAt = bookingRequestExpiresAt();
         const [inserted] = await tx
           .insert(bookings)
           .values({
@@ -350,8 +351,8 @@ export async function POST(request: NextRequest) {
             userId: lockedUser.id,
             propertyId: data.propertyId,
             roomId: data.roomId,
-            // L’intent PSP est créé uniquement après ce commit, jamais sous
-            // les verrous room/user. Le TTL protège ce hold si le process tombe.
+            // T-207 : aucune création d'intent PSP ; la réservation est une
+            // demande pending que l'hôte confirme manuellement.
             status: "pending",
             checkIn: data.checkIn,
             checkOut: data.checkOut,
@@ -376,14 +377,13 @@ export async function POST(request: NextRequest) {
             paymentStatus: "pending",
             paymentMethod: null,
             paymentIntentId: null,
-            // T-203 : une réservation manuelle (sans `payOnline`) n'a pas de
-            // paiement en ligne → ne PAS fixer de TTL. Le cron
-            // `expirePendingBookings` n'annule que les bookings avec un intent
-            // réel. `payOnline` garde son hold de 15 min (non-régression).
-            paymentExpiresAt: data.payOnline ? new Date(Date.now() + 15 * 60 * 1000) : null,
+            // T-207 : aucune réservation ne crée de hold de paiement plateforme.
+            // Même si un client legacy envoie `payOnline:true`, le booking reste
+            // une demande manuelle, avec un TTL métier séparé du paiement.
+            paymentExpiresAt: null,
+            requestExpiresAt,
             promotionId: appliedPromoId,
-            // T-153 (A) : montant réellement débité du wallet, en EUR
-            // (restitué à l'annulation dans la même devise).
+            // T-207 : wallet non consommé dans le tunnel, donc aucun débit EUR.
             walletCreditsUsed: walletUsedEur.toFixed(2),
             ratePlanId: selectedRatePlan?.id ?? null,
             ratePlanName: selectedRatePlan?.name ?? null,
@@ -403,12 +403,6 @@ export async function POST(request: NextRequest) {
           })
           .returning();
 
-        if (walletUsedEur > 0) {
-          await tx
-            .update(users)
-            .set({ walletBalance: Math.max(0, Number(lockedUser.walletBalance ?? "0") - walletUsedEur).toFixed(2) })
-            .where(eq(users.id, lockedUser.id));
-        }
         if (appliedPromoId) {
           await tx
             .update(promotions)
@@ -453,49 +447,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // T-202 — paiement manuel par défaut : le client réserve sans payer en
-    // ligne, la réservation reste `pending` et l'hôte confirme à la main.
-    // `payOnline` (optionnel) déclenche un intent PSP explicite (back-office).
-    if (!data.payOnline) {
-      return NextResponse.json(
-        {
-          booking: createdBooking,
-          payment: null,
-          manualConfirmation: true,
-          ...(isGuestBooking ? { guestAccessPending: true } : {}),
-        },
-        { status: 201 },
-      );
-    }
+    await sendBookingRequestCreatedIfNeeded(createdBooking.id).catch((mailError) => {
+      // Best-effort : la demande reste créée, l'outbox/cron pourra reprendre.
+      console.error("[booking] request created email failed:", mailError);
+    });
 
-    // Effet externe hors transaction. La référence booking est la clé
-    // d’idempotence du PSP, et le cron reprend un intent non rattaché.
-    let payment;
-    try {
-      payment = await createPaymentIntentForBooking(createdBooking.id);
-    } catch (paymentError) {
-      console.error("[booking] payment intent setup failed:", paymentError);
-      return NextResponse.json({
-        error: await apiError("La réservation est temporairement retenue, mais le paiement sécurisé n'a pas pu être préparé. Réessayez dans quelques instants."),
-        booking: createdBooking,
-      }, { status: 503 });
-    }
-    if (!payment) {
-      return NextResponse.json({ error: await apiError("La réservation a expiré avant la préparation du paiement") }, { status: 409 });
-    }
-    createdBooking = payment.booking;
-
+    // T-207 — réservations uniquement : aucune création d'intent PSP, même si
+    // un client legacy envoie `payOnline:true`. Le contrat reste non cassant
+    // côté intégrations : 201 + booking pending + payment:null.
     return NextResponse.json(
       {
         booking: createdBooking,
-        // Champ historique maintenu le temps de la migration UI.
-        clientSecret: payment.clientSecret,
-        payment: {
-          provider: payment.provider,
-          status: payment.status,
-          clientSecret: payment.clientSecret,
-          requiresConfirmation: payment.status !== "succeeded",
-        },
+        payment: null,
+        manualConfirmation: true,
+        onlinePaymentDisabled: true,
         ...(isGuestBooking ? { guestAccessPending: true } : {}),
       },
       { status: 201 },

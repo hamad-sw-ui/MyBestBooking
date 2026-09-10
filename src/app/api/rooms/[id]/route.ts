@@ -8,6 +8,7 @@ import { z } from "zod";
 import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
 import { apiError } from "@/lib/api-error";
 import { isSupportedCurrency } from "@/lib/i18n";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const updateRoomSchema = z.object({
   name: z.string().min(3).optional(),
@@ -76,6 +77,7 @@ export async function PUT(
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     const { id } = await params;
     if (!isUuid(id)) {
@@ -135,6 +137,7 @@ export async function PUT(
 
     return NextResponse.json({ room: updatedRoom });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
@@ -165,8 +168,12 @@ export async function DELETE(
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
+    }
 
     // Get room and check ownership
     const [room] = await db.select().from(rooms).where(eq(rooms.id, id));
@@ -197,6 +204,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: await apiError("Chambre supprimée") });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     console.error("Error deleting room:", error);
     return NextResponse.json(
       { error: await apiError("Une erreur est survenue") },

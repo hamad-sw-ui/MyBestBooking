@@ -25,7 +25,7 @@ await c.connect();
 // 1. Cleanup properties test
 const testProps = (
   await c.query(
-    "SELECT id FROM properties WHERE name LIKE 'Deep Villa%' OR name LIKE 'Race%' OR name LIKE 'Sim%' OR name LIKE 'Test%' OR name LIKE 'BulkTest%' OR name LIKE 'Dash%' OR name LIKE 'T034%'",
+    "SELECT id FROM properties WHERE name LIKE 'Deep Villa%' OR name LIKE 'Race%' OR name LIKE 'Sim%' OR name LIKE 'Test%' OR name LIKE 'BulkTest%' OR name LIKE 'Dash%' OR name LIKE 'T034%' OR name LIKE 'T-206%'",
   )
 ).rows.map((r) => r.id);
 
@@ -60,14 +60,15 @@ const delBookings = await c.query(
    OR guest_first_name LIKE 'Race%'
    OR guest_first_name LIKE 'Chevauchement%'
    OR guest_first_name LIKE 'Rate%'
-   OR guest_first_name LIKE 'Wallet%'`,
+   OR guest_first_name LIKE 'Wallet%'
+   OR guest_email LIKE 't206-%@test.local'`,
 );
 console.log(`✓ bookings test supprimées : ${delBookings.rowCount}`);
 
 // 3. Cleanup promotions test
 await c.query(
   `DELETE FROM promotions WHERE code LIKE 'MIN200_%' OR code LIKE 'MAX1_%'
-     OR code LIKE 'EXPIRED_%' OR code LIKE 'FUTURE_%' OR code LIKE 'SIMXTREME%'`,
+     OR code LIKE 'EXPIRED_%' OR code LIKE 'FUTURE_%' OR code LIKE 'SIMXTREME%' OR code LIKE 'T206%'`,
 );
 console.log("✓ promotions test supprimées");
 

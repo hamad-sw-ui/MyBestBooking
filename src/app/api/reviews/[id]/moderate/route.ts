@@ -54,7 +54,7 @@ export async function PATCH(
     if (!body) {
       return NextResponse.json({ error: await apiError("JSON invalide") }, { status: 400 });
     }
-    const { status } = schema.parse(body);
+    const { status, moderationReason } = schema.parse(body);
 
     // Transaction : update status + recalcul agrégat property.
     const result = await db.transaction(async (tx) => {
@@ -87,7 +87,7 @@ export async function PATCH(
       action: AUDIT_ACTIONS.reviewModerate,
       entityType: "review",
       entityId: id,
-      metadata: { from: result.previousStatus, to: status },
+      metadata: { from: result.previousStatus, to: status, ...(moderationReason ? { reason: moderationReason } : {}) },
     });
     return NextResponse.json({ review: result.review });
   } catch (error) {

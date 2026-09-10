@@ -46,6 +46,7 @@ dbTest("GET /api/properties/[id] — champs pricing additifs (T-154d)", () => {
   let propertyId = "";
   let hostId = "";
   let createdPropertyId = "";
+  let brPropertyId = "";
 
   beforeAll(async () => {
     const routeMod = await import("./route");
@@ -91,10 +92,28 @@ dbTest("GET /api/properties/[id] — champs pricing additifs (T-154d)", () => {
       .returning();
     createdPropertyId = prop.id;
     propertyId = prop.id;
+
+    const [brProp] = await db
+      .insert(schema.properties)
+      .values({
+        hostId: host.id,
+        name: "T-206 BR Test Property",
+        slug: generateSlug(`t206-br-${Date.now()}`),
+        type: "hotel",
+        city: "TestCity",
+        country: "FR",
+        status: "active",
+        isBestrewards: true,
+      })
+      .returning();
+    brPropertyId = brProp.id;
   });
 
   afterAll(async () => {
     const { eq: eqOp } = await import("drizzle-orm");
+    if (brPropertyId) {
+      await db.delete(schema.properties).where(eqOp(schema.properties.id, brPropertyId));
+    }
     if (createdPropertyId) {
       await db.delete(schema.properties).where(eqOp(schema.properties.id, createdPropertyId));
     }
@@ -123,16 +142,10 @@ dbTest("GET /api/properties/[id] — champs pricing additifs (T-154d)", () => {
     expect(body.property.bestrewardsDiscountPercent).toBe(15);
   });
 
-  it("propriété seed BestRewards (level 2) → 15 + bonus 2 = 17", async () => {
+  it("propriété BestRewards dédiée (level 2) → 15 + bonus 2 = 17", async () => {
     getCurrentUser.mockResolvedValue({ id: customerId, role: "customer" });
-    const { eq: eqOp } = await import("drizzle-orm");
-    const [seed] = await db
-      .select()
-      .from(schema.properties)
-      .where(eqOp(schema.properties.slug, "hotel-le-magnifique"))
-      .limit(1);
     const res = await GET(new Request("http://localhost/api/properties") as never, {
-      params: Promise.resolve({ id: seed!.id }),
+      params: Promise.resolve({ id: brPropertyId }),
     } as never);
     const body = await res.json();
     expect(res.status).toBe(200);

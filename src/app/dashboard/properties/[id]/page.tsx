@@ -17,6 +17,8 @@ import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { AMENITIES, amenityLabel } from "@/lib/amenities";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { SmartImage } from "@/components/ui/smart-image";
+import { propertyTypeOptions } from "@/lib/property-types";
+import { countryOptions } from "@/lib/countries";
 
 interface Property {
   id: string;
@@ -59,18 +61,8 @@ export default function EditPropertyPage() {
   const locale = useUiLocale();
   const { currency: displayCurrency } = useDisplayPreferences();
   const router = useRouter();
-  const PROPERTY_TYPES = [
-    { value: "hotel", label: t("search.type.hotel") },
-    { value: "apartment", label: t("search.type.apartment") },
-    { value: "house", label: t("prop.type.house") },
-    { value: "villa", label: t("search.type.villa") },
-    { value: "hostel", label: t("search.type.hostel") },
-    { value: "resort", label: t("search.type.resort") },
-    { value: "bnb", label: t("prop.type.bnb") },
-    { value: "guesthouse", label: t("search.type.guesthouse") },
-    { value: "riad", label: t("search.type.riad") },
-    { value: "camping", label: t("prop.type.camping") },
-  ];
+  const PROPERTY_TYPES = propertyTypeOptions(t);
+  const COUNTRY_OPTIONS = countryOptions(t);
   const params = useParams();
   const propertyId = params.id as string;
 
@@ -422,17 +414,7 @@ export default function EditPropertyPage() {
                 />
                 <Select
                   label={t("prop.country")}
-                  options={[
-                    { value: "FR", label: t("prop.country.FR") },
-                    { value: "MA", label: t("prop.country.MA") },
-                    { value: "TN", label: t("prop.country.TN") },
-                    { value: "ES", label: t("prop.country.ES") },
-                    { value: "IT", label: t("prop.country.IT") },
-                    { value: "PT", label: t("prop.country.PT") },
-                    { value: "DE", label: t("prop.country.DE") },
-                    { value: "GB", label: t("prop.country.GB") },
-                    { value: "US", label: t("prop.country.US") },
-                  ]}
+                  options={COUNTRY_OPTIONS}
                   value={property.country}
                   onChange={(e) => setProperty({ ...property, country: e.target.value })}
                 />

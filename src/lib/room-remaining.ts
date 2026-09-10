@@ -32,9 +32,13 @@ export function remainingRoomInventory(
 export function stayDatesFromPropertyQuery(
   checkIn: string | undefined | null,
   checkOut: string | undefined | null,
+  today: string = new Date().toISOString().slice(0, 10),
 ): { checkIn: string; checkOut: string } | null {
   if (!checkIn || !checkOut) return null;
   if (!DATE_RE.test(checkIn) || !DATE_RE.test(checkOut)) return null;
   if (checkOut <= checkIn) return null;
+  // T-205 : une fiche ne doit plus propager un séjour déjà passé vers le
+  // checkout. Le serveur reste l'autorité, mais l'UI prévient l'erreur 400.
+  if (DATE_RE.test(today) && checkIn < today) return null;
   return { checkIn, checkOut };
 }

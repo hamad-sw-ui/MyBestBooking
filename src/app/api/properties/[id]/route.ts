@@ -11,10 +11,13 @@ import { apiError } from "@/lib/api-error";
 // (settings, niveau du user courant) exposés en lecture seule à l'aperçu de
 // réservation — plus de TVA 0.1 en dur ni de remise invisible côté client.
 import { getSetting } from "@/lib/settings";
+import { PROPERTY_TYPE_VALUES } from "@/lib/property-types";
+import { requireApprovedHost } from "@/lib/host-approval";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const updatePropertySchema = z.object({
   name: z.string().min(3).optional(),
-  type: z.enum(["hotel", "apartment", "house", "villa", "hostel", "resort", "bnb", "guesthouse", "riad", "camping"]).optional(),
+  type: z.enum(PROPERTY_TYPE_VALUES).optional(),
   description: z.string().optional(),
   starRating: z.number().min(0).max(5).optional(),
   addressLine: z.string().optional(),
@@ -150,6 +153,7 @@ export async function PUT(
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     const { id } = await params;
     if (!isUuid(id)) {
@@ -194,6 +198,22 @@ export async function PUT(
         { status: 403 },
       );
     }
+    // T-206/F3 : le PUT générique admin ne doit pas contourner la même garde
+    // que /validate. Une annonce ne peut devenir publique que si son hôte est
+    // approuvé, même quand l'admin édite plusieurs champs à la fois.
+    if (data.status === "active") {
+      const gate = await requireApprovedHost(property.hostId);
+      if (!gate.ok) {
+        const suffix =
+          gate.messageKey === "host.pendingApproval"
+            ? " La commission et la validation du compte hôte doivent être définies avant publication."
+            : "";
+        return NextResponse.json(
+          { error: await apiError(gate.defaultMessage + suffix) },
+          { status: 409 },
+        );
+      }
+    }
 
     const [updatedProperty] = await db
       .update(properties)
@@ -206,6 +226,7 @@ export async function PUT(
 
     return NextResponse.json({ property: updatedProperty });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
@@ -236,8 +257,12 @@ export async function DELETE(
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     const { id } = await params;
+    if (!isUuid(id)) {
+      return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
+    }
 
     // Check ownership or admin
     const [property] = await db
@@ -267,6 +292,7 @@ export async function DELETE(
 
     return NextResponse.json({ message: await apiError("Hébergement archivé") });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     console.error("Error deleting property:", error);
     return NextResponse.json(
       { error: await apiError("Une erreur est survenue") },

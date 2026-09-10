@@ -36,7 +36,7 @@ export async function POST(
     if (!isUuid(id)) {
       return NextResponse.json({ error: await apiError("Identifiant invalide") }, { status: 400 });
     }
-    const { action } = schema.parse(await request.json());
+    const { action, reason } = schema.parse(await request.json());
 
     const [prop] = await db.select().from(properties).where(eq(properties.id, id));
     if (!prop) return NextResponse.json({ error: await apiError("Introuvable") }, { status: 404 });
@@ -88,7 +88,7 @@ export async function POST(
       action: auditAction,
       entityType: "property",
       entityId: id,
-      metadata: { previousStatus: prop.status, newStatus: updated.status },
+      metadata: { previousStatus: prop.status, newStatus: updated.status, ...(reason ? { reason } : {}) },
     });
 
     return NextResponse.json({ property: updated });

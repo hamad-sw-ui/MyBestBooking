@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, CreditCard, ThumbsUp, BadgeCheck, Clock } from "lucide-react";
+import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, ThumbsUp, BadgeCheck, Clock } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
@@ -12,12 +12,11 @@ interface Props {
   bookingReference: string;
   propertyId: string;
   status: string;
-  /** T-152 : état de paiement, permet d'offrir « Payer maintenant » aux pending. */
+  /** État de règlement informatif ; aucune action de paiement en ligne n’est exposée. */
   paymentStatus?: string | null;
   /** T-203 : paiement constaté sur place (paiement manuel) pour afficher le badge. */
   paymentMethodOffline?: boolean;
-  /** T-203 : intent de paiement en ligne. Si absent (NULL) pour une réservation
-   *  `pending`, il s'agit d'une demande manuelle → on masque « Payer maintenant ». */
+  /** Legacy : conservé pour compatibilité d’appel, non utilisé depuis T-207. */
   paymentIntentId?: string | null;
   messageArea?: "traveler" | "dashboard";
   /**
@@ -44,7 +43,6 @@ export function BookingRowActions({
   status,
   paymentStatus = null,
   paymentMethodOffline = false,
-  paymentIntentId = null,
   messageArea = "traveler",
   canManageStay = false,
 }: Props) {
@@ -272,39 +270,30 @@ export function BookingRowActions({
           </Button>
         </>
       )}
-      <a
-        href={`/api/bookings/${bookingId}/invoice`}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={t("book.invoiceAria").replace("{ref}", bookingReference)}
-        className="inline-flex items-center text-sm px-3 py-1.5 rounded-lg bg-transparent hover:bg-gray-100 text-gray-700 transition-all duration-200"
-      >
-        <FileText className="w-4 h-4 mr-2" />
-{t("book.invoiceReceipt")}
-      </a>
-      {/* T-152 (audit n°24, A) : une réservation pending (paiement non
-          finalisé, intent expiré, checkout abandonné) doit rester actionnable.
-          L'API /api/bookings/[id]/payment et l'annulation pending existent
-          déjà ; on expose juste les actions.
-          T-203 : on ne propose « Payer maintenant » que si un intent de
-          paiement en ligne existe (`paymentIntentId`) — sinon c'est une
-          demande manuelle, l'hôte confirme et constate le paiement sur place. */}
-      {status === "pending" && paymentStatus === "pending" && paymentIntentId && (
-        <Link
-          href={`/reservation?booking=${bookingId}`}
-          className="inline-flex items-center px-3 py-1.5 rounded-lg bg-[#1B3A6B] text-white text-sm font-medium hover:bg-[#152d54] transition"
+      {/* T-206/F11: payment documents are shown only after a settled payment.
+          The API remains defensive for legacy direct links. */}
+      {paymentStatus === "paid" && (
+        <a
+          href={`/api/bookings/${bookingId}/invoice`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={t("book.invoiceAria").replace("{ref}", bookingReference)}
+          className="inline-flex items-center text-sm px-3 py-1.5 rounded-lg bg-transparent hover:bg-gray-100 text-gray-700 transition-all duration-200"
         >
-          <CreditCard className="w-4 h-4 mr-2" />
-{t("bookings.payNow")}
-        </Link>
+          <FileText className="w-4 h-4 mr-2" />
+{t("book.invoiceReceipt")}
+        </a>
       )}
+      {/* T-207 : plus aucun lien « Payer maintenant » ni reprise d'intent.
+          Une réservation pending reste une demande à confirmer/traiter par
+          owner host, même si d'anciens champs paymentIntentId existent en base. */}
       {status === "pending" && paymentStatus !== "pending" && (
         <span className="inline-flex items-center text-sm px-3 py-1.5 text-amber-700 bg-amber-50 rounded-lg">
           <Loader2 className="w-4 h-4 mr-2" />
 {t("reservation.paymentConfirming")}
         </span>
       )}
-      {status === "pending" && paymentStatus === "pending" && !paymentIntentId && (
+      {status === "pending" && paymentStatus === "pending" && (
         <span className="inline-flex items-center text-sm px-3 py-1.5 text-amber-700 bg-amber-50 rounded-lg">
           <Clock className="w-4 h-4 mr-2" />
           {t("book.paymentAwaitingHost")}

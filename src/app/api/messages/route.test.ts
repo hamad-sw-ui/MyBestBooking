@@ -41,6 +41,7 @@ dbTest("T-150 — POST /api/messages → email du destinataire localisé + CTA",
   let getCurrentUser: (typeof import("@/lib/auth"))["getCurrentUser"];
   let hostId = "";
   let guestId = "";
+  let adminId = "";
   let propId = "";
   let roomId = "";
   let convId = "";
@@ -81,6 +82,18 @@ dbTest("T-150 — POST /api/messages → email du destinataire localisé + CTA",
       })
       .returning();
     guestId = guest.id;
+
+    const [admin] = await db
+      .insert(schema.users)
+      .values({
+        email: `admin-msg-t205-${Date.now()}@test.local`,
+        firstName: "Support",
+        lastName: "Admin",
+        role: "admin",
+        language: "fr",
+      })
+      .returning();
+    adminId = admin.id;
 
     const [prop] = await db
       .insert(schema.properties)
@@ -144,6 +157,9 @@ dbTest("T-150 — POST /api/messages → email du destinataire localisé + CTA",
     }
     if (guestId) {
       await db.delete(schema.users).where(eq(schema.users.id, guestId));
+    }
+    if (adminId) {
+      await db.delete(schema.users).where(eq(schema.users.id, adminId));
     }
   });
 
@@ -224,5 +240,28 @@ dbTest("T-150 — POST /api/messages → email du destinataire localisé + CTA",
     // CTA = section voyageur.
     expect(row.html).toContain(`/messages/${convId}`);
     expect(row.html).not.toContain("/dashboard/messages/");
+  });
+
+  it("admin support → voyageur : l'admin peut répondre depuis la file dashboard", async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({
+      id: adminId, firstName: "Support", lastName: "Admin", email: `admin-msg-t205-${Date.now()}@test.local`,
+      role: "admin", language: "fr",
+    } as never);
+
+    const { res, body } = await postMessage("Bonjour, le support suit cette conversation.");
+    expect(res.status).toBe(201);
+    expect(body.message).toMatchObject({ senderId: adminId, senderType: "host" });
+    const msgId = body.message!.id;
+    const guestKey = `message:${msgId}:${guestId}`;
+    outboxKeys.push(guestKey);
+
+    const [row] = await db
+      .select()
+      .from(schema.emailOutbox)
+      .where((await import("drizzle-orm")).eq(schema.emailOutbox.eventKey, guestKey))
+      .limit(1);
+    expect(row).toBeDefined();
+    expect(row.subject).toBe("New message from Support Admin");
+    expect(row.html).toContain(`/messages/${convId}`);
   });
 });

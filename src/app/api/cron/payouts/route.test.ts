@@ -25,6 +25,31 @@ try {
 
 const dbTest = dbAvailable ? describe : describe.skip;
 
+describe("T-209/F5 — cron payouts désactivé par défaut", () => {
+  let POST: typeof import("./route").POST;
+  let prevPayoutFlag: string | undefined;
+
+  beforeAll(async () => {
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    POST = (await import("./route")).POST;
+  });
+
+  afterAll(() => {
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
+  });
+
+  it("renvoie 410 après authentification cron", async () => {
+    const { NextRequest } = await import("next/server");
+    const res = await POST(new NextRequest("http://localhost/api/cron/payouts", { method: "POST" }));
+    const body = await res.json();
+    expect(res.status).toBe(410);
+    expect(body.code).toBe("PLATFORM_PAYOUTS_DISABLED");
+    expect(body.platformPayoutsDisabled).toBe(true);
+  });
+});
+
 dbTest("T-195 — GET/POST /api/cron/payouts (ledger job idempotent)", () => {
   let POST: typeof import("./route").POST;
   let GET: typeof import("./route").GET;
@@ -34,8 +59,11 @@ dbTest("T-195 — GET/POST /api/cron/payouts (ledger job idempotent)", () => {
   let seededBookingId = "";
   let prevMonthStart = "";
   let prevMonthEnd = "";
+  let prevPayoutFlag: string | undefined;
 
   beforeAll(async () => {
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    process.env.PLATFORM_PAYOUTS_ENABLED = "true";
     const route = await import("./route");
     POST = route.POST;
     GET = route.GET;
@@ -91,6 +119,8 @@ dbTest("T-195 — GET/POST /api/cron/payouts (ledger job idempotent)", () => {
     if (seededBookingId) await db.delete(schema.bookings).where(eq(schema.bookings.id, seededBookingId));
     const audit = await db.select({ id: schema.auditLog.id }).from(schema.auditLog).where(eq(schema.auditLog.action, "payout.cron"));
     if (audit.length) await db.delete(schema.auditLog).where(inArray(schema.auditLog.id, audit.map((a) => a.id)));
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
   });
 
   it("génère un payout pending pour la période, puis idempotent", async () => {

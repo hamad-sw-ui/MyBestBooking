@@ -8,10 +8,14 @@ import { stayNights } from "@/lib/booking-rules";
 import { eq, and, ilike, or, desc, asc, sql, min, count, gte, lte, lt, gt, ne, inArray, notInArray } from "drizzle-orm";
 import { z } from "zod";
 import { apiError } from "@/lib/api-error";
+import { PROPERTY_TYPE_VALUES } from "@/lib/property-types";
+import { hasInvalidRequestedStay, parseFutureStay } from "@/lib/future-stay";
+import { priceBoundToStorage } from "@/lib/i18n";
+import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const propertySchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
-  type: z.enum(["hotel", "apartment", "house", "villa", "hostel", "resort", "bnb", "guesthouse", "riad", "camping"]),
+  type: z.enum(PROPERTY_TYPE_VALUES),
   description: z.string().optional(),
   starRating: z.number().min(0).max(5).optional(),
   addressLine: z.string().optional(),
@@ -37,6 +41,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get("type");
     const minPrice = searchParams.get("minPrice");
     const maxPrice = searchParams.get("maxPrice");
+    const displayCurrency = searchParams.get("displayCurrency");
     const minRating = searchParams.get("minRating");
     const search = searchParams.get("search");
 
@@ -86,8 +91,9 @@ export async function GET(request: NextRequest) {
         }
       }
     }
-    // T-026 : nouveaux filtres
-    const amenitiesParam = searchParams.get("amenities"); // csv
+    // T-026/T-206 : nouveaux filtres. `amenity` reste accepté car la page
+    // SSR /recherche et d'anciens liens publics l'utilisent au singulier.
+    const amenitiesParam = searchParams.get("amenities") ?? searchParams.get("amenity"); // csv
     const guests = searchParams.get("guests");
     const checkIn = searchParams.get("checkIn");
     const checkOut = searchParams.get("checkOut");
@@ -109,17 +115,19 @@ export async function GET(request: NextRequest) {
       }
       guestsNum = parsed;
     }
-    // Dates incohérentes (départ <= arrivée) alors qu'une recherche par
-    // dates est demandée → aucun hébergement ne peut correspondre. On le
-    // note pour renvoyer une liste vide au lieu d'ignorer le filtre.
-    const stayDatesValid =
-      checkIn && checkOut
-        ? /^\d{4}-\d{2}-\d{2}$/.test(checkIn) &&
-          /^\d{4}-\d{2}-\d{2}$/.test(checkOut) &&
-          checkOut > checkIn
-        : true;
+    // T-206/F6 : un séjour explicitement demandé mais impossible (dates
+    // passées, incomplètes, mal formées ou inversées) ne doit pas être
+    // silencieusement ignoré par l'API catalogue.
+    if (hasInvalidRequestedStay(checkIn, checkOut)) {
+      return NextResponse.json(
+        { properties: [], total: 0, limit, offset },
+        { headers: { "Cache-Control": "public, max-age=0, s-maxage=30, stale-while-revalidate=60" } },
+      );
+    }
+    const stay = parseFutureStay(checkIn, checkOut);
 
-    let query = db.select().from(properties).where(eq(properties.status, "active"));
+    const minPriceStorage = minPrice !== null ? priceBoundToStorage(Number(minPrice), displayCurrency) : null;
+    const maxPriceStorage = maxPrice !== null ? priceBoundToStorage(Number(maxPrice), displayCurrency) : null;
 
     const conditions = [eq(properties.status, "active")];
 
@@ -149,12 +157,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // T-026 : filtre amenities — chaque équipement demandé doit être
-    // présent dans le tableau JSONB `properties.amenities`.
+    // T-206/F7 : chaque équipement demandé peut être porté soit par la
+    // propriété, soit par au moins une chambre active. Alignement avec la
+    // recherche SSR qui indexe les amenities des rooms (`amenity=tv`).
     if (amenitiesParam) {
       const wanted = amenitiesParam.split(",").map((a) => a.trim()).filter(Boolean);
       for (const a of wanted) {
-        conditions.push(sql`${properties.amenities} @> ${JSON.stringify([a])}::jsonb`);
+        conditions.push(sql`(
+          ${properties.amenities} @> ${JSON.stringify([a])}::jsonb
+          OR EXISTS (
+            SELECT 1 FROM ${rooms} amenity_room
+            WHERE amenity_room.property_id = ${properties.id}
+              AND amenity_room.is_active = true
+              AND amenity_room.amenities @> ${JSON.stringify([a])}::jsonb
+          )
+        )`);
       }
     }
 
@@ -217,43 +234,25 @@ export async function GET(request: NextRequest) {
     // AUCUNE chambre ne satisfait la condition ressort avec roomCount=0 /
     // minPrice=null à cause du LEFT JOIN. On l'explicite : elle n'est pas
     // bookable pour ces critères → on la retire des résultats.
-    if (guestsNum !== null || minPrice !== null) {
+    if (guestsNum !== null || minPriceStorage !== null || maxPriceStorage !== null) {
       filteredResults = filteredResults.filter((p) => p.roomCount > 0);
-    }
-    // T-119 (A2) — dates demandées mais incohérentes/invalides : aucune
-    // disponibilité possible → liste vide (au lieu d'ignorer le filtre).
-    if (!stayDatesValid) {
-      filteredResults = [];
-    }
-
-    // T-119 (A1) — corrige le bug du LEFT JOIN : quand un filtre de
-    // capacité (guests) ou de prix est demandé, une propriété dont
-    // AUCUNE chambre ne satisfait la condition ressort avec roomCount=0 /
-    // minPrice=null à cause du LEFT JOIN. On l'explicite : elle n'est pas
-    // bookable pour ces critères → on la retire des résultats.
-    if (guestsNum !== null || minPrice !== null) {
-      filteredResults = filteredResults.filter((p) => p.roomCount > 0);
-    }
-    // T-119 (A2) — dates demandées mais incohérentes/invalides : aucune
-    // disponibilité possible → liste vide (au lieu d'ignorer le filtre).
-    if (!stayDatesValid) {
-      filteredResults = [];
     }
 
     // Filter by price if needed (post-agrégation, borne côté JS car
     // Drizzle 0.45 n'expose pas `having` sur select simple ; tolerable
     // pour l'ordre de grandeur d'aujourd'hui, à optimiser si le trafic
     // impose le HAVING SQL).
-    if (minPrice) {
-      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice >= parseFloat(minPrice));
+    if (minPriceStorage !== null) {
+      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice >= minPriceStorage);
     }
-    if (maxPrice) {
-      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice <= parseFloat(maxPrice));
+    if (maxPriceStorage !== null) {
+      filteredResults = filteredResults.filter((p) => p.minPrice !== null && p.minPrice <= maxPriceStorage);
     }
 
     // Disponibilité évaluée nuit par nuit, avec le même modèle que la
     // création de booking : override daily, stop-sell et minimum à l'arrivée.
-    if (checkIn && checkOut && /^\d{4}-\d{2}-\d{2}$/.test(checkIn) && /^\d{4}-\d{2}-\d{2}$/.test(checkOut) && checkOut > checkIn) {
+    if (stay) {
+      const { checkIn, checkOut } = stay;
       const nights = stayNights(checkIn, checkOut);
       const propIds = filteredResults.map((p) => p.id);
       if (propIds.length > 0) {
@@ -370,6 +369,7 @@ export async function POST(request: NextRequest) {
         { status: 401 }
       );
     }
+    await assertNotMaintenance(user);
 
     const body = await request.json();
     const data = propertySchema.parse(body);
@@ -395,6 +395,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ property: newProperty }, { status: 201 });
   } catch (error) {
+    if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });

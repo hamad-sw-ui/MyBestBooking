@@ -33,6 +33,39 @@ vi.mock("@/lib/auth", async () => {
 // Clé maître de TEST (64 hex = 32 octets). Ne jamais utiliser en production.
 const TEST_KEY = "a".repeat(64);
 
+describe("T-209/F5 — compte de versement legacy non actionnable", () => {
+  let POST: typeof import("./route").POST;
+  let getCurrentUser: ReturnType<typeof vi.fn>;
+  let prevPayoutFlag: string | undefined;
+
+  beforeAll(async () => {
+    prevPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
+    delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    const route = await import("./route");
+    POST = route.POST;
+    const auth = await import("@/lib/auth");
+    getCurrentUser = (auth as any).getCurrentUser;
+  });
+
+  afterAll(() => {
+    if (prevPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = prevPayoutFlag;
+  });
+
+  it("refuse le POST quand les paiements plateforme sont désactivés", async () => {
+    getCurrentUser.mockResolvedValue({ id: "host-id", role: "host", currency: "EUR" });
+    const { NextRequest } = await import("next/server");
+    const res = await POST(new NextRequest("http://localhost/api/host/payout-account", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ provider: "sepa", reference: "FR7630006000011234567890189", currency: "EUR" }),
+    }));
+    const body = await res.json();
+    expect(res.status).toBe(410);
+    expect(body.code).toBe("PLATFORM_PAYOUTS_DISABLED");
+  });
+});
+
 dbTest("T-195 — POST/GET /api/host/payout-account (moyen de versement)", () => {
   let POST: typeof import("./route").POST;
   let GET: typeof import("./route").GET;
@@ -41,10 +74,13 @@ dbTest("T-195 — POST/GET /api/host/payout-account (moyen de versement)", () =>
   let schema: typeof import("@/db/schema");
   let hostId = "";
   let previousKey: string | undefined;
+  let previousPayoutFlag: string | undefined;
 
   beforeAll(async () => {
     previousKey = process.env.CREDENTIALS_ENCRYPTION_KEY;
+    previousPayoutFlag = process.env.PLATFORM_PAYOUTS_ENABLED;
     process.env.CREDENTIALS_ENCRYPTION_KEY = TEST_KEY;
+    process.env.PLATFORM_PAYOUTS_ENABLED = "true";
     const route = await import("./route");
     POST = route.POST;
     GET = route.GET;
@@ -73,6 +109,8 @@ dbTest("T-195 — POST/GET /api/host/payout-account (moyen de versement)", () =>
     }
     if (previousKey === undefined) delete process.env.CREDENTIALS_ENCRYPTION_KEY;
     else process.env.CREDENTIALS_ENCRYPTION_KEY = previousKey;
+    if (previousPayoutFlag === undefined) delete process.env.PLATFORM_PAYOUTS_ENABLED;
+    else process.env.PLATFORM_PAYOUTS_ENABLED = previousPayoutFlag;
   });
 
   it("customer → 403 (accès hébergeur/admin requis)", async () => {

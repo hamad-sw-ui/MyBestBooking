@@ -14,6 +14,7 @@ import { getPaymentProvider } from "@/lib/payment";
 import { recoverPendingPaymentIntents } from "@/lib/payment-intents";
 import { processPendingPaymentEvents, reconcileLateCapturedPaymentRefunds } from "@/lib/payment-events";
 import { sendBookingReminders, sendReviewRequests } from "@/lib/booking-lifecycle-emails";
+import { BOOKING_REQUEST_EXPIRED_REASON } from "@/lib/booking-request-expiration";
 import { templates } from "@/lib/mail";
 import { apiError } from "@/lib/api-error";
 
@@ -132,8 +133,87 @@ async function expirePendingBookings(): Promise<number> {
         cancelledAt: now,
         cancellationReason: "Paiement non finalisé dans le délai",
         benefitsReleasedAt: new Date(),
+        requestExpiresAt: null,
         updatedAt: now,
       }).where(eq(bookings.id, booking.id));
+      return true;
+    });
+    if (changed) expired += 1;
+  }
+  return expired;
+}
+
+/**
+ * T-209/F1 — expire les demandes manuelles restées `pending` au-delà de leur
+ * TTL métier. Conservateur contre le surbooking : les demandes bloquent bien le
+ * stock pendant le délai, puis le cron les annule pour libérer la chambre.
+ * Ne touche jamais aux anciens holds de paiement (`paymentIntentId` présent),
+ * ni aux réservations confirmées/annulées.
+ */
+export async function expireManualBookingRequests(now = new Date()): Promise<number> {
+  const candidates = await db
+    .select({ id: bookings.id })
+    .from(bookings)
+    .where(and(
+      eq(bookings.status, "pending"),
+      eq(bookings.paymentStatus, "pending"),
+      isNull(bookings.paymentIntentId),
+      lte(bookings.requestExpiresAt, now),
+    ))
+    .limit(100);
+
+  let expired = 0;
+  for (const candidate of candidates) {
+    const changed = await db.transaction(async (tx) => {
+      const [booking] = await tx
+        .select()
+        .from(bookings)
+        .where(eq(bookings.id, candidate.id))
+        .for("update");
+      if (
+        !booking ||
+        booking.status !== "pending" ||
+        booking.paymentStatus !== "pending" ||
+        booking.paymentIntentId ||
+        !booking.requestExpiresAt ||
+        booking.requestExpiresAt > now
+      ) {
+        return false;
+      }
+      if (booking.promotionId) {
+        await tx
+          .update(promotions)
+          .set({ currentUses: sql`GREATEST(${promotions.currentUses} - 1, 0)` })
+          .where(eq(promotions.id, booking.promotionId));
+      }
+      const walletUsed = Number(booking.walletCreditsUsed ?? "0");
+      if (walletUsed > 0) {
+        const [user] = await tx
+          .select()
+          .from(users)
+          .where(eq(users.id, booking.userId))
+          .for("update");
+        if (user) {
+          await tx
+            .update(users)
+            .set({
+              walletBalance: (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2),
+              updatedAt: now,
+            })
+            .where(eq(users.id, user.id));
+        }
+      }
+      await tx
+        .update(bookings)
+        .set({
+          status: "cancelled",
+          cancelledAt: now,
+          cancellationReason: BOOKING_REQUEST_EXPIRED_REASON,
+          benefitsReleasedAt: now,
+          requestExpiresAt: null,
+          updatedAt: now,
+        })
+        .where(eq(bookings.id, booking.id));
       return true;
     });
     if (changed) expired += 1;
@@ -184,6 +264,7 @@ export async function GET(request: NextRequest) {
     // n’est maintenu pendant l’I/O fournisseur.
     const paymentIntentRecovery = await recoverPendingPaymentIntents();
     const expiredPendingBookings = await expirePendingBookings();
+    const expiredManualBookingRequests = await expireManualBookingRequests();
     const processedPaymentEvents = await processPendingPaymentEvents();
     const latePaymentRefunds = await reconcileLateCapturedPaymentRefunds();
     const orphanUploadsRemoved = await cleanupOrphanUploads();
@@ -245,7 +326,7 @@ export async function GET(request: NextRequest) {
     }
 
     const alertEmailDelivery = await deliverPendingEmails();
-    return NextResponse.json({ ok: true, scanned: alerts.length, notified, pastAlertsExpired, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
+    return NextResponse.json({ ok: true, scanned: alerts.length, notified, pastAlertsExpired, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, expiredManualBookingRequests, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved });
   } catch (error) {
     console.error("[cron price-alerts]", error);
     return NextResponse.json({ error: await apiError("Échec du traitement des alertes prix") }, { status: 500 });

@@ -14,6 +14,7 @@ import {
 } from "@/lib/payout-service";
 import { getPayoutProvider } from "@/lib/payout-provider";
 import { AUDIT_ACTIONS, recordAudit } from "@/lib/audit";
+import { platformPayoutsEnabled } from "@/lib/platform-flags";
 
 /**
  * /api/host/payouts (T-195)
@@ -57,6 +58,16 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
     if (user.role !== "host" && user.role !== "admin") {
       return NextResponse.json({ error: await apiError("Accès hébergeur ou admin requis") }, { status: 403 });
+    }
+    if (!platformPayoutsEnabled()) {
+      return NextResponse.json(
+        {
+          error: await apiError("Versements plateforme désactivés : les règlements sont gérés hors MyBestBooking"),
+          code: "PLATFORM_PAYOUTS_DISABLED",
+          platformPayoutsDisabled: true,
+        },
+        { status: 410 },
+      );
     }
     const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {

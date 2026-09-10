@@ -38,7 +38,9 @@ export async function GET(
     })
     .from(wishlistItems)
     .leftJoin(properties, eq(wishlistItems.propertyId, properties.id))
-    .where(eq(wishlistItems.wishlistId, wl.id));
+    // T-205 : une liste partagée est publique ; elle ne doit donc plus exposer
+    // des hébergements brouillon/suspendus/archivés que le catalogue masque.
+    .where(and(eq(wishlistItems.wishlistId, wl.id), eq(properties.status, "active")));
 
   return NextResponse.json({
     name: wl.name,
