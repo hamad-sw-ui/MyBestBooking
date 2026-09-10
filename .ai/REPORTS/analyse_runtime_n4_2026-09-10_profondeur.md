@@ -62,7 +62,7 @@ sessions supprimées) — `src/app/api/users/me/route.ts:154-183`. Mais l'identi
 | --- | --- | --- |
 | `bookings` | `guest_email`, `guest_first_name`, `guest_last_name` (copie de l'identité au moment de la réservation) | `src/db/schema.ts` (bookings) |
 | `email_outbox` | `to` = adresse e-mail d'origine de **chaque** e-mail envoyé | `src/lib/email-outbox.ts` |
-| `audit_log` | `metadata.targetEmail` = adresse d'origine (ex. trace de suspension) | `src/app/api/users/[id]/suspend/route.ts:67` |
+| `audit_log` | `metadata.targetEmail` = adresse d'origine (ex. trace de suspension) | `src/app/api/users/[id]/suspend/route.ts:68` |
 | `messages` | contenu libre (nom, téléphone, adresse postale fréquemment cités) | `src/db/schema.ts` (messages) |
 
 **Preuve.** Sonde d'anonymisation : après `DELETE /api/users/me`, l'utilisateur est bien anonymisé
@@ -103,8 +103,9 @@ indéfiniment les messages `sent`/`failed` ; `audit_log` n'a aucune politique de
 
 **Preuve.** `grep` exhaustif des suppressions : six `delete(sessions)` (tous événementiels),
 aucun `delete(emailOutbox)`, aucun `delete(auditLog)`, aucune mention de rétention dans le cron.
-Base laissée après campagne : `sessions = 27` alors que le seed n'en crée aucune (les sessions
-expirées restent en base avec `expires_at` dépassé, `getSession()` les rejette sans les supprimer).
+Base laissée après campagne : `sessions = 27` alors que `POST /api/seed` n'insère aucune session
+(vérifié) : les sessions expirées restent en base avec `expires_at` dépassé, `getSession()` les rejette
+sans les supprimer.
 
 **Impact.** Croissance monotone (une ligne de session par connexion « remember me » de 30 jours,
 une ligne outbox par e-mail, une ligne d'audit par action admin) ; en production, la table
