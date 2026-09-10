@@ -485,6 +485,40 @@ proposé : A1+A2 → A6+A7+A8 → A3+A4 → A5+A9+A10+A11.
 - 🟢 **O6** — Pas d'export CSV dans `/dashboard/analytics`.
 
 
+### Audit T-242 (2026-09-10) — audit de profondeur (analyse n°4)
+
+Analyse : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie
+`REPORTS/analyse_runtime_n4_2026-09-10_profondeur.md`). 24 cas × 5 identités (120 requêtes), base
+remise à l'état seed. Trois constats nouveaux ; les autres confirment avec preuves chiffrées les
+tâches T-232 → T-241 (renvois en fin de section).
+
+- 🔴 **T-242 (M/P1)** — *N1 — anonymisation partielle à la suppression de compte.* `DELETE
+  /api/users/me` anonymise `users` (e-mail haché, nom effacé, 2FA purgée, sessions supprimées)
+  mais conserve l'identité dans `bookings.guest_email/guest_first_name/guest_last_name`,
+  `email_outbox.to` et `audit_log.metadata.targetEmail` (vérifié : `targetEmail` en clair dans la
+  trace de suspension d'un compte supprimé). Livrable : UPDATE ciblés dans la transaction
+  d'anonymisation (agrégats comptables intacts), + test « aucune occurrence de l'adresse d'origine
+  après DELETE ». Recoupe T-230 (séparation `suspended_at` / `deleted_at`).
+- 🟠 **T-243 (S/P2)** — *N2 — aucune purge des données techniques.* `sessions` expirées,
+  `email_outbox` livrés et `audit_log` ne sont jamais purgés (27 sessions en base après campagne
+  de sondes, 0 créée par le seed ; six `delete(sessions)` tous événementiels). Livrable :
+  `purgeTechnicalData()` en fin de cron (sessions expirées > 7 j, outbox > 90 j hors `pending`,
+  rétention d'audit documentée) + compteurs `sessionsPurged` / `emailsPurged` dans la réponse cron.
+  Prépare O3 (vue admin de l'outbox).
+- 🟠 **T-244 (S/P2)** — *N3 — stock affiché ≠ stock vendable.* `GET /api/rooms/[id]/availability`
+  renvoie le stock **déclaré** sans soustraire les séjours (prouvé : 24–26/09 « 2 disponibles »
+  pour une chambre à 2 unités dont 1 est réservée), alors que le tunnel applique bien les
+  chevauchements. Livrable : champ additif `bookedCount` + affichage « reste X / déclaré Y » dans
+  `AvailabilityCalendar` ; le tunnel reste l'autorité. Ferme O2 avec une information juste.
+
+Confirmations apportées par la même campagne (aucune ligne de BACKLOG modifiée) : dates et fuseaux
+(C1 → T-232), suspension d'hôte et sort des demandes en attente (C2 → T-233), expiration paresseuse
+(C3 → T-234), quota compté avant validation (C4 → T-235), heure d'arrivée jamais restituée et
+`z.string()` sur colonne `time` (C5 → T-236), fuseau décoratif et liste fermée incohérente
+(C6 → T-227), analytics figé 30 jours (C7 → T-241 b). Vérifié sain : matrice de permissions,
+révocation de session, bénéfices rendus à l'annulation, idempotence e-mail, anti-double vote,
+`POST /api/seed` fermé hors environnement démo, brouillons/wishlists privées en 404.
+
 ### Audit T-232 (2026-09-10) — scénarios runtime (analyse n°3)
 
 Analyse complète : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (copie

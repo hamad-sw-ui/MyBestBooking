@@ -1,120 +1,38 @@
 # Tâche courante
 
-- **ID** : T-217
-- **Titre** : Correctifs P1–P10 de l'audit runtime — soft-404, édition hébergement, modération, justificatifs, promotions, chambres, messagerie, versements, audit, navigation
-- **Statut** : CORRIGÉ (VALIDÉ)
-- **Niveau** : **L** (dix correctifs ciblés, aucun changement de schéma)
-- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_fonctionnalites.md` (commit `e8ecc71`)
+- **ID** : T-242 → T-244 (analyse) — livrée ; chantier T-221 → T-231 en cours
+- **Titre** : Audit runtime n°4 (profondeur) puis implémentation des correctifs d'audit n°2
+- **Statut** : EN COURS (analyse livrée ; correctifs T-242 → T-244 à engager)
+- **Niveau** : M (trois correctifs issus de l'analyse, aucun changement de contrat d'API)
+- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie `REPORTS/analyse_runtime_n4_2026-09-10_profondeur.md`)
 
 ## Contexte
 
-L'audit runtime du 2026-09-10 a relevé dix défauts d'exécution (P1–P10) :
-statuts HTTP faux pour les pages introuvables (soft-404 SEO), écran d'édition
-d'hébergement entièrement client, réglage de modération des avis sans UI, aucun
-justificatif pour les séjours passés, API d'édition des promotions sans écran,
-édition de chambre enfouie + route absente, fil de messagerie vide introuvable,
-carte « Factures » qui listait des versements, code mort/routes sans appelant et
-audit plafonné à 100 lignes, navigation admin sans « Chambres ».
+Quatrième passe d'analyse à l'exécution, orientée sur des surfaces jamais sondées :
+cloisonnement multi-tenant (24 cas × 5 identités, second hôte et annonce brouillon créés pour la
+mesure), cycle de vie des données personnelles après suppression de compte, rétention technique,
+et écart entre le stock affiché au calendrier hôte et le stock réellement vendable.
 
-## Livré
+Trois constats nouveaux en sortent — **T-242** (anonymisation partielle : l'identité survit dans
+`bookings.guest_*`, `email_outbox.to`, `audit_log.targetEmail`), **T-243** (aucune purge des
+sessions expirées, e-mails livrés et journaux d'audit) et **T-244** (le calendrier affiche le
+stock déclaré sans retirer les séjours). Les sept autres constats de la campagne confirment avec
+preuves chiffrées les tâches déjà planifiées T-227 et T-232 → T-236 / T-241.
 
-1. **P1** — `src/app/loading.tsx` racine supprimé au profit de squelettes
-   **feuilles** (`src/components/page-loading.tsx` + 11 routes de liste) :
-   les pages `notFound()` renvoient un vrai 404 en production.
-2. **P2** — `/dashboard/properties/[id]` découpé en RSC (`isUuid`, `notFound()`,
-   garde de rôle) + client amorcé (`initialProperty`/`initialRooms`/`isAdmin`).
-3. **P3** — section « Avis » dans `/dashboard/settings` (bascule
-   `reviews.requireModeration`) branchée sur l'API existante.
-4. **P4** — `BookingRowActions` dans les cartes « Passées » de
-   `/mes-reservations` (reçu/facture pour un séjour payé).
-5. **P5** — `/dashboard/promotions/[id]` + `PromotionEditForm` (PATCH existant ;
-   `null` accepté pour les plafonds ; `currentUses` préservé).
-6. **P6** — `/dashboard/rooms/[id]` redirige vers `/calendrier#room-edit` ;
-   lien « Modifier l'unité » dans la liste.
-7. **P7** — fil vide visible 7 jours dans `/messages` (libellé « brouillon »),
-   compteurs/API inchangés (T-206/F9 conservé au-delà).
-8. **P8** — carte billing renommée « Versements et relevés » + pointeur vers les
-   reçus par réservation.
-9. **P9** — `/dashboard/audit` branché sur `GET /api/admin/audit` (« Charger
-   plus ») ; composants orphelins `@deprecated` et documentés.
-10. **P10** — `/dashboard/rooms` ajouté aux `adminLinks` desktop et mobile.
-11. **Complément T-219** — libellés d'export distingués : « Export CSV
-    (versements) » (carte billing) vs « Export CSV (réservations) »
-    (`/dashboard/bookings`). T-218 (e-mail à la création d'un fil vide) **non
-    retenu** : `POST /api/messages` notifie déjà le destinataire, un e-mail sans
-    contenu serait du spam ; le rattrapage du fil non écrit est assuré par P7.
-    T-220 (préférences de notification par utilisateur) reste au backlog.
+## Chantier en cours (audit n°2)
 
-## Validation
+L'implémentation de **T-221 → T-231** est engagée dans l'arbre de travail, hors de ce livrable
+d'analyse : A1 (échéance des demandes) et A2 (règlements échus) livrés, plus A3 (interrupteurs
+d'e-mails), A4 (parrainage réglable), A5 (notifications d'avis) et A6 (édition complète de
+chambre). Restent A7 (horaires d'arrivée/départ), A8 (badges administrables), A9 (libellé du fil),
+A10 (`suspended_at`) et A11 (codes de secours 2FA).
 
-- `npm run typecheck` : ✅ 0 erreur.
-- `npm run lint` : ✅ 0 erreur / 0 warning.
-- `npm run i18n:check` : ✅ 0 candidat (catalogue FR = EN = **1559** clés).
-- `npx vitest run` : ✅ **109 fichiers / 652 tests, 0 échec** (+10 tests).
-- `npx next build` : ✅ 65 pages.
-- `npm run smoke` : ✅ **95/95** (assertion `/maintenance` corrigée).
-- Matrice production : ✅ 8 URL invalides → 404 · 18 pages valides → 200.
-- **Balayage exhaustif des 10 pages `notFound()`** : ✅ 14 sondes invalides → 404
-  en production ; contreparties valides → 200 (307 pour la redirection chambres).
-- **P4 bout en bout** : ✅ reçu voyageur 200 (référence présente) · autrui 403 ·
-  anonyme 401 · hôte/admin 200.
-- `npm run ai:check` : ✅ 19 OK / 1 warn R7 (levé par le commit `docs(state)`) / 0 fail.
+## Livré par cette passe
 
-## Rapports
-
-- `docs/analyse_2026-09-10_audit_runtime_fonctionnalites.md` (analyse d'origine)
-- `.ai/REPORTS/validation_T217_2026-09-10_correctifs_audit_runtime.md`
-
-## Suites — audit n°2 (2026-09-10)
-
-Deuxième passe d'analyse runtime livrée **à titre d'analyse seule** (aucun code produit
-modifié) : `docs/analyse_2026-09-10_audit_runtime_inacheves.md`. Méthode : 3 rôles + visiteur,
-43 pages, 67 routes API, **261 liens internes suivis (0 cassé)**, sondes d'exécution
-(création/expiration de demande, fil de conversation par rôle, suspension/réactivation,
-suppression de compte, confirmation de paiement) puis base remise à l'état seed.
-
-11 constats, priorisés et tracés dans `BACKLOG.md` sous T-221 → T-231 :
-
-1. **T-221** — échéance des demandes de réservation invisible et non notifiée (TTL 24 h).
-2. **T-222** — séjours échus non réglés : aucune vue ni relance « à constater ».
-3. **T-223** — interrupteurs `notifications` (7 booléens) sans section admin.
-4. **T-224** — paramètres de parrainage (`bestrewards.referral`) non éditables.
-5. **T-225** — aucun e-mail d'avis (publication côté hôte, issue de modération côté auteur).
-6. **T-226** — édition de chambre limitée à 7 champs sur les 14 acceptés par l'API.
-7. **T-227** — horaires d'arrivée/départ affichés mais absents des API/formulaires.
-8. **T-228** — labels non administrables ; badge « Éco » inatteignable.
-9. **T-229** — libellé « Écrire à l'hébergeur » faux pour l'hôte, action 403 pour l'admin.
-10. **T-230** — suspension et suppression partagent `deleted_at` (compte « zombie »
-    réactivable) ; aucune notification de suspension.
-11. **T-231** — 2FA sans codes de secours ni geste support.
-
-Observations complémentaires : `wallet_transactions`/historique de solde, calendrier sans
-réservations, vue `email_outbox`, édition d'avis par son auteur, fiche utilisateur admin,
-export analytics.
-
-
-## Suites — audit n°3 (scénarios runtime, 2026-09-10)
-
-Troisième passe d'analyse livrée **à titre d'analyse seule** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md`.
-Angle : **scénarios de bout en bout** et incohérences produit, là où les passes précédentes
-listaient les branchements manquants. Méthode : 3 rôles + visiteur, 43 pages, 67 routes API,
-124 liens internes suivis (**0 cassé**), analyse statique de tous les `<Button>` (**0 mort**),
-campagne de sondes HTTP/PostgreSQL (dates invalides, capacité, chevauchements, rôles croisés,
-ressources d'autrui, quota, suspension d'hôte, wishlist partagée), vérifications multi-fuseaux
-(`UTC`/`Africa/Douala`/`America/Los_Angeles`/`Pacific/Kiritimati`), exécution réelle du cron.
-Base remise à l'état seed exact (8/8/33/24, compteurs 0, 1 `app_settings`).
-
-13 constats (F1→F13) priorisés dans `BACKLOG.md` sous **T-232 → T-241** :
-
-1. **T-232** 🔴 Dates de séjour décalables d'un jour selon le fuseau du navigateur (et fuseau
-   serveur) ; réglages `timezone` décoratifs et non validés.
-2. **T-233** 🔴 Hôte suspendu : annonces toujours actives, visibles et réservables (prouvé).
-3. **T-234** 🟠 Demande en attente bloquant les dates sans expiration paresseuse (cron-dépendant).
-4. **T-235** 🟠 Quota de réservation 10/h compté avant validation → 429 sur une demande correcte.
-5. **T-236** 🟠 Heure d'arrivée estimée collectée, jamais transmise (+ API non validée).
-6. **T-237** 🟠 Validation/rejet d'annonce : hôte non notifié, motif dans l'audit seulement.
-7. **T-238** 🟠 Wishlist partagée indexable et sans expiration (noindex partout ailleurs).
-8. **T-239** 🟠 Désabonnement promis par la page Confidentialité mais inexistant.
-9. **T-241** 🟡 Finitions : états « supprimé/suspendu », période + export analytics, erreurs d'API.
-
-Interactions : T-232 ↔ T-227 (audit n°2), T-234 ↔ T-221, T-241(a) ↔ T-230, T-241(b) ↔ O6.
+1. **Analyse** : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` + copie `.ai/REPORTS/` ;
+   BACKLOG T-242 → T-244 ; PROGRESS et DEVLOG.
+2. **Preuves positives** : matrice de permissions exhaustive, révocation de session souhaitée à
+   toutes les entrées, restitution unique des bénéfices (promotion/wallet) à l'annulation,
+   idempotence `email_outbox`, `POST /api/seed` fermé hors environnement démo, 404 sur brouillons
+   et wishlists privées, aucune route orpheline hors tombeau 410 du paiement (T-207).
+3. **Aucun code produit modifié** par cette passe ; base remise à l'état seed et sondes supprimées.

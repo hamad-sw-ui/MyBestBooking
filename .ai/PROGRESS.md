@@ -4333,3 +4333,22 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
 - **Non modifié** : aucune ligne de code produit dans le cadre de cette analyse (un chantier
   d'implémentation T-221/T-222 reste en cours dans l'arbre de travail) ; les constats alimentent
   T-232 → T-241 au BACKLOG.
+
+## 2026-09-10 — Audit runtime n°4 (analyse seule) : cloisonnement, cycle de vie, stock, dates
+
+- **Livrable** : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie
+  `.ai/REPORTS/analyse_runtime_n4_2026-09-10_profondeur.md`) — 3 constats nouveaux
+  (T-242 → T-244) + 7 confirmations chiffrées rattachées à T-232 → T-241, et un inventaire
+  « vérifié sain ».
+- **Méthode** : sonde de cloisonnement multi-tenant (2ᵉ hôte + annonce brouillon + chambre +
+  conversation + wishlists créés pour la mesure) → 24 cas × 5 identités (120 requêtes) avec
+  restauration de toute écriture acceptée à tort ; analyse croisée « route sans appelant » /
+  « appel fantôme » ; contrôles d'intégrité en base ; vérification des flux d'anonymisation,
+  de révocation de session et de restitution des bénéfices.
+- **Constats saillants** : (N1) anonymisation limitée à `users` — l'identité survit dans
+  `bookings.guest_*`, `email_outbox.to` et `audit_log.targetEmail` ; (N2) aucune purge des
+  sessions expirées, e-mails livrés et journaux d'audit ; (N3) le calendrier hôte affiche le stock
+  déclaré sans soustraire les séjours (2 affichés / 1 réel sur les données du seed).
+- **État** : base remise à l'état seed (8 / 8 / 33 / 24 ; compteurs techniques à 0) ; sondes
+  supprimées ; chantier d'implémentation T-221/T-222 → T-231 toujours en cours dans l'arbre
+  (A1 → A6 livrés localement, A7 → A11 restants).

@@ -401,3 +401,35 @@ compteurs 0 ; 1 `app_settings`) ; scripts de sonde supprimés ; arbre de travail
 
 **Suites.** T-232 → T-241 au BACKLOG (ordre : dates/fuseaux → annonces → tunnel → confiance →
 finitions).
+
+### 2026-09-10 — Audit n°4 : profondeur (cloisonnement, cycle de vie, stock)
+
+**Livré.** `docs/analyse_2026-09-10_audit_runtime_profondeur.md` — nouvelle passe qui rejoue le
+moins possible : matrice de permissions (24 cas × 5 identités, dont un second hôte créé pour la
+mesure), cycle de vie des données personnelles, rétention technique, stock affiché vs vendable.
+
+**Constats nouveaux.** (N1) la suppression de compte n'anonymise que `users` : les copies
+`bookings.guest_*`, `email_outbox.to` et `audit_log.metadata.targetEmail` gardent l'adresse
+d'origine ; (N2) aucune purge des sessions expirées, des e-mails livrés ni du journal d'audit —
+le cron ne nettoie que les uploads orphelins ; (N3) `GET /api/rooms/[id]/availability` renvoie le
+stock **déclaré** sans retirer les séjours (prouvé : 2 affichés pour 1 réellement libre), alors
+que le tunnel applique bien les chevauchements — l'information de gestion est fausse, pas
+seulement incomplète.
+
+**Confirmations chiffrées.** Dates/fuseaux (décalage J-1 selon le fuseau de lecture, `toDate()`
+sensible au fuseau serveur), suspension d'hôte (catalogue 200 + annonces dans la recherche, et
+demandes en attente laissées vivantes), demande en attente bloquante jusqu'au cron, quota compté
+avant validation (429 sur une demande correcte), heure d'arrivée jamais restituée, fuseau
+décoratif avec liste fermée de 10 valeurs face à une API qui accepte tout, analytics figé.
+
+**Écarté (vérifié OK).** Cloisonnement inter-tenant correct sur les 24 cas (factures, messages,
+brouillons, chambres, exports, admin, wishlists privées) ; sessions révoquées à la suspension, à
+la suppression et au changement de mot de passe ; bénéfices rendus exactement une fois à
+l'annulation ; `POST /api/seed` fermé hors environnement démo ; mode sombre réellement stylé ;
+aucune route orpheline hormis le tombeau 410 du paiement en ligne (T-207).
+
+**Préservé.** Base à l'état seed exact (8 users / 8 properties / 33 bookings / 24 reviews,
+0 conversation / wishlist / outbox / audit) ; scripts de sonde supprimés.
+
+**Suites.** T-242 → T-244 au BACKLOG ; les confirmations enrichissent T-227, T-232 → T-236,
+T-241.
