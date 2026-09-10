@@ -345,3 +345,31 @@ Gates : `npm run typecheck` 0 · `npm run lint` 0 · `npm test` 455/455 (113 ski
 **Préservé.** Approbation hôte (T-202), paiement manuel et `markPaidOffline` (T-203), snapshots de commission des réservations vendues, bulk admin, FSM complète, i18n FR/EN (+16 clés = 1532), page détail réservation.
 
 **Validation.** `npm run typecheck` 0 · `npm run lint` 0 · `npm run i18n:check` 0 · `npx next build` 65 pages · `npx vitest run` 107 fichiers / 642 tests (0 échec) · runtime API : `propertyCount` 8, propagation `listed`/`inherited`/reset, erreurs 400/403/404, audits en base, `pending→confirmed` 200, clôtures 400/409/200, terminal 400 · `npm run ci` verte (smoke 95/95) · `ai:check` 19 OK.
+
+## 2026-09-10 — Audit runtime n°2 : fonctionnalités inachevées ou mal pensées (analyse seule)
+
+**Fait.** Deuxième passe d'analyse à l'exécution sur l'application complète, livrée sous forme de
+document (`docs/analyse_2026-09-10_audit_runtime_inacheves.md`) et d'entrées BACKLOG **T-221 →
+T-231** (+ 6 observations).
+
+**Méthode.** Jetons frais pour les 4 profils, crawl des 43 pages et des 67 routes API, suivi de
+261 liens internes (0 cassé), confrontation du registre `src/lib/settings.ts` aux sections
+réellement rendues par `settings-panel.tsx`, inventaire des `enqueueEmail` par événement, puis
+sondes : `POST /api/bookings` (échéance `requestExpiresAt` présente côté API, absente de l'UI),
+expiration par cron sans e-mail, `PUT /api/conversations` par rôle (admin 403 / hôte 201),
+suspension → 401 explicite → réactivation, suppression de compte → anonymisation → réactivation
+admin (compte « zombie »), constat de paiement conditionnant la clôture.
+
+**Constats principaux.** (1) échéance des demandes de réservation invisible et expiration
+silencieuse ; (2) séjours échus non réglés sans vue ni relance ; (3) réglages d'e-mails sans UI ;
+(4) parrainage non réglable ; (5) avis sans notification ; (6) édition de chambre incomplète ;
+(7) horaires d'arrivée/départ inéditables ; (8) labels/badges non administrables (badge « Éco »
+inatteignable, `isBestrewards` aléatoire dans le seed alors qu'il change la remise) ;
+(9) « Écrire à l'hébergeur » faux dans le back-office ; (10) suspension ≡ suppression ;
+(11) 2FA sans codes de secours ni reset support.
+
+**Préservé.** Aucun code produit, aucune migration, aucune donnée conservée : les réservations,
+comptes et fils créés par les sondes ont été supprimés et la base est revenue à l'état seed.
+
+**Validation.** `npm run ai:check` 19 OK / 1 warn (R7, levé par `docs(state)` après commit) /
+0 fail ; arbre de travail = document + docs `.ai` uniquement.

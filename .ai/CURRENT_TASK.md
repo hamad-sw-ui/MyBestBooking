@@ -64,3 +64,30 @@ audit plafonné à 100 lignes, navigation admin sans « Chambres ».
 
 - `docs/analyse_2026-09-10_audit_runtime_fonctionnalites.md` (analyse d'origine)
 - `.ai/REPORTS/validation_T217_2026-09-10_correctifs_audit_runtime.md`
+
+## Suites — audit n°2 (2026-09-10)
+
+Deuxième passe d'analyse runtime livrée **à titre d'analyse seule** (aucun code produit
+modifié) : `docs/analyse_2026-09-10_audit_runtime_inacheves.md`. Méthode : 3 rôles + visiteur,
+43 pages, 67 routes API, **261 liens internes suivis (0 cassé)**, sondes d'exécution
+(création/expiration de demande, fil de conversation par rôle, suspension/réactivation,
+suppression de compte, confirmation de paiement) puis base remise à l'état seed.
+
+11 constats, priorisés et tracés dans `BACKLOG.md` sous T-221 → T-231 :
+
+1. **T-221** — échéance des demandes de réservation invisible et non notifiée (TTL 24 h).
+2. **T-222** — séjours échus non réglés : aucune vue ni relance « à constater ».
+3. **T-223** — interrupteurs `notifications` (7 booléens) sans section admin.
+4. **T-224** — paramètres de parrainage (`bestrewards.referral`) non éditables.
+5. **T-225** — aucun e-mail d'avis (publication côté hôte, issue de modération côté auteur).
+6. **T-226** — édition de chambre limitée à 7 champs sur les 14 acceptés par l'API.
+7. **T-227** — horaires d'arrivée/départ affichés mais absents des API/formulaires.
+8. **T-228** — labels non administrables ; badge « Éco » inatteignable.
+9. **T-229** — libellé « Écrire à l'hébergeur » faux pour l'hôte, action 403 pour l'admin.
+10. **T-230** — suspension et suppression partagent `deleted_at` (compte « zombie »
+    réactivable) ; aucune notification de suspension.
+11. **T-231** — 2FA sans codes de secours ni geste support.
+
+Observations complémentaires : `wallet_transactions`/historique de solde, calendrier sans
+réservations, vue `email_outbox`, édition d'avis par son auteur, fiche utilisateur admin,
+export analytics.

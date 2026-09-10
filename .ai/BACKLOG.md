@@ -426,3 +426,60 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 - 🟢 **T-220 (S/P3)** — Préférences de notification par utilisateur
   (`user_notification_prefs`) : aujourd'hui seul `priceAlertEnabled` est
   individuel, le reste est global (`app_settings.notifications`).
+
+### Audit T-221 (2026-09-10) — fonctionnalités inachevées ou mal pensées
+
+Analyse complète : `docs/analyse_2026-09-10_audit_runtime_inacheves.md` (11 constats A1→A11,
+6 observations O1→O6). Aucune ligne de code produit modifiée par l'analyse. Ordre d'implémentation
+proposé : A1+A2 → A6+A7+A8 → A3+A4 → A5+A9+A10+A11.
+
+- 🔴 **T-221 (M/P1)** — *A1 — échéance des demandes de réservation.* `requestExpiresAt` (TTL 24 h)
+  n'est affiché nulle part et l'expiration (`expireManualBookingRequests`) n'envoie aucun e-mail ;
+  `stats.bookings.pending` est calculé mais jamais rendu sur `/dashboard`. Livrable : échéance sur
+  `/mes-reservations` + `/dashboard/bookings`, carte « Demandes à traiter » (hôte/admin), e-mail
+  d'expiration idempotent. Preuve : sonde `MBB-2026-1PRF1S` (`requestExpiresAt` renvoyé, 0 mention
+  dans la page).
+- 🔴 **T-222 (M/P1)** — *A2 — séjours échus non réglés.* `completed` est refusé sans
+  `paymentStatus = paid` ; la constatation n'existe que sur la fiche ; aucun filtre/colonne
+  « Règlement », aucune relance. Livrable : vue « À constater » (départ ≤ aujourd'hui),
+  colonne Règlement, action de ligne, rappel hôte J+1, compteur admin.
+- 🟠 **T-223 (S/P2)** — *A3 — interrupteurs d'e-mails sans UI.* `notificationsSchema` (7 booléens,
+  défauts `true`) est lu par 5 modules mais absent de `settings-panel.tsx` (0 occurrence) ;
+  `newsletter` n'est lu nulle part. Livrable : section « Notifications » ; trancher le sort de
+  `newsletter`.
+- 🟠 **T-224 (S/P2)** — *A4 — parrainage non réglable.* `bestrewards.referral`
+  (`enabled`/`referrerAmount`/`refereeAmount`) n'a pas de champs dans la section BestRewards alors
+  que le programme est affiché dans `/mon-compte`.
+- 🟠 **T-225 (M/P2)** — *A5 — avis sans notification.* Aucun `enqueueEmail` dans
+  `src/app/api/reviews/**` : l'hôte ignore la publication, l'auteur ignore l'issue de la
+  modération. Livrable : `review-published` / `review-moderated`, optionnels (liés à T-223).
+- 🟠 **T-226 (M/P2)** — *A6 — édition de chambre incomplète.* Le `PUT` accepte description, type,
+  lits, surface, devise, équipements, photos ; `RoomEditSection` n'en envoie que 7 champs, figés
+  après création.
+- 🟠 **T-227 (S/P2)** — *A7 — horaires arrivée/départ.* `check_in_from` / `check_in_until` /
+  `check_out_until` sont affichés sur la fiche (repli 14:00/23:00/11:00) mais absents des API et
+  des formulaires. Livrable : acceptation POST/PUT + champs d'édition (+ `timezone`).
+- 🟠 **T-228 (M/P2)** — *A8 — labels non administrables.* `isEcoCertified` n'est écrit nulle part
+  (badge inatteignable) ; `isBestrewards`/`isPreferred` ne sont écrits que par le seed
+  aléatoirement, alors que `isBestrewards` majore la remise BestRewards de 2 points.
+- 🟡 **T-229 (S/P3)** — *A9 — fil depuis le back-office.* Libellé `book.writeHost` sur la fiche
+  réservation hôte/admin (il écrit au voyageur) ; l'admin reçoit **403** (prouvé : admin 403 /
+  hôte 201 / voyageur 201). Livrable : libellé par acteur + décision explicite sur l'admin.
+- 🟠 **T-230 (M/P2)** — *A10 — suspension vs suppression.* Les deux écrivent `deleted_at` ; l'UI
+  admin affiche « Suspendu » + « Réactiver » sur un compte anonymisé (sonde : réactivation 200,
+  email `deleted-…@anonymized.local` conservé). Livrable : `suspended_at` (+ raison), UI à deux
+  états, refus 409 de réactivation d'un compte anonymisé, migration des suspensions existantes.
+- 🔴 **T-231 (M/P1)** — *A11 — 2FA sans secours.* Désactivation = mot de passe + code TOTP ; aucun
+  code de secours, aucun reset support (le seul reset est l'anonymisation). Livrable : codes de
+  secours hachés à usage unique + action admin tracée `user.2fa.reset` (+ révocation de sessions,
+  e-mail d'information).
+
+#### Observations (à trancher, hors lots ci-dessus)
+
+- 🟢 **O1** — Portefeuille sans journal ni débit : décider d'une consommation (avoir au règlement
+  sur place) avec `wallet_transactions`, ou geler le programme explicitement.
+- 🟢 **O2** — Calendrier d'indisponibilité sans affichage des réservations couvrant la date.
+- 🟢 **O3** — Pas de vue admin de `email_outbox` (statuts `pending`/`failed`/`sent`).
+- 🟢 **O4** — Avis non modifiable/non supprimable par son auteur (seul l'admin masque).
+- 🟢 **O5** — Pas de fiche utilisateur admin (vue 360° support).
+- 🟢 **O6** — Pas d'export CSV dans `/dashboard/analytics`.

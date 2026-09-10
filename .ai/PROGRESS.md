@@ -4299,3 +4299,17 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
 3. **Erreur évitable** : deux identifiants libres (`T-212`/`T-213`) avaient été pris dans les commentaires alors qu'ils désignent d'autres items du BACKLOG → renommés en T-215/T-216 avant commit.
 4. **Nouvelle règle ?** Non : `CODING_RULES` §13 et §22 couvrent déjà le besoin.
 5. **Permanent ?** Non applicable : aucune règle ajoutée.
+
+## 2026-09-10 — Audit runtime n°2 (analyse seule) : fonctionnalités inachevées ou mal pensées
+
+- **Livrable** : `docs/analyse_2026-09-10_audit_runtime_inacheves.md` — 11 constats (A1→A11) et
+  6 observations (O1→O6), chacun avec constat, preuves fichier:ligne + sondes d'exécution, impact
+  et solution non régressive ; ordre d'implémentation proposé (A1+A2 → A6+A7+A8 → A3+A4 →
+  A5+A9+A10+A11).
+- **Méthode** : 3 rôles + visiteur, 43 pages, 67 routes API, 261 liens internes suivis (**0 cassé**),
+  comparaison registre de réglages ↔ panneau admin, inventaire des e-mails par événement, sondes
+  d'exécution (demande de réservation et son échéance, expiration silencieuse, constat de paiement,
+  fil de conversation par rôle, suspension/réactivation, suppression de compte et sa réactivation
+  admin, 2FA). Base remise à l'état seed (8/8/33/24, compteurs 0).
+- **Non modifié** : aucune ligne de code produit ; les correctifs P1–P10 (T-217) restent la
+  référence livrée. Les constats alimentent T-221 → T-231 au BACKLOG.
