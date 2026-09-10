@@ -23,15 +23,23 @@ Authentification :
 | POST | `/api/auth/login` | 🔓 | Vérifie mdp, met à jour `lastLoginAt`, ouvre une session. |
 | POST | `/api/auth/logout` | 🔓 | Supprime la session en base + le cookie, `302 → /`. |
 | GET | `/api/auth/me` | 🔒 | Retourne le profil courant (sans le hash). |
+| POST | `/api/auth/2fa/setup` | 🔒 | Génère un secret TOTP `pending` (mot de passe courant requis, plus le code actif en cas de rotation). Aucun service tiers. |
+| POST | `/api/auth/2fa/verify` | 🔒 | Promeut le secret `pending` et **retourne 10 codes de secours en clair une seule fois** (`{enabled:true, backupCodes:[…]}`, T-231) ; seules leurs empreintes bcrypt sont persistées. |
+| POST | `/api/auth/2fa/disable` | 🔒 | Mot de passe + **code TOTP ou code de secours** (`XXXXX-XXXXX`, T-231). Purge secret, secret `pending` et codes de secours. |
+
+`POST /api/auth/login` accepte `totpCode` sous deux formes depuis T-231 : six chiffres (TOTP) ou un
+code de secours à usage unique (consommé en base, un code déjà utilisé répond `401` avec un message
+dédié). Un compte **suspendu** répond `401` avec le motif de suspension ; un compte **supprimé**
+(anonymisé) répond `401` « Ce compte a été supprimé. Il n'est pas réactivable. » (T-230).
 
 ## Properties
 
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
 | GET | `/api/properties` | 🔓 | Liste paginée (`limit`, `offset`) des properties `active`. Filtres : `city`, `country`, `type`, `minRating`, `search` (ilike sur name/city/description), et post-filtrage `minPrice`/`maxPrice` sur le `min(basePrice)` des rooms. Trié par `averageRating desc`. ⚠️ N+1 sur les rooms. |
-| POST | `/api/properties` | 👤 `host`, `admin` | Crée une property. Génère un slug unique. Admin → `active`, host → `pending`. |
+| POST | `/api/properties` | 👤 `host`, `admin` | Crée une property. Génère un slug unique. Admin → `active`, host → `pending`. Accepte `checkInFrom`/`checkInUntil`/`checkOutUntil` (`HH:MM`, T-227) et `timezone` (IANA vérifié). Fenêtre d'arrivée vide (`début = fin`) → `400`. Les labels (`isEcoCertified`/`isBestrewards`/`isPreferred`) sont **réservés à l'admin** → `403` (T-228). |
 | GET | `/api/properties/[id]` | 🔓 | Détail (avec rooms et reviews). |
-| PATCH | `/api/properties/[id]` | 👤 propriétaire ou `admin` | Mise à jour partielle. |
+| PATCH / PUT | `/api/properties/[id]` | 👤 propriétaire ou `admin` | Mise à jour partielle (le PUT partage le même schéma). Horaires/fuseau comme POST ; la fenêtre d'arrivée est validée sur **l'état résultant** de la fusion (T-227). Labels et `status` → `403` hors admin (T-228). |
 | DELETE | `/api/properties/[id]` | 👤 propriétaire ou `admin` | Suppression (soft/hard selon impl.). |
 
 ## Rooms
@@ -109,6 +117,19 @@ Authentification :
   - Lecture liste → `200 {properties: [...]}` / `{bookings: [...]}` etc.
 - **Filtrage par rôle** : dans les listes, on filtre **au niveau du WHERE SQL**
   (pas après), sauf `GET /api/properties` qui post-filtre `minPrice/maxPrice`.
+
+## Utilisateurs (T-230 / T-231, additives)
+
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| DELETE | `/api/users/me` | 🔒 | Suppression définitive : anonymisation **transactionnelle** (`src/lib/account-anonymization.ts`, T-242) — e-mail haché, nom effacé, 2FA et codes de secours purgés, `bookings.guest_*`, `email_outbox.to` et `audit_log.metadata.targetEmail` nettoyés, sessions supprimées. Les agrégats comptables (référence, dates, montants, commission) restent intacts. |
+| PATCH | `/api/users/[id]/suspend` | 🔒 `admin` | `{suspended:true, reason?}` → `suspendedAt` + révocation des sessions ; `{suspended:false}` → réactivation. **Un compte supprimé (anonymisé) répond `409`** dans les deux sens (T-230) : suspension et suppression ne partagent plus `deleted_at`. |
+| POST | `/api/users/[id]/two-factor/reset` | 🔒 `admin` | Dernier recours support (T-231) : purge la 2FA (secret, `pending`, codes de secours), révoque les sessions, trace `user.2fa.reset` et envoie un e-mail d'information. `400` si la 2FA n'est pas active, `409` sur compte supprimé. |
+
+`PATCH /api/users/me` valide `timezone` (fuseau IANA reconnu, sinon `400`).
+
+Les actions bulk `suspend`/`reactivate` de `/api/admin/bulk` suivent les mêmes règles (T-230) :
+`reactivate` sur un compte anonymisé est **ignoré avec motif** et compté en `skipped`.
 
 ## Extensions T-217 (additives)
 

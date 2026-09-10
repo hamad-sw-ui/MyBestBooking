@@ -4334,6 +4334,28 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   d'implémentation T-221/T-222 reste en cours dans l'arbre de travail) ; les constats alimentent
   T-232 → T-241 au BACKLOG.
 
+## 2026-09-10 — Implémentation des remarques d'audit (T-221 → T-231, T-242 → T-244)
+
+- **Livré** : les 11 constats de l'audit n°2 (A1→A11) et les 3 constats de
+  l'audit n°4 (N1→N3). A1 échéance des demandes · A2 séjours échus non réglés ·
+  A3 interrupteurs d'e-mails · A4 parrainage réglable · A5 notifications d'avis ·
+  A6 édition complète de chambre · A7 horaires d'arrivée/départ + fuseau
+  (validés, fenêtre non vide, PUT partiel validé sur l'état résultant) ·
+  A8 labels/badges réservés à l'admin (PUT **et** POST) · A9 libellé du fil par
+  acteur + masquage admin non hôte · A10 `suspended_at` distinct de `deleted_at`
+  (migration `0021`, refus `409` de réactivation d'un compte anonymisé) ·
+  A11 codes de secours 2FA hachés à usage unique + reset support tracé
+  `user.2fa.reset` · N1 anonymisation transactionnelle complète · N2 purge
+  technique en cron (sessions > 7 j, outbox livrée > 90 j) · N3 « Reste
+  vendable » au calendrier hôte (`bookedCounts` additif).
+- **Preuves** : `npm run typecheck` 0 · `npm run lint` 0 · **vitest 691/691**
+  (117 fichiers, +39 depuis 652) · `npm run ci` verte · `ai:check` · runtime réel
+  (parcours 2FA complet, non-réutilisation d'un code de secours, suspension /
+  réactivation / 409 sur compte anonymisé, horaires et fuseau persistés, labels
+  `403` hôte / `200` admin, page calendrier « reste 2 (1 réservé) »).
+- **Base** : remise à l'état seed exact (8 users / 8 properties / 31 bookings /
+  22 avis) ; sondes et comptes de test supprimés.
+
 ## 2026-09-10 — Audit runtime n°4 (analyse seule) : cloisonnement, cycle de vie, stock, dates
 
 - **Livrable** : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie

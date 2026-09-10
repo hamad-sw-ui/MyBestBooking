@@ -7,6 +7,12 @@
 
 - Schéma Drizzle : `src/db/schema.ts`; migrations SQL additives `0000` à
   `0013_orchestration-resilience.sql`.
+- Dernière migration : `0021_user_suspension_and_backup_codes.sql` (T-230/T-231,
+  2026-09-10) — additive : `users.suspended_at` + `users.suspended_reason`
+  (suspension **distincte** de `deleted_at`, qui reste la marque de suppression),
+  migration des suspensions existantes (`deleted_at` renseigné sans e-mail
+  anonymisé → devient `suspended_at`), `users.two_factor_backup_codes` (jsonb,
+  empreintes bcrypt `[{hash, usedAt}]`, jamais de code en clair).
 - T-107 ajoute `bookings.benefits_released_at`,
   `email_outbox.provider_message_id` et remplace les FK `review_votes` par
   `ON DELETE CASCADE`. La migration `0014` ajoute
@@ -16,6 +22,11 @@
   remboursement et libération d’avantages restent persistés/rejouables.
 - Toute migration future doit rester additive, être appliquée sur une chaîne
   fraîche et vérifier les contraintes/FK avec PostgreSQL réel.
+- Rétention technique (T-243, `src/lib/technical-retention.ts`) : les sessions
+  expirées depuis plus de **7 jours** et les lignes `email_outbox` `sent`/`failed`
+  de plus de **90 jours** sont purgées en fin de cron ; `audit_log` n'est jamais
+  purgé (seule une mesure `auditRows`/`oldestAuditAt` est remontée). Les lignes
+  `pending`/`sending` sont toujours conservées.
 
 
 | Élément | Valeur |

@@ -5,6 +5,44 @@ en haut). Aucun format imposé — quelques lignes suffisent : ce qu'on a fait,
 ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 
 ---
+## 2026-09-10 — T-221 → T-231, T-242 → T-244 : mise en œuvre des remarques d'audit
+
+**Fait.** Les onze constats A1→A11 (audit n°2) et les trois constats N1→N3
+(audit n°4) sont implémentés et validés. Ordre suivi : A1+A2 (échéance des
+demandes, séjours échus non réglés) → A6+A7+A8 (édition de chambre, horaires
+d'arrivée et fuseau, labels administrables) → A3+A4 (interrupteurs d'e-mails,
+parrainage réglable) → A5+A9+A10+A11 (avis notifiés, libellé du fil par acteur,
+suspension distincte de la suppression, codes de secours 2FA) →
+T-242+T-243+T-244 (anonymisation complète, purge technique, stock vendable).
+
+**Appris.**
+1. Un état métier ne doit pas partager sa colonne avec un autre : suspension et
+   suppression écrivaient toutes deux `deleted_at`, si bien qu'un compte
+   anonymisé affichait « Suspendu » avec un bouton « Réactiver » — et que la
+   réactivation le faisait réapparaître sous `deleted-…@anonymized.local`.
+   Séparer `suspended_at` a rendu les deux messages de connexion exacts (motif de
+   suspension vs compte supprimé irréversible).
+2. Une échappatoire de sécurité doit être aussi testée que le verrou : les codes
+   de secours 2FA sont vérifiés en bout en bout (activation → connexion avec un
+   code → refus du même code réutilisé → désactivation par code de secours), car
+   un code réutilisable serait une régression silencieuse du second facteur.
+3. Un formulaire qui accepte une valeur sans la valider produit une
+   configuration incohérente : `14:00 → 14:00` (fenêtre d'arrivée vide) passait en
+   `200`. La validation se fait désormais sur l'**état résultant** d'une mise à
+   jour partielle, sans bloquer les fenêtres à cheval sur minuit (18:00 → 02:00).
+
+**Non retenu.** Bloquer les fenêtres d'arrivée traversant minuit : c'est une
+pratique hôtelière courante, seule la fenêtre vide est refusée. Également écarté
+d'ignorer silencieusement les labels envoyés par un hôte en POST : le refus
+explicite (`403`) évite de laisser croire que le badge a été appliqué.
+
+**Preuves.** `npm run ci` verte · **vitest 691 tests / 117 fichiers** (0 échec) ·
+`ai:check` · runtime serveur réel (parcours 2FA complet, suspension/réactivation
+puis refus 409, horaires/fuseau persistés, labels 403, purge technique, stock
+« reste X »). Base remise à l'état seed (8 users / 8 props / 31 bookings /
+22 avis).
+
+---
 ## 2026-09-10 — T-217 correctifs P1–P10 (audit runtime)
 
 ### Complément T-217 (même journée)

@@ -430,46 +430,54 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
 ### Audit T-221 (2026-09-10) — fonctionnalités inachevées ou mal pensées
 
 Analyse complète : `docs/analyse_2026-09-10_audit_runtime_inacheves.md` (11 constats A1→A11,
-6 observations O1→O6). Aucune ligne de code produit modifiée par l'analyse. Ordre d'implémentation
-proposé : A1+A2 → A6+A7+A8 → A3+A4 → A5+A9+A10+A11.
+6 observations O1→O6). Ordre d'implémentation retenu : A1+A2 → A6+A7+A8 → A3+A4 → A5+A9+A10+A11.
 
-- 🔴 **T-221 (M/P1)** — *A1 — échéance des demandes de réservation.* `requestExpiresAt` (TTL 24 h)
+> **Les onze constats A1→A11 sont livrés et validés (2026-09-10)** — preuve :
+> `npm run ci` verte (typecheck 0 · lint 0 · i18n 0 · **vitest 691 tests** · build ·
+> smoke) et vérifications runtime sur serveur réel (échéance affichée, expiration sans
+> e-mail, interrupteurs d'e-mails, parrainage, avis notifiés, édition de chambre,
+> horaires/fuseau persistés et validés, labels refusés à l'hôte en PUT **et** POST,
+> libellé du fil par acteur, `suspended_at` distinct de `deleted_at`, codes de secours
+> 2FA testés en bout en bout : activation → connexion → non-réutilisation →
+> désactivation).
+
+- ✅ ~~**T-221 (M/P1)** — *A1 — échéance des demandes de réservation.* `requestExpiresAt` (TTL 24 h)
   n'est affiché nulle part et l'expiration (`expireManualBookingRequests`) n'envoie aucun e-mail ;
   `stats.bookings.pending` est calculé mais jamais rendu sur `/dashboard`. Livrable : échéance sur
   `/mes-reservations` + `/dashboard/bookings`, carte « Demandes à traiter » (hôte/admin), e-mail
   d'expiration idempotent. Preuve : sonde `MBB-2026-1PRF1S` (`requestExpiresAt` renvoyé, 0 mention
   dans la page).
-- 🔴 **T-222 (M/P1)** — *A2 — séjours échus non réglés.* `completed` est refusé sans
+- ✅ ~~**T-222 (M/P1)** — *A2 — séjours échus non réglés.* `completed` est refusé sans
   `paymentStatus = paid` ; la constatation n'existe que sur la fiche ; aucun filtre/colonne
   « Règlement », aucune relance. Livrable : vue « À constater » (départ ≤ aujourd'hui),
   colonne Règlement, action de ligne, rappel hôte J+1, compteur admin.
-- 🟠 **T-223 (S/P2)** — *A3 — interrupteurs d'e-mails sans UI.* `notificationsSchema` (7 booléens,
+- ✅ ~~**T-223 (S/P2)** — *A3 — interrupteurs d'e-mails sans UI.* `notificationsSchema` (7 booléens,
   défauts `true`) est lu par 5 modules mais absent de `settings-panel.tsx` (0 occurrence) ;
   `newsletter` n'est lu nulle part. Livrable : section « Notifications » ; trancher le sort de
   `newsletter`.
-- 🟠 **T-224 (S/P2)** — *A4 — parrainage non réglable.* `bestrewards.referral`
+- ✅ ~~**T-224 (S/P2)** — *A4 — parrainage non réglable.* `bestrewards.referral`
   (`enabled`/`referrerAmount`/`refereeAmount`) n'a pas de champs dans la section BestRewards alors
   que le programme est affiché dans `/mon-compte`.
-- 🟠 **T-225 (M/P2)** — *A5 — avis sans notification.* Aucun `enqueueEmail` dans
+- ✅ ~~**T-225 (M/P2)** — *A5 — avis sans notification.* Aucun `enqueueEmail` dans
   `src/app/api/reviews/**` : l'hôte ignore la publication, l'auteur ignore l'issue de la
   modération. Livrable : `review-published` / `review-moderated`, optionnels (liés à T-223).
-- 🟠 **T-226 (M/P2)** — *A6 — édition de chambre incomplète.* Le `PUT` accepte description, type,
+- ✅ ~~**T-226 (M/P2)** — *A6 — édition de chambre incomplète.* Le `PUT` accepte description, type,
   lits, surface, devise, équipements, photos ; `RoomEditSection` n'en envoie que 7 champs, figés
   après création.
-- 🟠 **T-227 (S/P2)** — *A7 — horaires arrivée/départ.* `check_in_from` / `check_in_until` /
+- ✅ ~~**T-227 (S/P2)** — *A7 — horaires arrivée/départ.* `check_in_from` / `check_in_until` /
   `check_out_until` sont affichés sur la fiche (repli 14:00/23:00/11:00) mais absents des API et
   des formulaires. Livrable : acceptation POST/PUT + champs d'édition (+ `timezone`).
-- 🟠 **T-228 (M/P2)** — *A8 — labels non administrables.* `isEcoCertified` n'est écrit nulle part
+- ✅ ~~**T-228 (M/P2)** — *A8 — labels non administrables.* `isEcoCertified` n'est écrit nulle part
   (badge inatteignable) ; `isBestrewards`/`isPreferred` ne sont écrits que par le seed
   aléatoirement, alors que `isBestrewards` majore la remise BestRewards de 2 points.
-- 🟡 **T-229 (S/P3)** — *A9 — fil depuis le back-office.* Libellé `book.writeHost` sur la fiche
+- ✅ ~~**T-229 (S/P3)** — *A9 — fil depuis le back-office.* Libellé `book.writeHost` sur la fiche
   réservation hôte/admin (il écrit au voyageur) ; l'admin reçoit **403** (prouvé : admin 403 /
   hôte 201 / voyageur 201). Livrable : libellé par acteur + décision explicite sur l'admin.
-- 🟠 **T-230 (M/P2)** — *A10 — suspension vs suppression.* Les deux écrivent `deleted_at` ; l'UI
+- ✅ ~~**T-230 (M/P2)** — *A10 — suspension vs suppression.* Les deux écrivent `deleted_at` ; l'UI
   admin affiche « Suspendu » + « Réactiver » sur un compte anonymisé (sonde : réactivation 200,
   email `deleted-…@anonymized.local` conservé). Livrable : `suspended_at` (+ raison), UI à deux
   états, refus 409 de réactivation d'un compte anonymisé, migration des suspensions existantes.
-- 🔴 **T-231 (M/P1)** — *A11 — 2FA sans secours.* Désactivation = mot de passe + code TOTP ; aucun
+- ✅ ~~**T-231 (M/P1)** — *A11 — 2FA sans secours.* Désactivation = mot de passe + code TOTP ; aucun
   code de secours, aucun reset support (le seul reset est l'anonymisation). Livrable : codes de
   secours hachés à usage unique + action admin tracée `user.2fa.reset` (+ révocation de sessions,
   e-mail d'information).
@@ -492,20 +500,20 @@ Analyse : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie
 remise à l'état seed. Trois constats nouveaux ; les autres confirment avec preuves chiffrées les
 tâches T-232 → T-241 (renvois en fin de section).
 
-- 🔴 **T-242 (M/P1)** — *N1 — anonymisation partielle à la suppression de compte.* `DELETE
+- ✅ ~~**T-242 (M/P1)** — *N1 — anonymisation partielle à la suppression de compte.* `DELETE
   /api/users/me` anonymise `users` (e-mail haché, nom effacé, 2FA purgée, sessions supprimées)
   mais conserve l'identité dans `bookings.guest_email/guest_first_name/guest_last_name`,
   `email_outbox.to` et `audit_log.metadata.targetEmail` (vérifié : `targetEmail` en clair dans la
   trace de suspension d'un compte supprimé). Livrable : UPDATE ciblés dans la transaction
   d'anonymisation (agrégats comptables intacts), + test « aucune occurrence de l'adresse d'origine
   après DELETE ». Recoupe T-230 (séparation `suspended_at` / `deleted_at`).
-- 🟠 **T-243 (S/P2)** — *N2 — aucune purge des données techniques.* `sessions` expirées,
+- ✅ ~~**T-243 (S/P2)** — *N2 — aucune purge des données techniques.* `sessions` expirées,
   `email_outbox` livrés et `audit_log` ne sont jamais purgés (27 sessions en base après campagne
   de sondes, 0 créée par le seed ; six `delete(sessions)` tous événementiels). Livrable :
   `purgeTechnicalData()` en fin de cron (sessions expirées > 7 j, outbox > 90 j hors `pending`,
   rétention d'audit documentée) + compteurs `sessionsPurged` / `emailsPurged` dans la réponse cron.
   Prépare O3 (vue admin de l'outbox).
-- 🟠 **T-244 (S/P2)** — *N3 — stock affiché ≠ stock vendable.* `GET /api/rooms/[id]/availability`
+- ✅ ~~**T-244 (S/P2)** — *N3 — stock affiché ≠ stock vendable.* `GET /api/rooms/[id]/availability`
   renvoie le stock **déclaré** sans soustraire les séjours (prouvé : 24–26/09 « 2 disponibles »
   pour une chambre à 2 unités dont 1 est réservée), alors que le tunnel applique bien les
   chevauchements. Livrable : champ additif `bookedCount` + affichage « reste X / déclaré Y » dans
