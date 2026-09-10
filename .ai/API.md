@@ -53,9 +53,8 @@ Authentification :
 | POST | `/api/bookings` | 🔒 ou 👤 invité | Crée le hold après validation transactionnelle : dates, capacité adultes/enfants, stock par nuit, stop-sell et `minStay`. Prix journalier, TVA/réductions/wallet sont recalculés serveur. L’intent PSP est créé **après** commit avec clé d’idempotence ; le cron reprend un intent non rattaché avant TTL. Réponse `payment` distingue mock/wallet confirmés et Stripe `pending`. |
 | GET | `/api/bookings/[id]` | 🔒 propriétaire, host de la property, ou admin | Détail booking, y compris états paiement/remboursement. |
 | POST | `/api/bookings/[id]/payment` | 🔒 propriétaire/admin | Reprend le même hold/intention PSP avec la clé existante; ne crée pas une seconde réservation. |
-| PUT | `/api/bookings/[id]` | 🔒 même règle | Voyageur : annulation uniquement. Hôte/admin : clôture contrôlée après départ. Annulation calcule frais et remboursement provider idempotent. |
-
-## Reviews
+| PUT | `/api/bookings/[id]` | 🔒 même règle | Voyageur : annulation uniquement. Hôte/admin : clôture contrôlée après départ (`completed` refusé en 409 tant que `paymentStatus !== "paid"`), `no_show` après le départ, confirmation manuelle d'une demande `pending`. Annulation calcule frais et remboursement provider idempotent. T-216 : chaque transition réellement appliquée écrit une entrée `booking.status.update` dans `audit_log` (y compris l'annulation, qui passe par `cancelBooking`). Aucun nouvel endpoint : c'est ce contrat qui alimente la colonne Statut de `/dashboard/bookings`. |
+| PUT | `/api/bookings/[id]` (body `markPaidOffline`) | 🔒 hôte du bien ou admin | Constate le règlement sur place : `paymentStatus="paid"`, `paymentMethodOffline=true`, TTL libéré. Idempotent ; 409 si la réservation est annulée/no-show. |
 
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
@@ -74,6 +73,14 @@ Authentification :
 | GET/POST | `/api/messages` | 🔒 participant | Liste ou envoie les messages ; les nouvelles pièces jointes utilisent `attachmentKey` privé. |
 | GET | `/api/messages/attachments/[id]` | 🔒 participant | Sert une pièce jointe privée après vérification conversation. |
 | GET | `/api/cron/price-alerts` | 🔒 cron | Évalue alertes prix (quote de séjour si dates/voyageurs fournis, sinon prix de base), clôture séjours payés, reprend intents sans rattachement, expire holds, compense paiements tardifs et traite outbox/uploads ; `CRON_SECRET` obligatoire en production. |
+
+## Validation et commission des hôtes
+
+| Méthode | Route | Auth | Ce qu'elle fait |
+|---|---|---|---|
+| GET | `/api/admin/hosts` | 👤 admin | Liste les comptes `host` (filtres `status=pending\|approved\|rejected`, `q` sur l'email) avec `approvalStatus`, `commissionRate`, `propertyCount` (nombre réel d’hébergements — la sous-requête corrélée doit rester **qualifiée** : `${users.id}` seul se résolvait sur `properties.id` et renvoyait 0, BUG-050). |
+| GET | `/api/admin/hosts/[id]` | 👤 admin | T-215 — état de commission d'un hôte et **impact** d'une modification, en lecture seule : `hostRate`, `globalRate`, `effectiveRate`, `inheritCount` (hébergements `commission_rate IS NULL`, donc suivant le taux hôte), `explicitCount`, détail par hébergement. |
+| PATCH | `/api/admin/hosts/[id]` | 👤 admin | `action:"approve"` (avec `commissionRate` optionnel) / `"reject"` : contrat T-202 inchangé. `action:"updateCommission"` (T-215) : fixe `users.commissionRate` quel que soit l'état d'approbation, `null` = retour à l'héritage du taux global ; `applyTo:"inherited"` ne touche que les hébergements sans taux explicite, `applyTo:"listed"` + `propertyIds` (≤ 100) uniquement ceux transmis — **jamais** de propagation implicite ni de recalcul des réservations existantes (`bookings.commissionRate/Amount/netToHost` sont des snapshots de vente, ADR-009). Audit : `host.commission.update` (+ `property.commission.update` par hébergement propagé). |
 
 ## Administration des providers
 

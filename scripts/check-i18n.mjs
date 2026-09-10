@@ -68,7 +68,13 @@ function* walk(dir) {
     if (EXCLUDED_DIRS.has(entry)) continue;
     if (statSync(full).isDirectory()) {
       yield* walk(full);
-    } else if (full.endsWith(".tsx") || (full.endsWith(".ts") && !full.endsWith(".test.ts"))) {
+    } else if (
+      (full.endsWith(".tsx") && !full.endsWith(".test.tsx")) ||
+      (full.endsWith(".ts") && !full.endsWith(".test.ts"))
+    ) {
+      // Les tests (`.test.ts` / `.test.tsx`) sortent du périmètre : ils citent
+      // légitimement les libellés attendus (« Confirmée », « Hérite : 15 % »)
+      // et ne sont pas de la surface UI expédiée.
       yield full;
     }
   }

@@ -25,6 +25,11 @@ Voir `CURRENT_TASK.md` pour la tâche active.
 - 🟢 **T-213 (S/P3)** — Compléter les preuves HTTP par un pack Playwright navigateur quand Chromium est disponible : accueil → recherche, recherche → fiche, fiche → demande, hôte confirme/refuse, messagerie, dashboard mobile.
 - 🟠 **T-214 (S/P2)** — Préparer un environnement staging avec providers réels isolés (Resend, stockage objet, webhooks signés) pour valider les intégrations externes sans réactiver de paiement voyageur plateforme.
 
+### Suite de l’analyse produit du 2026-09-10 (commission hôte, avis, statuts)
+
+- ✅ ~~**T-215 (L/P2)** — Rendre la commission d'un hôte éditable par l'admin pour **tout** statut d'approbation (et non seulement à l'approbation), avec impact annoncé et propagation explicite aux hébergements.~~ **Livré 2026-09-10** : action `updateCommission` de `PATCH /api/admin/hosts/[id]` + `GET` d'aperçu + éditeur sur `/dashboard/users` ; corrige au passage `propertyCount` (BUG-050). Preuve : 642 tests verts, runtime documenté dans `REPORTS/validation_T215_T216_2026-09-10_commission_hote_statuts_reservation.md`.
+- ✅ ~~**T-216 (L/P2)** — Permettre à l'hôte/admin de gérer le statut d'une réservation **depuis la liste** `/dashboard/bookings` (elle n'offrait qu'un badge), en réutilisant la FSM existante.~~ **Livré 2026-09-10** : `BookingStatusSelect` + `availableTransitions()` dérivé de `transitionError()`, audit `booking.status.update`, aucune nouvelle route. Même rapport de validation.
+
 ### Remédiations issues de l’audit post T-107 (à arbitrer avant implémentation)
 
 - 🔴 **T-108 (C)** — frontières publiques/RBAC, DTO RSC de recherche,

@@ -1,40 +1,60 @@
 # Tâche courante
 
-- **ID** : T-211
-- **Titre** : Wrapper `site:audit:prod` pour audit de site en serveur production
+- **ID** : T-215 + T-216
+- **Titre** : Commission hôte éditable pour tout statut (Q1 §1.5) + gestion manuelle des statuts de réservation dans la liste (Q3 §3.3)
 - **Statut** : CORRIGÉ (VALIDÉ)
-- **Niveau** : **L** (outillage local, aucune modification produit)
+- **Niveau** : **L** (deux évolutions produit ciblées + correctif BUG-050)
+- **Analyse source** : `docs/analyse_2026-09-10_commission_hote_avis_statuts_reservation.md` (verdicts Q1 « OUI partiel », Q2 « OUI complet » → rien à faire, Q3 « OUI partiel »)
 
 ## Contexte
 
-T-210 a validé le site audit sur `next start`, mais a observé des faux rouges `EXC fetch failed` lorsque le long crawl multi-profils était lancé contre `next dev`/Turbopack. T-211 outille désormais ce mode de validation fiable.
+L'analyse produit du 2026-09-10 a établi que :
+
+1. la commission d'un hôte n'était saisissable qu'**au moment de l'approbation**
+   (`HostApproveActions`) : un hôte déjà approuvé n'avait aucune zone d'édition,
+   et `GET /api/admin/hosts` renvoyait un `propertyCount` toujours nul ;
+2. la gestion des statuts de réservation n'existait que sur la page **détail** ;
+   la liste `/dashboard/bookings` n'affichait qu'un badge.
 
 ## Livré
 
-1. Nouvelle commande `npm run site:audit:prod`.
-2. Wrapper `scripts/site-audit-prod.mjs` :
-   - exécute `npx next build` par défaut ;
-   - lance `npx next start -H 0.0.0.0 -p <port>` ;
-   - attend `/api/health` ;
-   - exécute `node scripts/site-audit.mjs <baseUrl>` ;
-   - arrête le groupe de processus du serveur en `finally`.
-3. Port configurable par `SITE_AUDIT_PROD_PORT` ou `--port`; défaut `3100` avec recherche de port libre si non explicite.
-4. Option `--skip-build` pour réutiliser un build existant.
-5. `npm run site:audit` reste inchangé pour auditer une instance déjà servie.
+### T-215 — commission hôte
+
+1. Correctif **BUG-050** : sous-requête corrélée `propertyCount` qualifiée
+   (`"users"."id"`).
+2. `GET /api/admin/hosts/[id]` : aperçu lecture seule (`host`, `globalRate`,
+   `effectiveRate`, `inheritCount`, `explicitCount`, `propertyCount`,
+   `properties[]`).
+3. `PATCH /api/admin/hosts/[id]` : action additive `updateCommission`
+   (`commissionRate` 0–100 ou `null` = héritage ; `applyTo: inherited|listed` +
+   `propertyIds` ≤ 100) ; `approve`/`reject` T-202 inchangés ; propagation jamais
+   implicite ; snapshots de vente intacts ; audits `host.commission.update` et
+   `property.commission.update`.
+4. `HostCommissionEditor` sur `/dashboard/users` (tout statut d'approbation,
+   une seule zone de saisie par hôte) + répartition héritage/explicite calculée
+   dans `users/page.tsx`.
+
+### T-216 — statuts de réservation dans la liste
+
+1. `availableTransitions()` (pure) : transitions proposables dérivées de
+   `transitionError()` + garde paiement.
+2. `BookingStatusSelect` dans la colonne Statut de `/dashboard/bookings`
+   (hôte propriétaire et admin), badge historique conservé sinon.
+3. Audit `booking.status.update` sur les transitions **et** l'annulation
+   (`cancelBooking`). `PUT /api/bookings/[id]` reste l'unique source de vérité.
 
 ## Validation
 
-- `node --check scripts/site-audit-prod.mjs` : ✅ OK.
-- `npm run site:audit:prod` : ✅ build 65 pages, serveur production `http://127.0.0.1:3100`, crawl 247 pages / 0 issue, serveur arrêté.
-- `npm run lint` : ✅ 0 erreur.
 - `npm run typecheck` : ✅ 0 erreur.
-- `npm run i18n:check` : ✅ 0 candidat.
-- `npm run test` : ✅ 100 fichiers passés / 2 skipped ; 577 tests passés / 17 skipped.
-- `npm run ai:check` : ✅ 20 OK / 0 warn / 0 fail.
-- `git diff --check` : ✅ OK.
-- Vérification process final : ✅ aucun `next dev/start/next-server` persistant.
+- `npm run lint` : ✅ 0 erreur / 0 warning.
+- `npm run i18n:check` : ✅ 0 candidat (catalogue FR = EN = 1532 clés).
+- `npx next build` : ✅ 65 pages.
+- `npx vitest run` : ✅ **107 fichiers / 642 tests passés, 0 échec**.
+- Runtime API + SSR : ✅ voir `REPORTS/validation_T215_T216_2026-09-10_commission_hote_statuts_reservation.md`.
+- `npm run ai:check` : ✅ 19 OK / 1 warn (préexistant) / 0 fail.
+- `npm run ci` : ✅ chaîne complète verte (smoke 95/95).
 
 ## Rapports
 
-- `.ai/REPORTS/analyse_impact_T211_2026-09-10_site_audit_prod.md`
-- `.ai/REPORTS/validation_T211_2026-09-10_site_audit_prod.md`
+- `docs/analyse_2026-09-10_commission_hote_avis_statuts_reservation.md` (analyse d'origine)
+- `.ai/REPORTS/validation_T215_T216_2026-09-10_commission_hote_statuts_reservation.md`

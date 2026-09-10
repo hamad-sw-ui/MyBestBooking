@@ -353,3 +353,16 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
 - Le formulaire hero de l'accueil ne demande plus que la destination et mène toujours vers `/recherche`.
 - Les dates et voyageurs restent disponibles sur `/recherche`, la fiche hébergement et `/reservation`, où ils sont nécessaires à la disponibilité et au devis.
 - Audit runtime post T-209 : aucun nouveau défaut applicatif bloquant détecté ; sujets résiduels proposés = robustesse `site:audit` en mode dev, carte visuelle, validation providers externes, E2E navigateur.
+
+## T-215 — Commission hôte éditable pour tout statut d'approbation (2026-09-10)
+
+- L'admin fixe le taux d'un hôte depuis `/dashboard/users` quel que soit son statut d'approbation ; champ vide = héritage du taux global, impact (hébergements héritant / taux explicite) annoncé avant l'enregistrement.
+- La propagation aux hébergements est **explicite** : `inherited` (ceux sans taux propre) ou `listed` (sélection), jamais implicite ; les réservations déjà vendues ne sont pas recalculées.
+- `GET /api/admin/hosts/[id]` expose l'état de commission en lecture seule ; `PATCH … action:"updateCommission"` journalise `host.commission.update` / `property.commission.update`.
+- Corrige BUG-050 : `propertyCount` de `GET /api/admin/hosts` renvoyait toujours 0.
+
+## T-216 — Gestion manuelle des statuts de réservation dans la liste (2026-09-10)
+
+- La colonne Statut de `/dashboard/bookings` permet à l'hôte propriétaire et à l'admin de faire évoluer une réservation (confirmer une demande, annuler, clôturer en terminé/no-show après départ) sans quitter la liste.
+- Les actions proposées sont exactement celles que le serveur accepterait (`availableTransitions()` dérivé de `transitionError()` + garde paiement) : pas de bouton menant à un 400/409 ; nouvel audit `booking.status.update` (transitions et annulation).
+- Aucune nouvelle route ni règle métier : `PUT /api/bookings/[id]` reste l'unique source de vérité (verrou transactionnel, e-mails, fidélité, remboursements).

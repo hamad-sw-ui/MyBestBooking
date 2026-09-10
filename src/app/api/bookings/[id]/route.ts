@@ -33,6 +33,33 @@ function actorFor(role: string, isOwner: boolean): BookingActor {
   return isOwner ? "customer" : "system";
 }
 
+/**
+ * T-216 — trace une transition de statut de réservation.
+ * Best-effort (`recordAudit` ne throw jamais) et uniquement si le statut a
+ * réellement changé : aucune écriture parasite sur une requête sans effet.
+ */
+async function auditStatusChange(input: {
+  actor: { id: string; email: string | null };
+  bookingId: string;
+  from: string;
+  to: string;
+  actorRole: BookingActor;
+}): Promise<void> {
+  if (input.from === input.to) return;
+  await recordAudit({
+    actorId: input.actor.id,
+    actorEmail: input.actor.email,
+    action: AUDIT_ACTIONS.bookingStatusUpdate,
+    entityType: "booking",
+    entityId: input.bookingId,
+    metadata: {
+      previousStatus: input.from,
+      newStatus: input.to,
+      actor: input.actorRole,
+    },
+  });
+}
+
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -112,6 +139,15 @@ export async function PUT(
         const actor = actorFor(user.role, isOwner);
         const outcome = await cancelBooking(id, data.cancellationReason?.trim() || "Annulation demandée", actor);
         await notifyBookingCancellation(outcome, actor);
+        // T-216 : l'annulation sort du flux principal (commande métier unique
+        // `cancelBooking`) : on la trace ici pour ne pas perdre la transition.
+        await auditStatusChange({
+          actor: { id: user.id, email: user.email },
+          bookingId: id,
+          from: existing.booking.status,
+          to: outcome.booking.status,
+          actorRole: actor,
+        });
         return NextResponse.json({ booking: outcome.booking });
       } catch (cancellationError) {
         if (cancellationError instanceof BookingCancellationError) {
@@ -276,6 +312,17 @@ export async function PUT(
     if (data.status === "confirmed") {
       await sendBookingConfirmationIfNeeded(updatedBooking.id).catch((error) => {
         console.error("[bookings/[id]] confirmation mail failed:", error);
+      });
+    }
+
+    // T-216 : trace la transition réellement appliquée.
+    if (data.status) {
+      await auditStatusChange({
+        actor: { id: user.id, email: user.email },
+        bookingId: id,
+        from: existing.booking.status,
+        to: updatedBooking.status,
+        actorRole: actorFor(user.role, isOwner),
       });
     }
 

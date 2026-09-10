@@ -46,8 +46,12 @@ export async function GET(request: NextRequest) {
         commissionRate: users.commissionRate,
         createdAt: users.createdAt,
         // nb d'hébergements (pour savoir ce qui serait impacté par l'approbation)
+        // T-215 : la colonne doit être **qualifiée** (`"users"."id"`). Avec
+        // `${users.id}` seul, Drizzle insère `"id"` sans préfixe (requête
+        // mono-table) et la sous-requête résolvait alors `"id"` sur
+        // `properties.id` → `host_id = id` toujours faux → compteur à 0.
         propertyCount: sql<number>`(
-          SELECT count(*)::int FROM properties WHERE properties.host_id = ${users.id}
+          SELECT count(*)::int FROM properties WHERE properties.host_id = "users"."id"
         )`,
       })
       .from(users)

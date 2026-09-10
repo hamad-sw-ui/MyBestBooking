@@ -398,3 +398,14 @@ fournisseur de test dans l’environnement.
   faisait dépasser la colonne `sessions.token` (varchar(255)) → erreur
   `22001 value too long` à la connexion. ▶️ colonne passée en `text`
   (migration `drizzle/0016_sessions-token-text.sql`).
+
+- [x] **2026-09-10 — BUG-050** (L, T-215) : `GET /api/admin/hosts`
+  renvoyait **toujours `propertyCount: 0`**, y compris pour un hôte possédant
+  des hébergements. Cause : la sous-requête corrélée interpolait `${users.id}`
+  *sans qualification* ; Drizzle émettant `"id"` (requête mono-table), la
+  référence se résolvait dans la sous-requête sur `properties.id` →
+  `properties.host_id = properties.id`, condition jamais vraie. Conséquence
+  métier : l'admin approuvait (ou modifiait) un hôte en croyant qu'aucun
+  hébergement n'était concerné, à rebours de la promesse de la route.
+  ▶️ après : colonne qualifiée `"users"."id"` ; test d'intégration
+  `propertyCount === 1` sur l'hôte du bloc « gate de publication ».

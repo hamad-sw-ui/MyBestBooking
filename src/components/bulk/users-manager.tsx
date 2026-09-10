@@ -8,6 +8,7 @@ import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
 import { UserSuspendActions } from "@/components/admin/user-suspend-actions";
 import { HostApproveActions } from "@/components/admin/host-approve-actions";
+import { HostCommissionEditor } from "@/components/admin/host-commission-editor";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { countryLabel } from "@/lib/country-label";
 
@@ -27,6 +28,10 @@ export interface UserRow {
   // T-202 : validation hôte (approvalStatus + commission) — null pour non-hôtes.
   approvalStatus: string | null;
   commissionRate: string | null;
+  // T-215 : répartition des hébergements de l'hôte face au taux de commission
+  // (ceux qui héritent du taux hôte vs ceux qui portent un taux explicite).
+  inheritCount: number;
+  explicitCount: number;
 }
 
 
@@ -54,9 +59,11 @@ function fmt(d: string | null, locale: string): string {
 interface Props {
   users: UserRow[];
   currentUserId: string;
+  /** T-215 : taux global (`settings.billing.defaultCommissionRate`). */
+  globalCommissionRate: number;
 }
 
-export function UsersManager({ users, currentUserId }: Props) {
+export function UsersManager({ users, currentUserId, globalCommissionRate }: Props) {
   const t = useT();
   const locale = useUiLocale();
   const roleLabels: Record<string, string> = {
@@ -303,8 +310,20 @@ export function UsersManager({ users, currentUserId }: Props) {
                           {u.approvalStatus === "rejected" && (
                             <Badge variant="danger">{t("dash.hostRejected")}</Badge>
                           )}
-                          {u.commissionRate !== null && (
-                            <span className="text-xs text-gray-500">{u.commissionRate}%</span>
+                          {/* T-202 : à l'approbation, l'input commission vit dans
+                              <HostApproveActions> (statuts pending/rejected).
+                              T-215 : pour un hôte déjà approuvé, le taux
+                              s'édite via <HostCommissionEditor> — une seule
+                              source de saisie à l'écran. */}
+                          {(u.approvalStatus === "approved" || u.commissionRate !== null) && (
+                            <HostCommissionEditor
+                              userId={u.id}
+                              commissionRate={u.commissionRate}
+                              globalRate={globalCommissionRate}
+                              inheritCount={u.inheritCount}
+                              explicitCount={u.explicitCount}
+                              disabled={isSelf}
+                            />
                           )}
                           <HostApproveActions
                             userId={u.id}

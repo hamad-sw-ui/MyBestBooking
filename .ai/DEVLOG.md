@@ -292,3 +292,14 @@ Gates : `npm run typecheck` 0 · `npm run lint` 0 · `npm test` 455/455 (113 ski
 - Le port est configurable (`SITE_AUDIT_PROD_PORT`, `--port`) avec défaut 3100 et recherche automatique si le port par défaut est occupé ; `--skip-build` permet de réutiliser un build existant.
 
 **Validation.** `node --check scripts/site-audit-prod.mjs` OK · `npm run site:audit:prod` : build 65 pages, serveur `next start`, crawl 247 pages / 0 issue, serveur arrêté · `npm run lint` 0 · `npm run typecheck` 0 · `npm run i18n:check` 0 · `npm run test` 577 pass / 17 skip · `npm run ai:check` 20 OK / 0 warn / 0 fail · `git diff --check` OK.
+
+## 2026-09-10 — T-215/T-216 commission hôte éditable + statuts dans la liste
+
+**Fait.** Deux évolutions issues de l'analyse produit du 2026-09-10, plus un correctif réel.
+
+- **T-215** : l'admin édite le taux de commission d'un hôte **pour tout statut** depuis `/dashboard/users` (champ vide = héritage du taux global), avec impact affiché et propagation **explicite** aux hébergements (`inherited` / `listed`). `PATCH /api/admin/hosts/[id]` gagne l'action additive `updateCommission` et `GET` expose l'état en lecture seule. Corrige BUG-050 (`propertyCount` toujours nul).
+- **T-216** : la colonne Statut de `/dashboard/bookings` offre les transitions réellement acceptées par le serveur (confirmer une demande, annuler, clôturer après départ), avec confirmation et audit `booking.status.update`. `PUT /api/bookings/[id]` reste l'unique source de vérité.
+
+**Préservé.** Approbation hôte (T-202), paiement manuel et `markPaidOffline` (T-203), snapshots de commission des réservations vendues, bulk admin, FSM complète, i18n FR/EN (+16 clés = 1532), page détail réservation.
+
+**Validation.** `npm run typecheck` 0 · `npm run lint` 0 · `npm run i18n:check` 0 · `npx next build` 65 pages · `npx vitest run` 107 fichiers / 642 tests (0 échec) · runtime API : `propertyCount` 8, propagation `listed`/`inherited`/reset, erreurs 400/403/404, audits en base, `pending→confirmed` 200, clôtures 400/409/200, terminal 400 · `npm run ci` verte (smoke 95/95) · `ai:check` 19 OK.

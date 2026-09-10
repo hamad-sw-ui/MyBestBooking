@@ -68,6 +68,13 @@ export const AUDIT_ACTIONS = {
   hostReject: "host.reject",
   // T-203 — paiement sur place constaté par l'hôte/admin (paiement manuel)
   bookingPayOffline: "booking.pay.offline",
+  // T-215 — édition du taux de commission d'un hôte (indépendante de
+  // l'approbation) et propagation explicite aux hébergements.
+  hostCommissionUpdate: "host.commission.update",
+  propertyCommissionUpdate: "property.commission.update",
+  // T-216 — transition de statut d'une réservation (gestion manuelle
+  // hôte/admin depuis la liste ou la page détail).
+  bookingStatusUpdate: "booking.status.update",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

@@ -4238,3 +4238,27 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
 - **Portabilité** : port par défaut 3100 avec recherche de port libre si non explicite ; override via `SITE_AUDIT_PROD_PORT` ou `--port`; `--skip-build` disponible pour rejouer l'audit sur un build déjà présent.
 - **Non-régression** : `npm run site:audit` reste inchangé et dédié aux instances déjà servies ; aucune route, composant produit, logique paiement, réservation ou soft-delete rooms modifiés.
 - **Gates** : `node --check scripts/site-audit-prod.mjs` OK · `npm run site:audit:prod` build 65 pages + crawl 247 pages / 0 issue + cleanup OK · lint 0 · typecheck 0 · i18n 0 · vitest global 577 pass / 17 skip · ai:check 20 OK / 0 warn / 0 fail · git diff --check OK · aucun serveur Next persistant.
+
+## T-215 — 2026-09-10 (commission hôte éditable, VALIDÉ)
+
+- **Origine** : analyse produit `docs/analyse_2026-09-10_commission_hote_avis_statuts_reservation.md` (§1.5, verdict Q1 « OUI partiel »).
+- **API** : `GET /api/admin/hosts/[id]` (aperçu lecture seule : taux hôte/global/effectif, héritage, explicites, détail par hébergement) ; `PATCH` action additive `updateCommission` (`commissionRate` 0–100 ou `null` = héritage, `applyTo: inherited|listed` + `propertyIds` ≤ 100). Propagation jamais implicite ; snapshots de vente (`bookings.commission*`) intacts ; audit `host.commission.update` + `property.commission.update`.
+- **Bug corrigé au passage** : BUG-050 — `propertyCount` de `GET /api/admin/hosts` était toujours 0 (sous-requête corrélée non qualifiée, `"id"` résolu sur `properties.id`).
+- **UI** : `HostCommissionEditor` sur `/dashboard/users` (tout statut d'approbation ; une seule zone de saisie avec `HostApproveActions`), impact « Héritent : N · Taux explicite : M », case de propagation décochée par défaut.
+- **Gates** : typecheck 0 · lint 0 · i18n:check 0 · build 65 pages · vitest 107 fichiers / **642 tests** · runtime API (8 scénarios + erreurs 400/403/404) · audits vérifiés en base · `ai:check` 19 OK · `npm run ci` verte (smoke 95/95).
+
+## T-216 — 2026-09-10 (statuts de réservation dans la liste, VALIDÉ)
+
+- **Origine** : analyse produit (§3.3, verdict Q3 « OUI partiel » — la liste n'offrait qu'un badge).
+- **UI** : `BookingStatusSelect` dans la colonne Statut de `/dashboard/bookings` (hôte propriétaire et admin) ; badge historique conservé quand aucune transition n'existe.
+- **Logique** : `availableTransitions()` (pure) dérive les transitions de `transitionError()` — aucune règle dupliquée — plus la garde paiement (`completed` seulement si `paid`) ; annulation triée en dernier ; confirmations avant actions destructives.
+- **API** : `PUT /api/bookings/[id]` **inchangé** fonctionnellement ; ajout de l'audit `booking.status.update` (`{previousStatus, newStatus, actor}`) sur les transitions et sur la voie annulation `cancelBooking`.
+- **Gates** : mêmes gates que T-215 (même lot) + runtime (`pending→confirmed` 200, clôtures 400/409/200, terminal 400, RBAC voyageur 400) + SSR `/dashboard/bookings`.
+
+### Rétrospective T-215/T-216
+
+1. **Bien fonctionné** : dériver l'UI de la même source de vérité que l'API (`transitionError`) — l'UI ne propose jamais une action vouée à un 400, sans dupliquer la FSM.
+2. **Ralentissement** : le premier rendu de test des composants clients a montré que l'entrée « aucun environnement DOM » interdit de mimer un clic ; la couverture a été scindée (rendu replié + logique pure + intégration API) plutôt que de forcer une dépendance de test.
+3. **Erreur évitable** : deux identifiants libres (`T-212`/`T-213`) avaient été pris dans les commentaires alors qu'ils désignent d'autres items du BACKLOG → renommés en T-215/T-216 avant commit.
+4. **Nouvelle règle ?** Non : `CODING_RULES` §13 et §22 couvrent déjà le besoin.
+5. **Permanent ?** Non applicable : aucune règle ajoutée.

@@ -56,3 +56,47 @@ export function isReviewEligible(status: BookingStatus, checkOut: string | Date,
   const reference = today ?? new Date().toISOString().slice(0, 10);
   return status === "completed" && toDate(checkOut) <= reference;
 }
+
+/** Liste exhaustive des statuts, dans l'ordre du cycle de vie. */
+export const BOOKING_STATUSES: readonly BookingStatus[] = [
+  "pending",
+  "confirmed",
+  "cancelled",
+  "completed",
+  "no_show",
+] as const;
+
+/**
+ * T-216 — transitions réellement proposables à un acteur donné.
+ *
+ * Dérivée **exclusivement** de `transitionError()` (source unique de vérité
+ * partagée avec l'API) : l'UI ne fait que ne pas proposer ce que le serveur
+ * refuserait de toute façon. S'y ajoute la garde paiement, qui vit dans la
+ * route `PUT /api/bookings/[id]` : une clôture `completed` n'est proposée que
+ * si le règlement est constaté (`paymentStatus === "paid"`), faute de quoi le
+ * serveur répond 409.
+ *
+ * Fonction pure (aucune I/O) : testable et utilisable côté serveur comme
+ * côté client.
+ */
+export function availableTransitions(input: {
+  current: BookingStatus;
+  actor: BookingActor;
+  checkOut: string | Date;
+  paymentStatus?: string | null;
+  today?: string;
+}): BookingStatus[] {
+  const candidates = transitions[input.current] ?? [];
+  return candidates.filter((next) => {
+    if (next === "completed" && input.paymentStatus !== "paid") return false;
+    return (
+      transitionError({
+        current: input.current,
+        next,
+        actor: input.actor,
+        checkOut: input.checkOut,
+        today: input.today,
+      }) === null
+    );
+  });
+}

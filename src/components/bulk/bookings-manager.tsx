@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Calendar, Eye } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
+import { BookingStatusSelect } from "./booking-status-select";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
 export interface BookingRow {
@@ -84,6 +85,10 @@ interface Props {
 export function BookingsManager({ bookings, isAdmin }: Props) {
   const t = useT();
   const locale = useUiLocale();
+  // T-216 : dans cette vue, l'utilisateur est l'hôte du bien ou un admin (le
+  // proxy et la page serveur ont déjà filtré). L'admin suit exactement les
+  // mêmes transitions que l'hôte (`transitionError`).
+  const viewerActor = isAdmin ? "admin" : "host";
   const statusLabels: Record<string, string> = {
     pending: t("status.pending"),
     confirmed: t("status.confirmed"),
@@ -341,14 +346,28 @@ export function BookingsManager({ bookings, isAdmin }: Props) {
                         )}
                       </td>
                       <td className="px-4 py-4">
-                        <Badge
-                          className={
-                            statusBadgeColor[booking.status] ??
-                            "bg-gray-100 text-gray-800"
+                        {/* T-216 : la colonne Statut permet la gestion manuelle
+                            (hôte/admin) quand le cycle de vie le permet ; le
+                            badge historique est conservé tel quel sinon. */}
+                        <BookingStatusSelect
+                          bookingId={booking.id}
+                          bookingReference={booking.bookingReference}
+                          status={booking.status}
+                          paymentStatus={booking.paymentStatus}
+                          checkOut={booking.checkOut}
+                          actor={viewerActor}
+                          disabledHint={t("bookings.statusNoTransition")}
+                          badge={
+                            <Badge
+                              className={
+                                statusBadgeColor[booking.status] ??
+                                "bg-gray-100 text-gray-800"
+                              }
+                            >
+                              {statusLabels[booking.status] ?? booking.status}
+                            </Badge>
                           }
-                        >
-                          {statusLabels[booking.status] ?? booking.status}
-                        </Badge>
+                        />
                       </td>
                       <td className="px-4 py-4">
                         <Link

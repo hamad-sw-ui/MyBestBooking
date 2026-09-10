@@ -1,21 +1,58 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
-import { users } from "@/db/schema";
-import { desc } from "drizzle-orm";
+import { users, properties } from "@/db/schema";
+import { desc, sql } from "drizzle-orm";
 import { UsersManager, type UserRow } from "@/components/bulk/users-manager";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { getSetting } from "@/lib/settings";
 
 /**
  * /dashboard/users (admin) — T-033 Session 12
  * Page shell (Server Component) : charge les utilisateurs et délègue
  * l'affichage + filtres + actions groupées au composant client
  * <UsersManager>.
+ *
+ * T-215 : expose aussi le taux de commission global et, par hôte, le nombre
+ * d'hébergements qui héritent (`commission_rate IS NULL`) ou portent un taux
+ * explicite — l'admin voit ainsi l'impact réel d'une modification de taux.
  */
 
 async function getUsers() {
   return db.select().from(users).orderBy(desc(users.createdAt));
+}
+
+/**
+ * Répartition des hébergements d'un hôte : ceux qui héritent du taux hôte
+ * (colonne NULL) et ceux qui portent un taux explicite (prioritaires).
+ */
+async function getPropertyRateBreakdown(): Promise<
+  Map<string, { inherit: number; explicit: number }>
+> {
+  const rows = await db
+    .select({
+      hostId: properties.hostId,
+      inherit: sql<number>`count(*) FILTER (WHERE ${properties.commissionRate} IS NULL)::int`,
+      explicit: sql<number>`count(*) FILTER (WHERE ${properties.commissionRate} IS NOT NULL)::int`,
+    })
+    .from(properties)
+    .groupBy(properties.hostId);
+
+  const map = new Map<string, { inherit: number; explicit: number }>();
+  for (const row of rows) {
+    if (row.hostId) map.set(row.hostId, { inherit: row.inherit, explicit: row.explicit });
+  }
+  return map;
+}
+
+async function getGlobalCommissionRate(): Promise<number> {
+  try {
+    const billing = await getSetting("billing");
+    return Number(billing.defaultCommissionRate);
+  } catch {
+    return 15;
+  }
 }
 
 export default async function UsersPage() {
@@ -24,7 +61,11 @@ export default async function UsersPage() {
     redirect("/dashboard");
   }
   const t = makeT(await getServerLocale());
-  const rows = await getUsers();
+  const [rows, rateBreakdown, globalRate] = await Promise.all([
+    getUsers(),
+    getPropertyRateBreakdown(),
+    getGlobalCommissionRate(),
+  ]);
 
   // Sérialiser pour le composant client (dates → ISO string)
   const serialized: UserRow[] = rows.map((u) => ({
@@ -55,6 +96,9 @@ export default async function UsersPage() {
       u.role === "host" && u.commissionRate !== null
         ? String(u.commissionRate)
         : null,
+    // T-215 : impact d'une modification du taux hôte (0 pour les non-hôtes).
+    inheritCount: u.role === "host" ? rateBreakdown.get(u.id)?.inherit ?? 0 : 0,
+    explicitCount: u.role === "host" ? rateBreakdown.get(u.id)?.explicit ?? 0 : 0,
   }));
 
   return (
@@ -70,7 +114,11 @@ export default async function UsersPage() {
           {t("dash.usersSub")}
         </p>
       </div>
-      <UsersManager users={serialized} currentUserId={user.id} />
+      <UsersManager
+        users={serialized}
+        currentUserId={user.id}
+        globalCommissionRate={globalRate}
+      />
     </div>
   );
 }

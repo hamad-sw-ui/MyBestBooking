@@ -51,7 +51,13 @@ describe("uiStrings (T-132)", () => {
     // T-206 (2026-09-10) : +1 clé inv.unpaidNote (facture bloquée tant que non payée) = 1503.
     // T-207 (2026-09-10) : +12 clés pour la réservation sans paiement plateforme
     //   (reservation.* demande-only, host.bookingConfirmed, settings.stripeDisabled, payouts.platformDisabled*) = 1516.
-    expect(Object.keys(fr)).toHaveLength(1516);
+    // T-215 (2026-09-10) : +8 clés dash.hostCommission* (édition du taux hôte hors
+    //   approbation : édition, enregistrement, héritage, impact, propagation)
+    //   +3 clés bulk.action* (libellés d'audit commission hôte/hébergement) = 1527.
+    // T-216 (2026-09-10) : +5 clés bookings.* (gestion manuelle du statut dans la
+    //   colonne Statut : changer, confirmer, annuler, mis à jour, indisponible),
+    //   dont +1 bulk.actionBookingStatus déjà comptée ci-dessus = 1532.
+    expect(Object.keys(fr)).toHaveLength(1532);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

@@ -45,6 +45,10 @@ export function AuditFilter({ entries }: Props) {
     "property.reject": { label: t("bulk.actionReject"), variant: "warning" },
     "property.suspend": { label: t("bulk.suspend"), variant: "danger" },
     "bulk.action": { label: t("bulk.actionBulk"), variant: "info" },
+    // T-215 / T-216 — commission hôte, commission hébergement, statut booking.
+    "host.commission.update": { label: t("bulk.actionHostCommission"), variant: "warning" },
+    "property.commission.update": { label: t("bulk.actionPropertyCommission"), variant: "warning" },
+    "booking.status.update": { label: t("bulk.actionBookingStatus"), variant: "info" },
   };
   const [q, setQ] = useState("");
   const [actionFilter, setActionFilter] = useState("all");

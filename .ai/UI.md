@@ -70,6 +70,19 @@ Utilitaire `cn(...)` (`clsx` + `tailwind-merge`) exposé par `@/lib/utils`.
 `bookings` (+ `[id]`), `reviews`, `messages`, `promotions`, `analytics`,
 `billing`, `users`, `settings`.
 
+Deux colonnes du dashboard pro sont directement actionnables :
+
+- `/dashboard/users` — colonne « Hôte » : statut d'approbation, puis
+  éditeur de commission (`HostCommissionEditor`, T-215) pour un hôte approuvé
+  ou porteur d'un taux explicite : taux affiché ou « Hérite : {global} % »,
+  crayon, impact « Héritent : N · Taux explicite : M », case de propagation
+  aux hébergements sans taux propre (décochée par défaut).
+- `/dashboard/bookings` — colonne « Statut » (T-216) : badge historique, plus
+  un crayon ouvrant les transitions acceptées par le serveur
+  (`pending → confirmed|cancelled`, `confirmed → cancelled|completed|no_show`,
+  clôture seulement après le départ et paiement constaté). États terminaux et
+  cas non couverts : badge seul, avec infobulle explicative.
+
 ## Conventions UI
 
 - Toutes les pages publiques et voyageur sont en **français** (labels codés en dur).
