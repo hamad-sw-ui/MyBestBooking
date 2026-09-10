@@ -483,3 +483,72 @@ proposé : A1+A2 → A6+A7+A8 → A3+A4 → A5+A9+A10+A11.
 - 🟢 **O4** — Avis non modifiable/non supprimable par son auteur (seul l'admin masque).
 - 🟢 **O5** — Pas de fiche utilisateur admin (vue 360° support).
 - 🟢 **O6** — Pas d'export CSV dans `/dashboard/analytics`.
+
+
+### Audit T-232 (2026-09-10) — scénarios runtime (analyse n°3)
+
+Analyse complète : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (copie
+`.ai/REPORTS/analyse_runtime_n3_2026-09-10_scenarios.md`) — 13 constats F1→F13, tous vérifiés
+au runtime (sondes HTTP + PostgreSQL, fuseaux `UTC`/`Africa/Douala`/`America/Los_Angeles`/
+`Pacific/Kiritimati`, crawl par rôle, analyse statique des boutons). Les intersections avec
+l'audit n°2 sont signalées (F3↔T-221, F9↔T-227, F11↔T-230, F12↔O6). Aucune ligne de code produit
+modifiée par l'analyse.
+
+- 🔴 **T-232 (M/P1)** — *F1 + F10 + F9 — dates de séjour et fuseaux.* `formatDate()` formate les
+  colonnes `date` sans `timeZone: "UTC"` : le même séjour s'affiche « 24 septembre » en UTC et
+  **« 23 septembre »** à Los Angeles (reproduit), le rendu SSR pouvant différer du client ; `pg` lit
+  une `date` à minuit **local du serveur** (`TZ=Africa/Douala` → `2026-09-23T23:00Z`), ce qui rend
+  `toDate()` (`booking-lifecycle.ts:14-16`) et donc la clôture/éligibilité d'avis dépendantes du
+  fuseau de l'instance ; `users.timezone`/`properties.timezone` sont collectés et **jamais lus**,
+  et `PATCH /api/users/me` accepte `"Pas/Un-Fuseau"` (200, vérifié). Livrable : helper unique
+  d'affichage des dates civiles (UTC), lecture `date` normalisée (mode string) pour les
+  comparaisons métier, validation IANA du fuseau, usage effectif (ou retrait) du réglage, tests
+  multi-fuseaux. Aucune migration destructive.
+- 🔴 **T-233 (M/P1)** — *F2 — suspension d'hôte sans effet sur ses annonces.* Après
+  `PATCH /api/users/[id]/suspend`, la fiche `/hebergement/appartement-montmartre` répond **200** et
+  le bien reste dans `/recherche?city=Paris` alors que l'hôte ne peut plus se connecter (401
+  « Ce compte est désactivé… ») — prouvé au runtime. Livrable : cascade `active → suspended` en
+  transaction (statut antérieur conservé), filtre `users.deleted_at IS NULL` dans les requêtes
+  publiques, traitement des demandes en attente + e-mail d'information, restauration à la
+  réactivation, test « suspension → invisible → réactivation → visible ».
+- 🟠 **T-234 (M/P2)** — *F3 — demande en attente bloquant les dates sans expiration paresseuse.*
+  Le contrôle de chevauchement ignore `pending` (`ne(status,'cancelled')`, `api/bookings/route.ts:220-232`) :
+  une 2ᵉ demande sur les mêmes dates reçoit **409** (reproduit), la libération dépendant du cron
+  quotidien (`vercel.json`, 08:00 UTC). Livrable : extraction de la purge d'expiration en fonction
+  partagée, appel **dans la transaction** de devis/création pour la chambre et la fenêtre
+  demandées (le cron reste), test d'intégration « demande expirée → nouvelle réservation
+  acceptée ».
+- 🟠 **T-235 (S/P2)** — *F4 — quota de réservation punissant les erreurs de saisie.* Rate-limit
+  10/h par utilisateur (10 par IP pour les invités) appliqué **avant** la validation
+  (`api/bookings/route.ts:158-162`) : 6 essais invalides puis une demande correcte → **429**
+  (reproduit deux fois), message sans délai, quota partagé derrière une IP publique. Livrable :
+  compteur déplacé après validation (ou compteurs séparés), message avec `Retry-After`, clé invité
+  par cookie plutôt qu'IP seule, documentation `KNOWN_LIMITATIONS.md`.
+- 🟠 **T-236 (S/P2)** — *F5 — heure d'arrivée estimée jamais restituée.* `bookings.estimated_arrival`
+  est saisie au tunnel (select heures pleines) et **aucun affichage** ne la relit (fiche hôte,
+  e-mails, espace voyageur) ; l'API accepte n'importe quelle chaîne (`z.string()`) alors que la
+  colonne est `time` (erreur PostgreSQL possible, vérifié). Livrable : affichage sur la fiche
+  réservation hôte + variable dans les e-mails de demande/confirmation, validation `HH:MM`.
+- 🟠 **T-237 (S/P2)** — *F6 — validation/rejet d'annonce non notifié, motif invisible.*
+  `/api/properties/[id]/validate` écrit `reason` dans `audit_log` uniquement (aucun `enqueueEmail`,
+  aucune colonne motif) ; l'hôte voit un statut « draft » sans explication. Livrable : gabarits
+  `propertyApproved`/`propertyRejected` (idempotents, interrupteurs `notifications`), colonne
+  additive `properties.review_reason` affichée dans l'éditeur hôte.
+- 🟠 **T-238 (XS/P2)** — *F7 — wishlist partagée indexable, sans expiration.*
+  `/wishlists/share/[token]` expose `title`/`description` sans `robots: { index: false }` alors que
+  les 14 autres surfaces privées le déclarent ; `share_token` sans échéance ni rotation.
+  Livrable : noindex, régénération du lien (« invalider l'ancien »), mention dans l'UI de partage.
+- 🟠 **T-239 (S/P2)** — *F8 — désabonnement promis mais inexistant.* La page Confidentialité
+  annonce « désabonnement possible depuis l'onglet Notifications » alors que seule
+  `priceAlertEnabled` est exposée et qu'aucun e-mail ne porte de lien d'opposition. Livrable :
+  corriger la formulation, puis préférences par catégorie (`user_notification_prefs` ou JSONB)
+  alimentant les envois non transactionnels + lien d'opposition en pied d'e-mail.
+- 🟠 **T-240 (S/P3)** — *F9/F10 (volet fuseau serveur) — déjà couvert par T-232 pour la partie
+  dates ; reste : tests de non-régression multi-fuseaux sur `transitionError`/`isReviewEligible`
+  (`TZ=Africa/Douala`, `Pacific/Kiritimati`) et remplacement de `new Date().toISOString()` comme
+  « aujourd'hui » métier par une date d'horizon explicite.*
+- 🟡 **T-241 (S/P3)** — *F11 + F12 + F13 — finitions : (a) « Supprimé » vs « suspendu » dans
+  l'admin (à fusionner au correctif T-230 : `suspended_at` distinct, bouton « Réactiver » masqué
+  sur un compte anonymisé) ; (b) analytics : sélecteur de période + export CSV (reprend O6) ;
+  (c) erreurs d'API : `issues` détaillées en complément du message et schémas de mutation
+  `.strict()` (le `PUT` accepte aujourd'hui un champ inconnu en 200 silencieux, vérifié).*

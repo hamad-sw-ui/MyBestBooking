@@ -4313,3 +4313,23 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   admin, 2FA). Base remise à l'état seed (8/8/33/24, compteurs 0).
 - **Non modifié** : aucune ligne de code produit ; les correctifs P1–P10 (T-217) restent la
   référence livrée. Les constats alimentent T-221 → T-231 au BACKLOG.
+
+
+## 2026-09-10 — Audit runtime n°3 (analyse seule) : scénarios et incohérences produit
+
+- **Livrable** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (copie
+  `.ai/REPORTS/analyse_runtime_n3_2026-09-10_scenarios.md`) — 13 constats F1→F13 avec preuve
+  runtime, cause fichier:ligne, impact et correctif non régressif ; § « Vérifié OK » pour écarter
+  les fausses pistes ; ordre d'implémentation en 5 lots indépendants.
+- **Méthode** : crawl par rôle (124 liens, 0 cassé), analyse statique des `<Button>` (0 mort),
+  campagne de sondes API/PostgreSQL (dates, capacité, chevauchements, rôles croisés, quota,
+  suspension d'hôte, wishlist partagée), reproductions multi-fuseaux, exécution réelle du cron.
+  Base remise à l'état seed exact ; scripts de sonde supprimés.
+- **Constats saillants** : dates de séjour affichables à J-1 (fuseau navigateur/serveur) ; hôte
+  suspendu dont les annonces restent réservables ; demande en attente bloquant le stock sans
+  expiration paresseuse ; quota de réservation punissant les erreurs de saisie ; heure d'arrivée
+  jamais restituée ; rejet d'annonce silencieux ; wishlist partagée indexable ; désabonnement
+  promis mais absent.
+- **Non modifié** : aucune ligne de code produit dans le cadre de cette analyse (un chantier
+  d'implémentation T-221/T-222 reste en cours dans l'arbre de travail) ; les constats alimentent
+  T-232 → T-241 au BACKLOG.

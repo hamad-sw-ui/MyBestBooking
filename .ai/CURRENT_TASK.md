@@ -91,3 +91,30 @@ suppression de compte, confirmation de paiement) puis base remise à l'état see
 Observations complémentaires : `wallet_transactions`/historique de solde, calendrier sans
 réservations, vue `email_outbox`, édition d'avis par son auteur, fiche utilisateur admin,
 export analytics.
+
+
+## Suites — audit n°3 (scénarios runtime, 2026-09-10)
+
+Troisième passe d'analyse livrée **à titre d'analyse seule** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md`.
+Angle : **scénarios de bout en bout** et incohérences produit, là où les passes précédentes
+listaient les branchements manquants. Méthode : 3 rôles + visiteur, 43 pages, 67 routes API,
+124 liens internes suivis (**0 cassé**), analyse statique de tous les `<Button>` (**0 mort**),
+campagne de sondes HTTP/PostgreSQL (dates invalides, capacité, chevauchements, rôles croisés,
+ressources d'autrui, quota, suspension d'hôte, wishlist partagée), vérifications multi-fuseaux
+(`UTC`/`Africa/Douala`/`America/Los_Angeles`/`Pacific/Kiritimati`), exécution réelle du cron.
+Base remise à l'état seed exact (8/8/33/24, compteurs 0, 1 `app_settings`).
+
+13 constats (F1→F13) priorisés dans `BACKLOG.md` sous **T-232 → T-241** :
+
+1. **T-232** 🔴 Dates de séjour décalables d'un jour selon le fuseau du navigateur (et fuseau
+   serveur) ; réglages `timezone` décoratifs et non validés.
+2. **T-233** 🔴 Hôte suspendu : annonces toujours actives, visibles et réservables (prouvé).
+3. **T-234** 🟠 Demande en attente bloquant les dates sans expiration paresseuse (cron-dépendant).
+4. **T-235** 🟠 Quota de réservation 10/h compté avant validation → 429 sur une demande correcte.
+5. **T-236** 🟠 Heure d'arrivée estimée collectée, jamais transmise (+ API non validée).
+6. **T-237** 🟠 Validation/rejet d'annonce : hôte non notifié, motif dans l'audit seulement.
+7. **T-238** 🟠 Wishlist partagée indexable et sans expiration (noindex partout ailleurs).
+8. **T-239** 🟠 Désabonnement promis par la page Confidentialité mais inexistant.
+9. **T-241** 🟡 Finitions : états « supprimé/suspendu », période + export analytics, erreurs d'API.
+
+Interactions : T-232 ↔ T-227 (audit n°2), T-234 ↔ T-221, T-241(a) ↔ T-230, T-241(b) ↔ O6.

@@ -373,3 +373,31 @@ comptes et fils créés par les sondes ont été supprimés et la base est reven
 
 **Validation.** `npm run ai:check` 19 OK / 1 warn (R7, levé par `docs(state)` après commit) /
 0 fail ; arbre de travail = document + docs `.ai` uniquement.
+
+
+### 2026-09-10 — Audit n°3 : scénarios runtime
+
+**Livré.** `docs/analyse_2026-09-10_audit_runtime_scenarios.md` — 13 constats F1→F13, tous
+reproduits au runtime : (F1) dates de séjour à J-1 selon le fuseau (UTC « 24 septembre » vs
+Los Angeles « 23 septembre » ; lecture `pg` d'une `date` dépendante du fuseau serveur) ;
+(F2) hôte suspendu dont la fiche et la recherche restent servies (200) alors qu'il ne peut plus
+se connecter ; (F3) demande en attente bloquant les dates (409 sur une 2ᵉ demande) sans
+expiration paresseuse ; (F4) quota 10/h compté avant validation (429 sur une demande pourtant
+correcte) ; (F5) heure d'arrivée collectée et jamais affichée ; (F6) rejet d'annonce sans e-mail
+ni motif lisible ; (F7) page de wishlist partagée sans `noindex` ; (F8) page Confidentialité
+promettant un désabonnement inexistant ; (F9) fuseaux horaires décoratifs et non validés ;
+(F10) « aujourd'hui » UTC croisé avec un `toDate()` sensible au fuseau serveur ; (F11) suppression
+anonymisée confondue avec la suspension ; (F12) analytics sans période ni export ; (F13) champs
+inconnus acceptés en 200 et première erreur de validation seule.
+
+**Écarté (vérifié OK).** 0 bouton mort, 0 lien cassé sur 124, messages de validation explicites,
+champs invité verrouillés pour un compte connecté, « écrire à l'hébergeur » passant par la
+messagerie interne, `/reservation` sans paramètres géré, livraison d'e-mails effective quand le
+cron tourne, 403 homogènes.
+
+**Préservé.** Base remise à l'état seed exact (8 users / 8 biens / 33 réservations / 24 avis ;
+compteurs 0 ; 1 `app_settings`) ; scripts de sonde supprimés ; arbre de travail hors bruit
+`next-env.d.ts`.
+
+**Suites.** T-232 → T-241 au BACKLOG (ordre : dates/fuseaux → annonces → tunnel → confiance →
+finitions).
