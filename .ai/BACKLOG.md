@@ -389,3 +389,38 @@ Chacun activable en 1 commit ou 1 clic dès que la contrainte disparaît :
   `src/lib/app-url.ts` (`appBaseUrl()` + repli) + tests `app-url.test.ts`.
 - 🟢 ~~**T-166 (P3)** — Hygiène runs~~ ✅ **livré 2026-08-30** :
   `purge-sim-data.mjs` étendu (votes/alertes/wishlists de sims).
+
+### T-217 (2026-09-10) — correctifs P1–P10 de l'audit runtime
+
+- ✅ ~~**Soft-404** : pages `notFound()` en 200~~ **Livré** : squelettes de
+  chargement au niveau feuille (`components/page-loading.tsx`) ; matrice prod
+  8 URL → 404 / 18 pages → 200 ; smoke 95/95.
+- ✅ ~~**Édition hébergement client-only**~~ **Livré** : RSC + `notFound()` +
+  props initiales ; édition/upload/commission inchangés.
+- ✅ ~~**Modération des avis sans UI**~~ **Livré** : section « Avis » dans
+  `/dashboard/settings` (avis `pending` quand activée).
+- ✅ ~~**Reçus des séjours passés**~~ **Livré** : `BookingRowActions` dans les
+  cartes « Passées » ; carte billing renommée « Versements et relevés ».
+- ✅ ~~**Promotions non éditables**~~ **Livré** : `/dashboard/promotions/[id]`,
+  plafonds `null` = illimité, `currentUses` conservé.
+- ✅ ~~**Chambres** : route d'édition absente / édition enfouie~~ **Livré** :
+  redirection `/dashboard/rooms/[id]` → `/calendrier#room-edit` + libellé dédié.
+- ✅ ~~**Fil de messagerie vide introuvable**~~ **Livré** : fenêtre de
+  rattrapage de 7 jours (compteurs non-lus inchangés).
+- ✅ ~~**Audit limité à 100 lignes / code mort**~~ **Livré** : « Charger plus »
+  branché sur `GET /api/admin/audit` ; 3 composants orphelins `@deprecated` et
+  documentés.
+- ✅ ~~**Navigation admin sans Chambres**~~ **Livré** : entrée ajoutée
+  (desktop + mobile).
+
+#### Sujets résiduels proposés (non bloquants, audit T-217)
+
+- 🟢 **T-218 (S/P3)** — Notifier l'hôte par e-mail à la création d'une
+  conversation (« Contacter l'hôte ») : `POST /api/conversations` n'enqueue rien,
+  l'hôte ne voit le fil qu'en ouvrant sa messagerie.
+- 🟢 **T-219 (S/P3)** — Clarifier l'export CSV de la carte billing (ledger
+  versements vs export réservations `GET /api/dashboard/billing/export`, appelé
+  uniquement depuis `/dashboard/bookings`).
+- 🟢 **T-220 (S/P3)** — Préférences de notification par utilisateur
+  (`user_notification_prefs`) : aujourd'hui seul `priceAlertEnabled` est
+  individuel, le reste est global (`app_settings.notifications`).

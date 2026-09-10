@@ -7,11 +7,17 @@ import { isUuid, frenchZodMessage } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
 
+/**
+ * T-217/P5 : `null` est désormais accepté pour les deux plafonds (retour à
+ * « illimité » / « pas de plafond de remise »), en plus des valeurs déjà
+ * supportées. Extension additive : les appelants existants (nombres) sont
+ * inchangés.
+ */
 const updateSchema = z.object({
   name: z.string().min(3).max(100).optional(),
   isActive: z.boolean().optional(),
-  maxUses: z.number().int().positive().optional(),
-  maxDiscount: z.number().positive().optional(),
+  maxUses: z.number().int().positive().nullable().optional(),
+  maxDiscount: z.number().positive().nullable().optional(),
   validUntil: z.string().optional(),
 });
 
@@ -49,7 +55,12 @@ export async function PATCH(
         name: patch.name,
         isActive: patch.isActive,
         maxUses: patch.maxUses,
-        maxDiscount: patch.maxDiscount != null ? String(patch.maxDiscount) : undefined,
+        maxDiscount:
+          patch.maxDiscount === undefined
+            ? undefined
+            : patch.maxDiscount === null
+              ? null
+              : String(patch.maxDiscount),
         validUntil: patch.validUntil ? new Date(patch.validUntil) : undefined,
       })
       .where(eq(promotions.id, id))

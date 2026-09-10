@@ -3,10 +3,12 @@
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { useMemo, useState, useRef, useEffect } from "react";
 import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ScrollText, Search, X } from "lucide-react";
 import { formatDate } from "@/lib/utils";
+import { toAuditEntryRow, type AuditEntryRow } from "@/lib/audit-rows";
 
 /**
  * <AuditFilter> (T-034) — filtres client pour /dashboard/audit :
@@ -16,24 +18,17 @@ import { formatDate } from "@/lib/utils";
  *   - Raccourci `/` pour focus recherche
  */
 
-export interface AuditEntryRow {
-  id: string;
-  action: string;
-  actorId: string | null;
-  actorEmail: string | null;
-  entityType: string | null;
-  entityId: string | null;
-  metadata: Record<string, unknown> | null;
-  createdAt: string;
-}
+export type { AuditEntryRow } from "@/lib/audit-rows";
 
 type ActionInfo = { label: string; variant: "success" | "warning" | "info" | "danger" | "default" };
 
 interface Props {
   entries: AuditEntryRow[];
+  /** Nombre d'entrées chargées par le serveur (= pas de pagination API). */
+  pageSize: number;
 }
 
-export function AuditFilter({ entries }: Props) {
+export function AuditFilter({ entries, pageSize }: Props) {
   const t = useT();
   const locale = useUiLocale();
   const ACTION_LABELS: Record<string, ActionInfo> = {
@@ -50,10 +45,41 @@ export function AuditFilter({ entries }: Props) {
     "property.commission.update": { label: t("bulk.actionPropertyCommission"), variant: "warning" },
     "booking.status.update": { label: t("bulk.actionBookingStatus"), variant: "info" },
   };
+  // T-217/P9 : la première page vient du serveur (rendu initial inchangé) ;
+  // « charger plus » interroge `GET /api/admin/audit` (limit/offset) — l'API
+  // paginée existait mais n'avait aucun appelant applicatif.
+  const [extra, setExtra] = useState<AuditEntryRow[]>([]);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [exhausted, setExhausted] = useState(entries.length < pageSize);
+  const rows = useMemo(() => [...entries, ...extra], [entries, extra]);
   const [q, setQ] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
   const [entityFilter, setEntityFilter] = useState("all");
   const searchRef = useRef<HTMLInputElement>(null);
+
+  async function loadMore() {
+    if (loadingMore || exhausted) return;
+    setLoadingMore(true);
+    setLoadError(null);
+    try {
+      const res = await fetch(
+        `/api/admin/audit?limit=${pageSize}&offset=${rows.length}`,
+        { cache: "no-store" },
+      );
+      const body = (await res.json().catch(() => ({}))) as {
+        entries?: Parameters<typeof toAuditEntryRow>[0][];
+        error?: string;
+      };
+      if (!res.ok) throw new Error(body.error ?? t("settings.error"));
+      const fetched = (body.entries ?? []).map(toAuditEntryRow);
+      setExtra((prev) => [...prev, ...fetched]);
+      if (fetched.length < pageSize) setExhausted(true);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : t("settings.error"));
+    }
+    setLoadingMore(false);
+  }
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -76,8 +102,8 @@ export function AuditFilter({ entries }: Props) {
   }, []);
 
   const actions = useMemo(
-    () => Array.from(new Set(entries.map((e) => e.action))).sort(),
-    [entries],
+    () => Array.from(new Set(rows.map((e) => e.action))).sort(),
+    [rows],
   );
   const entities = useMemo(
     () =>
@@ -89,7 +115,7 @@ export function AuditFilter({ entries }: Props) {
 
   const filtered = useMemo(() => {
     const ql = q.trim().toLowerCase();
-    return entries.filter((e) => {
+    return rows.filter((e) => {
       if (actionFilter !== "all" && e.action !== actionFilter) return false;
       if (entityFilter !== "all" && (e.entityType ?? "") !== entityFilter)
         return false;
@@ -103,7 +129,7 @@ export function AuditFilter({ entries }: Props) {
         meta.includes(ql)
       );
     });
-  }, [entries, q, actionFilter, entityFilter]);
+  }, [rows, q, actionFilter, entityFilter]);
 
   return (
     <div className="max-w-5xl">
@@ -185,7 +211,7 @@ export function AuditFilter({ entries }: Props) {
 
       <p className="text-sm text-gray-600 mb-3">
 {(filtered.length > 1 ? t("bulk.entriesShownMany") : t("bulk.entriesShown")).replace("{n}", String(filtered.length))}
-        {filtered.length !== entries.length && ` ${t("bulk.ofTotal").replace("{n}", String(entries.length))}`}
+        {filtered.length !== rows.length && ` ${t("bulk.ofTotal").replace("{n}", String(rows.length))}`}
       </p>
 
       <Card padding="none">
@@ -267,6 +293,23 @@ export function AuditFilter({ entries }: Props) {
           </div>
         )}
       </Card>
+
+      {/* T-217/P9 : au-delà de la première page, chargement à la demande
+          (même endpoint paginé que la supervision, aucun rechargement). */}
+      <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
+        <p className="text-sm text-gray-500">
+          {t("bulk.auditLoaded").replace("{n}", String(rows.length))}
+          {filtered.length !== rows.length && ` · ${t("bulk.auditFiltered").replace("{n}", String(filtered.length))}`}
+        </p>
+        {exhausted ? (
+          <span className="text-xs text-gray-400">{t("bulk.auditAllLoaded")}</span>
+        ) : (
+          <Button variant="outline" size="sm" onClick={loadMore} disabled={loadingMore}>
+            {loadingMore ? t("bulk.loadingMore") : t("bulk.loadMore")}
+          </Button>
+        )}
+        {loadError && <span className="text-xs text-red-600">{loadError}</span>}
+      </div>
 
       <p className="text-xs text-gray-400 mt-3">
 {t("bulk.shortcuts")} <kbd className="px-1 bg-gray-100 rounded">/</kbd> {t("bulk.shortcutSearch")} ·{" "}

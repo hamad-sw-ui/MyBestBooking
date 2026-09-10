@@ -92,16 +92,18 @@ export default async function RoomCalendarPage({
           minStay: d.minStay,
         }))}
       />
-      <RoomEditSection room={{
-        id,
-        name: row.room.name,
-        basePrice: row.room.basePrice,
-        quantity: row.room.quantity ?? 1,
-        maxOccupancy: row.room.maxOccupancy,
-        maxAdults: row.room.maxAdults,
-        maxChildren: row.room.maxChildren,
-        isActive: row.room.isActive,
-      }} />
+      <div id="room-edit" className="scroll-mt-24">
+        <RoomEditSection room={{
+          id,
+          name: row.room.name,
+          basePrice: row.room.basePrice,
+          quantity: row.room.quantity ?? 1,
+          maxOccupancy: row.room.maxOccupancy,
+          maxAdults: row.room.maxAdults,
+          maxChildren: row.room.maxChildren,
+          isActive: row.room.isActive,
+        }} />
+      </div>
       <RatePlansSection
         roomId={id}
         basePrice={row.room.basePrice}

@@ -366,3 +366,27 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
 - La colonne Statut de `/dashboard/bookings` permet à l'hôte propriétaire et à l'admin de faire évoluer une réservation (confirmer une demande, annuler, clôturer en terminé/no-show après départ) sans quitter la liste.
 - Les actions proposées sont exactement celles que le serveur accepterait (`availableTransitions()` dérivé de `transitionError()` + garde paiement) : pas de bouton menant à un 400/409 ; nouvel audit `booking.status.update` (transitions et annulation).
 - Aucune nouvelle route ni règle métier : `PUT /api/bookings/[id]` reste l'unique source de vérité (verrou transactionnel, e-mails, fidélité, remboursements).
+
+## T-217 — Correctifs P1–P10 de l'audit runtime (2026-09-10)
+
+- **404 réels** : les pages « introuvables » renvoient enfin un statut 404 en
+  production (squelettes de chargement au niveau feuille, jamais au-dessus d'une
+  route `[id]`) ; `/dashboard/properties/[id]` est rendu côté serveur et appelle
+  `notFound()`.
+- **Modération des avis activable** depuis `/dashboard/settings` (section
+  « Avis ») : les nouveaux avis passent en file « En attente » quand la bascule
+  est active.
+- **Justificatifs voyageur** : les séjours passés de `/mes-reservations`
+  proposent de nouveau « Facture / Reçu » (paiement réglé) et « Contacter
+  l'hôte » ; la carte billing est renommée « Versements et relevés » et renvoie
+  vers les reçus par réservation.
+- **Promotions éditables** : `/dashboard/promotions/[id]` modifie nom, date de
+  fin, plafonds (vides = illimité) et état actif sans perdre `currentUses`.
+- **Chambres** : `/dashboard/rooms/<id>` redirige vers la surface d'édition,
+  lien « Modifier l'unité » (ancre `#room-edit`) et entrée « Chambres » dans la
+  navigation admin desktop/mobile.
+- **Messagerie** : un fil encore vide reste visible 7 jours dans `/messages`
+  (libellé « Conversation ouverte »), les compteurs non-lus gardent la règle
+  T-206/F9.
+- **Journal d'audit paginé** : `/dashboard/audit` charge la suite via
+  `GET /api/admin/audit` (« Charger plus »), sans recharger la page.

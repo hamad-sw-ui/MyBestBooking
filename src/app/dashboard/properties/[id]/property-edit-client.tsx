@@ -1,0 +1,691 @@
+"use client";
+
+import { useState } from "react";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input, Textarea, Select } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, Save, Eye, Plus, Trash2, Star, Upload, RefreshCw } from "lucide-react";
+import Link from "next/link";
+import { PropertySubmitButton } from "@/components/property-submit-button";
+import { PhotoUploadButton } from "@/components/photo-upload-button";
+import { formatPrice } from "@/lib/utils";
+import { convertAmount, formatMoney } from "@/lib/i18n";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+// T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
+import { AMENITIES, amenityLabel } from "@/lib/amenities";
+import { useT, useUiLocale } from "@/components/ui-locale-provider";
+import { SmartImage } from "@/components/ui/smart-image";
+import { propertyTypeOptions } from "@/lib/property-types";
+import { countryOptions } from "@/lib/countries";
+
+interface Property {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  description: string | null;
+  starRating: number | null;
+  addressLine: string | null;
+  city: string;
+  postalCode: string | null;
+  country: string;
+  cancellationPolicy: string | null;
+  petsAllowed: boolean | null;
+  smokingAllowed: boolean | null;
+  amenities: string[];
+  mainImage: string | null;
+  images: string[];
+  status: string | null;
+  averageRating: string | null;
+  totalReviews: number | null;
+  // T-145 : commission spécifique à l'hébergement (admin uniquement).
+  commissionRate?: string | null;
+}
+
+interface Room {
+  id: string;
+  name: string;
+  roomType: string;
+  maxOccupancy: number;
+  basePrice: string;
+  // T-153 (audit n°25, E) : devise réelle de la chambre (affichage).
+  currency?: string;
+  quantity: number;
+  isActive: boolean;
+}
+
+interface Props {
+  propertyId: string;
+  /** Hébergement chargé et autorisé côté serveur (T-217) : plus de fetch initial. */
+  initialProperty: Property;
+  initialRooms: Room[];
+  /** T-145 : seul un admin peut modifier la commission de l'hébergement. */
+  isAdmin: boolean;
+}
+
+export default function PropertyEditClient({
+  propertyId,
+  initialProperty,
+  initialRooms,
+  isAdmin,
+}: Props) {
+  const t = useT();
+  const locale = useUiLocale();
+  const { currency: displayCurrency } = useDisplayPreferences();
+  const PROPERTY_TYPES = propertyTypeOptions(t);
+  const COUNTRY_OPTIONS = countryOptions(t);
+
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [property, setProperty] = useState<Property | null>(initialProperty);
+  const [rooms] = useState<Room[]>(initialRooms);
+  const [activeTab, setActiveTab] = useState("general");
+  // T-130 : upload de photos dans l'édition (réutilise POST /api/properties/upload).
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+
+  const handleSave = async () => {
+    if (!property) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch(`/api/properties/${propertyId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: property.name,
+          type: property.type,
+          description: property.description,
+          starRating: property.starRating,
+          addressLine: property.addressLine,
+          city: property.city,
+          postalCode: property.postalCode,
+          country: property.country,
+          cancellationPolicy: property.cancellationPolicy,
+          petsAllowed: property.petsAllowed,
+          smokingAllowed: property.smokingAllowed,
+          amenities: property.amenities,
+          mainImage: property.mainImage,
+          images: property.images,
+          // T-145 : la commission n'est envoyée que par un admin (l'API
+          // ignore/refuse ce champ pour un hôte) ; on ne l'envoie que si admin.
+          ...(isAdmin ? { commissionRate: property.commissionRate ?? "15" } : {}),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || t("settings.saveError"));
+      } else {
+        setSuccess(t("action.saved"));
+        setProperty(data.property);
+      }
+    } catch {
+      setError(t("settings.saveError"));
+    }
+
+    setSaving(false);
+  };
+
+  const handleAmenityToggle = (amenityId: string) => {
+    if (!property) return;
+    setProperty({
+      ...property,
+      amenities: property.amenities.includes(amenityId)
+        ? property.amenities.filter((a) => a !== amenityId)
+        : [...property.amenities, amenityId],
+    });
+  };
+
+  // T-130 : upload d'une photo dans l'édition (même endpoint qu'à la création).
+  // T-141 : refactorisé pour servir aussi bien l'ajout que le remplacement
+  // (« Changer » une photo existante) depuis le gestionnaire de fichiers.
+  const uploadPhoto = async (file: File, replaceUrl?: string) => {
+    if (!property) return;
+    setUploadError("");
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/properties/upload", { method: "POST", body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error ?? t("account.uploadFail"));
+      setProperty((prev) => {
+        if (!prev) return prev;
+        if (replaceUrl) {
+          // Remplacement : on échange l'ancienne URL par la nouvelle, sans
+          // toucher à l'ordre ni au statut « principale ».
+          const images = prev.images.map((img) => (img === replaceUrl ? data.url : img));
+          return {
+            ...prev,
+            images,
+            mainImage: prev.mainImage === replaceUrl ? data.url : prev.mainImage,
+          };
+        }
+        const images = prev.images.includes(data.url) ? prev.images : [...prev.images, data.url];
+        return { ...prev, mainImage: prev.mainImage ?? data.url, images };
+      });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : t("account.uploadFail"));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const addGalleryImage = (url: string) => {
+    if (!property || !url.trim()) return;
+    const value = url.trim();
+    setProperty((prev) => prev
+      ? { ...prev, images: prev.images.includes(value) ? prev.images : [...prev.images, value] }
+      : prev);
+  };
+
+  const removeGalleryImage = (url: string) => {
+    if (!property) return;
+    setProperty((prev) => {
+      if (!prev) return prev;
+      const images = prev.images.filter((img) => img !== url);
+      return { ...prev, images, mainImage: prev.mainImage === url ? (images[0] ?? null) : prev.mainImage };
+    });
+  };
+
+  const setMainImage = (url: string) => {
+    if (!property) return;
+    setProperty((prev) => prev ? { ...prev, mainImage: url } : prev);
+  };
+
+  if (!property) {
+    return (
+      <div className="text-center py-12">
+<p className="text-gray-500">{t("prop.notFound")}</p>
+        <Link href="/dashboard/properties">
+          <Button variant="outline" className="mt-4">{t("action.back")}</Button>
+        </Link>
+      </div>
+    );
+  }
+
+  const tabs = [
+    { id: "general", label: t("prop.tabInfo") },
+    { id: "rooms", label: t("prop.tabRooms").replace("{n}", String(rooms.length)) },
+    { id: "photos", label: t("prop.tabPhotos") },
+    { id: "policies", label: t("property.policies") },
+  ];
+
+  return (
+    <div className="max-w-4xl">
+      {/* Header */}
+      <div className="mb-8">
+        <Link
+          href="/dashboard/properties"
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 mb-4"
+        >
+          <ArrowLeft className="w-4 h-4" />
+{t("prop.backToList")}
+        </Link>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-gray-900" style={{ fontFamily: "'Poppins', sans-serif" }}>
+                {property.name}
+              </h1>
+              <Badge className={
+                property.status === "active" ? "bg-green-100 text-green-800" :
+                property.status === "pending" ? "bg-yellow-100 text-yellow-800" :
+                property.status === "suspended" ? "bg-red-100 text-red-800" :
+                "bg-gray-100 text-gray-800"
+              }>
+                {property.status === "active" ? t("bulk.activeSingular") :
+                 property.status === "pending" ? t("prop.pendingReview") :
+                 property.status === "suspended" ? t("bulk.suspendedBadge") :
+                 property.status === "draft" ? t("prop.draftRejected") :
+                 property.status === "archived" ? t("bulk.archived") : property.status}
+              </Badge>
+            </div>
+            {property.averageRating && (
+              <div className="flex items-center gap-2 mt-2">
+                <Star className="w-4 h-4 text-[#F5A623] fill-current" />
+                <span className="font-medium">{parseFloat(property.averageRating).toFixed(1)}</span>
+                <span className="text-gray-500">{t("card.reviewsCount").replace("{n}", String(property.totalReviews))}</span>
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <Link href={`/hebergement/${property.slug}`} target="_blank">
+              <Button variant="outline">
+                <Eye className="w-4 h-4 mr-2" />
+                {t("prop.viewListing")}
+              </Button>
+            </Link>
+            <Button onClick={handleSave} loading={saving}>
+              <Save className="w-4 h-4 mr-2" />
+              {t("action.save")}
+            </Button>
+            {/* T-137 (A2) : re-soumission après rejet (draft) ou suspension. */}
+            <PropertySubmitButton propertyId={property.id} currentStatus={property.status} />
+          </div>
+        </div>
+      </div>
+
+      {/* T-137 (A2): explain why the listing is not public and how to
+          resubmit (rejected listings used to stay stuck in draft). */}
+      {(property.status === "draft" || property.status === "suspended") && (
+        <div className="mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-800 text-sm">
+          {property.status === "draft"
+            ? t("prop.rejectedBanner")
+            : t("prop.suspendedBanner")}
+        </div>
+      )}
+
+      {/* Messages */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-600">
+          {error}
+        </div>
+      )}
+      {success && (
+        <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg text-green-600">
+          {success}
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-2 mb-6 border-b border-gray-200">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+              activeTab === tab.id
+                ? "border-[#1B3A6B] text-[#1B3A6B]"
+                : "border-transparent text-gray-500 hover:text-gray-700"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      {activeTab === "general" && (
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+<CardTitle>{t("prop.generalInfo")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                label={t("prop.name")}
+                value={property.name}
+                onChange={(e) => setProperty({ ...property, name: e.target.value })}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <Select
+                  label={t("prop.type")}
+                  options={PROPERTY_TYPES}
+                  value={property.type}
+                  onChange={(e) => setProperty({ ...property, type: e.target.value })}
+                />
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+{t("prop.stars")}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setProperty({ ...property, starRating: star })}
+                        className={`text-2xl transition-colors ${
+                          star <= (property.starRating || 0) ? "text-[#F5A623]" : "text-gray-300"
+                        }`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <Textarea
+                label={t("prop.description")}
+                rows={4}
+                value={property.description || ""}
+                onChange={(e) => setProperty({ ...property, description: e.target.value })}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>{t("prop.location")}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Input
+                label={t("prop.address")}
+                value={property.addressLine || ""}
+                onChange={(e) => setProperty({ ...property, addressLine: e.target.value })}
+              />
+
+              <div className="grid grid-cols-3 gap-4">
+                <Input
+                  label={t("prop.city")}
+                  value={property.city}
+                  onChange={(e) => setProperty({ ...property, city: e.target.value })}
+                />
+                <Input
+                  label={t("prop.postal")}
+                  value={property.postalCode || ""}
+                  onChange={(e) => setProperty({ ...property, postalCode: e.target.value })}
+                />
+                <Select
+                  label={t("prop.country")}
+                  options={COUNTRY_OPTIONS}
+                  value={property.country}
+                  onChange={(e) => setProperty({ ...property, country: e.target.value })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+<CardTitle>{t("prop.amenities")}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                {AMENITIES.map((amenity) => (
+                  <label
+                    key={amenity.id}
+                    className={`flex items-center gap-2 p-3 rounded-lg border cursor-pointer transition-colors ${
+                      property.amenities.includes(amenity.id)
+                        ? "border-[#1B3A6B] bg-[#1B3A6B]/5"
+                        : "border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={property.amenities.includes(amenity.id)}
+                      onChange={() => handleAmenityToggle(amenity.id)}
+                      className="sr-only"
+                    />
+                    <span className="text-sm">{amenityLabel(amenity.id, locale)}</span>
+                  </label>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* T-145 : commission spécifique à l'hébergement (admin uniquement).
+              Un hôte ne voit pas ce champ et ne peut pas modifier son taux. */}
+          {isAdmin && (
+            <Card>
+              <CardHeader>
+                <CardTitle>{t("prop.platformCommission")}</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="max-w-xs">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    {t("prop.commissionRate")}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="0.01"
+                      value={property.commissionRate ?? "15"}
+                      onChange={(e) => setProperty({ ...property, commissionRate: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+                    />
+                    <span className="text-gray-500">%</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t("prop.commissionHint")}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {activeTab === "rooms" && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>{t("dash.rooms")}</CardTitle>
+              <Link href="/dashboard/rooms/new">
+                <Button size="sm">
+                  <Plus className="w-4 h-4 mr-2" />
+                  {t("prop.addRoom")}
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {rooms.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+<p>{t("prop.noRooms")}</p>
+                <Link href="/dashboard/rooms/new">
+                  <Button variant="outline" className="mt-4">
+                    <Plus className="w-4 h-4 mr-2" />
+                    {t("prop.addRoom")}
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {rooms.map((room) => (
+                  <div
+                    key={room.id}
+                    className="flex items-center justify-between p-4 border border-gray-200 rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">{room.name}</p>
+                      <p className="text-sm text-gray-500">
+                        {t("prop.persMax").replace("{n}", String(room.maxOccupancy))} • {(room.quantity > 1 ? t("prop.unitsCountMany") : t("prop.unitsCount")).replace("{n}", String(room.quantity))}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {/* T-195 — prix/nuit en devise d'affichage (conversion indicative) ;
+                          le paiement reste dans la devise de la chambre. */}
+                      <div className="text-right">
+                        <p className="font-bold">
+                          {(() => {
+                            const src = room.currency ?? "EUR";
+                            const numeric = parseFloat(room.basePrice);
+                            const converted = Boolean(displayCurrency) && displayCurrency !== src.toUpperCase();
+                            const text = converted
+                              ? formatMoney(convertAmount(numeric, src, displayCurrency!), displayCurrency!, locale)
+                              : formatPrice(numeric, src, locale);
+                            return text;
+                          })()}{t("price.perNight")}
+                        </p>
+                        {Boolean(displayCurrency) && displayCurrency !== (room.currency ?? "EUR").toUpperCase() && (
+                          <p className="text-[10px] text-gray-400">{t("price.convertedNote")} {room.currency ?? "EUR"}</p>
+                        )}
+                      </div>
+                      <Link href={`/dashboard/rooms/${room.id}/calendrier`}>
+                        <Button variant="ghost" size="sm">
+                          {t("bulk.calendar")}
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "photos" && (
+        <Card>
+          <CardHeader>
+            <CardTitle>{t("prop.photos")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Import d'une photo depuis le gestionnaire de fichiers de la
+                machine (même mécanisme d'upload qu'à la création, T-113). */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                {t("prop.addPhoto")}
+              </label>
+              <PhotoUploadButton
+                onFile={(file) => uploadPhoto(file)}
+                loading={uploading}
+              >
+                <Upload className="w-4 h-4 mr-2" />
+{uploading ? t("account.uploading") : t("account.importFromComputer")}
+              </PhotoUploadButton>
+              <p className="text-xs text-gray-500 mt-1">
+                {uploading
+                  ? t("prop.uploadingHint")
+                  : t("prop.uploadSaveHint")}
+              </p>
+              {uploadError && <p className="text-sm text-red-600 mt-1">{uploadError}</p>}
+            </div>
+
+            {/* Galerie */}
+            <div>
+              <p className="text-sm font-medium text-gray-700 mb-2">
+                {(property.images.length > 1 ? t("prop.galleryCountMany") : t("prop.galleryCount")).replace("{n}", String(property.images.length))}
+              </p>
+              {property.images.length === 0 ? (
+                <p className="text-sm text-gray-500">
+                  {t("prop.noPhotosHint")}
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {property.images.map((url) => {
+                    const isMain = property.mainImage === url;
+                    return (
+                      <div key={url} className="relative group">
+                        <SmartImage src={url} alt="" className="w-full h-32 object-cover rounded-lg border" sizes="(max-width: 768px) 50vw, 25vw" />
+                        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between gap-1 px-2 py-1 bg-black/50 rounded-b-lg">
+                          <button
+                            type="button"
+                            onClick={() => setMainImage(url)}
+                            disabled={isMain}
+                            className={`text-xs font-medium ${isMain ? "text-[#F5A623]" : "text-white hover:underline"}`}
+                          >
+{isMain ? t("prop.mainPhoto") : t("prop.setMain")}
+                          </button>
+                          <div className="flex items-center gap-1">
+                            {/* T-141 : remplacer directement cette photo depuis
+                                le gestionnaire de fichiers (sans supprimer/ré-ajouter). */}
+                            <PhotoUploadButton
+                              variant="ghost"
+                              size="sm"
+                              loading={uploading}
+                              onFile={(file) => uploadPhoto(file, url)}
+                              className="text-white hover:bg-white/10 hover:text-white p-1.5"
+                              title={t("prop.changeThisImage")}
+                              ariaLabel={t("prop.changeImagePos").replace("{n}", String(property.images.indexOf(url) + 1))}
+                            >
+                              <RefreshCw className="w-4 h-4" />
+                            </PhotoUploadButton>
+                            <button
+                              type="button"
+                              onClick={() => removeGalleryImage(url)}
+                              className="text-white hover:text-red-300 p-1.5"
+                              aria-label={t("prop.deletePhoto")}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* URL alternative */}
+            <details className="text-sm">
+              <summary className="cursor-pointer text-gray-600 hover:text-[#1B3A6B]">
+                {t("prop.addByUrl")}
+              </summary>
+              <div className="flex gap-2 mt-3">
+                <input
+                  type="url"
+                  placeholder="https://…/photo.jpg"
+                  className="flex-1 px-3 py-2 border border-gray-200 rounded-lg"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addGalleryImage((e.target as HTMLInputElement).value);
+                      (e.target as HTMLInputElement).value = "";
+                    }
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={(e) => {
+                    const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
+                    addGalleryImage(input.value);
+                    input.value = "";
+                  }}
+                >
+                  {t("prop.add")}
+                </Button>
+              </div>
+            </details>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeTab === "policies" && (
+        <Card>
+          <CardHeader>
+<CardTitle>{t("property.policies")}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Select
+              label={t("prop.cancelPolicy")}
+              options={[
+{ value: "free", label: t("prop.policyFree") },
+{ value: "flexible", label: t("prop.policyFlexible") },
+{ value: "moderate", label: t("prop.policyModerate") },
+{ value: "strict", label: t("prop.policyStrict") },
+{ value: "non_refundable", label: t("prop.policyNonRefundable") },
+              ]}
+              value={property.cancellationPolicy || "flexible"}
+              onChange={(e) => setProperty({ ...property, cancellationPolicy: e.target.value })}
+            />
+
+            <div className="flex items-center gap-6">
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={property.petsAllowed || false}
+                  onChange={(e) => setProperty({ ...property, petsAllowed: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+<span className="text-sm text-gray-700">{t("prop.pets")}</span>
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={property.smokingAllowed || false}
+                  onChange={(e) => setProperty({ ...property, smokingAllowed: e.target.checked })}
+                  className="rounded border-gray-300"
+                />
+<span className="text-sm text-gray-700">{t("prop.smoking")}</span>
+              </label>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}

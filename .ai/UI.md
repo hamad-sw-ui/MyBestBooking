@@ -83,6 +83,24 @@ Deux colonnes du dashboard pro sont directement actionnables :
   clôture seulement après le départ et paiement constaté). États terminaux et
   cas non couverts : badge seul, avec infobulle explicative.
 
+### T-217 — écrans ajoutés ou corrigés (2026-09-10)
+
+- `/dashboard/promotions/[id]` : édition d'un code promo (nom, date de fin,
+  plafonds, actif) ; identité (code/type/valeur) en lecture seule.
+- `/dashboard/rooms/[id]` : redirection serveur (307) vers
+  `/dashboard/rooms/[id]/calendrier#room-edit` — l'édition d'unité reste sur la
+  page calendrier, désormais accessible aussi par cette URL.
+- `/dashboard/settings` : section « Avis » (bascule de modération préalable) +
+  lien vers la file de modération.
+- `/dashboard/audit` : bouton « Charger plus » (pagination API) et compteurs
+  d'entrées chargées/filtrées.
+- `/dashboard/billing` : carte renommée « Versements et relevés » + pointeur
+  vers les reçus par réservation.
+- `/messages` : un fil encore vide (7 jours) affiche « Conversation ouverte —
+  écrivez votre premier message ».
+- `loading.tsx` **feuilles uniquement** (`components/page-loading.tsx`) :
+  jamais de squelette au-dessus d'une route `[id]` (soft-404, BUG-051).
+
 ## Conventions UI
 
 - Toutes les pages publiques et voyageur sont en **français** (labels codés en dur).

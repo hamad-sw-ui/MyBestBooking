@@ -337,12 +337,23 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
                     </p>
                   </div>
                   <div className="flex items-center gap-1">
+                    {/* T-217/P6 : second lien vers la section de modification
+                        des caractéristiques de l unité (ancre #room-edit). */}
                     <Link
                       href={`/dashboard/rooms/${room.id}/calendrier`}
                       className="px-3 py-1.5 text-xs bg-[#1B3A6B] text-white rounded-lg hover:bg-[#0f2444]"
                       title={t("bulk.editCalendar")}
                     >
                       {t("bulk.calendar")}
+                    </Link>
+                    {/* Le lien ouvre directement la section de modification
+                        de l unité (BUG-053). */}
+                    <Link
+                      href={`/dashboard/rooms/${room.id}/calendrier#room-edit`}
+                      className="px-3 py-1.5 text-xs border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+                      title={t("bulk.editUnit")}
+                    >
+                      {t("bulk.editUnit")}
                     </Link>
                     {isAdmin && (
                       <RowDeleteButton

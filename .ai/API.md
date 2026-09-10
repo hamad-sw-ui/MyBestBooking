@@ -110,6 +110,22 @@ Authentification :
 - **Filtrage par rôle** : dans les listes, on filtre **au niveau du WHERE SQL**
   (pas après), sauf `GET /api/properties` qui post-filtre `minPrice/maxPrice`.
 
+## Extensions T-217 (additives)
+
+- `PATCH /api/promotions/[id]` accepte désormais `maxUses: null` et
+  `maxDiscount: null` pour revenir à « illimité » (les valeurs numériques et les
+  gardes T-126 restent identiques).
+- `GET /api/admin/audit` (pagination `limit`/`offset`, filtre `action`) est
+  branchée par `/dashboard/audit` ; `src/lib/audit-rows.ts` partage la
+  projection serveur/client.
+
+## Surfaces volontairement inactives
+
+`GET /api/providers/stripe`, `POST /api/webhooks/stripe`,
+`POST /api/bookings/[id]/payment` (410) et `GET /api/cron/payouts` (410) ne sont
+appelées par aucun écran : voir `.ai/KNOWN_LIMITATIONS.md` → « Surfaces
+inactives ».
+
 ## Ce qui n'existe pas encore
 
 - Les routes promotions, conversations, messages, rate-plans et disponibilité

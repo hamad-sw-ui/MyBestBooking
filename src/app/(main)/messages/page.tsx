@@ -13,6 +13,7 @@ import Link from "next/link";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { SmartImage } from "@/components/ui/smart-image";
+import { isConversationVisible } from "@/lib/conversation-visibility";
 
 /**
  * T-172 — titre localisé + noindex (messagerie privée, non indexable).
@@ -71,10 +72,13 @@ async function getConversations(userId: string, search = "") {
     })
   );
 
-  // T-206/F9 : masquer les conversations sans aucun message dans les listes
-  // générales. Le fil direct reste accessible juste après création, mais la
-  // boîte de réception n'est plus polluée si l'utilisateur repart sans écrire.
-  const visibleConversations = conversationsWithMessages.filter(({ lastMessage }) => Boolean(lastMessage));
+  // T-206/F9 : les fils sans message restaient masqués pour ne pas polluer la
+  // boîte de réception. T-217/P7 : fenêtre de rattrapage de 7 jours pour les
+  // fils vides (le fil « Contacter l'hôte » créé puis quitté sans écrire est
+  // de nouveau visible et cliquable) ; au-delà, règle F9 inchangée.
+  const visibleConversations = conversationsWithMessages.filter(({ conversation, lastMessage }) =>
+    isConversationVisible({ hasMessage: Boolean(lastMessage), createdAt: conversation.createdAt }),
+  );
   const needle = search.trim().toLocaleLowerCase("fr");
   if (!needle) return visibleConversations;
   return visibleConversations.filter(({ property, lastMessage }) =>
@@ -183,11 +187,9 @@ export default async function MessagesPage({
                             <p className="text-sm text-gray-500">{property?.city}</p>
                           </div>
                           <div className="text-right flex-shrink-0">
-                            {lastMessage && (
-                              <p className="text-xs text-gray-400">
-                                {formatDate(lastMessage.createdAt, { day: "numeric", month: "short" }, locale)}
-                              </p>
-                            )}
+                            <p className="text-xs text-gray-400">
+                              {formatDate(lastMessage?.createdAt ?? conversation.createdAt, { day: "numeric", month: "short" }, locale)}
+                            </p>
                             {unreadCount && unreadCount > 0 && (
                               <Badge variant="info" className="mt-1">
                                 {(unreadCount > 1 ? t("messages.unreadMany") : t("messages.unreadOne")).replace("{n}", String(unreadCount))}
@@ -208,12 +210,17 @@ export default async function MessagesPage({
                           </div>
                         )}
 
-                        {/* Last message preview */}
-                        {lastMessage && (
+                        {/* Last message preview — un fil vide récent affiche
+                            son état « brouillon » (T-217/P7). */}
+                        {lastMessage ? (
                           <p className="mt-2 text-sm text-gray-600 truncate">
                             {lastMessage.senderType === "user" && !isHost && t("messages.youPrefix")}
                             {lastMessage.senderType === "host" && isHost && t("messages.youPrefix")}
                             {lastMessage.content}
+                          </p>
+                        ) : (
+                          <p className="mt-2 text-sm text-gray-400 italic truncate">
+                            {t("messages.draftPreview")}
                           </p>
                         )}
                       </div>

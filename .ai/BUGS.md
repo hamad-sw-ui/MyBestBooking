@@ -409,3 +409,38 @@ fournisseur de test dans l’environnement.
   hébergement n'était concerné, à rebours de la promesse de la route.
   ▶️ après : colonne qualifiée `"users"."id"` ; test d'intégration
   `propertyCount === 1` sur l'hôte du bloc « gate de publication ».
+
+- [x] **2026-09-10 — BUG-051** (L, T-217/P1) : toutes les pages `notFound()`
+  répondaient **200** (corps 404, statut 200) à cause du `loading.tsx` racine
+  (frontière Suspense). ▶️ après : squelette déplacé au niveau **feuille** ;
+  matrice production 8 URL → 404, 18 pages valides → 200 ; smoke 95/95.
+- [x] **2026-09-10 — BUG-052** (M, T-217/P2) : `/dashboard/properties/[id]`
+  était un composant client → aucun `notFound()`, id malformé en écran
+  d'erreur 200. ▶️ après : RSC + `isUuid()` + `notFound()` + props initiales.
+- [x] **2026-09-10 — BUG-053** (S, T-217/P3) : `reviews.requireModeration`
+  pilotait la modération des avis mais n'était réglable par aucune UI.
+  ▶️ après : section « Avis » dans `/dashboard/settings` ; avis créé `pending`
+  quand activée, `approved` sinon.
+- [x] **2026-09-10 — BUG-054** (M, T-217/P4) : les cartes « Passées » de
+  `/mes-reservations` n'exposaient aucune action, donc aucun reçu pour un
+  séjour terminé payé (l'API facture existait). ▶️ après : 8 liens facture.
+- [x] **2026-09-10 — BUG-055** (S, T-217/P8) : la carte « Factures » du
+  billing listait en réalité des **versements**. ▶️ après : libellés
+  « Versements et relevés » + pointeur vers les reçus par réservation.
+- [x] **2026-09-10 — BUG-056** (M, T-217/P5) : `PATCH /api/promotions/[id]`
+  existait sans écran → prolonger une promo exigeait de la recréer (perte de
+  `currentUses`). ▶️ après : `/dashboard/promotions/[id]` + `null` accepté pour
+  les plafonds ; `currentUses` préservé.
+- [x] **2026-09-10 — BUG-057** (S, T-217/P6) : `/dashboard/rooms/<id>`
+  renvoyait 404 et l'édition de l'unité était enfouie sous `/calendrier`.
+  ▶️ après : redirection serveur + ancre `#room-edit` + lien « Modifier l'unité ».
+- [x] **2026-09-10 — BUG-058** (S, T-217/P10) : `/dashboard/rooms` absent des
+  deux listes `adminLinks`. ▶️ après : entrée ajoutée (desktop + mobile).
+- [x] **2026-09-10 — BUG-059** (S, T-217/P7) : un fil ouvert via
+  « Contacter l'hôte » puis quitté sans écrire disparaissait de `/messages`.
+  ▶️ après : fenêtre de rattrapage de 7 jours (fil étiqueté « brouillon »),
+  compteurs inchangés.
+- [x] **2026-09-10 — BUG-060** (S, T-217/P9) : `GET /api/admin/audit`
+  (paginée) sans appelant et `/dashboard/audit` figé sur 100 lignes.
+  ▶️ après : « Charger plus » branché sur l'API, projecteur partagé testé ;
+  composants orphelins marqués `@deprecated` et documentés.

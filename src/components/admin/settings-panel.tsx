@@ -7,13 +7,14 @@
  */
 
 import { useEffect, useState, useTransition } from "react";
+import Link from "next/link";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   Globe, CreditCard, Bell, Shield, Award,
-  Package, CheckCircle2, XCircle, AlertCircle, Mail,
+  Package, CheckCircle2, XCircle, AlertCircle, Mail, Star,
 } from "lucide-react";
 import type {
   SettingValue,
@@ -64,6 +65,7 @@ export function SettingsPanel({ initial, providers }: Props) {
       <BillingSection initial={initial.billing} />
       <BestrewardsSection initial={initial.bestrewards} />
       <CancellationSection initial={initial.cancellation} />
+      <ReviewsSection initial={initial.reviews} />
       <EmailTemplatesSection initial={initial.emailTemplates} />
       <SecuritySection initial={initial.security} />
       <ProvidersSection providers={providers} />
@@ -488,6 +490,48 @@ function SecuritySection({ initial }: { initial: SettingValue<"security"> }) {
         <label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={maintenanceMode} onChange={(e) => setMaintenanceMode(e.target.checked)} /><div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600" /></label>
       </div>
       <p className="text-xs text-gray-500 border-t pt-3">{t("settings.securityNote")}</p>
+    </CardContent>
+    <CardFooter className="flex items-center gap-3"><Button onClick={save} disabled={isPending}>{t("action.save")}</Button><StatusPill status={status} error={error} /></CardFooter>
+  </Card>;
+}
+
+/* ─────────────────────── AVIS ET MODÉRATION (T-217) ─────────────────────── */
+
+/**
+ * Expose le réglage `reviews.requireModeration`, jusqu'ici sans interface :
+ * il est lu par `POST /api/reviews` pour décider si un nouvel avis est publié
+ * immédiatement (`false`, défaut) ou déposé dans la file « En attente » de
+ * `/dashboard/reviews` (`true`).
+ */
+function ReviewsSection({ initial }: { initial: SettingValue<"reviews"> }) {
+  const t = useT();
+  const [requireModeration, setRequireModeration] = useState(initial.requireModeration);
+  const [status, setStatus] = useState<SaveStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  function save() {
+    setStatus("saving"); setError(null);
+    startTransition(async () => {
+      try {
+        await saveSection("reviews", { requireModeration }, t("settings.saveError"));
+        setStatus("saved");
+      } catch (reason) {
+        setStatus("error"); setError(reason instanceof Error ? reason.message : t("settings.error"));
+      }
+    });
+  }
+
+  return <Card>
+    <CardHeader><div className="flex items-center gap-3"><Star className="w-5 h-5 text-[#1B3A6B]" /><CardTitle>{t("settings.reviews")}</CardTitle></div></CardHeader>
+    <CardContent className="space-y-4">
+      <p className="text-sm text-gray-500">{t("settings.reviewsBody")}</p>
+      <div className="flex items-center justify-between py-2">
+        <div><p className="font-medium text-gray-900">{t("settings.requireModeration")}</p><p className="text-sm text-gray-500">{t("settings.requireModerationBody")}</p></div>
+        <label className="relative inline-flex items-center cursor-pointer"><input type="checkbox" className="sr-only peer" checked={requireModeration} onChange={(e) => setRequireModeration(e.target.checked)} /><div className="w-11 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#1B3A6B] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#1B3A6B]" /></label>
+      </div>
+      <p className="text-xs text-gray-500 border-t pt-3">{t("settings.reviewsNote")}</p>
+      <Link href="/dashboard/reviews" className="text-sm font-medium text-[#1B3A6B] hover:underline">{t("settings.openModerationQueue")} →</Link>
     </CardContent>
     <CardFooter className="flex items-center gap-3"><Button onClick={save} disabled={isPending}>{t("action.save")}</Button><StatusPill status={status} error={error} /></CardFooter>
   </Card>;

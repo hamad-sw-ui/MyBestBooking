@@ -1,5 +1,14 @@
 "use client";
 
+/**
+ * @deprecated T-217/P9 — composant **volontairement inactif** : le paiement
+ * plateforme (carte) a été retiré du produit par T-207, donc plus aucun écran
+ * ne l'importe. Conservé pour historique et pour un éventuel rétablissement
+ * du flux ; voir `.ai/KNOWN_LIMITATIONS.md` (« Surfaces inactives »).
+ * Ne pas le réintroduire sans décision produit : le tunnel actuel est manuel
+ * (demande → confirmation de l'hôte → paiement sur place).
+ */
+
 import { AlertTriangle } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
 

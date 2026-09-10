@@ -57,7 +57,12 @@ describe("uiStrings (T-132)", () => {
     // T-216 (2026-09-10) : +5 clés bookings.* (gestion manuelle du statut dans la
     //   colonne Statut : changer, confirmer, annuler, mis à jour, indisponible),
     //   dont +1 bulk.actionBookingStatus déjà comptée ci-dessus = 1532.
-    expect(Object.keys(fr)).toHaveLength(1532);
+    // T-217 (2026-09-10) : +27 clés (correctifs d'audit runtime) :
+    //   +6 settings.* (section Avis/modération), +1 messages.draftPreview,
+    //   +1 bulk.editUnit (édition d'unité en ancre), +12 promo.* (écran
+    //   d'édition d'une promotion), +2 billing.receipts* (versements vs
+    //   reçus), +5 bulk.* (pagination du journal d'audit) = 1559.
+    expect(Object.keys(fr)).toHaveLength(1559);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

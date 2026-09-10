@@ -231,3 +231,17 @@ l'outbox). Restent assumées :
 Si l'une de ces limites bloque la prochaine étape (ex : mise en prod), la
 déplacer immédiatement dans `BUGS.md` **avec la priorité appropriée** et
 créer une tâche dans `BACKLOG.md`.
+
+## Surfaces inactives (volontairement hors service, T-217/P9)
+
+Ces surfaces existent dans le code mais ne sont **branchées à aucun écran** :
+elles sont conservées comme historique/contrat et ne doivent pas être
+réintroduites sans décision produit.
+
+- Composants `@deprecated` : `src/components/stripe-payment-form.tsx`
+  (paiement carte, retiré par T-207), `payout-account-form.tsx` et
+  `payout-request-button.tsx` (versements hôtes, désactivés par T-209).
+- Routes sans appelant applicatif : `GET /api/providers/stripe`,
+  `POST /api/webhooks/stripe` (compatibilité PSP), `POST /api/bookings/[id]/payment`
+  (410), `GET /api/cron/payouts` (410). `GET /api/admin/audit` est désormais
+  **branchée** par `/dashboard/audit` (T-217/P9).

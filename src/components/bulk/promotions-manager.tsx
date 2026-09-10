@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { formatPrice, formatDate } from "@/lib/utils";
-import { Tag, Plus, Percent, Copy } from "lucide-react";
+import { Tag, Plus, Percent, Copy, Pencil } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
 
@@ -370,6 +370,18 @@ export function PromotionsManager({ promotions }: Props) {
                       </td>
                       <td className="px-4 py-4">
                         <div className="flex items-center justify-end gap-1">
+                          {/* T-217/P5 : l'API PATCH existait sans écran —
+                              prolonger une promo ne doit plus passer par une
+                              suppression/recréation (perte de currentUses). */}
+                          <Link
+                            href={`/dashboard/promotions/${promo.id}`}
+                            className="inline-flex items-center gap-1 px-2 py-1 text-xs text-[#1B3A6B] rounded-lg hover:bg-blue-50"
+                            title={t("promo.editTitle").replace("{code}", promo.code)}
+                            aria-label={t("promo.editTitle").replace("{code}", promo.code)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                            {t("promo.editCta")}
+                          </Link>
                           <RowDeleteButton
                             entity="promotions"
                             id={promo.id}

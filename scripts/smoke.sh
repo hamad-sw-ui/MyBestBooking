@@ -246,9 +246,16 @@ done
 sect "3. Pages publiques (12, checkout invité inclus)"
 for u in / /recherche /aide /bestrewards /confidentialite \
          /mentions-legales /connexion /inscription /reservation \
-         /mot-de-passe-oublie /verifier-email /maintenance; do
+         /mot-de-passe-oublie /verifier-email; do
   assert_code "$u" "200" "public"
 done
+# T-217/P1 : /maintenance est « publique » au sens de la whitelist anti-lockout
+# (shouldBypassMaintenance), mais la page se **redirige** vers / quand le mode
+# maintenance est inactif (T-179) : 200 si actif, 307 sinon. Avant le correctif
+# P1, le loading racine transformait cette redirection en réponse 200 streamée
+# (soft-redirect) ; on accepte donc explicitement les deux issues réelles, sans
+# masquer un éventuel 500.
+assert_code "/maintenance" "200 307" "public (actif 200 / inactif 307)"
 
 # T-194 : les accès démo doivent PASSER — les 3 boutons un-clic sont
 # servis sur /connexion ET l'authentification de chaque compte fonctionne

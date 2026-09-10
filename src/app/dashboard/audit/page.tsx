@@ -3,15 +3,18 @@ import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { auditLog } from "@/db/schema";
 import { desc } from "drizzle-orm";
-import {
-  AuditFilter,
-  type AuditEntryRow,
-} from "@/components/bulk/audit-filter";
+import { AuditFilter } from "@/components/bulk/audit-filter";
+import { toAuditEntryRow, type AuditEntryRow } from "@/lib/audit-rows";
+
+/** Taille de page partagée avec le client (l'API accepte `limit` ≤ 200). */
+const AUDIT_PAGE_SIZE = 100;
 
 /**
- * /dashboard/audit (refactoré T-034) — Server Component qui charge les
- * 100 dernières entrées puis délègue au <AuditFilter> client (recherche
- * + filtres action/entity + raccourcis clavier).
+ * /dashboard/audit (refactoré T-034, paginé T-217/P9) — Server Component qui
+ * charge la **première page** du journal (100 entrées, même requête qu'avant)
+ * puis délègue au <AuditFilter> client : recherche, filtres action/entity,
+ * raccourcis clavier et « charger plus » branché sur `GET /api/admin/audit`
+ * (pagination `limit`/`offset`), qui existait déjà sans appelant.
  */
 export const dynamic = "force-dynamic";
 
@@ -24,19 +27,7 @@ export default async function AuditPage() {
     .select()
     .from(auditLog)
     .orderBy(desc(auditLog.createdAt))
-    .limit(100);
-  const mapped: AuditEntryRow[] = rows.map((e) => ({
-    id: e.id,
-    action: e.action,
-    actorId: e.actorId,
-    actorEmail: e.actorEmail,
-    entityType: e.entityType,
-    entityId: e.entityId,
-    metadata:
-      e.metadata && typeof e.metadata === "object"
-        ? (e.metadata as Record<string, unknown>)
-        : null,
-    createdAt: e.createdAt.toISOString(),
-  }));
-  return <AuditFilter entries={mapped} />;
+    .limit(AUDIT_PAGE_SIZE);
+  const mapped: AuditEntryRow[] = rows.map(toAuditEntryRow);
+  return <AuditFilter entries={mapped} pageSize={AUDIT_PAGE_SIZE} />;
 }

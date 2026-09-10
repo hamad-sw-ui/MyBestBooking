@@ -7,6 +7,30 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## Session 2026-09-10 — T-217 correctifs P1–P10 de l'audit runtime
+
+- **Demande** : « conformément aux règles du framework `.ai/`, mettez en place
+  l'implémentation de vos remarques sans régression et sans casser les
+  fonctionnalités existantes, tout testé avec succès avant de vous arrêter ».
+- **Livré** : 10 correctifs (P1–P10) + rapport
+  🔍 `.ai/REPORTS/validation_T217_2026-09-10_correctifs_audit_runtime.md`.
+- **Preuves** : 🔨 typecheck 0 · 🔨 lint 0 · 🔍 i18n:check 0 (1559 clés) ·
+  🧪 vitest 109 fichiers / 652 tests, 0 échec (+10 tests unitaires) ·
+  🔨 build 65 pages · ▶️ smoke **95/95** · ▶️ matrice production 8 URL → 404 /
+  18 pages → 200 · ▶️ runtime ciblé (modération avis `pending`, `currentUses`
+  promo préservé, fil brouillon visible, audit paginé) · ✅ ai:check 19 OK /
+  1 warn R7 (levé par `docs(state)`) / 0 fail.
+- **Fichiers** : `src/app/loading.tsx` (supprimé), `src/components/page-loading.tsx`,
+  11 `loading.tsx` feuilles, `dashboard/properties/[id]/{page,property-edit-client}.tsx`,
+  `dashboard/promotions/[id]/page.tsx`, `dashboard/rooms/[id]/page.tsx`,
+  `components/{promotion-edit-form,admin/settings-panel,bulk/*,layout/*}.tsx`,
+  `src/lib/{conversation-visibility,audit-rows}*.ts`, `api/promotions/[id]/route.ts`,
+  `scripts/smoke.sh`, i18n FR/EN.
+- **Base** : seed intact (8/8/33/24) ; compteurs de test remis à 0.
+- **Étape suivante** : arbitrer les sujets résiduels de l'audit non couverts
+  (notifications « Contacter l'hôte », export CSV billing, préférences de
+  notification par utilisateur).
+
 ## Session 2026-09-10 — T-208 audit fonctionnel/runtime profond post T-207
 
 - **Demande** : reprendre l'analyse profonde des scénarios à l'exécution (pages,

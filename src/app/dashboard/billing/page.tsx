@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { bookings, properties } from "@/db/schema";
@@ -244,6 +245,16 @@ export default async function BillingPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {/* T-217/P8 : la carte listait des versements sous le nom
+                « Factures ». Le titre est corrigé et le lien vers les reçus
+                réels (un par réservation, `src/lib/invoice.ts`) est explicite
+                au lieu de laisser croire à une facturation légale. */}
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-3 rounded-lg bg-gray-50 px-3 py-2">
+              <p className="text-xs text-gray-600">{t("billing.receiptsPointer")}</p>
+              <Link href="/dashboard/bookings" className="text-xs font-medium text-[#1B3A6B] hover:underline">
+                {t("billing.receiptsLink")}
+              </Link>
+            </div>
             {billing.invoices.length === 0 ? (
 <p className="text-center text-gray-500 py-8">{t("billing.invoicesSoon")}</p>
             ) : (

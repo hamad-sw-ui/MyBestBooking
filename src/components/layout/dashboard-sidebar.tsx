@@ -56,6 +56,9 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
   const adminLinks = [
     { href: "/dashboard", icon: LayoutDashboard, label: t("dash.overview") },
     { href: "/dashboard/properties", icon: Building2, label: t("dash.properties") },
+    // T-217/P10 : la page existe pour l'admin (toutes les chambres + actions
+    // groupées) mais n'était atteignable que par URL directe.
+    { href: "/dashboard/rooms", icon: BedDouble, label: t("dash.rooms") },
     { href: "/dashboard/bookings", icon: Calendar, label: t("dash.bookings") },
     { href: "/dashboard/users", icon: Users, label: t("dash.users") },
     { href: "/dashboard/reviews", icon: Star, label: t("dash.reviews") },

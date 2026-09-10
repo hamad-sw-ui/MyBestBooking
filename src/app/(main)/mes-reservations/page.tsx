@@ -279,6 +279,28 @@ export default async function MyBookingsPage() {
                               )}
                             </div>
                           )}
+                          {/* T-217 (BUG-054) : un séjour passé conservait les
+                              avis mais perdait toutes les actions — dont le
+                              reçu, pourtant généré par l'API et proposé sur les
+                              séjours à venir. On réutilise la barre d'actions
+                              existante : le serveur reste la source de vérité
+                              (aucun bouton d'annulation pour un statut clos). */}
+                          <div className="flex flex-wrap items-center gap-3 mt-4 pt-4 border-t border-gray-100">
+                            <Link href={`/hebergement/${property?.slug}`}>
+                              <Button variant="outline" size="sm">
+                                {t("bookings.viewProperty")}
+                              </Button>
+                            </Link>
+                            <BookingRowActions
+                              bookingId={booking.id}
+                              bookingReference={booking.bookingReference}
+                              propertyId={property?.id ?? booking.propertyId}
+                              status={booking.status}
+                              paymentStatus={booking.paymentStatus}
+                              paymentMethodOffline={booking.paymentMethodOffline}
+                              paymentIntentId={booking.paymentIntentId}
+                            />
+                          </div>
                         </div>
                       </div>
                     </Card>

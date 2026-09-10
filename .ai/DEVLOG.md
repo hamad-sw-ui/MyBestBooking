@@ -5,6 +5,29 @@ en haut). Aucun format imposé — quelques lignes suffisent : ce qu'on a fait,
 ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 
 ---
+## 2026-09-10 — T-217 correctifs P1–P10 (audit runtime)
+
+**Fait.** Mise en œuvre des dix constats de
+`docs/analyse_2026-09-10_audit_runtime_fonctionnalites.md` : squelettes de
+chargement feuilles (fin du soft-404), édition d'hébergement rendue côté
+serveur, section « Avis » (modération), reçus sur les séjours passés, carte
+« Versements et relevés », édition des promotions, accès direct à l'édition
+d'une chambre, fil de messagerie vide visible 7 jours, journal d'audit paginé,
+entrée « Chambres » dans la navigation admin.
+
+**Appris.** Le soft-404 ne venait d'aucune page mais du `loading.tsx` **racine** :
+toute frontière Suspense au-dessus d'une route `[id]` fige le statut à 200.
+Corollaire : un `loading.tsx` ne doit être posé que sur des feuilles sans enfant
+dynamique — la règle est écrite dans `page-loading.tsx` pour ne pas la
+redécouvrir. Autre leçon : une assertion smoke peut dépendre d'un bug (ici le
+soft-redirect de `/maintenance`) ; quand le statut redevient correct, l'assertion
+doit décrire les deux issues réelles (200 actif / 307 inactif) au lieu d'être
+« ajustée » au hasard.
+
+**Pour la suite.** Sujets résiduels : notification e-mail à la création d'une
+conversation, export CSV de la carte billing, préférences de notification par
+utilisateur.
+
 ## 2026-09-10 — T-208 audit fonctionnel/runtime post T-207
 
 **Fait.** Reprise de l'audit runtime demandé : build production, seed, smoke,
