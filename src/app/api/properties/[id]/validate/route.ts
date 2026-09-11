@@ -9,6 +9,7 @@ import { eq } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
 import { requireApprovedHost } from "@/lib/host-approval";
 import { getSetting } from "@/lib/settings";
+import { enabledFor } from "@/lib/notification-prefs";
 import { appBaseUrl } from "@/lib/app-url";
 import { templates } from "@/lib/mail";
 import { enqueueEmail } from "@/lib/email-outbox";
@@ -51,11 +52,27 @@ async function notifyHostOfDecision(input: {
     if (previousStatus === property.status) return;
 
     const [host] = await db
-      .select({ email: users.email, firstName: users.firstName, language: users.language })
+      .select({
+        email: users.email,
+        firstName: users.firstName,
+        language: users.language,
+        notificationPrefs: users.notificationPrefs,
+      })
       .from(users)
       .where(eq(users.id, property.hostId))
       .limit(1);
     if (!host?.email) return;
+    // T-261 (audit n°6, B9) : l'hôte peut couper la catégorie « décisions de
+    // modération » ; la décision est appliquée, seul l'e-mail est retenu.
+    if (
+      !enabledFor(
+        host.notificationPrefs,
+        action === "approve" ? "propertyApproved" : "propertyRejected",
+        action === "approve" ? notifications.propertyApproved : notifications.propertyRejected,
+      )
+    ) {
+      return;
+    }
 
     const url = `${appBaseUrl()}/dashboard/properties/${property.id}`;
     const mail = action === "approve"

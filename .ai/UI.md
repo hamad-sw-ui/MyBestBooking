@@ -119,6 +119,11 @@ Deux colonnes du dashboard pro sont directement actionnables :
 - **Zone de danger (T-262)** : `/mon-compte` affiche, **avant** la suppression du compte, un encart
   conditionnel « Votre crédit accumulé de X sera perdu » (montant dans la devise d'affichage) quand
   le solde gelé est positif — aucune saisie nouvelle, la suppression reste au même endroit.
+- **Préférences de notification (T-261)** : l'onglet « Notifications » de `/mon-compte` expose, en
+  plus des alertes prix, trois catégories réglables par l'utilisateur — rappels de séjour, demandes
+  d'avis, décisions de modération (`users.notification_prefs` ; `null` = héritage du réglage global,
+  jamais de réactivation de ce que l'équipe a coupé) ; une note rappelle que les e-mails
+  transactionnels restent envoyés par l'équipe.
 - **Recherche complète (T-260)** : le formulaire de `/recherche` gagne « Note minimale » (0–10),
   l'option de tri « Populaires » et le bouton « Autour de moi » (géolocalisation → `near=lat,lng,25`,
   repli « saisissez une ville » si la position est refusée) ; le champ destination cherche désormais

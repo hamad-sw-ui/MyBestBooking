@@ -7,6 +7,25 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-11 — Audit n°6, lot C (2/2) : T-261 (B9) — préférences de notification par utilisateur
+
+- **Livré** : 🔨 colonne additive **`users.notification_prefs`** (jsonb **nullable**, migration `0025`)
+  — `NULL` = héritage du réglage global, donc **comportement d'envoi inchangé** pour tous les comptes
+  existants ; 🔨 helper pur `src/lib/notification-prefs.ts` (3 catégories : rappels de séjour J-3/J-1,
+  demandes d'avis, décisions de modération ; lecture défensive du jsonb ; **le global reste maître**) ;
+  🔨 appliqué aux rappels/demandes d’avis (`booking-lifecycle-emails`), à la modération d'avis
+  (`review-notifications`) et aux décisions d'annonce (`validate`) ; 🔨 `PATCH /api/users/me`
+  (objet strict, `null` = effacer) + `GET /api/auth/me` ; 🔨 écran `/mon-compte` : trois cases
+  réglables + note réécrite (« e-mails transactionnels envoyés par l'équipe »). Verrou i18n
+  **1762 → 1768** (+6).
+- **🧪 Tests** : `notification-prefs` **10/10**, `route.t261` **5/5** (base réelle : persistance,
+  exposition, clé inconnue → 400, `null` → héritage), `booking-lifecycle-emails.t261` **2/2**
+  (compte coupé → aucune ligne d'outbox, compte hérité → envoyée), composant **2/2** ; sonde runtime
+  PATCH/GET/400/reset ; tsc 0, eslint 0/0.
+- **✅ Audit n°6 entièrement soldé (B1 → B12)** : lots A (`11165d4`), B (`76ec5b9`, `dfd0a5e`),
+  D (`7e71914`, `130831e`) et C (`04d906e`, ce commit). Prochaine étape : resynchronisation finale de
+  `STATE.md` sur le HEAD (R7) et clôture.
+
 ## 2026-09-11 — Audit n°6, lot C (1/2) : T-260 (B7) — tri « Populaires », note minimale, « Autour de moi », recherche libre
 
 - **Livré** : 🔨 `sort=popularity` dans le `<select>` (déjà géré par l'API et la liste blanche

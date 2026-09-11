@@ -841,3 +841,32 @@ est couvert par un test de rendu.
 sondes runtime FR/EN : `?search=azur` → 1 carte, `?minRating=9.5` → 2, `?near=43.7696,11.2558,50` → 1
 + puce, `?city=Paris` → 2 (inchangé), EN « Popular / Minimum rating / Near me ».
 
+## T-261 — audit n°6, B9 : des préférences de notification qui appartiennent à l'utilisateur (2026-09-11)
+
+**Le constat.** L'écran « Préférences de notification » ne proposait que les alertes prix ; les onze
+autres interrupteurs étaient des réglages globaux d'administration. Un voyageur ne pouvait donc pas
+arrêter ses rappels de séjour ni ses demandes d'avis — au mieux il signalait les e-mails en spam, ce
+qui abîme la délivrabilité de tout le monde.
+
+**Ce qui a été fait.** Une colonne **`users.notification_prefs`** (jsonb **nullable**, migration
+`0025`) porte trois catégories « confort » : `stayReminders` (J-3/J-1), `reviewRequests`,
+`moderationDecisions` (avis modéré, annonce validée/refusée). Un helper pur
+(`src/lib/notification-prefs.ts`) décide, pour chaque envoi, si la préférence utilisateur restreint le
+réglage global ; il est appliqué aux rappels et demandes d'avis (préférence du voyageur), à la
+modération d'avis (auteur) et aux décisions d'annonce (hôte). `PATCH /api/users/me` accepte l'objet
+(strict, `null` = effacer) et `GET /api/auth/me` l'expose ; l'écran affiche trois cases et une note
+rappelant que les e-mails transactionnels restent envoyés par l'équipe.
+
+**Trois décisions de conception.** (1) `NULL` = héritage : tout compte existant reçoit exactement ce
+qu'il recevait avant — c'est ce qui rend la livraison non régressive, et c'est prouvé en base réelle
+(le compte réglé n'a **aucune** ligne d'outbox, le compte hérité l'a). (2) **Le global reste maître** :
+une préférence utilisateur ne peut que restreindre, jamais réactiver un type coupé par l'équipe —
+réactiver serait un vecteur de spam et un retour en arrière sur les décisions produit. (3) La coupure
+a lieu **avant** l'écriture de l'`eventKey` : une catégorie réactivée dans la fenêtre de 14 jours peut
+encore recevoir sa demande d'avis, il n'y a pas de « trou » définitif.
+
+**Preuves.** `notification-prefs` 10/10 · `route.t261` 5/5 (PATCH/GET/400/reset en base réelle) ·
+`booking-lifecycle-emails.t261` 2/2 (outbox) · composant 2/2 · tsc 0 · eslint 0/0 · sonde runtime
+PATCH/GET/400/reset sur le compte de démonstration (remis à `null`). Verrou i18n **1762 → 1768**.
+Rapports : `REPORTS/validation_T261_2026-09-11_audit6_B9.md` (+ impact et conception).
+

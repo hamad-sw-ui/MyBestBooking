@@ -686,6 +686,22 @@ Numérotation de suivi : **B1→T-253**, **B2→T-254**, **B3→T-255**, **B11�
   lien, fiche toujours bornée à 5 ; page 1 = 20 lignes avec `?page=2`, page 2 = fin de liste ; slug
   inconnu → `notFound()`).
 
+- ✅ ~~**T-261 (M/P2) — *B9 — préférences de notification : un interrupteur par utilisateur, onze globaux.***~~
+  **FAIT (2026-09-11)** : colonne additive **`users.notification_prefs`** (jsonb **nullable**,
+  migration `0025`, sans défaut : `NULL` = héritage du réglage global, donc **aucun envoi ne change**
+  pour les comptes existants) ; helper pur `src/lib/notification-prefs.ts` (3 catégories —
+  `stayReminders` J-3/J-1, `reviewRequests`, `moderationDecisions` avis modéré + annonce
+  validée/refusée ; lecture défensive du jsonb ; `enabledFor(prefs, clé, global)` où **le global reste
+  maître** : l'utilisateur ne peut que restreindre) ; appliqué à `sendBookingReminders`,
+  `sendReviewRequests` (préférence du voyageur), `notifyReviewModerated` (auteur) et
+  `notifyHostOfDecision` (hôte) ; `PATCH /api/users/me` accepte `notificationPrefs` (objet strict,
+  `null` = effacer) et `GET /api/auth/me` l'expose ; écran `/mon-compte` : trois cases réglables +
+  note réécrite rappelant que les e-mails transactionnels restent envoyés par l'équipe. Verrou i18n
+  **1762 → 1768** (+6). Preuves : `notification-prefs` **10/10**, `route.t261` **5/5** (base réelle,
+  clé inconnue → 400, `null` → héritage), `booking-lifecycle-emails.t261` **2/2** (compte coupé →
+  aucune ligne d'outbox, compte hérité → envoyée), composant **2/2**, sonde runtime PATCH/GET/400/reset.
+  **➡️ Audit n°6 entièrement soldé (B1 → B12).**
+
 - ✅ ~~**T-260 (M/P2) — *B7 — quatre capacités de l'API que l'interface n'expose pas.***~~ **FAIT
   (2026-09-11)** : `/recherche` expose (1) le tri **« Populaires »** (`totalReviews DESC`, déjà géré
   par l'API et par la liste blanche T-249), (2) la **note minimale** (0–10, pas de 0,5 ; hors bornes →

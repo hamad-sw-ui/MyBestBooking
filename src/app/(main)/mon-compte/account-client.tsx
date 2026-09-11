@@ -41,6 +41,12 @@ interface UserData {
   twoFactorEnabled: boolean | null;
   timezone?: string | null;
   priceAlertEnabled?: boolean | null;
+  /** T-261 — catégories de notification réglables (null = héritage global). */
+  notificationPrefs?: {
+    stayReminders?: boolean;
+    reviewRequests?: boolean;
+    moderationDecisions?: boolean;
+  } | null;
   avatarUrl?: string | null;
 }
 
@@ -383,6 +389,7 @@ export default function MyAccountPage() {
                 <NotificationPrefsSection
                   initial={{
                     priceAlertEnabled: user.priceAlertEnabled ?? false,
+                    notificationPrefs: user.notificationPrefs ?? null,
                   }}
                 />
                 {/* T-130 : le parrainage est disponible (T-125) ; on renvoie vers l'onglet BestRewards */}

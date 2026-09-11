@@ -87,8 +87,10 @@ describe("uiStrings (T-132)", () => {
   //   de compte, +1) = 1749 ; T-260 (audit n°6, B7 : tri « Populaires », note
   //   minimale, « Autour de moi », recherche libre nom/ville/description et
   //   deux avertissements de filtre ignoré, +13) = 1762 ;
-  //   T-263/T-264 (audit n°6, B10/B12) = 1762 (aucune clé ajoutée).
-  expect(Object.keys(fr)).toHaveLength(1762);
+  //   T-263/T-264 (audit n°6, B10/B12) = 1762 (aucune clé ajoutée) ;
+  //   T-261 (audit n°6, B9 : catégories de notification réglables par
+  //   l'utilisateur, +6) = 1768.
+  expect(Object.keys(fr)).toHaveLength(1768);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

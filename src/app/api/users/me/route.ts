@@ -13,6 +13,7 @@ import { apiError } from "@/lib/api-error";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 import { anonymizeUserAccount, anonymizedEmailFor } from "@/lib/account-anonymization";
 import { recordAccountClosureEntry } from "@/lib/wallet-ledger";
+import { parseUserNotificationPrefs } from "@/lib/notification-prefs";
 
 // T-135 — langues de l'UI réellement traduites (fr/en). L'arabe n'a pas
 // de dictionnaire V1 : on le rejette ici plutôt que de stocker une
@@ -45,6 +46,18 @@ const schema = z.object({
   avatarUrl: z.string().url().max(500).optional().nullable(),
   // T-030 : préférence user
   priceAlertEnabled: z.boolean().optional(),
+  // T-261 (audit n°6, B9) : préférences par catégorie. `null` efface le
+  // réglage (retour à l'héritage du global) ; objet partiel strict — une clé
+  // inconnue est refusée en 400 plutôt que stockée sans effet.
+  notificationPrefs: z
+    .object({
+      stayReminders: z.boolean().optional(),
+      reviewRequests: z.boolean().optional(),
+      moderationDecisions: z.boolean().optional(),
+    })
+    .strict()
+    .nullable()
+    .optional(),
 }).strict()
 
 /**
@@ -82,6 +95,9 @@ export async function PATCH(request: NextRequest) {
         // toggle sans recharger. Détecté par scripts/deep_sim.py.
         priceAlertEnabled: updated.priceAlertEnabled,
         twoFactorEnabled: updated.twoFactorEnabled,
+        // T-261 : renvoyé normalisé (clés connues seulement) pour que l'UI
+        // confirme l'enregistrement sans recharger, comme `priceAlertEnabled`.
+        notificationPrefs: parseUserNotificationPrefs(updated.notificationPrefs),
       },
     });
   } catch (error) {

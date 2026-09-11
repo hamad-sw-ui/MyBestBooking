@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
 import { apiError } from "@/lib/api-error";
+import { parseUserNotificationPrefs } from "@/lib/notification-prefs";
 
 export async function GET() {
   const user = await getCurrentUser();
@@ -31,6 +32,9 @@ export async function GET() {
       twoFactorEnabled: user.twoFactorEnabled,
       timezone: user.timezone,
       priceAlertEnabled: user.priceAlertEnabled,
+      // T-261 (audit n°6, B9) : préférences par catégorie (null = héritage
+      // du réglage global) — l'écran de `/mon-compte` les édite.
+      notificationPrefs: parseUserNotificationPrefs(user.notificationPrefs),
       avatarUrl: user.avatarUrl,
     },
   });

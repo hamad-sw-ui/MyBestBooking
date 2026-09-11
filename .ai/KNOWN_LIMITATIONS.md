@@ -61,16 +61,19 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   réel (jamais cachés). En multi-instance, chaque instance diverge ≤ TTL —
   à remplacer par `unstable_cache`/Redis le jour venu.
 
-- **Désabonnement (T-239) limité aux envois non transactionnels.** Seules
-  les **alertes prix** portent un lien d'opposition signé (`/desabonnement`) et
-  sont pilotées par une préférence utilisateur. Les e-mails de réservation
-  (demande, confirmation, expiration, rappel de paiement), de sécurité
-  (2FA, réinitialisation de mot de passe) et de contenu (avis publié ou
-  modéré) restent envoyés sans possibilité de refus : ils portent l'exécution
-  du contrat ou la sécurité du compte. Le registre
-  `UNSUBSCRIBE_CATEGORIES` (`src/lib/unsubscribe.ts`) est le point d'extension
-  si une nouvelle catégorie marketing apparaît : aucune table
-  `user_notification_prefs` n'a été créée pour une seule catégorie.
+- **Désabonnement (T-239) et préférences (T-261) limités aux envois non
+  transactionnels.** Les **alertes prix** portent un lien d'opposition signé
+  (`/desabonnement`) et leur réglage dédié ; depuis **T-261**, **trois catégories**
+  supplémentaires sont réglables par l'utilisateur dans `/mon-compte`
+  (`users.notification_prefs`) : **rappels de séjour** (J-3/J-1), **demandes d'avis**
+  et **décisions de modération** (avis modéré, annonce validée/refusée). Le réglage
+  **global** d'administration reste **maître** : une préférence utilisateur ne peut que
+  restreindre, jamais réactiver un type coupé par l'équipe. Les e-mails de réservation
+  (demande, confirmation, expiration, relance de règlement), de sécurité (2FA,
+  réinitialisation de mot de passe) et les autres notifications de contenu restent
+  envoyés sans possibilité de refus : ils portent l'exécution du contrat ou la sécurité
+  du compte. Le registre `UNSUBSCRIBE_CATEGORIES` (`src/lib/unsubscribe.ts`) reste le
+  point d'extension pour une future catégorie marketing.
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).

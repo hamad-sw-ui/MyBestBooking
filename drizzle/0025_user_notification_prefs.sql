@@ -1,0 +1,14 @@
+-- T-261 (audit n°6, B9) — migration additive : préférences de notification
+-- par utilisateur.
+--
+-- Onze interrupteurs d'e-mail n'existaient qu'en réglage GLOBAL d'admin
+-- (`app_settings.notifications`) : un voyageur ne pouvait pas arrêter ses
+-- rappels de séjour ou ses demandes d'avis. L'écran de `/mon-compte` n'avait
+-- qu'une colonne (`users.price_alert_enabled`).
+--
+-- `notification_prefs` est NULLABLE et sans défaut : `NULL` (tous les comptes
+-- existants) = héritage du réglage global, donc **aucun envoi ne change** tant
+-- que l'utilisateur n'a pas touché l'écran. Seules trois catégories « confort »
+-- sont réglables (rappels de séjour, demandes d'avis, décisions de modération) ;
+-- les e-mails transactionnels restent pilotés par l'équipe.
+ALTER TABLE "users" ADD COLUMN IF NOT EXISTS "notification_prefs" jsonb;

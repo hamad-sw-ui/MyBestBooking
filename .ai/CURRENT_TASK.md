@@ -2,14 +2,15 @@
 
 - **ID** : Audit n°6 — lots **A → D** (décisions **oui ×4** reçues le 2026-09-11)
 - **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution
-- **Statut** : 🔄 **IMPLÉMENTATION EN COURS (2026-09-11)** — **lot A livré** (`11165d4` : B1/B2/B3/B11),
+- **Statut** : ✅ **IMPLÉMENTATION LIVRÉE (2026-09-11) — audit n°6 entièrement soldé (B1 → B12)** — **lot A livré** (`11165d4` : B1/B2/B3/B11),
   **lot B livré** (B4 → **T-257**, B5 → **T-258**, `76ec5b9` ; B6 → **T-259**, `dfd0a5e`) et
   **lot D livré** : B8 → **T-262** (crédit gelé signalé et journalisé à la suppression de compte,
   **aucune consommation** — gel T-248 §3), B10 → **T-263** (résidus T-207 récapitulés + `// legacy:`),
   B12 → **T-264** (rate-limit en mémoire énoncé au déploiement + avertissement unique), puis
-  **lot C (1/2)** : B7 → **T-260** (tri « Populaires », note minimale, « Autour de moi », recherche
-  libre `search` — vitest 146 f/812 t, sondes FR/EN). Reste : **B9 → T-261** (préférences de
-  notification par utilisateur).
+  **lot C** : B7 → **T-260** (tri « Populaires », note minimale, « Autour de moi », recherche libre
+  `search` — vitest 146 f/812 t, sondes FR/EN) et B9 → **T-261** (préférences de notification par
+  utilisateur : `users.notification_prefs`, `null` = héritage global, le réglage admin reste maître ;
+  `notification-prefs` 10/10, `route.t261` 5/5, outbox 2/2, sonde runtime).
 - **Niveau** : S (correctifs de fin de parcours ; le lot D reste sous le gel wallet T-248 §3)
 - **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md`
   (copie `.ai/REPORTS/analyse_runtime_n6_2026-09-11_inacheves.md`)

@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { templates } from "@/lib/mail";
 import { enqueueEmail } from "@/lib/email-outbox";
 import { getSetting } from "@/lib/settings";
+import { enabledFor } from "@/lib/notification-prefs";
 
 /**
  * T-225 (audit n°2, A5) — notifications d'avis.
@@ -95,6 +96,7 @@ export async function notifyReviewModerated(
         authorEmail: users.email,
         authorFirstName: users.firstName,
         authorLanguage: users.language,
+        authorPrefs: users.notificationPrefs,
         bookingReference: bookings.bookingReference,
       })
       .from(reviews)
@@ -105,6 +107,9 @@ export async function notifyReviewModerated(
       .limit(1);
 
     if (!row?.authorEmail) return false;
+    // T-261 (audit n°6, B9) : « décisions de modération » coupées par l'auteur
+    // → pas d'e-mail (le statut de l'avis, lui, est bien appliqué).
+    if (!enabledFor(row.authorPrefs, "reviewModerated", notifications.reviewModerated)) return false;
 
     const mail = await templates.reviewModerated({
       firstName: row.authorFirstName ?? "",

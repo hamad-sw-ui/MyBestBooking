@@ -34,6 +34,11 @@ export const users = pgTable("users", {
   bestrewardsLevel: smallint("bestrewards_level").default(1),
   bestrewardsBookingsCount: integer("bestrewards_bookings_count").default(0),
   walletBalance: decimal("wallet_balance", { precision: 10, scale: 2 }).default("0.00"),
+  // T-261 (audit n°6, B9) : préférences de notification par utilisateur
+  // ({ stayReminders, reviewRequests, moderationDecisions } ; `null` = héritage
+  // du réglage global `app_settings.notifications`, comportement historique).
+  // Les e-mails transactionnels ne sont pas réglables ici.
+  notificationPrefs: jsonb("notification_prefs"),
   emailVerified: boolean("email_verified").default(false),
   language: varchar("language", { length: 5 }).default("fr"),
   currency: varchar("currency", { length: 3 }).default("EUR"),

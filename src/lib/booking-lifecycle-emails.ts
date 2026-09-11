@@ -6,6 +6,7 @@ import { toMailLocale } from "@/lib/mail/strings";
 import { appBaseUrl } from "@/lib/app-url";
 import { enqueueEmail, deliverEmail } from "@/lib/email-outbox";
 import { getSetting } from "@/lib/settings";
+import { enabledFor } from "@/lib/notification-prefs";
 
 /**
  * T-149 — E-mails de cycle de vie pilotés par le cron quotidien.
@@ -17,6 +18,12 @@ import { getSetting } from "@/lib/settings";
  * Les interrupteurs admin `notifications.bookingReminderJ3 / J1` et
  * `notifications.reviewRequest` sont respectés ; les sujets et corps
  * restent éditables via `emailTemplates`.
+ *
+ * T-261 (audit n°6, B9) : la préférence **par utilisateur**
+ * (`users.notification_prefs`, lue ici avec la ligne du voyageur) peut en plus
+ * couper sa catégorie. `null` = héritage du global : un compte qui n'a jamais
+ * touché l'écran reçoit exactement ce qu'il recevait avant. L'admin reste
+ * maître : `enabledFor` ne permet jamais de réactiver un global coupé.
  */
 
 /**
@@ -44,12 +51,19 @@ function addDays(base: Date, days: number): Date {
  */
 export async function sendBookingReminders(today = new Date()): Promise<number> {
   const notifications = await getSetting("notifications");
-  const targets: { date: string; code: "j3" | "j1"; daysLabelFr: string; daysLabelEn: string }[] = [];
+  const targets: {
+    date: string;
+    code: "j3" | "j1";
+    /** Clé de réglage global — porte aussi la préférence utilisateur (T-261). */
+    settingKey: "bookingReminderJ3" | "bookingReminderJ1";
+    daysLabelFr: string;
+    daysLabelEn: string;
+  }[] = [];
   if (notifications.bookingReminderJ3) {
-    targets.push({ date: toIso(addDays(today, 3)), code: "j3", daysLabelFr: "Votre arrivée est dans 3 jours", daysLabelEn: "Your check-in is in 3 days" });
+    targets.push({ date: toIso(addDays(today, 3)), code: "j3", settingKey: "bookingReminderJ3", daysLabelFr: "Votre arrivée est dans 3 jours", daysLabelEn: "Your check-in is in 3 days" });
   }
   if (notifications.bookingReminderJ1) {
-    targets.push({ date: toIso(addDays(today, 1)), code: "j1", daysLabelFr: "Votre arrivée est demain", daysLabelEn: "Your check-in is tomorrow" });
+    targets.push({ date: toIso(addDays(today, 1)), code: "j1", settingKey: "bookingReminderJ1", daysLabelFr: "Votre arrivée est demain", daysLabelEn: "Your check-in is tomorrow" });
   }
   if (targets.length === 0) return 0;
 
@@ -64,6 +78,7 @@ export async function sendBookingReminders(today = new Date()): Promise<number> 
       propertyName: properties.name,
       city: properties.city,
       guestLanguage: users.language,
+      guestPrefs: users.notificationPrefs,
     })
     .from(bookings)
     .innerJoin(properties, eq(properties.id, bookings.propertyId))
@@ -85,7 +100,13 @@ export async function sendBookingReminders(today = new Date()): Promise<number> 
 
   let sent = 0;
   for (const row of rows) {
-    const target = targets.find((t) => t.date === toIso(new Date(row.checkIn)));
+    const target = targets.find(
+      (t) =>
+        t.date === toIso(new Date(row.checkIn)) &&
+        enabledFor(row.guestPrefs, t.settingKey, notifications[t.settingKey]),
+    );
+    // Le voyageur a coupé la catégorie « rappels de séjour » (T-261) : la
+    // réservation reste éligible, elle n'est simplement pas notifiée.
     if (!target) continue;
     const eventKey = `booking-reminder:${row.id}:${target.code}`;
     try {
@@ -137,6 +158,7 @@ export async function sendReviewRequests(today = new Date()): Promise<number> {
       bookingReference: bookings.bookingReference,
       propertyName: properties.name,
       guestLanguage: users.language,
+      guestPrefs: users.notificationPrefs,
     })
     .from(bookings)
     .innerJoin(properties, eq(properties.id, bookings.propertyId))
@@ -156,6 +178,10 @@ export async function sendReviewRequests(today = new Date()): Promise<number> {
 
   let sent = 0;
   for (const row of rows) {
+    // T-261 : « demandes d'avis » coupées par le voyageur → pas d'envoi
+    // (l'`eventKey` n'est pas consommé : si la préférence est réactivée,
+    // la demande pourra repartir dans la fenêtre de 14 jours).
+    if (!enabledFor(row.guestPrefs, "reviewRequest", notifications.reviewRequest)) continue;
     const eventKey = `review-request:${row.id}`;
     try {
       const mail = await templates.reviewRequest({

@@ -169,6 +169,13 @@
       "when": 1789999999500,
       "tag": "0024_wallet_transactions",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1789999999900,
+      "tag": "0025_user_notification_prefs",
+      "breakpoints": true
     }
   ]
 }
