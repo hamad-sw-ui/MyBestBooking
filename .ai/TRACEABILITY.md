@@ -300,6 +300,5 @@ complète verte : typecheck 0 · lint 0/0 · i18n (warn-only, 6 candidats préex
 (28 skips DB-gated) · build production · smoke **95/95**. Runtime réel des 5 scénarios sur
 serveur dev. Base rendue à l'état seed exact (8 users, 0 outbox/audit/cron/sessions/tokens/
 alertes/wallet/conversations/messages, 33 bookings, 8 properties, 23 rooms, 1 wishlist).
-HEAD de clôture : `8b8b2e5` (analyse) puis commit d'implémentation ci-dessus (SHA à
-consigner en fin de session — motif R7).
+HEAD de clôture : `d463f0d` (implémentation, au-dessus de `8b8b2e5` — analyse n°8).
 

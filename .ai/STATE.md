@@ -41,8 +41,8 @@
   429 au 4e essai) · verrou i18n **1770 → 1774** (FR/EN appariées) · base rendue à
   l'état seed exact. Rapport : `REPORTS/validation_T271_T275_2026-09-11_audit8.md`.
   **Aucune ligne de l'audit n°8 ouverte.** `STATE.md` est réécrit au-dessus du commit
-  d'implémentation et ne peut pas citer son propre SHA (motif R7 toléré, warn attendu) —
-  HEAD de référence : `8b8b2e5` (analyse n°8, commit précédent).
+  d'implémentation et ne peut pas citer son propre SHA (motif R7 toléré) —
+  commit de clôture poussé : `d463f0d` (analyse n°8 : `8b8b2e5`).
 - **Analyse (2026-09-11, après l'audit n°7) : audit runtime n°8 — ANALYSIS DELIVERED** —
   `docs/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md` (copie
   `.ai/REPORTS/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md`) :
