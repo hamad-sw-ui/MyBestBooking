@@ -92,8 +92,10 @@ function todayIso(): string {
 function ReservationPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  // Lecture temporaire des paramètres legacy propertyId/roomId afin que les
-  // liens déjà générés ne cassent pas pendant la migration de convention.
+  // legacy: (dette T-207, récapitulée par T-263/audit n°6 B10) lecture
+  // temporaire des paramètres `propertyId`/`roomId` afin que les liens déjà
+  // générés ne cassent pas pendant la migration de convention. Retrait quand
+  // plus aucun lien legacy ne circule (KNOWN_LIMITATIONS.md).
   const reservationParams = readReservationParams(searchParams);
   // T-207 : les reprises de paiement en ligne sont désactivées. Un ancien
   // lien /reservation?booking=… affiche un message clair au lieu de rouvrir

@@ -14,6 +14,24 @@ type Attempt = number; // timestamp ms
 
 const store = new Map<string, Attempt[]>();
 
+/**
+ * T-264 (audit n°6, B12) — le limiteur est en mémoire : au-delà d'une instance,
+ * la limite effective est divisée par le nombre d'instances. On le **dit une
+ * fois** dans les journaux de production (sans `REDIS_URL`) au lieu de laisser
+ * la limite invisible ; aucun changement de comportement (le passage à un
+ * stockage partagé reste une décision produit, cf. `docs/CI.md`).
+ */
+let warnedSharedStore = false;
+function warnIfNotShared(): void {
+  if (warnedSharedStore || process.env.NODE_ENV !== "production" || process.env.REDIS_URL) return;
+  warnedSharedStore = true;
+  console.warn(
+    "[rate-limit] limiteur en mémoire en production : au-delà d'une instance, " +
+      "la limite effective est divisée par le nombre d'instances — prévoir un " +
+      "stockage partagé (Redis), cf. docs/CI.md.",
+  );
+}
+
 export interface RateLimitResult {
   ok: boolean;
   remaining: number;
@@ -28,6 +46,7 @@ export interface RateLimitOptions {
 }
 
 export function rateLimit(key: string, opts: RateLimitOptions): RateLimitResult {
+  warnIfNotShared();
   const now = Date.now();
   const cutoff = now - opts.windowMs;
 

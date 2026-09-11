@@ -7,6 +7,20 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-11 — Audit n°6, lot D (fin) : T-263 (B10) et T-264 (B12) — dette rendue visible
+
+- **Livré** : 🔨 **B10 → T-263** : les 5 résidus T-207 (route de paiement 410, stub providers, compat
+  `propertyId`/`roomId`, cron payouts 410, redirection `/dashboard/rooms/[id]`) sont **récapitulés**
+  dans `KNOWN_LIMITATIONS.md` (raison d'être, conditions de retrait, colonnes à ne pas nettoyer) et
+  marqués `// legacy:` sur les deux sites de compatibilité — **aucune suppression** (les vieux liens
+  continuent d'être servis). 🔨 **B12 → T-264** : ligne de checklist de production (`docs/CI.md`) et
+  **avertissement unique** dans `src/lib/rate-limit.ts` (production sans `REDIS_URL`, log seul).
+- **🧪 Tests** : `rate-limit` **11/11** (nouveau test d'unicité de l'avertissement), tsc 0,
+  eslint 0/0, **0 clé i18n ajoutée**.
+- **Étape suivante** : **lot C** — **B7 → T-260** (exposer `sort=popularity`, note minimale,
+  « Autour de moi »/`near`, brancher `search`) puis **B9 → T-261** (préférences de notification par
+  utilisateur).
+
 ## 2026-09-11 — Audit n°6, lot D : T-262 (B8) — le crédit gelé tracé à la suppression de compte
 
 - **Livré** : 🔨 **B8 → T-262**. `DELETE /api/users/me` anonymisait le compte sans toucher

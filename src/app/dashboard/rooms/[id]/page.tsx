@@ -17,6 +17,9 @@ import { isUuid } from "@/lib/http";
  * propriétaire ou admin ; identifiant mal formé → 404). Aucun écran n'est
  * dupliqué ni modifié : le lien profond fonctionne, l'URL canonique reste
  * `/dashboard/rooms/<id>/calendrier`.
+ *
+ * legacy: (dette T-207, récapitulée par T-263/audit n°6 B10) conservée pour les
+ * favoris et liens profonds existants ; aucun lien interne ne la cible.
  */
 export const dynamic = "force-dynamic";
 

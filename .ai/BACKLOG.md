@@ -698,6 +698,19 @@ Numérotation de suivi : **B1→T-253**, **B2→T-254**, **B3→T-255**, **B11�
   `delete-account-section` **2/2**, `wallet-ledger` 5/5, `wallet-policy` 3/3 ; sonde runtime (compte
   jetable supprimé, base revenue à l'état seed).
 
+- ✅ ~~**T-263 (F/P3) — *B10 — résidus de la sortie du paiement en ligne.***~~ **FAIT (2026-09-11)** :
+  aucun résidu n'est supprimé (les routes 410 servent encore les vieux liens, le tunnel manuel
+  dépend des colonnes de paiement). La dette est **récapitulée** : entrée « Dette T-207 » de
+  `KNOWN_LIMITATIONS.md` (5 résidus, conditions de retrait, colonnes à ne pas nettoyer) et marqueurs
+  `// legacy:` sur les deux sites de compatibilité (`propertyId`/`roomId` dans
+  `reservation-form.tsx`, redirection `/dashboard/rooms/[id]`). 0 clé i18n.
+- ✅ ~~**T-264 (F/P3) — *B12 — rate-limit en mémoire : limitation à énoncer au déploiement.***~~
+  **FAIT (2026-09-11)** : ligne de checklist de mise en production dans `docs/CI.md` (au-delà d'une
+  instance, la limite effective est divisée par le nombre d'instances → stockage partagé) **et**
+  avertissement **unique** dans `src/lib/rate-limit.ts` (production sans `REDIS_URL`, log seul,
+  aucun impact runtime). Preuve : `rate-limit.test.ts` **11/11** (nouveau test `vi.stubEnv`),
+  tsc 0, eslint 0/0. Le passage à Redis reste une décision produit documentée.
+
 ### Audit T-242 (2026-09-10) — audit de profondeur (analyse n°4)
 
 Analyse : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie

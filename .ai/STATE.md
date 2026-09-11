@@ -64,7 +64,11 @@
   `account_closed` (montant 0, `balanceAfter` = solde) écrite dans la transaction par
   `recordAccountClosureEntry()` (verrou `wallet-policy` étendu) ; verrou i18n **1748 → 1749** ; preuves
   `route.t262` 2/2, `delete-account-section` 2/2 et sonde runtime (solde `12.50` inchangé après
-  suppression). **Reste** : lot D (B10 → T-263, B12 → T-264) puis lot C (B7 → T-260, B9 → T-261). **Reste** : **B6 → T-259** (champs
+  suppression). **B10 → T-263** : les 5 résidus T-207 sont récapitulés dans `KNOWN_LIMITATIONS.md`
+  (conditions de retrait comprises) et marqués `// legacy:` sur les deux sites de compatibilité —
+  aucune route supprimée. **B12 → T-264** : limiteur en mémoire énoncé dans la checklist de
+  production (`docs/CI.md`) + avertissement **unique** en production sans `REDIS_URL`
+  (`rate-limit.test.ts` 11/11). **Reste** : lot C (B7 → T-260, B9 → T-261). **Reste** : **B6 → T-259** (champs
   affichés jamais éditables), puis lot D (B8/B10/B12 — signalement et journal du crédit gelé,
   **aucune consommation**), puis lot C (B7/B9). `STATE.md` est à rafraîchir en fin de session (R7 : un
   commit ne peut pas citer son propre SHA).

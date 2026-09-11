@@ -790,3 +790,26 @@ seed : faux dès qu'un seed fraîchement régénéré donne 3 avis au bien ou de
 et ancre ses avis une seconde d'écart **au-dessus** du plus récent avis existant — la suite est
 insensible au tirage aléatoire du seed (`Math.random()` dans `api/seed`).
 
+## T-263 / T-264 — audit n°6, B10 et B12 : rendre la dette visible (2026-09-11)
+
+**B10 — les résidus T-207 ne sont pas des oublis.** Cinq éléments de la sortie du paiement en ligne
+subsistent sans appelant : `POST /api/bookings/[id]/payment` (410), `GET /api/providers/stripe`
+(stub sans clé), la lecture de compatibilité `propertyId`/`roomId`, `GET /api/cron/payouts` (410) et
+la redirection `/dashboard/rooms/[id]`. Les supprimer casserait les vieux liens et les favoris ;
+les laisser sans mot les ferait passer pour des oublis — pire, exposerait
+`bookings.paymentMethodOffline` / `paymentIntentId` / `paymentExpiresAt` (que le tunnel manuel
+utilise) à un « nettoyage ». D'où l'entrée « Dette T-207 » de `KNOWN_LIMITATIONS.md` (raison d'être,
+condition de retrait, colonnes à ne pas toucher) et deux marqueurs `// legacy:` en tête des sites de
+compatibilité (`reservation-form.tsx`, `dashboard/rooms/[id]/page.tsx`).
+
+**B12 — la limite invisible.** Le rate-limiter est en mémoire : sur plusieurs instances, la limite
+effective est divisée par le nombre d'instances. La ligne existait déjà dans `docs/CI.md` et
+`KNOWN_LIMITATIONS.md` ; l'audit demandait de l'énoncer au déploiement (et suggérait un log unique).
+`src/lib/rate-limit.ts` émet donc **un seul** avertissement par processus, uniquement en production
+et seulement si `REDIS_URL` est absent — aucun changement de comportement, aucun bruit en
+développement ou en test (`NODE_ENV=test`).
+
+**Preuves.** `rate-limit.test.ts` **11/11** (dont « un avertissement unique en production sans
+stockage partagé », `vi.stubEnv` + deux appels → un seul log), tsc 0, eslint 0/0, aucune clé i18n.
+Rapports : `REPORTS/validation_T263_T264_2026-09-11_audit6_B10_B12.md` (+ impact et conception).
+

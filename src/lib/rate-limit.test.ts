@@ -1,9 +1,26 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { guestQuotaKey, ipFromRequest, rateLimit, rateLimitMessage, _resetRateLimit } from "./rate-limit";
 import { localizeApiMessage } from "./api-error";
 
 describe("rate-limit (T-009, §13.5)", () => {
   beforeEach(() => _resetRateLimit());
+
+  it("T-264 (B12) — un avertissement unique en production sans stockage partagé", () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      // `vi.stubEnv` : `process.env.NODE_ENV` est typé en lecture seule.
+      vi.stubEnv("NODE_ENV", "production");
+      vi.stubEnv("REDIS_URL", "");
+      rateLimit("t264-warn-key", { limit: 5, windowMs: 60_000 });
+      rateLimit("t264-warn-key-2", { limit: 5, windowMs: 60_000 });
+    } finally {
+      vi.unstubAllEnvs();
+    }
+    const calls = warn.mock.calls.filter((args) => String(args[0]).includes("[rate-limit]"));
+    expect(calls).toHaveLength(1);
+    expect(String(calls[0]?.[0])).toContain("mémoire");
+    warn.mockRestore();
+  });
 
   it("autorise sous la limite, refuse au-delà", () => {
     const key = "1.2.3.4:login";
