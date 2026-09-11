@@ -74,8 +74,11 @@ describe("uiStrings (T-132)", () => {
   //   book.writeGuest (libellé du fil côté hôte, T-229) = 1620.
   //   T-227/T-228 (A7/A8) : +11 (horaires, fuseau, labels) = 1631.
   //   T-230/T-231 (A10/A11) : +9 (codes de secours, reset 2FA, comptes
-  //   supprimés distincts des suspendus) = 1640.
-  expect(Object.keys(fr)).toHaveLength(1640);
+  //   supprimés distincts des suspendus) = 1640 ; T-237 (décision de
+  //   validation d'annonce notifiée à l'hôte, dont le motif affiché) = 1643 ; T-238
+  //   (mention de partage wishlist + rotation) = 1645 ; T-239 (page de
+  //   désabonnement) = 1655.
+  expect(Object.keys(fr)).toHaveLength(1655);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

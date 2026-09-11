@@ -237,6 +237,8 @@ export const properties = pgTable("properties", {
   status: varchar("status", { length: 20 }).default("pending"),
   validatedAt: timestamp("validated_at"),
   validatedBy: uuid("validated_by").references(() => users.id),
+  /** T-237 : dernier motif de rejet/suspension communiqué à l'hôte. */
+  reviewReason: varchar("review_reason", { length: 500 }),
   amenities: jsonb("amenities").$type<string[]>().default([]),
   images: jsonb("images").$type<string[]>().default([]),
   mainImage: varchar("main_image", { length: 500 }),

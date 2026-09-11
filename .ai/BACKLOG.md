@@ -563,31 +563,56 @@ Rapport de validation : `REPORTS/validation_T232_T234_2026-09-10_dates_suspensio
   partagée, appel **dans la transaction** de devis/création pour la chambre et la fenêtre
   demandées (le cron reste), test d'intégration « demande expirée → nouvelle réservation
   acceptée ».
-- 🟠 **T-235 (S/P2)** — *F4 — quota de réservation punissant les erreurs de saisie.* Rate-limit
+- ✅ **T-235 (S/P2) — FAIT (2026-09-11)** — *F4 — quota de réservation punissant les erreurs de saisie.* Rate-limit
   10/h par utilisateur (10 par IP pour les invités) appliqué **avant** la validation
   (`api/bookings/route.ts:158-162`) : 6 essais invalides puis une demande correcte → **429**
   (reproduit deux fois), message sans délai, quota partagé derrière une IP publique. Livrable :
   compteur déplacé après validation (ou compteurs séparés), message avec `Retry-After`, clé invité
   par cookie plutôt qu'IP seule, documentation `KNOWN_LIMITATIONS.md`.
-- 🟠 **T-236 (S/P2)** — *F5 — heure d'arrivée estimée jamais restituée.* `bookings.estimated_arrival`
+  **Livré** : garde-fou 60/h par clé posé **avant** lecture du corps, quota produit 10/h consommé
+  **après** validation (une saisie invalide ne le consomme plus), clé invité = cookie signé
+  `mbb_guest` (repli IP), 429 avec `Retry-After` + « réessayez dans N minute(s) » localisé,
+  `KNOWN_LIMITATIONS.md` complété. Tests : `rate-limit.test.ts` 15/15,
+  `bookings/route.t235.test.ts` 3/3 (6 essais invalides ne bloquent plus la demande valide).
+- ✅ **T-236 (S/P2) — FAIT (2026-09-11)** — *F5 — heure d'arrivée estimée jamais restituée.* `bookings.estimated_arrival`
   est saisie au tunnel (select heures pleines) et **aucun affichage** ne la relit (fiche hôte,
   e-mails, espace voyageur) ; l'API accepte n'importe quelle chaîne (`z.string()`) alors que la
   colonne est `time` (erreur PostgreSQL possible, vérifié). Livrable : affichage sur la fiche
   réservation hôte + variable dans les e-mails de demande/confirmation, validation `HH:MM`.
-- 🟠 **T-237 (S/P2)** — *F6 — validation/rejet d'annonce non notifié, motif invisible.*
+  **Livré** : validation `HH:MM` à l'entrée (`bookings/route.ts`), affichage sur la fiche hôte
+  **et** dans l'espace voyageur (`mes-reservations`), variable `estimatedArrival` dans les 4
+  e-mails (demande + confirmation, voyageur et hôte), libellés FR/EN. Tests :
+  `booking-arrival-time.test.ts` 3 + `mail/templates.t236.test.ts` 4.
+- ✅ **T-237 (S/P2) — FAIT (2026-09-11)** — *F6 — validation/rejet d'annonce non notifié, motif invisible.*
   `/api/properties/[id]/validate` écrit `reason` dans `audit_log` uniquement (aucun `enqueueEmail`,
   aucune colonne motif) ; l'hôte voit un statut « draft » sans explication. Livrable : gabarits
   `propertyApproved`/`propertyRejected` (idempotents, interrupteurs `notifications`), colonne
   additive `properties.review_reason` affichée dans l'éditeur hôte.
-- 🟠 **T-238 (XS/P2)** — *F7 — wishlist partagée indexable, sans expiration.*
+  **Livré** : migration `0022_property_review_reason.sql` (`properties.review_reason`, appliquée),
+  `notifyHostOfDecision` idempotent (`eventKey` déterministe, interrupteurs dédiés, best-effort),
+  motif persisté au rejet/suspension et **effacé à l'approbation**, bannière motif dans l'éditeur
+  hôte, gabarits FR/EN. Tests : `validate/route.t237.test.ts` 3/3.
+- ✅ **T-238 (XS/P2) — FAIT (2026-09-11)** — *F7 — wishlist partagée indexable, sans expiration.*
   `/wishlists/share/[token]` expose `title`/`description` sans `robots: { index: false }` alors que
   les 14 autres surfaces privées le déclarent ; `share_token` sans échéance ni rotation.
   Livrable : noindex, régénération du lien (« invalider l'ancien »), mention dans l'UI de partage.
-- 🟠 **T-239 (S/P2)** — *F8 — désabonnement promis mais inexistant.* La page Confidentialité
+  **Livré** : `robots: { index: false, follow: false }` sur `/wishlists/share/[token]` (la
+  dernière surface privée qui ne le déclarait pas), mention de partage + infobulle de rotation
+  dans l'UI, rotation `PATCH /api/wishlists` (`rotateShareToken`) désormais **testée** : ancien
+  lien → 404, nouveau → 200. Tests : `route.t238.test.ts` 2/2.
+- ✅ **T-239 (S/P2) — FAIT (2026-09-11)** — *F8 — désabonnement promis mais inexistant.* La page Confidentialité
   annonce « désabonnement possible depuis l'onglet Notifications » alors que seule
   `priceAlertEnabled` est exposée et qu'aucun e-mail ne porte de lien d'opposition. Livrable :
   corriger la formulation, puis préférences par catégorie (`user_notification_prefs` ou JSONB)
   alimentant les envois non transactionnels + lien d'opposition en pied d'e-mail.
+  **Livré** : formulé corrigé dans `/confidentialite` (FR/EN : ce qui est refusable, ce qui reste
+  dû), `src/lib/unsubscribe.ts` (jeton **HMAC-SHA256** `userId|catégorie`, vérification à temps
+  constant, registre `UNSUBSCRIBE_CATEGORIES`), page publique `/desabonnement` (noindex, `GET`
+  depuis l'e-mail, idempotente, message générique si jeton invalide), pied d'opposition dans
+  l'alerte prix (le seul envoi non transactionnel), section Notifications du compte inchangée
+  comme voie alternative. Décision : pas de table `user_notification_prefs` pour une seule
+  catégorie — le registre est le point d'extension (voir `KNOWN_LIMITATIONS.md`). Tests :
+  `unsubscribe.test.ts` 4/4, `desabonnement/page.t239.test.ts` 2/2.
 - ✅ **T-240 (S/P3) — FAIT (2026-09-10)** — *F9/F10 (volet fuseau serveur) — tests de
   non-régression multi-fuseaux sur `transitionError`/`isReviewEligible`
   (`TZ=Africa/Douala`, `Pacific/Kiritimati`) ajoutés, et « aujourd'hui » métier centralisé sur

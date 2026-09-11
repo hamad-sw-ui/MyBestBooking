@@ -34,6 +34,8 @@ const privateProperty = {
   status: "active",
   validatedAt: null,
   validatedBy: "admin-private",
+  // T-237 : le motif de rejet reste interne (jamais exposé sur la fiche).
+  reviewReason: null,
   amenities: [],
   images: [],
   mainImage: null,

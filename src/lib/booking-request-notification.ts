@@ -47,6 +47,7 @@ export async function sendBookingRequestCreatedIfNeeded(bookingId: string): Prom
       total: String(booking.total),
       currency: booking.currency,
       requestExpiresAt: booking.requestExpiresAt,
+      estimatedArrival: booking.estimatedArrival,
       language: traveler?.language ?? null,
     });
     const travelerKey = `booking-request:${booking.id}:traveler`;
@@ -71,6 +72,7 @@ export async function sendBookingRequestCreatedIfNeeded(bookingId: string): Prom
           checkIn: String(booking.checkIn),
           checkOut: String(booking.checkOut),
           requestExpiresAt: booking.requestExpiresAt,
+          estimatedArrival: booking.estimatedArrival,
           language: host.language ?? null,
         });
         const hostKey = `booking-request:${booking.id}:host`;

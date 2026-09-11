@@ -38,6 +38,10 @@ interface MailStrings {
   lblReference: string;
   lblAccommodation: string;
   lblArrival: string;
+  /** T-236 : heure d'arrivée estimée par le voyageur. */
+  lblEstimatedArrival: string;
+  /** T-239 : lien d'opposition en pied d'e-mail non transactionnel. */
+  unsubscribeLink: string;
   lblDeparture: string;
   lblTotal: string;
   lblGuest: string;
@@ -105,6 +109,8 @@ const FR: MailStrings = {
   lblReference: "Référence",
   lblAccommodation: "Hébergement",
   lblArrival: "Arrivée",
+  lblEstimatedArrival: "Heure d'arrivée estimée",
+  unsubscribeLink: "Se désabonner des alertes prix",
   lblDeparture: "Départ",
   lblTotal: "Total",
   lblGuest: "Voyageur",
@@ -209,6 +215,8 @@ const EN: MailStrings = {
   lblReference: "Reference",
   lblAccommodation: "Accommodation",
   lblArrival: "Check-in",
+  lblEstimatedArrival: "Estimated arrival time",
+  unsubscribeLink: "Unsubscribe from price alerts",
   lblDeparture: "Check-out",
   lblTotal: "Total",
   lblGuest: "Guest",

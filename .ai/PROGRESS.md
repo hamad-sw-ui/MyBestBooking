@@ -4397,3 +4397,14 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
 - **État** : base remise à l'état seed (8 / 8 / 33 / 24 ; compteurs techniques à 0) ; sondes
   supprimées ; chantier d'implémentation T-221/T-222 → T-231 toujours en cours dans l'arbre
   (A1 → A6 livrés localement, A7 → A11 restants).
+- **2026-09-11 — T-235 → T-239 (audit n°3, F4 → F8)** : quota de réservation scindé (garde-fou
+  60/h avant corps, quota produit 10/h après validation, cookie invité signé, délai dans le 429) ·
+  heure d'arrivée estimée validée `HH:MM` et restituée (fiche hôte, espace voyageur, 4 e-mails) ·
+  décision de validation d'annonce notifiée à l'hôte avec motif persisté (`properties.review_reason`,
+  migration 0022), idempotente et interruptible · lien de wishlist partagée en `noindex` avec
+  rotation prouvée (ancien lien 404) · désabonnement réel par jeton HMAC et page `/desabonnement`,
+  pied d'opposition sur les alertes prix, formulation légale corrigée FR/EN.
+  **Preuves** : `npm run ci` verte (vitest **127 fichiers / 735 tests**, smoke **95/95**,
+  ai:check 19 OK / 1 warn R7) + runtime (10 essais invalides → 400 ×10 puis 201 ; fiche hôte
+  « 15:30 » ; `/desabonnement` 200 `noindex` + préférence basculée). Reste **T-241** puis resync
+  `STATE.md`.

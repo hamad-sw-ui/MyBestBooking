@@ -506,3 +506,39 @@ aucun résidu de sonde.
 
 **Suites.** T-235 → T-239 et T-241 restent au BACKLOG (quota avant validation, heure d'arrivée,
 validation d'annonce notifiée, wishlist partagée, désabonnement, finitions d'admin).
+
+## 2026-09-11 — T-235 → T-239 : cinq finitions d'audit (F4 → F8)
+
+**T-235 (F4) — le quota de réservation ne punit plus les erreurs de saisie.** Deux compteurs aux
+rôles distincts : un garde-fou anti-abus **60/h** posé **avant** la lecture du corps, et le quota
+produit **10/h** consommé **après** validation du payload. La clé invité devient un cookie signé
+`mbb_guest` (repli IP) : deux voyageurs derrière la même IP publique ne se pénalisent plus. Le
+refus porte `Retry-After` et un délai lisible, traduit en anglais.
+
+**T-236 (F5) — l'heure d'arrivée estimée est enfin restituée.** Validation `HH:MM` à l'entrée
+(l'API ne peut plus casser la colonne `time`) et affichage sur la fiche hôte, dans l'espace
+voyageur et dans les **4 e-mails** de demande/confirmation (FR/EN).
+
+**T-237 (F6) — la décision d'annonce est expliquée.** Colonne additive
+`properties.review_reason` (migration **0022**) : motif persisté au rejet/suspension, **effacé à
+l'approbation**, affiché à l'hôte ; notification idempotente via l'outbox avec interrupteurs admin
+dédiés et gabarits FR/EN. Un rejeu ne produit jamais de second e-mail.
+
+**T-238 (F7) — la wishlist partagée cesse d'être indexable.** `noindex`/`nofollow`, notice de
+partage et infobulle de rotation ; la rotation existante est désormais **prouvée** par un test
+(ancien lien 404 / nouveau 200).
+
+**T-239 (F8) — le désabonnement promis existe.** Jeton **HMAC-SHA256** sur `userId|catégorie`
+(vérification à temps constant, catégorie whitelistée), page publique `/desabonnement` idempotente
+et `noindex`, pied d'opposition sur les alertes prix — seul envoi non transactionnel. La page
+Confidentialité FR/EN dit maintenant exactement ce qui est refusable et ce qui reste dû.
+
+**Preuves.** `npm run ci` verte : typecheck 0 · lint 0/0 · i18n 0 candidat · **vitest 127 fichiers
+/ 735 tests** · build · **smoke 95/95** · `ai:check` 19 OK / 1 warn (R7). Runtime : 10 essais
+invalides → **400 ×10** puis demande valide → **201** ; fiche hôte affichant « Heure d'arrivée
+estimée : 15:30 » ; `/desabonnement` → 200 `noindex` et `price_alert_enabled` basculé à `false`.
+
+**Base.** Restaurée à l'identique du seed (31 réservations, 0 compte de sonde, outbox nettoyée).
+
+**Suites.** T-241 (finitions admin/analytics/erreurs d'API) puis resynchronisation de `STATE.md`
+en fin de session.

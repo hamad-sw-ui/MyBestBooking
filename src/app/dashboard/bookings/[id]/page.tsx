@@ -200,6 +200,13 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
 <p className="text-sm text-gray-500">{t("book.checkIn")}</p>
                   <p className="text-lg font-bold">{formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)}</p>
                   <p className="text-sm text-gray-500">{t("host.fromTime").replace("{time}", property?.checkInFrom || "14:00")}</p>
+                  {/* T-236 : l'heure d'arrivée saisie par le voyageur était
+                      stockée mais jamais relue. */}
+                  {booking.estimatedArrival && (
+                    <p className="text-sm font-medium text-[#1B3A6B]">
+                      {t("reservation.arrivalTime")} : {String(booking.estimatedArrival).slice(0, 5)}
+                    </p>
+                  )}
                 </div>
                 <div className="text-center p-4 bg-[#1B3A6B] text-white rounded-lg">
 <p className="text-sm text-white/70">{t("host.duration")}</p>

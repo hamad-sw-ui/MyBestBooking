@@ -1,13 +1,45 @@
 # Tâche courante
 
-- **ID** : T-232 + T-233 + T-234 (audit n°3) + volet T-240
-- **Titre** : Dates de séjour et fuseaux, cascade de suspension d'hôte, expiration paresseuse des demandes
-- **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-10 : les constats F1/F9/F10 (T-232), F2 (T-233) et F3
-  (T-234) sont implémentés, testés et vérifiés au runtime ; reliquat de T-240 (tests multi-fuseaux)
-  couvert
-- **Niveau** : C (données personnelles persistées — cf. §15.0)
-- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (F1→F13)
-- **Rapport de cette tâche** : `REPORTS/validation_T232_T234_2026-09-10_dates_suspension_expiration.md`
+- **ID** : T-235 + T-236 + T-237 + T-238 + T-239 (audit n°3, findings F4 → F8)
+- **Titre** : Finitions d'audit : quota de réservation par étape, heure d'arrivée restituée,
+  décision d'annonce notifiée avec motif, wishlist partagée assainie, désabonnement réel
+- **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-11 : les cinq constats sont corrigés, testés et couverts
+  par `npm run ci` (vitest 127 fichiers / 735 tests, smoke 95/95)
+- **Niveau** : S (agrégat de 4 × S + 1 × XS)
+- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (F4 → F8)
+- **Rapports de cette tâche** : `.ai/REPORTS/analyse_impact_T235_T239_2026-09-11_audit3_f4_f8.md` ·
+  `.ai/REPORTS/analyse_conception_T235_T239_2026-09-11_audit3_f4_f8.md` ·
+  `.ai/REPORTS/validation_T235_T239_2026-09-11_audit3_f4_f8.md`
+
+## Livraison T-235 → T-239 (2026-09-11)
+
+**T-235 (F4) — quota de réservation.** Garde-fou anti-abus **60/h avant** lecture du corps et
+quota produit **10/h après** validation (une saisie invalide ne consomme plus le quota) ; clé
+invité par cookie signé `mbb_guest` (repli IP) ; `429` + `Retry-After` + délai lisible, traduit ;
+`KNOWN_LIMITATIONS.md` mis à jour.
+
+**T-236 (F5) — heure d'arrivée estimée.** Validation `HH:MM` à l'entrée (plus d'erreur PostgreSQL
+possible sur la colonne `time`) ; restitution sur la fiche hôte, dans l'espace voyageur et dans les
+**4 e-mails** (demande + confirmation, FR/EN).
+
+**T-237 (F6) — décision d'annonce.** Colonne additive `properties.review_reason` (migration
+**0022**, appliquée) : motif persisté au rejet/suspension, effacé à l'approbation, affiché à
+l'hôte ; notification idempotente via l'outbox avec interrupteurs admin dédiés et gabarits FR/EN.
+
+**T-238 (F7) — wishlist partagée.** `noindex`/`nofollow` sur le lien partagé, notice de partage et
+infobulle de rotation ; la rotation existante (`PATCH /api/wishlists`) est désormais **prouvée** :
+ancien lien 404, nouveau lien 200.
+
+**T-239 (F8) — désabonnement.** Jeton HMAC-SHA256 (`src/lib/unsubscribe.ts`), page publique
+`/desabonnement` idempotente et `noindex`, pied d'opposition sur les alertes prix (seul envoi non
+transactionnel) ; la page Confidentialité FR/EN dit désormais précisément ce qui est refusable.
+
+## Suite
+
+- **T-241** (F11/F12/F13) : finitions — distinction « supprimé »/« suspendu » (déjà couverte par
+  T-230), analytics (sélecteur de période + export CSV), erreurs d'API (`issues` détaillées +
+  schémas de mutation `.strict()`).
+- Resynchronisation de `STATE.md` sur le HEAD final (R7) avant clôture de session.
 
 ## Livraison T-232 / T-233 / T-234 (2026-09-10)
 

@@ -438,6 +438,8 @@ const NOTIFICATION_SWITCHES = [
   "bookingPaymentReminder",
   "reviewPublished",
   "reviewModerated",
+  "propertyApproved",
+  "propertyRejected",
 ] as const;
 
 function NotificationSwitch({

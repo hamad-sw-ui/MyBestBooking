@@ -80,6 +80,8 @@ export default async function EditPropertyPage({
         mainImage: row.mainImage,
         images: Array.isArray(row.images) ? (row.images as string[]) : [],
         status: row.status,
+        // T-237 : motif de la dernière décision de validation (visible hôte).
+        reviewReason: row.reviewReason,
         averageRating: row.averageRating,
         totalReviews: row.totalReviews,
         commissionRate: row.commissionRate,

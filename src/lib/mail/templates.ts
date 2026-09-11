@@ -166,11 +166,13 @@ export const templates = {
   },
 
   bookingRequestTraveler({
-    firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency, requestExpiresAt, language,
+    firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency, requestExpiresAt, estimatedArrival, language,
   }: {
     firstName: string; bookingReference: string; propertyName: string;
     city: string; checkIn: string; checkOut: string; total: string; currency: string;
     requestExpiresAt?: Date | string | null; language?: string | null;
+    /** T-236 : heure d'arrivée estimée (`HH:MM`), affichée si fournie. */
+    estimatedArrival?: string | null;
   }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
@@ -185,6 +187,7 @@ export const templates = {
         <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}, ${escapeHtml(city)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        ${estimatedArrival ? `<tr><td style="padding:8px 0;color:#666;">${s.lblEstimatedArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(estimatedArrival)}</td></tr>` : ""}
         <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblTotal}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(total)} ${escapeHtml(currency)}</td></tr>
         ${expires ? `<tr><td style="padding:8px 0;color:#666;">${s.lblRequestExpires}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(expires)}</td></tr>` : ""}
@@ -195,11 +198,13 @@ export const templates = {
   },
 
   bookingRequestHost({
-    hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut, requestExpiresAt, language,
+    hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut, requestExpiresAt, estimatedArrival, language,
   }: {
     hostFirstName: string; bookingReference: string; propertyName: string;
     guestName: string; checkIn: string; checkOut: string;
     requestExpiresAt?: Date | string | null; language?: string | null;
+    /** T-236 : heure d'arrivée estimée (`HH:MM`), affichée si fournie. */
+    estimatedArrival?: string | null;
   }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
@@ -215,6 +220,7 @@ export const templates = {
         <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblGuest}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(guestName)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        ${estimatedArrival ? `<tr><td style="padding:8px 0;color:#666;">${s.lblEstimatedArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(estimatedArrival)}</td></tr>` : ""}
         <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
         ${expires ? `<tr><td style="padding:8px 0;color:#666;">${s.lblRequestExpires}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(expires)}</td></tr>` : ""}
       </table>
@@ -224,11 +230,13 @@ export const templates = {
   },
 
   async bookingConfirmation({
-    firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency, language,
+    firstName, bookingReference, propertyName, city, checkIn, checkOut, total, currency, estimatedArrival, language,
   }: {
     firstName: string; bookingReference: string; propertyName: string;
     city: string; checkIn: string; checkOut: string; total: string; currency: string;
     language?: string | null;
+    /** T-236 : heure d'arrivée estimée (`HH:MM`), affichée si fournie. */
+    estimatedArrival?: string | null;
   }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
@@ -246,6 +254,7 @@ export const templates = {
         <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}, ${escapeHtml(city)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        ${estimatedArrival ? `<tr><td style="padding:8px 0;color:#666;">${s.lblEstimatedArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(estimatedArrival)}</td></tr>` : ""}
         <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblTotal}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(total)} ${escapeHtml(currency)}</td></tr>
       </table>
@@ -404,10 +413,12 @@ export const templates = {
    * localisé dans la langue du destinataire.
    */
   priceAlert({
-    firstName, propertyName, price, currency, maxPrice, offerLabel, url, language,
+    firstName, propertyName, price, currency, maxPrice, offerLabel, url, language, unsubscribeUrl,
   }: {
     firstName: string; propertyName: string; price: string; currency: string;
     maxPrice: string; offerLabel: string; url: string; language?: string | null;
+    /** T-239 : lien d'opposition (e-mail non transactionnel). */
+    unsubscribeUrl?: string | null;
   }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
@@ -422,6 +433,11 @@ export const templates = {
       <p>${offerLine}</p>
       <p style="margin:24px 0;">${button(url, cta)}</p>
       <p style="font-size:13px;color:#666;">${s.priceAlertFollowing}</p>
+      ${unsubscribeUrl
+        ? `<p style="font-size:12px;color:#888;margin-top:16px;">
+             <a href="${escapeHtml(unsubscribeUrl)}" style="color:#888;">${s.unsubscribeLink}</a>
+           </p>`
+        : ""}
     `, loc);
     return { subject, html, text: stripHtml(html) };
   },
@@ -459,10 +475,12 @@ export const templates = {
   },
 
   async bookingHostNotification({
-    hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut, language,
+    hostFirstName, bookingReference, propertyName, guestName, checkIn, checkOut, estimatedArrival, language,
   }: {
     hostFirstName: string; bookingReference: string; propertyName: string;
     guestName: string; checkIn: string; checkOut: string; language?: string | null;
+    /** T-236 : heure d'arrivée estimée (`HH:MM`), affichée si fournie. */
+    estimatedArrival?: string | null;
   }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
@@ -482,6 +500,7 @@ export const templates = {
         <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblGuest}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(guestName)}</td></tr>
         <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        ${estimatedArrival ? `<tr><td style="padding:8px 0;color:#666;">${s.lblEstimatedArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(estimatedArrival)}</td></tr>` : ""}
         <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
       </table>
       <p>${s.hostDashboardHint} <a href="${escapeHtml(dashboardUrl)}/dashboard/bookings">${s.dashboard}</a>.</p>
@@ -670,6 +689,59 @@ export const templates = {
       <p>${intro}</p>
       <p style="font-size:13px;color:#666;">${hint}</p>
       <p style="margin:24px 0;">${button(`${appBaseUrl()}/mes-reservations`, loc === "en" ? "My bookings" : "Mes réservations")}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
+   * T-237 (audit n°3, F6) — décision de validation d'annonce.
+   *
+   * L'admin écrivait le motif dans `audit_log` uniquement : l'hôte voyait son
+   * annonce repasser en `draft` sans savoir pourquoi, et ne recevait aucun
+   * message. Ces deux gabarits sont envoyés à l'hôte (idempotents côté route
+   * via `eventKey`), avec le motif éventuel.
+   */
+  propertyApproved({ hostFirstName, propertyName, url, language }: {
+    hostFirstName: string; propertyName: string; url: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(hostFirstName)},` : `Bonjour ${escapeHtml(hostFirstName)},`;
+    const subject = loc === "en"
+      ? `Your listing ${propertyName} is online`
+      : `Votre annonce ${propertyName} est en ligne`;
+    const intro = loc === "en"
+      ? `Your listing <strong>${escapeHtml(propertyName)}</strong> has been approved and is now visible to travellers.`
+      : `Votre annonce <strong>${escapeHtml(propertyName)}</strong> a été validée et est désormais visible par les voyageurs.`;
+    const cta = loc === "en" ? "View my listing" : "Voir mon annonce";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      <p style="margin:24px 0;">${button(url, cta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  propertyRejected({ hostFirstName, propertyName, reason, url, language }: {
+    hostFirstName: string; propertyName: string; reason?: string | null;
+    url: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const greeting = loc === "en" ? `Hi ${escapeHtml(hostFirstName)},` : `Bonjour ${escapeHtml(hostFirstName)},`;
+    const subject = loc === "en"
+      ? `Changes required for ${propertyName}`
+      : `Des modifications sont nécessaires pour ${propertyName}`;
+    const intro = loc === "en"
+      ? `Your listing <strong>${escapeHtml(propertyName)}</strong> was not approved. It stays in draft until you update it and submit it again.`
+      : `Votre annonce <strong>${escapeHtml(propertyName)}</strong> n'a pas été validée. Elle reste en brouillon tant que vous ne l'avez pas corrigée et soumise à nouveau.`;
+    const reasonBlock = reason && reason.trim().length > 0
+      ? `<p style="border-left:3px solid #B42318;padding-left:12px;color:#444;"><strong>${loc === "en" ? "Reason" : "Motif"} :</strong> ${escapeHtml(reason.slice(0, 500))}</p>`
+      : "";
+    const cta = loc === "en" ? "Edit and resubmit" : "Corriger et soumettre";
+    const html = layout(`
+      <p>${greeting}</p>
+      <p>${intro}</p>
+      ${reasonBlock}
+      <p style="margin:24px 0;">${button(url, cta)}</p>
     `, loc);
     return { subject, html, text: stripHtml(html) };
   },

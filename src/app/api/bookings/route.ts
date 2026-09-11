@@ -17,7 +17,7 @@ import {
   MaintenanceError,
   maintenanceResponse,
 } from "@/lib/maintenance";
-import { ipFromRequest, rateLimit } from "@/lib/rate-limit";
+import { GUEST_QUOTA_COOKIE, guestQuotaKey, rateLimit, rateLimitMessage } from "@/lib/rate-limit";
 import { frenchZodMessage, isUuid } from "@/lib/http";
 import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules";
 import { bookingGuestIdentity } from "@/lib/booking-identity";
@@ -45,7 +45,14 @@ const bookingSchema = z
     language: z.enum(["fr", "en", "ar"]).optional(),
     tripPurpose: z.enum(["leisure", "business"]).optional(),
     specialRequests: z.string().optional(),
-    estimatedArrival: z.string().optional(),
+    // T-236 (audit n°3, F5) : la colonne `bookings.estimated_arrival` est un
+    // `time`. Une chaîne libre (« vers 15 h », « 25:00 ») faisait échouer
+    // l'insertion en erreur PostgreSQL (500). On valide dès la porte d'entrée,
+    // en tolérant les secondes que PostgreSQL peut renvoyer.
+    estimatedArrival: z
+      .string()
+      .regex(/^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/, "Heure d'arrivée estimée invalide (HH:MM)")
+      .optional(),
     promoCode: z.string().max(50).optional(),
     ratePlanId: z.string().uuid().optional(),
     useWalletCredits: z.boolean().optional(),
@@ -137,9 +144,65 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/**
+ * T-235 — cookie de quota des visiteurs non connectés.
+ *
+ * Sans cookie, tous les voyageurs d'une même IP publique (hôtel, campus,
+ * opérateur mobile) partageaient le compteur. Le tunnel pose donc un
+ * identifiant opaque au premier passage ; l'IP ne sert plus que de repli.
+ */
+function withGuestQuotaCookie(response: NextResponse, request: NextRequest): NextResponse {
+  // Défensif : un cookie de quota ne doit jamais faire échouer une réservation
+  // (requête sans en-têtes, objet de test, proxy amont…).
+  try {
+    const already =
+      request.cookies?.get?.(GUEST_QUOTA_COOKIE)?.value ??
+      ((request.headers?.get?.("cookie") ?? "").includes(`${GUEST_QUOTA_COOKIE}=`) ? "présent" : "");
+    if (already) return response;
+    response.cookies.set({
+      name: GUEST_QUOTA_COOKIE,
+      value: crypto.randomUUID(),
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 180,
+    });
+  } catch (cookieError) {
+    console.error("[bookings] cookie de quota non posé :", cookieError);
+  }
+  return response;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
+
+    // T-235 (audit n°3, F4) — deux compteurs aux rôles distincts.
+    //
+    // AVANT : un rate-limit unique de 10/h, posé avant la validation, punissait
+    // les erreurs de saisie (6 essais invalides suffisaient à bloquer une
+    // demande correcte, constat reproduit) et ne disait pas combien de temps
+    // attendre.
+    //
+    // Désormais :
+    //   1. un **garde-fou anti-abus** large (60/h) posé ici, avant même la
+    //      lecture du corps, donc il couvre aussi les payloads mal formés ;
+    //   2. un **quota produit** (10/h) posé après les validations d'entrée (voir
+    //      plus bas) : seules les demandes valides le consomment, une erreur de
+    //      saisie ne coûte rien.
+    const quotaKey = user
+      ? `bookings:user:${user.id}`
+      : guestQuotaKey(request, GUEST_QUOTA_COOKIE);
+    const guard = rateLimit(`${quotaKey}:guard`, { limit: 60, windowMs: 60 * 60 * 1000 });
+    if (!guard.ok) {
+      const denied = NextResponse.json(
+        { error: await apiError(rateLimitMessage(guard.retryAfter)) },
+        { status: 429, headers: { "Retry-After": String(guard.retryAfter) } },
+      );
+      return !user ? withGuestQuotaCookie(denied, request) : denied;
+    }
+
     const data = bookingSchema.parse(await request.json());
     const isGuestBooking = !user && data.isGuestBooking === true;
 
@@ -158,11 +221,17 @@ export async function POST(request: NextRequest) {
     if (data.checkIn < today) return NextResponse.json({ error: await apiError("La date d'arrivée ne peut pas être dans le passé") }, { status: 400 });
     if (!stayNightsWithinLimit(data.checkIn, data.checkOut)) return NextResponse.json({ error: await apiError("Un séjour doit compter entre 1 et 365 nuits") }, { status: 400 });
 
-    // Un invité n’a pas encore de userId : limiter par IP avant toute écriture.
-    const rl = user
-      ? rateLimit(`bookings:user:${user.id}`, { limit: 10, windowMs: 60 * 60 * 1000 })
-      : rateLimit(`bookings:guest-ip:${ipFromRequest(request)}`, { limit: 10, windowMs: 60 * 60 * 1000 });
-    if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de tentatives, réessayez plus tard") }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
+    // Quota produit (T-235) : consommé par les demandes **validées**, une fois
+    // les dates et les limites de séjour vérifiées. Un invité n'a pas encore de
+    // `userId` : sa clé est son cookie visiteur, avec l'IP en repli.
+    const rl = rateLimit(quotaKey, { limit: 10, windowMs: 60 * 60 * 1000 });
+    if (!rl.ok) {
+      const denied = NextResponse.json(
+        { error: await apiError(rateLimitMessage(rl.retryAfter)) },
+        { status: 429, headers: { "Retry-After": String(rl.retryAfter) } },
+      );
+      return !user ? withGuestQuotaCookie(denied, request) : denied;
+    }
 
     // T-233 (audit n°3, F2) : dernier verrou avant l'écriture — un hôte suspendu
     // ou supprimé ne peut plus recevoir de réservation, même si sa fiche était
@@ -495,7 +564,7 @@ export async function POST(request: NextRequest) {
     // T-207 — réservations uniquement : aucune création d'intent PSP, même si
     // un client legacy envoie `payOnline:true`. Le contrat reste non cassant
     // côté intégrations : 201 + booking pending + payment:null.
-    return NextResponse.json(
+    const created = NextResponse.json(
       {
         booking: createdBooking,
         payment: null,
@@ -505,6 +574,7 @@ export async function POST(request: NextRequest) {
       },
       { status: 201 },
     );
+    return isGuestBooking ? withGuestQuotaCookie(created, request) : created;
   } catch (error) {
     if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
     // T-120 (D1) : corps JSON vide/mal formé → SyntaxError à request.json() → 400 (pas 500).

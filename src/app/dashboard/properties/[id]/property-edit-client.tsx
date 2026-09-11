@@ -38,6 +38,8 @@ interface Property {
   mainImage: string | null;
   images: string[];
   status: string | null;
+  /** T-237 : motif de rejet/suspension, affiché à l'hôte. */
+  reviewReason?: string | null;
   averageRating: string | null;
   totalReviews: number | null;
   // T-145 : commission spécifique à l'hébergement (admin uniquement).
@@ -303,6 +305,13 @@ export default function PropertyEditClient({
           {property.status === "draft"
             ? t("prop.rejectedBanner")
             : t("prop.suspendedBanner")}
+          {/* T-237 : le motif de la décision n'existait que dans le journal
+              d'audit ; l'hôte voyait « brouillon » sans explication. */}
+          {property.reviewReason && (
+            <p className="mt-2 font-medium">
+              {t("prop.reviewReason")} : {property.reviewReason}
+            </p>
+          )}
         </div>
       )}
 

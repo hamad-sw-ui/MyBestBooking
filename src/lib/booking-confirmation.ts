@@ -39,6 +39,7 @@ export async function sendBookingConfirmationIfNeeded(bookingId: string): Promis
       checkOut: String(booking.checkOut),
       total: String(booking.total),
       currency: booking.currency,
+      estimatedArrival: booking.estimatedArrival,
       language: guest?.language ?? null,
     });
     const guestKey = `booking-confirmation:${booking.id}:guest`;
@@ -54,6 +55,7 @@ export async function sendBookingConfirmationIfNeeded(bookingId: string): Promis
           guestName: `${booking.guestFirstName} ${booking.guestLastName}`,
           checkIn: String(booking.checkIn),
           checkOut: String(booking.checkOut),
+          estimatedArrival: booking.estimatedArrival,
           language: host.language ?? null,
         });
         const hostKey = `booking-confirmation:${booking.id}:host`;

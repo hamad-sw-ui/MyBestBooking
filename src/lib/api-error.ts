@@ -288,6 +288,16 @@ const API_ERROR_PATTERNS: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
     (m) => `This room accepts a maximum of ${enNoun(m[1], "guest", "guests")}`,
   ],
   [/^Réservation minimum (.+)$/, (m) => `Minimum booking ${m[1]}`],
+  // T-235 : le refus de quota porte désormais le délai réel ; il doit rester
+  // traduisible (« Trop de tentatives, réessayez dans 3 minutes » → anglais).
+  [
+    /^Trop de tentatives, réessayez dans (\d+) secondes?$/,
+    (m) => `Too many attempts, try again in ${enNoun(m[1], "second", "seconds")}`,
+  ],
+  [
+    /^Trop de tentatives, réessayez dans (\d+) minutes?$/,
+    (m) => `Too many attempts, try again in ${enNoun(m[1], "minute", "minutes")}`,
+  ],
   [
     /^Devise non supportée pour l'application du wallet : (.+)$/,
     (m) => `Unsupported currency for wallet application: ${m[1]}`,

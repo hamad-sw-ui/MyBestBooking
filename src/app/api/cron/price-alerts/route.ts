@@ -6,6 +6,7 @@ import { and, eq, gte, isNotNull, isNull, lt, lte, sql } from "drizzle-orm";
 import { deliverPendingEmails, enqueueEmail } from "@/lib/email-outbox";
 import { shouldNotifyPriceAlert, isStayExpired } from "@/lib/price-alert-rules";
 import { appBaseUrl } from "@/lib/app-url";
+import { unsubscribeUrl } from "@/lib/unsubscribe";
 import { quotePriceAlert } from "@/lib/price-alert-quote";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { getSetting } from "@/lib/settings";
@@ -324,6 +325,9 @@ export async function GET(request: NextRequest) {
         maxPrice: Number(entry.alert.maxPrice).toFixed(2),
         offerLabel,
         url: `${appBaseUrl()}/hebergement/${entry.property.slug}`,
+        // T-239 : l'alerte prix est le seul envoi non transactionnel ; elle
+        // doit porter un moyen d'opposition en un clic (jeton signé).
+        unsubscribeUrl: unsubscribeUrl(entry.user.id, "price_alerts"),
         language: entry.user.language ?? null,
       });
       await enqueueEmail({

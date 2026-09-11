@@ -84,10 +84,21 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
     <div className="flex items-center gap-2">
       {isPublicState && shareTokenState ? (
         <>
+          {/* T-238 : dire ce que le lien implique (consultable par quiconque le
+              détient) et ce que fait la rotation. */}
+          <span className="hidden sm:inline text-xs text-gray-500 mr-1" data-testid="wishlist-share-notice">
+            {t("wish.shareNotice")}
+          </span>
 <Button variant="ghost" size="sm" onClick={share} aria-label={t("wish.shareAria")}>
 {copied ? <><Check className="w-4 h-4 mr-2" /> {t("wishlist.copy")}</> : <><Share2 className="w-4 h-4 mr-2" /> {t("wishlist.share")}</>}
           </Button>
-          <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(true, true)}>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={updatingShare}
+            onClick={() => updateSharing(true, true)}
+            title={t("wish.newLinkNotice")}
+          >
 {t("wish.newLink")}
           </Button>
           <Button variant="ghost" size="sm" disabled={updatingShare} onClick={() => updateSharing(false)}>

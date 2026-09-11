@@ -40,6 +40,18 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   Suffisant pour ralentir un attaquant naïf, à remplacer par Redis
   (Upstash, ioredis) pour un vrai rate-limiting global.
 
+  **T-235 (2026-09-11) — deux compteurs distincts sur les réservations.**
+  `POST /api/bookings` applique désormais (a) un garde-fou anti-abus de
+  **60 requêtes/heure** posé **avant** la lecture du corps, et (b) le quota
+  produit de **10 réservations/heure** consommé **après** validation du
+  payload (une demande rejetée pour saisie invalide ne consomme plus le
+  quota). Clé invité : cookie signé `mbb_guest` (180 j, httpOnly, lax)
+  avec repli IP — plusieurs voyageurs derrière une même IP publique ne se
+  pénalisent donc plus entre eux, mais **effacer le cookie repart de zéro**
+  (contournement trivial, accepté : le garde-fou 60/h par IP reste, et la
+  limite est un quota produit, pas un contrôle de sécurité). En
+  multi-instance, ces deux compteurs restent process-locaux comme ci-dessus.
+
 - **Cache catalogue/fiches 60 s (T-182, mono-instance).**
   `src/lib/read-cache.ts` sert les recherches **sans dates** et les fiches
   **publiques** depuis un TTL 60 s process-local (pattern settings T-179).
@@ -48,6 +60,17 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
   la disponibilité AVEC dates et le tunnel de réservation restent temps
   réel (jamais cachés). En multi-instance, chaque instance diverge ≤ TTL —
   à remplacer par `unstable_cache`/Redis le jour venu.
+
+- **Désabonnement (T-239) limité aux envois non transactionnels.** Seules
+  les **alertes prix** portent un lien d'opposition signé (`/desabonnement`) et
+  sont pilotées par une préférence utilisateur. Les e-mails de réservation
+  (demande, confirmation, expiration, rappel de paiement), de sécurité
+  (2FA, réinitialisation de mot de passe) et de contenu (avis publié ou
+  modéré) restent envoyés sans possibilité de refus : ils portent l'exécution
+  du contrat ou la sécurité du compte. Le registre
+  `UNSUBSCRIBE_CATEGORIES` (`src/lib/unsubscribe.ts`) est le point d'extension
+  si une nouvelle catégorie marketing apparaît : aucune table
+  `user_notification_prefs` n'a été créée pour une seule catégorie.
 
 - **Rotation JWT_SECRET manuelle.** Voir ADR-003. Une rotation
   invalide toutes les sessions actives (30 jours par défaut).

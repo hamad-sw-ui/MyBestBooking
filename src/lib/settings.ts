@@ -142,6 +142,10 @@ export const notificationsSchema = z.object({
   // à l'issue de la modération).
   reviewPublished: z.boolean(),
   reviewModerated: z.boolean(),
+  // T-237 (audit n°3, F6) : décision de validation d'annonce — l'hôte était
+  // laissé sans explication. Défaut actif.
+  propertyApproved: z.boolean(),
+  propertyRejected: z.boolean(),
   /** T-223 : aucun envoi branché — exposé pour transparence, jamais lu ailleurs. */
   newsletter: z.boolean(),
 });
@@ -278,6 +282,9 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     // T-225 : nouvelles notifications d'avis — actives par défaut.
     reviewPublished: true,
     reviewModerated: true,
+    // T-237 : décisions de validation d'annonce — notifiées par défaut.
+    propertyApproved: true,
+    propertyRejected: true,
     newsletter: false,
   },
   // T-125 (P1) : par défaut, comportement historique (publication immédiate).

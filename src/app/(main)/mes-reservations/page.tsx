@@ -167,6 +167,14 @@ export default async function MyBookingsPage() {
                               <p className="text-xs text-gray-500">{t("book.checkOut")}</p>
                               <p className="font-medium">{formatDate(booking.checkOut, { day: "numeric", month: "short" }, locale)}</p>
                             </div>
+                            {/* T-236 : restituer au voyageur l'heure d'arrivée
+                                qu'il a saisie (elle était stockée sans relecture). */}
+                            {booking.estimatedArrival && (
+                              <div>
+                                <p className="text-xs text-gray-500">{t("reservation.arrivalTime")}</p>
+                                <p className="font-medium">{String(booking.estimatedArrival).slice(0, 5)}</p>
+                              </div>
+                            )}
                             <div>
                               <p className="text-xs text-gray-500">{t("bookings.room")}</p>
                               <p className="font-medium">{room?.name}</p>

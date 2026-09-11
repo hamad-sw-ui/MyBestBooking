@@ -51,6 +51,45 @@ export function rateLimit(key: string, opts: RateLimitOptions): RateLimitResult 
   };
 }
 
+/**
+ * T-235 (audit n°3, F4) — message de refus **explicite** : le constat reprochait
+ * un « réessayez plus tard » sans délai, qui laissait l'utilisateur deviner
+ * combien de temps attendre (et donnait l'impression d'une panne).
+ *
+ * Le libellé reste traduisible : `localizeApiMessage` reconnaît les deux formes
+ * (« … dans N secondes » / « … dans N minutes ») et les rend en anglais.
+ */
+export function rateLimitMessage(retryAfterSeconds: number): string {
+  const seconds = Math.max(1, Math.ceil(retryAfterSeconds));
+  if (seconds < 60) {
+    return `Trop de tentatives, réessayez dans ${seconds} seconde${seconds > 1 ? "s" : ""}`;
+  }
+  const minutes = Math.ceil(seconds / 60);
+  return `Trop de tentatives, réessayez dans ${minutes} minute${minutes > 1 ? "s" : ""}`;
+}
+
+/**
+ * T-235 — clé de quota d'un visiteur **non connecté**.
+ *
+ * Le constat F4 relevait que le quota invité reposait sur la seule IP : tous les
+ * voyageurs derrière une IP publique partagée (hôtel, campus, opérateur mobile)
+ * consommaient le même compteur. On préfère donc l'identifiant de cookie posé
+ * par le tunnel (`mbb_guest`), avec l'IP en repli pour les clients qui refusent
+ * les cookies.
+ */
+export const GUEST_QUOTA_COOKIE = "mbb_guest";
+
+export function guestQuotaKey(request: Request, cookieName = GUEST_QUOTA_COOKIE): string {
+  const cookie = request.headers?.get?.("cookie") ?? null;
+  if (cookie) {
+    const match = cookie.match(new RegExp(`(?:^|;\\s*)${cookieName}=([^;]+)`));
+    if (match && match[1]) {
+      return `guest-cookie:${decodeURIComponent(match[1]).slice(0, 64)}`;
+    }
+  }
+  return `guest-ip:${ipFromRequest(request)}`;
+}
+
 /** Extrait une clé d'IP raisonnable d'une requête Next.js. */
 export function ipFromRequest(request: Request): string {
   const xff = request.headers.get("x-forwarded-for");

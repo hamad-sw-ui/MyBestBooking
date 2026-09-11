@@ -51,7 +51,7 @@ export async function generateMetadata({
   params,
 }: {
   params: Promise<{ token: string }>;
-}): Promise<{ title: string; description: string }> {
+}): Promise<{ title: string; description: string; robots: { index: false; follow: false } }> {
   const { token } = await params;
   const t = makeT(await getServerLocale());
   const data = await fetchShared(token);
@@ -60,6 +60,10 @@ export async function generateMetadata({
   return {
     title: t("share.meta.title").replace("{name}", data.name),
     description: t("share.meta.description"),
+    // T-238 (audit n°3, F7) : une liste de favoris partagée est un lien privé
+    // transmis de la main à la main. Les 14 autres surfaces privées déclarent
+    // `noindex` ; celle-ci exposait `title`/`description` aux moteurs.
+    robots: { index: false, follow: false },
   };
 }
 

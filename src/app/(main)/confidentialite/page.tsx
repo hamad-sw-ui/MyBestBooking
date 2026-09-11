@@ -30,7 +30,7 @@ const CONTENT = {
       ["Rectification", "édition directe du profil dans Mon compte."],
       ["Suppression", "bouton « Supprimer mon compte » dans l'onglet Sécurité (soft-delete, anonymisation en base pour conservation des factures et avis conformément aux obligations légales)."],
       ["Portabilité", "sur demande à support@mybestbooking.com."],
-      ["Opposition", "désabonnement possible depuis l'onglet Notifications."],
+      ["Opposition", "Les alertes prix (seul envoi non transactionnel) se désactivent depuis l'onglet Notifications de votre compte ou via le lien de désabonnement présent en pied de chaque alerte. Les e-mails liés à vos réservations et à la sécurité du compte restent envoyés : ils portent l'exécution du contrat."],
     ],
     security: "Sécurité",
     securityItems: [
@@ -76,7 +76,7 @@ const CONTENT = {
       ["Rectification", "direct profile editing in My account."],
       ["Deletion", "the “Delete my account” button in the Security tab (soft delete, anonymisation in the database to keep invoices and reviews as required by law)."],
       ["Portability", "on request to support@mybestbooking.com."],
-      ["Opposition", "unsubscribe from the Notifications tab."],
+      ["Opposition", "Price alerts (the only non-transactional email) can be turned off from the Notifications tab of your account or via the unsubscribe link at the bottom of every alert. Emails related to your bookings and account security are still sent: they carry out the contract."],
     ],
     security: "Security",
     securityItems: [
