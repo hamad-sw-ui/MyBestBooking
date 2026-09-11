@@ -18,6 +18,54 @@
 
 Voir `CURRENT_TASK.md` pour la tâche active.
 
+### Audit T-271 (2026-09-11) — implémentation de l'audit runtime n°8 (F1 → F5) — **ENTIÈREMENT SOLDÉ**
+
+- ✅ ~~**T-271 (S/P1)** — F1 — 500 sur `/mes-reservations`.~~ **Livré** : `formatTimestamp`
+  (`src/lib/dates.ts`) détecte les styles Intl → options = styles + `timeZone` seuls
+  (chemin historique inchangé pour les composants). 🧪 `dates.t271` **35/35** (rendus FR
+  verrouillés) · ▶️ runtime : `/mes-reservations` **200** pour un customer possédant une
+  demande `pending` + `requestExpiresAt` (avant : 500 `RangeError`).
+- ✅ ~~**T-272 (S/P2)** — F2 — no-show sans e-mail voyageur.~~ **Livré** : gabarit `noShow`
+  FR/EN + `sendNoShowNotificationIfNeeded` (idempotent `no-show:<id>`, best-effort
+  post-commit, interrupteur `notifications.bookingNoShow` défaut `true`) + hook dans
+  `PUT /api/bookings/[id]`. 🧪 `no-show-notification` **5/5** · ▶️ runtime : no-show hôte
+  → e-mail « **sent** » au voyageur (outbox + sujet FR vérifiés).
+- ✅ ~~**T-273 (C/P2)** — F3 — finalisation du remboursement hors plateforme.~~ **Livré** :
+  `POST /api/bookings/[id]/refund` (hôte/admin ; gardes `paid` + `refundStatus='none'` +
+  `paymentIntentId IS NULL` ; `FOR UPDATE` ; idempotent 409 ; audit `booking.refund.manual` ;
+  e-mail `refund-finalized:<id>` best-effort) + action « Finaliser le remboursement » dans
+  `BookingRowActions`/`booking-settlement-cell` (`ReasonDialog`, motif 3–500). Débat §15.2
+  fait. 🧪 `refund/route.t273` **10/10** · ▶️ runtime : 200 → `refunded` + `refundAmount` +
+  audit `{host, reason, currency}` + e-mail « sent », 2e appel → **409**.
+- ✅ ~~**T-274 (S/P2)** — F4 — alertes prix d'un compte supprimé toujours notifiées.~~
+  **Livré** : `anonymizeUserAccount` pose `price_alerts.active=false` +
+  `users.price_alert_enabled=false` (même tx) + garde `isNull(users.deletedAt)` dans
+  `selectActivePriceAlerts()` (exportée, appelée par le GET cron). 🧪 `account-anonymization.t274`
+  **2/2** + `cron/price-alerts/route.t274` **3/3** · ▶️ runtime : compte supprimé + alerte
+  active → **`scanned:1` (exclu du scan), 0 e-mail** ; alerte d'un compte vivant notifiée
+  (contrôle non-régression, e-mail « sent »).
+- ✅ ~~**T-275 (C/P2)** — F5 — claim invité sans renvoi auto-service.~~ **Livré** :
+  `POST /api/auth/resend-guest-claim` (zod strict `{bookingReference, guestEmail}` ; double
+  identification ; 4 gardes d'émission en une requête jointe ; réponse strictement générique
+  anti-énumération ; rate-limit IP 10/h + email 3/h avant toute lecture ; jeton `guest_claim`
+  24 h non annulé ; gabarit `guestAccountClaim` ; eventKey `guest-claim-resend:<id>:<ts>` ;
+  échec mail best-effort sans 5xx) + bouton « Renvoyer l'e-mail d'activation » sur l'écran
+  de confirmation du tunnel guest (`guestAccessPending`). Débat §15.2 fait. 🧪 `resend-guest-claim/route.t275`
+  **8/8** · ▶️ runtime : demande guest réelle `MBB-2026-Q7IYI8` → 3 renvois = 3 e-mails « sent »
+  + 4 jetons valides non consommés + lien `activer-compte?token=` dans le mail ; 4e essai →
+  **429** `Retry-After`.
+
+Documents : `REPORTS/analyse_impact_T271_T275_2026-09-11_audit8.md` ·
+`REPORTS/analyse_conception_T271_T275_2026-09-11_audit8.md` ·
+`REPORTS/debat_technique_T273_T275_2026-09-11_audit8.md` ·
+`REPORTS/validation_T271_T275_2026-09-11_audit8.md` · analyse source
+`docs/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md`.
+
+**Clôture** : chaîne CI complète verte (typecheck · lint 0/0 · i18n · ai:check 19 OK /
+1 warn R7 / 0 fail · vitest **161 f / 858 t** · build · smoke **95/95**) · runtime réel
+des 5 scénarios · base rendue à l'état seed exact (8 users, 0 outbox/audit/cron/sessions/
+tokens/alertes/wallet/conversations, 33 bookings, 8 properties, 23 rooms).
+
 ### Audit T-210 (2026-09-10) — suites non bloquantes proposées
 
 - ✅ ~~**T-211 (L/P3)** — Ajouter un wrapper `site:audit:prod` qui lance `next start`, attend `/api/health`, exécute `scripts/site-audit.mjs`, puis stoppe le serveur.~~ **Livré 2026-09-10** : `npm run site:audit:prod` exécute `build → next start → /api/health → site-audit → cleanup`, port configurable et `--skip-build` disponible. Preuve : 247 pages / 0 issue.

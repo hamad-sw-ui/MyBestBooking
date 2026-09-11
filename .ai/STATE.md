@@ -4,6 +4,45 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a0913d-mybestbooking` (branche Arena active)
+- **Implémentation de l'audit n°8 (2026-09-11) — audit entièrement soldé, F1 → F5 livrés (T-271 → T-275)** :
+  **T-271 (S/F1, majeur)** — le 500 latent de `/mes-reservations` est corrigé :
+  `formatTimestamp` (`src/lib/dates.ts`) n'applique les styles Intl
+  (`dateStyle`/`timeStyle`) qu'entre eux, avec `timeZone` ; le chemin historique
+  (composants explicites) est inchangé — tout client possédant une demande `pending`
+  (champ `requestExpiresAt` posé à 100 % des créations) revoit sa page ; **T-272
+  (S/F2)** — le no-show n'est plus unilatéral : gabarit `noShow` FR/EN +
+  `sendNoShowNotificationIfNeeded` (idempotent `no-show:<id>`, best-effort
+  post-commit, interrupteur `notifications.bookingNoShow` défaut `true`) hooké dans
+  `PUT /api/bookings/[id]` ; **T-273 (C/F3)** — le remboursement hors plateforme se
+  **finalise** : `POST /api/bookings/[id]/refund` (hôte du bien/admin ; gardes `paid` +
+  `refundStatus='none'` + `paymentIntentId IS NULL` + non-`pending` ; `FOR UPDATE` ;
+  idempotent 409 ; audit `booking.refund.manual` ; e-mail `refund-finalized:<id>`
+  best-effort) + action « Finaliser le remboursement » (`ReasonDialog`) dans
+  `BookingRowActions`/colonne Règlement — la voie PSP reste exclusivement Stripe
+  (garde `paymentIntentId IS NULL`) ; **T-274 (S/F4)** — l'anonymisation coupe
+  `price_alerts.active` + `users.price_alert_enabled` **dans la même transaction**
+  et le scan cron applique la garde `isNull(users.deletedAt)` (`selectActivePriceAlerts()`
+  exportée) : un compte supprimé (même avant le correctif) ne produit plus aucun e-mail
+  d'alerte prix ; **T-275 (C/F5)** — le claim invité a un **renvoi auto-service** :
+  `POST /api/auth/resend-guest-claim` (zod strict, double identification référence +
+  e-mail exact, 4 gardes d'émission, réponse **strictement générique** anti-énumération,
+  rate-limit IP 10/h + email 3/h avant toute lecture, jeton `guest_claim` 24 h **non
+  annulé**, eventKey `guest-claim-resend:<id>:<ts>`, échec mail sans 5xx) + bouton
+  « Renvoyer l'e-mail d'activation » sur l'écran de confirmation du tunnel guest.
+  **Aucune migration** (colonnes existantes), aucun contrat d'API existant modifié,
+  FSM intacte, e-mails existants strictement inchangés. Débat §15.2 fait pour les deux
+  C ; analyses d'impact/conception **avant** tout code. Preuves : `dates.t271` 35/35 ·
+  `no-show-notification` 5/5 · `refund/route.t273` 10/10 · `account-anonymization.t274`
+  2/2 + `cron/price-alerts/route.t274` 3/3 · `resend-guest-claim/route.t275` 8/8 ·
+  **vitest intégral 161 f / 858 t, 0 échec** · **chaîne CI complète verte** (typecheck ·
+  lint 0/0 · i18n · `ai:check` 19 OK / 1 warn R7 / 0 fail · build · smoke 95/95) ·
+  **runtime réel des 5 scénarios** (500→200, no-show mail sent, refund refunded+audit+409,
+  cron `scanned:1` compte supprimé exclu / contrôlée notifiée, 3 renvois claim sent +
+  429 au 4e essai) · verrou i18n **1770 → 1774** (FR/EN appariées) · base rendue à
+  l'état seed exact. Rapport : `REPORTS/validation_T271_T275_2026-09-11_audit8.md`.
+  **Aucune ligne de l'audit n°8 ouverte.** `STATE.md` est réécrit au-dessus du commit
+  d'implémentation et ne peut pas citer son propre SHA (motif R7 toléré, warn attendu) —
+  HEAD de référence : `8b8b2e5` (analyse n°8, commit précédent).
 - **Analyse (2026-09-11, après l'audit n°7) : audit runtime n°8 — ANALYSIS DELIVERED** —
   `docs/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md` (copie
   `.ai/REPORTS/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md`) :

@@ -1,290 +1,52 @@
 # Tâche courante
 
-- **ID** : Audit n°7 — analyse runtime « fins de parcours », constats **C1 → C6** (2026-09-11)
-- **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution (7ᵉ passe)
-- **Statut** : ✅ **ENTIÈREMENT SOLDÉ (2026-09-11) — les 3 lots livrés et validés** :
-  **lot A** (C1 → **T-265** re-vérification du bien avant confirmation, C2 → **T-266**
-  remboursement hors plateforme finalisable par l'hôte + label « à traiter par l'hébergeur »),
-  **lot B** (C3 → **T-267** visuel neutre + état vide « Pas encore de photos »,
-  C4 → **T-268** claim invité pose `emailVerified`), **lot C** (C5 → **T-269** colonne
-  `bookings.confirmed_at` posée dans la transaction de confirmation + timeline qui la lit,
-  C6 → **T-270** `/messages` : dernier message en **une** requête IN-liste + fenêtre T-245
-  (25 par défaut, « Afficher 25 de plus », plafond 500) + même condition SQL pour la liste et
-  le compteur du bandeau).
-- **Preuves du lot C** : `route.t269.test.ts` **4/4** (pose ≈ maintenant, stabilité après
-  `markPaidOffline`, timeline RSC = date de confirmation et non du dernier update, repli
-  `updated_at` sur ligne historique NULL) ; `page.t270.test.ts` **4/4** (25 sur 30 + liens,
-  `?limit=100` complet sans bandeau, 0 requête N+1 et 1 IN-liste comptées sur le pool, fils
-  vides > 7 jours ni affichés ni comptés) ; correctif de robustesse `list-window.t257`
-  (23 chambres codées en dur → comptage dynamique, le seed est aléatoire) ; **chaîne CI
-  complète verte** (typecheck 0 · lint 0/0 · i18n · ai:check · vitest intégral · build ·
-  smoke 95/95) ; runtime sur serveur réel : confirmation → `confirmed_at` stable après
-  `markPaidOffline` (timeline « 11 sept. 2026, 18:00 ») et `/messages` 200 avec bandeau
-  « 25 résultats affichés sur 30 » / `?limit=100` complet. Base rendue à l'état seed exact.
-- **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_n7_fins_de_parcours.md`
-  (copie `.ai/REPORTS/analyse_2026-09-11_audit_runtime_n7_fins_de_parcours.md`)
-- **Moyens** : base neuve + seed complet, 46 pages × 4 rôles balayées (0 erreur applicative),
-  78 liens internes dashboard sondés (tous résolus), cycles rejoués de bout en bout (demande →
-  confirmation → paiement sur place → facture → annulation avec devis → clôture → avis),
-  scénario d'exception « demande confirmée après suspension de l'annonce » (C1), annulation
-  d'un paiement sur place (C2), claim invité (C4), favoris multi-listes + partage, 2FA,
-  alerte prix, cron d'expiration, validation d'annonce, suspension de compte, promotions.
-- **Constats** : **C1** (demande pending confirmable après suspension de l'annonce /
-  désactivation de la chambre — transition sans re-vérification du bien ; fiche publique 404) ·
-  **C2** (remboursement hors plateforme « en cours » indéfiniment — `refundStatus=pending` sans
-  aucun chemin vers `refunded`, ni action hôte) · **C3** (annonce sans photo : la
-  `placeholder-property.jpg` est une copie de `villa-azure-1.jpg` — photo d'autrui en galerie) ·
-  **C4** (claim invité : `emailVerified` reste `false` malgré la preuve de la boîte mail) ·
-  **C5** (timeline : étape « confirmée » datée de `updated_at` — colonne `confirmed_at` absente) ·
-  **C6** (`/messages` voyageur : 1+N requêtes + pas de fenêtre `parsePageWindow`, contrairement
-  aux 9 autres écrans T-245/T-257). **Tous les six sont corrigés** (T-265 → T-270).
-- **Lots livrés** : **A** (C1, C2) intégrité cycle de réservation + état de remboursement ·
-  **B** (C3, C4) visuels honnêtes + fin de parcours du claim · **C** (C5, C6) timeline précise +
-  cohérence du contrat de fenêtre — les trois lots sont livrés ensemble dans le commit
-  `b39fe89` (la chaîne CI complète y est verte). Tous les correctifs sont **non régressifs**
-  (aucun contrat existant modifié).
-- **Vérifié sain (à ne pas rouvrir)** : balayage 4 rôles 0 erreur ; 78 liens OK ; cycle de vie
-  complet (e-mails ×2 à chaque étape, clôture refusée avant paiement) ; expiration cron (e-mails
-  voyageur + hôte) ; avis de bout en bout (agrégats, réponse hôte, modération + motif, vote utile
-  auto-vote 400 / double 409) ; 2FA (setup → TOTP → code erroné 401 → désactivation) ; claim
-  invité (token consommé, login) ; alerte prix (seuils, idempotence) ; validation (hôte 403,
-  e-mail hôte) ; suspension (login 401 → réactivation) ; favoris (partage 200 anonyme, move
-  atomique, IDOR 404) ; promotions (aperçu + compteur) ; i18n warn-only (6 candidats
-  pré-existants) ; cookies session httpOnly + secure(prod) + sameSite=lax.
-- **État de la base** : rendu à l'état seed exact après le lot C (8 properties / 8 users /
-  33 bookings / 0 outbox / 0 audit_log / 0 conversations / 0 sessions — le seed est aléatoire,
-  le total de bookings/rooms varie à chaque seed : 23 rooms sur cette passe).
-
----
-
-## Livraison précédente — Audit n°6 (lots **A → D**, décisions **oui ×4** reçues le 2026-09-11)
-- **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution
-- **Statut** : ✅ **IMPLÉMENTATION LIVRÉE (2026-09-11) — audit n°6 entièrement soldé (B1 → B12)** — **lot A livré** (`11165d4` : B1/B2/B3/B11),
-  **lot B livré** (B4 → **T-257**, B5 → **T-258**, `76ec5b9` ; B6 → **T-259**, `dfd0a5e`) et
-  **lot D livré** : B8 → **T-262** (crédit gelé signalé et journalisé à la suppression de compte,
-  **aucune consommation** — gel T-248 §3), B10 → **T-263** (résidus T-207 récapitulés + `// legacy:`),
-  B12 → **T-264** (rate-limit en mémoire énoncé au déploiement + avertissement unique), puis
-  **lot C** : B7 → **T-260** (tri « Populaires », note minimale, « Autour de moi », recherche libre
-  `search` — vitest 146 f/812 t, sondes FR/EN) et B9 → **T-261** (préférences de notification par
-  utilisateur : `users.notification_prefs`, `null` = héritage global, le réglage admin reste maître ;
-  `notification-prefs` 10/10, `route.t261` 5/5, outbox 2/2, sonde runtime).
-- **Niveau** : S (correctifs de fin de parcours ; le lot D reste sous le gel wallet T-248 §3)
-- **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md`
-  (copie `.ai/REPORTS/analyse_runtime_n6_2026-09-11_inacheves.md`)
-- **Moyens** : 45 pages balayées avec les 3 rôles (0 erreur applicative), 71 routes API, 90 appels UI
-  ↔ routes, confrontation schéma ↔ API ↔ formulaires, `email_outbox` (73 lignes), trace `cron_runs`
-  datée de −4 h insérée puis supprimée pour mesurer l'état de supervision affiché.
-- **Lots proposés** : **A** (B1, B2, B3, B11) supervision juste + e-mails fiables + squelettes ·
-  **B** (B4, B5, B6) finir ce qui est à moitié câblé · **C** (B7, B9) exposer les capacités de l'API ·
-  **D** (B8, B10, B12) hygiène produit et dette. Ordre conseillé : A → D (crédit à la suppression de
-  compte) → B → C.
-- **État de la base** : inchangé (8 users / 8 properties / 23 rooms / 30 bookings / 21 reviews ;
-  `cron_runs` 0 ; `wallet_transactions` 0 ; `price_alerts` 0 ; `wishlist_items` 0).
-
----
-
-## Livraison précédente — T-245 → T-252 (audit n°5), close le 2026-09-11
-
-- **ID** : T-245 → T-252 (audit n°5 : exécution — parcours métier et fins de parcours)
-- **Titre** : Pagination des listes, favoris multi-listes, dialogues de motif, journal du wallet,
-  bandeau « tri ignoré », supervision des crons, message de conversation, hygiène T-207
-- **Statut** : ✅ **IMPLÉMENTATION LIVRÉE ET VALIDÉE (2026-09-11)** — T-245, T-246, T-247, T-248
-  (étapes 1-2), T-249, T-250, T-251, T-252. **Décision produit T-248 §3 tranchée : gel explicite du
-  wallet** (crédit futur tracé, non déductible ; libellés FR/EN + test de politique) — **plus aucune
-  ligne de l'audit n°5 ouverte**.
-- **Niveau** : S (passe d'analyse + correctifs de fin de parcours ; T-248 touche un solde monétaire et sera traité en dernier)
-- **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_execution.md`
-  (copie `.ai/REPORTS/analyse_runtime_n5_2026-09-11_execution.md`)
-- **Rapports produits** : `.ai/REPORTS/analyse_impact_T245_T252_2026-09-11_execution.md` ·
-  `.ai/REPORTS/analyse_conception_T245_T252_2026-09-11_execution.md`
-- **Rapport de validation** : `.ai/REPORTS/validation_T245_T252_2026-09-11_execution.md` (livré, complété
-  par `validation_T245_T250_2026-09-11_implementation.md`)
-
-## Analyse n°5 (2026-09-11) — méthode et constats
-
-Cinquième passe d'exécution : les scénarios métier ont été rejoués (promos, stop-sell de bout en
-bout, réponse d'hôte publique, heure d'arrivée dans les e-mails, alertes prix, disponibilité de
-chambre par l'hôte, favoris, messagerie) **et** des surfaces jamais sondées ont été attaquées
-(volumétrie des écrans de liste, cycle de vie complet d'une liste de favoris, saisie des motifs de
-modération, traçabilité du wallet, supervision des tâches planifiées). Moyens : matrice de rôles
-(3 rôles), sonde d'endpoints, sonde de flux, 3 scripts de scénarios, analyse croisée des **66
-endpoints appelés par l'UI** (0 manquant), contrôles SQL après chaque écriture. Base remise à l'état
-seed : `bookings` 35, `email_outbox` 1, `review_votes` 0, `price_alerts` 0, `stop_sell` 0,
-`host_reply` 0, `wishlists` 1, `conversations` 0.
-
-| # | Constat | Tâche | Niveau |
-|---|---|---|---|
-| A1 | Favoris : multi-listes à moitié câblé (ordre non déterministe, pas de renommage, pas de choix/déplacement de liste) | T-246 | M |
-| A2 | Aucune pagination sur 6 écrans de liste ; `GET /api/bookings` et `/api/messages` renvoient tout | T-245 | M |
-| A3 | Motifs de modération en `window.prompt`, `moderationReason` optionnel côté API | T-247 | S |
-| A4 | `sort` inconnu ignoré en silence (seul filtre sans bandeau T-175) | T-249 | S |
-| A5 | Messagerie : « introuvable » et « interdit » → même 403 | T-251 | XS |
-| A6 | Wallet : 4 familles d'écriture sans journal ; solde non dépensable depuis T-207 (O1) | T-248 | M |
-| A7 | Crons sans trace d'exécution ni supervision | T-250 | S |
-| A8 | Résidus T-207 : `applyWalletToTotal` sans appelant, `useWalletCredits` non documenté | T-252 | XS |
-
-**Vérifié sain et à ne pas rouvrir** : `DELETE /api/price-alerts/[id]` (200/404/400) et UI
-`/mes-favoris` complète ; `PUT /api/rooms/[id]/availability` avec `{ days: [...] }` par l'hôte
-propriétaire ; `/api/auth/verify` n'est pas morte (lien des e-mails) ; stop-sell appliqué
-(recherche 8 → 7, devis et réservation 409) ; réponse d'hôte publiée sur la fiche ; heure d'arrivée
-dans les 2 e-mails ; promos 200/200/400/404 ; clamp `limit` 1–100 ; 0 bouton mort, 0
-`TODO/FIXME`, 0 `href="#"` ; rétention technique (T-243) et export analytique (T-241) déjà livrés.
-
-## Correctifs courts livrés (2026-09-11)
-
-Trois constats de l'analyse ont été corrigés dans la foulée, sans toucher aux surfaces sensibles :
-
-- **T-249 (A4) — bandeau « tri ignoré ».** `sortIgnored` ajouté à `SearchWarning` + liste blanche
-  `SORT_VALUES` (`rating`/`price_asc`/`price_desc`/`popularity`), clé `search.warn.sortIgnored` FR/EN,
-  verrou `ui-strings.test.ts` **1682 → 1683**. API inchangée (tolérance conservée, comme T-175).
-- **T-251 (A5) — messagerie.** `checkParticipant` renvoie `{ kind: "not_found" | "forbidden" | "ok" }` :
-  conversation absente → **404** « Conversation introuvable » (`code: CONVERSATION_NOT_FOUND`),
-  tiers → **403** inchangé (`code: CONVERSATION_FORBIDDEN`), variante alignée sur `/messages/[id]`
-  (404 si absente, redirection si non participant) ; traduction EN ajoutée dans `api-error.ts`.
-- **T-252 (A8) — hygiène T-207.** `src/lib/wallet-currency.ts` + son test supprimés (aucun appelant
-  applicatif) ; `useWalletCredits` (accepté puis ignoré) et la suppression documentés dans
-  `KNOWN_LIMITATIONS.md` § « Surfaces inactives », avec renvoi à T-248 pour la décision produit.
-
-Preuves : typecheck 0 erreur · tests ciblés 23/23 · `npm run ci` (voir `PROGRESS.md`) · runtime des
-deux routes modifiées (404/403 messages, bandeau tri).
-
-## Suite
-
-- Ordre recommandé : **T-247 → T-245 → T-246 → T-250 → T-248** (T-248 en dernier : trancher d'abord
-  la consommation du wallet — avoir au règlement sur place ou gel).
-- Chaque correctif : `npm run ci` verte (typecheck · lint · i18n · ai:check · vitest · build · smoke)
-  puis vérification runtime, avant commit `fix(...)`/`feat(...)`.
-- Resynchronisation de `STATE.md` sur le HEAD final (R7) avant clôture de session.
-
-## Livraison T-241 (2026-09-11) — audit n°3, volets F11 + F12 + F13
-
-**(a) F11 — « supprimé » ≠ « suspendu ».** Déjà livré par T-230 : `users.suspended_at` distinct de
-`deleted_at`, bouton **Réactiver** remplacé par « Compte anonymisé — non réactivable ». Vérifié en
-base et dans les deux catalogues ; aucun code ajouté.
-
-**(b) F12 — analytics.** Période `?from&to` (dates civiles, `src/lib/analytics-period.ts`), défaut
-inchangé (30 derniers jours comparés aux 30 précédents), étendue bornée à 366 jours ; agrégats
-partagés entre l'écran et l'export CSV (`src/lib/analytics.ts`) ; sélecteur + export localisé
-`GET /api/dashboard/analytics/export`.
-
-**(c) F13 — erreurs d'API.** `{ error, issues: [{ field, message }] }` traduits sur 20 routes
-(`zodIssues`/`zodErrorResponse`) ; `.strict()` sur les schémas de mutation : un champ inconnu est
-refusé en 400 au lieu d'un 200 silencieux.
-
-## Suite
-
-- Resynchronisation de `STATE.md` sur le HEAD final (R7) avant clôture.
-- BACKLOG : plus aucun item 🔴/🟠 ouvert (T-235 → T-241 tous livrés).
-
-## Livraison T-235 → T-239 (2026-09-11)
-
-**T-235 (F4) — quota de réservation.** Garde-fou anti-abus **60/h avant** lecture du corps et
-quota produit **10/h après** validation (une saisie invalide ne consomme plus le quota) ; clé
-invité par cookie signé `mbb_guest` (repli IP) ; `429` + `Retry-After` + délai lisible, traduit ;
-`KNOWN_LIMITATIONS.md` mis à jour.
-
-**T-236 (F5) — heure d'arrivée estimée.** Validation `HH:MM` à l'entrée (plus d'erreur PostgreSQL
-possible sur la colonne `time`) ; restitution sur la fiche hôte, dans l'espace voyageur et dans les
-**4 e-mails** (demande + confirmation, FR/EN).
-
-**T-237 (F6) — décision d'annonce.** Colonne additive `properties.review_reason` (migration
-**0022**, appliquée) : motif persisté au rejet/suspension, effacé à l'approbation, affiché à
-l'hôte ; notification idempotente via l'outbox avec interrupteurs admin dédiés et gabarits FR/EN.
-
-**T-238 (F7) — wishlist partagée.** `noindex`/`nofollow` sur le lien partagé, notice de partage et
-infobulle de rotation ; la rotation existante (`PATCH /api/wishlists`) est désormais **prouvée** :
-ancien lien 404, nouveau lien 200.
-
-**T-239 (F8) — désabonnement.** Jeton HMAC-SHA256 (`src/lib/unsubscribe.ts`), page publique
-`/desabonnement` idempotente et `noindex`, pied d'opposition sur les alertes prix (seul envoi non
-transactionnel) ; la page Confidentialité FR/EN dit désormais précisément ce qui est refusable.
-
-## Suite
-
-- **T-241** (F11/F12/F13) : finitions — distinction « supprimé »/« suspendu » (déjà couverte par
-  T-230), analytics (sélecteur de période + export CSV), erreurs d'API (`issues` détaillées +
-  schémas de mutation `.strict()`).
-- Resynchronisation de `STATE.md` sur le HEAD final (R7) avant clôture de session.
-
-## Livraison T-232 / T-233 / T-234 (2026-09-10)
-
-**T-232 (F1 + F9 + F10) — dates et fuseaux.** Helper unique `src/lib/dates.ts` (date civile jamais
-décalée vs instant à fuseau explicite) ; `pg` lit les colonnes `date` en chaînes ; fenêtres civiles
-(analytics, calendriers, dashboard, tunnel, mon-compte, gestionnaire de réservations) ; les 7
-derniers `toLocaleDateString` remplacés — **0 occurrence** dans `src/` ; `users.timezone` validé et
-réellement lu comme fuseau d'affichage.
-
-**T-233 (F2) — suspension d'hôte.** `src/lib/host-suspension.ts` : cascade transactionnelle et
-idempotente `active ↔ suspended` depuis `PATCH /api/users/[id]/suspend` et `POST /api/admin/bulk` ;
-filtres publics (recherche, fiche dont `metadata`, tunnel) ; cache du catalogue ancré sur
-`globalThis` et invalidé à chaque changement, plus **garde de visibilité hors cache** sur la fiche.
-
-**T-234 (F3) — expiration paresseuse.** Purge extraite dans `src/lib/booking-request-expiration.ts`
-(le cron n'en garde que le branchement), exécutée **dans la transaction** de `POST /api/bookings` et
-de `GET /api/bookings/quote`, bornée à la chambre et à la fenêtre, notifications **après** commit ;
-`loadBookedCounts` ne compte plus une demande `pending` expirée (`now()` SQL).
-
-**Preuves.** `npm run ci` verte : typecheck 0 · lint 0/0 · i18n 1640 · ai:check 19 OK / 1 warn (R7) /
-0 fail · vitest **709 tests / 120 fichiers, 0 échec** · build · smoke **95/95**. Runtime : fiche
-`200 → 404 → 404 → 200`, total d'annonces `8 → 0 → 8`, réservation `400` (« Hébergement non
-disponible ») puis `201` ; demande expirée purgée par le tunnel (**201 au lieu de 409** — le `409`
-du constat est reproduit en retirant le correctif), disponibilité `0/1 → 1/0`. Base restaurée au
-seed exact (8 users / 8 annonces `active` / 34 réservations / 25 avis).
-
-## Étape précédente — T-221 → T-231 (audit n°2) + T-242 → T-244 (audit n°4)
-
-- **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-10 : les 14 constats A1→A11 et N1→N3 sont implémentés, testés et vérifiés au runtime
-- **Niveau** : C (données personnelles persistées — cf. §15.0 : en cas de doute, choisir le niveau le plus élevé)
-- **Analyses sources** : `docs/analyse_2026-09-10_audit_runtime_inacheves.md` (A1→A11) et
-  `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (N1→N3, copie `REPORTS/analyse_runtime_n4_2026-09-10_profondeur.md`)
-- **Rapports de cette tâche** : `REPORTS/analyse_impact_T-221_2026-09-10_mise_en_oeuvre_audits.md`
-  (impact §14) et `REPORTS/analyse_conception_T-221_2026-09-10_mise_en_oeuvre_audits.md`
-  (conception §15.1)
-
-## Contexte
-
-Quatrième passe d'analyse à l'exécution, orientée sur des surfaces jamais sondées :
-cloisonnement multi-tenant (24 cas × 5 identités, second hôte et annonce brouillon créés pour la
-mesure), cycle de vie des données personnelles après suppression de compte, rétention technique,
-et écart entre le stock affiché au calendrier hôte et le stock réellement vendable.
-
-Trois constats nouveaux en sortent — **T-242** (anonymisation partielle : l'identité survit dans
-`bookings.guest_*`, `email_outbox.to`, `audit_log.targetEmail`), **T-243** (aucune purge des
-sessions expirées, e-mails livrés et journaux d'audit) et **T-244** (le calendrier affiche le
-stock déclaré sans retirer les séjours). Les sept autres constats de la campagne confirment avec
-preuves chiffrées les tâches déjà planifiées T-227 et T-232 → T-236 / T-241.
-
-## Livraison (implémentation)
-
-Les quatorze constats sont **implémentés et validés** : A1 (échéance des demandes), A2 (séjours
-échus non réglés), A3 (interrupteurs d'e-mails), A4 (parrainage réglable), A5 (notifications
-d'avis), A6 (édition complète de chambre), A7 (horaires d'arrivée/départ + fuseau validés),
-A8 (labels/badges réservés à l'admin en PUT et POST), A9 (libellé du fil par acteur), A10
-(`suspended_at` distinct de `deleted_at`, migration `0021`, `409` sur compte anonymisé),
-A11 (codes de secours 2FA hachés à usage unique + reset support `user.2fa.reset`), T-242
-(anonymisation transactionnelle complète), T-243 (purge technique en cron), T-244 (« Reste
-vendable » au calendrier hôte).
-
-Preuves : `npm run ci` verte (typecheck 0 · lint 0 · i18n 0 · **vitest 691 tests** · build ·
-smoke) ; `ai:check` ; vérifications runtime sur serveur réel (parcours 2FA complet, suspension /
-réactivation / `409`, horaires et fuseau persistés, labels `403` hôte / `200` admin, calendrier
-« reste 2 (1 réservé) »). Base remise à l'état seed (8 users / 8 properties / 31 bookings /
-22 avis).
-
-## Chantier d'origine (audit n°2, contexte conservé)
-
-L'implémentation de **T-221 → T-231** est engagée dans l'arbre de travail, hors de ce livrable
-d'analyse : A1 (échéance des demandes) et A2 (règlements échus) livrés, plus A3 (interrupteurs
-d'e-mails), A4 (parrainage réglable), A5 (notifications d'avis) et A6 (édition complète de
-chambre). Restent A7 (horaires d'arrivée/départ), A8 (badges administrables), A9 (libellé du fil),
-A10 (`suspended_at`) et A11 (codes de secours 2FA).
-
-## Livré par cette passe
-
-1. **Analyse** : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` + copie `.ai/REPORTS/` ;
-   BACKLOG T-242 → T-244 ; PROGRESS et DEVLOG.
-2. **Preuves positives** : matrice de permissions exhaustive, révocation de session souhaitée à
-   toutes les entrées, restitution unique des bénéfices (promotion/wallet) à l'annulation,
-   idempotence `email_outbox`, `POST /api/seed` fermé hors environnement démo, 404 sur brouillons
-   et wishlists privées, aucune route orpheline hors tombeau 410 du paiement (T-207).
-3. **Aucun code produit modifié** par cette passe ; base remise à l'état seed et sondes supprimées.
+- **ID** : T-271 → T-275 (audit n°8 — implémentation des constats **F1 → F5**, 2026-09-11)
+- **Niveau** : C (le plus ambitieux du lot : T-273 et T-275 sont en C —
+  débat §15.2 fait ; T-271/T-272/T-274 en S avec rapport d'impact + conception)
+- **Titre** : Correction non régressive des 5 constats de l'audit runtime n°8
+  (500 `/mes-reservations`, no-show muet, remboursement manuel finalisable,
+  alertes prix post-suppression, renvoi du claim invité)
+- **Statut** : ✅ **CORRIGÉ (VALIDÉ)** (2026-09-11) — les 5 constats sont
+  livrés, testés et prouvés au runtime ; chaîne CI complète verte ; base
+  rendue à l'état seed exact. Preuves rejouables :
+  `REPORTS/validation_T271_T275_2026-09-11_audit8.md`.
+- **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md`
+  (copie `.ai/REPORTS/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md`)
+- **Documents pré-code (avant toute ligne de code)** :
+  - `REPORTS/analyse_impact_T271_T275_2026-09-11_audit8.md` (§14, 9 questions,
+    faits cités) ;
+  - `REPORTS/analyse_conception_T271_T275_2026-09-11_audit8.md` (§15.1,
+    3+ options par tâche, retenue argumentée) ;
+  - `REPORTS/debat_technique_T273_T275_2026-09-11_audit8.md` (§15.2, 10 rôles,
+    objections vérifiées dans le code).
+- **Tâches** :
+  - **T-271 (S)** — `formatTimestamp` : styles Intl exclusifs des composants
+    (fix du 500, `src/lib/dates.ts`) + tests.
+  - **T-272 (S)** — e-mail voyageur au no-show (gabarit FR/EN,
+    `sendNoShowNotificationIfNeeded` idempotent, interrupteur
+    `notifications.bookingNoShow` défaut `true`, hook best-effort post-commit
+    dans `PUT /api/bookings/[id]`).
+  - **T-273 (C)** — `POST /api/bookings/[id]/refund` (hôte/admin ; gardes
+    `paid` + `refundStatus='none'` + `paymentIntentId IS NULL` ; `FOR UPDATE` ;
+    audit `booking.refund.manual` ; e-mail best-effort) + bouton UI
+    `BookingRowActions` (motif obligatoire `ReasonDialog`).
+  - **T-274 (S)** — anonymisation : `price_alerts.active=false` +
+    `users.priceAlertEnabled=false` (même tx) + garde `isNull(users.deletedAt)`
+    dans le scan cron (défense en profondeur).
+  - **T-275 (C)** — `POST /api/auth/resend-guest-claim` (réf. + email exact,
+    4 gardes, réponse générique anti-énumération, rate-limit email 3/h + IP
+    10/h, jeton `guest_claim` neuf, eventKey timestampé) + bouton UI sur
+    l'écran de confirmation du tunnel guest.
+- **Garde-fous non-régression** : aucune migration (toutes les colonnes
+  existent) ; aucun contrat d'API existant modifié ; FSM de statuts intacte ;
+  voie PSP exclusivement Stripe (garde `paymentIntentId IS NULL` sur le
+  refund manuel) ; e-mails existants strictement inchangés (gabarits ajoutés,
+  jamais modifiés) ; réglage nouveau additif défaut `true` (`mergeDefaults`).
+- **Preuves livrées (toutes rejouables)** : `dates.t271` 35/35 ·
+  `no-show-notification.t272` 5/5 · `refund/route.t273` 10/10 ·
+  `account-anonymization.t274` 2/2 + `cron/price-alerts/route.t274` 3/3 ·
+  `resend-guest-claim/route.t275` 8/8 · non-régression des voisins (vitest
+  intégral **161 f / 858 t, 0 échec**) · `npm run ci` complète **verte**
+  (typecheck · lint 0/0 · i18n · ai:check 19 OK / 1 warn R7 / 0 fail · build ·
+  smoke 95/95) · runtime réel des 5 scénarios (détails dans le rapport) · base
+  rendue à l'état seed exact. Verrou i18n **1770 → 1774**.

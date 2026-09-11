@@ -33,6 +33,20 @@
   `cron_runs` (`name`, `started_at`, `finished_at`, `ok`, `duration_ms`,
   `counters` jsonb, `error_message`), une ligne par exécution de tâche
   planifiée, purgée à 90 jours par `purgeTechnicalData()`.
+- **T-274 (audit n°8, F4 — anonymisation, sans migration)** : la suppression d'un
+  compte (`anonymizeUserAccount`) pose, **dans la même transaction**,
+  `users.price_alert_enabled=false` et `price_alerts.active=false` pour toutes
+  ses alertes (le dernier tarif notifié est conservé — historique non réécrit).
+  Le scan du cron `price-alerts` applique en défense de profondeur la garde
+  `users.deleted_at IS NULL` (requête `selectActivePriceAlerts()`), si bien
+  qu'un compte supprimé **avant** le correctif n'est plus scanné : aucune
+  alerte d'un compte supprimé ne produit de ligne `email_outbox`.
+- **T-273 (audit n°8, F3 — colonne `bookings.refund_status`)** : l'écriture
+  `refunded` existe désormais aussi par l'action hôte/admin
+  `POST /api/bookings/[id]/refund` (`refundStatus="refunded"`, `refundedAt`,
+  `refundAmount=total`, `FOR UPDATE`, idempotent 409) — le webhook Stripe
+  reste l'autre chemin, exclusif aux réservations `paymentIntentId`
+  (garde `paymentIntentId IS NULL` côté manuel).
 - Migrations antérieures : `0021_user_suspension_and_backup_codes.sql` (T-230/T-231,
   2026-09-10) — additive : `users.suspended_at` + `users.suspended_reason`
   (suspension **distincte** de `deleted_at`, qui reste la marque de suppression),

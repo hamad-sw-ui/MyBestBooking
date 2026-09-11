@@ -42,7 +42,11 @@ export function formatDate(
 ): string {
   const isCivil = typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date.trim());
   if (isCivil) return formatCivilDate(date, options, locale);
-  return formatTimestamp(date, { day: "numeric", month: "long", year: "numeric", ...options }, locale);
+  // T-271 (audit n°8, F1) : si le call site demande des styles
+  // (`dateStyle`/`timeStyle`), on ne pré-mélange pas de composants —
+  // `formatTimestamp` les gère seul (ECMA-402 interdit la combinaison).
+  const usesStyles = options !== undefined && ("dateStyle" in options || "timeStyle" in options);
+  return formatTimestamp(date, usesStyles ? options : { day: "numeric", month: "long", year: "numeric", ...options }, locale);
 }
 
 export function formatDateShort(date: Date | string, locale: string = "fr-FR"): string {

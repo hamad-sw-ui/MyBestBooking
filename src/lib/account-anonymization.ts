@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { bookings, emailOutbox, sessions, users } from "@/db/schema";
+import { bookings, emailOutbox, priceAlerts, sessions, users } from "@/db/schema";
 import type { db } from "@/db";
 
 /**
@@ -78,8 +78,23 @@ export async function anonymizeUserAccount(
       // T-230 (A10) : un compte supprimé n'est plus « suspendu » (états distincts).
       suspendedAt: null,
       suspendedReason: null,
+      // T-274 (audit n°8, F4) : un compte supprimé ne reçoit plus d'alertes
+      // prix — le flag opt-in est coupé avec le compte (l'anonymisation ne
+      // touchait que l'identité ; l'alerte active + flag true continuaient
+      // d'être scannées par le cron, e-mails « sent » vers l'adresse
+      // anonymisée — prouvé runtime pendant l'audit).
+      priceAlertEnabled: false,
     })
     .where(eq(users.id, userId));
+
+  // T-274 (audit n°8, F4) : les alertes prix du compte sont désactivées dans
+  // la même transaction (l'étape ci-dessus couvrait le flag ; celle-ci couvre
+  // les lignes `price_alerts.active` — les deux ensemble : un compte mort ne
+  // notifie plus, quelle que soit la porte d'entrée du scan).
+  await executor
+    .update(priceAlerts)
+    .set({ active: false })
+    .where(eq(priceAlerts.userId, userId));
 
   // Copies d'identité figées dans les réservations : le séjour reste
   // incontestable (référence, dates, montants intacts), le nom disparaît.

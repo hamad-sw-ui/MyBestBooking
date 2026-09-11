@@ -325,6 +325,69 @@ export const templates = {
   },
 
   /**
+   * T-272 (audit n°8, F2) — no-show notifié au voyageur (langue du voyageur).
+   * Constat : la transition `→ no_show` (hôte) ne produisait aucun e-mail —
+   * le voyageur découvrait l'état terminal (et la perte de cashback) seul,
+   * sans modalité. Nouvel événement, jamais édité par l'admin → contenu
+   * entièrement géré par la plateforme et localisé fr/en (même approche que
+   * `bookingHostCancellation`). E-mail transactionnel : hors préférences
+   * utilisateur (T-261), sous l'interrupteur admin `bookingNoShow`.
+   */
+  noShow({
+    firstName, bookingReference, propertyName, checkIn, checkOut, language,
+  }: {
+    firstName: string; bookingReference: string; propertyName: string;
+    checkIn: string; checkOut: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { firstName, bookingReference, propertyName, checkIn, checkOut };
+    const subject = renderTemplate(s.noShowSubject, vars);
+    const body = renderTemplate(bodyToHtml(s.noShowBody), vars);
+    const dashboardUrl = appBaseUrl();
+    const html = layout(`
+      ${body}
+      <table style="width:100%;margin:16px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+      </table>
+      <p style="margin:24px 0;">${button(`${dashboardUrl}/mes-reservations`, s.noShowCta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
+   * T-273 (audit n°8, F3) — remboursement finalisé hors plateforme, confirmé
+   * à l'hôte/admin (langue du voyageur). Constat : `refundStatus` ne devenait
+   * `refunded` que par le webhook Stripe ; un paiement sur place remboursé
+   * manuellement restait « à traiter » à vie. E-mail transactionnel (état
+   * comptable terminal) — jamais édité par l'admin, localisé fr/en.
+   */
+  bookingRefundFinalized({
+    firstName, bookingReference, propertyName, refundAmount, currency, language,
+  }: {
+    firstName: string; bookingReference: string; propertyName: string;
+    refundAmount: string; currency: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { firstName, bookingReference, propertyName, refundAmount, currency };
+    const subject = renderTemplate(s.refundFinalizedSubject, vars);
+    const body = renderTemplate(bodyToHtml(s.refundFinalizedBody), vars);
+    const html = layout(`
+      ${body}
+      <p style="margin:16px 0 4px;font-size:13px;color:#666;">${s.lblFullRefund} — ${escapeHtml(refundAmount)} ${escapeHtml(currency)}</p>
+      <table style="width:100%;margin:16px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+      </table>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
    * T-150 — Annulation notifiée à l'hôte (langue de l'hôte). Nouvel
    * événement, jamais édité par l'admin → contenu entièrement géré par la
    * plateforme et localisé fr/en (même approche que `priceAlert`).

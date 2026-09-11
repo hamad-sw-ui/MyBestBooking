@@ -17,7 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea, Select } from "@/components/ui/input";
 import {
   ArrowLeft, ArrowRight, Check, Shield, MapPin,
-  Calendar, Users, CheckCircle, Star
+  Calendar, Users, CheckCircle, Star, Loader2
 } from "lucide-react";
 import Link from "next/link";
 import { readReservationParams, describeIncompleteLink } from "@/lib/reservation-url";
@@ -132,7 +132,15 @@ function ReservationPageInner() {
   const [property, setProperty] = useState<PropertyData | null>(null);
   const [room, setRoom] = useState<RoomData | null>(null);
   const [ratePlans, setRatePlans] = useState<RatePlanData[]>([]);
-  const [confirmation, setConfirmation] = useState<{ bookingReference: string; total: string; manualBooking?: boolean } | null>(null);
+  const [confirmation, setConfirmation] = useState<{
+    bookingReference: string;
+    total: string;
+    manualBooking?: boolean;
+    /** T-275 (audit n°8, F5) : invité → l'écran propose le renvoi du claim. */
+    guestAccessPending?: boolean;
+  } | null>(null);
+  // T-275 : état du bouton « Renvoyer l'e-mail d'activation ».
+  const [claimResendState, setClaimResendState] = useState<"idle" | "busy" | "sent" | "error">("idle");
   const [promo, setPromo] = useState<{ code: string; discount: number; finalTotal: number; quoteKey: string } | null>(null);
   // T-030 : guest booking ; T-207 retire les déductions wallet du tunnel.
   const [isAuthed, setIsAuthed] = useState<boolean>(true);
@@ -415,6 +423,8 @@ function ReservationPageInner() {
         total: data.booking.total,
         // T-207 : toutes les créations du tunnel sont des demandes manuelles.
         manualBooking: data.manualConfirmation !== false,
+        // T-275 (audit n°8, F5) : le claim invité est à activer par e-mail.
+        guestAccessPending: data.guestAccessPending === true,
       });
       setStep(4);
     } catch {
@@ -422,6 +432,30 @@ function ReservationPageInner() {
     }
     setSubmitting(false);
   };
+
+  // T-275 (audit n°8, F5) : le 1er e-mail de claim a été perdu ou sa fenêtre
+  // de 24 h est dépassée → renvoi (réf. + email exact, réponse générique,
+  // rate-limit côté serveur). Le lien initial, s'il reste valide, fonctionne
+  // toujours : le renvoi n'annule pas le jeton en cours.
+  async function resendClaimEmail() {
+    if (!confirmation) return;
+    setClaimResendState("busy");
+    try {
+      const res = await fetch("/api/auth/resend-guest-claim", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          bookingReference: confirmation.bookingReference,
+          guestEmail: formData.guestEmail,
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error ?? t("settings.error"));
+      setClaimResendState("sent");
+    } catch {
+      setClaimResendState("error");
+    }
+  }
 
   if (!propertyId || !roomId) {
     return (
@@ -752,6 +786,36 @@ function ReservationPageInner() {
                   <p className="text-sm text-gray-500 mb-6">
                     {t("reservation.confirmationEmailSent")}
                   </p>
+                  {/* T-275 (audit n°8, F5) : invité — le 1er e-mail de claim
+                      perdu ou la fenêtre de 24 h dépassée ? Renvoi possible
+                      sans support (le lien initial reste valable s'il existe). */}
+                  {confirmation.guestAccessPending && (
+                    <div className="flex items-center justify-center gap-3 mb-6">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={claimResendState === "busy"}
+                        onClick={resendClaimEmail}
+                        className="text-[#1B3A6B]"
+                      >
+                        {claimResendState === "busy" && (
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        )}
+                        {t("reservation.resendClaim")}
+                      </Button>
+                      {claimResendState === "sent" && (
+                        <span className="text-xs text-emerald-600" role="status">
+                          {t("reservation.resendClaimSent")}
+                        </span>
+                      )}
+                      {claimResendState === "error" && (
+                        <span className="text-xs text-red-600" role="alert">
+                          {t("reservation.resendClaimError")}
+                        </span>
+                      )}
+                    </div>
+                  )}
                   <div className="flex flex-col sm:flex-row gap-3 justify-center">
                     <Link href="/mes-reservations">
                       <Button>{t("reservation.viewBookings")}</Button>

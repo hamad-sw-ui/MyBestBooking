@@ -4,8 +4,9 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, ThumbsUp, BadgeCheck, Clock } from "lucide-react";
+import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, ThumbsUp, BadgeCheck, Clock, Undo2 } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
+import { ReasonDialog } from "@/components/admin/reason-dialog";
 
 interface Props {
   bookingId: string;
@@ -16,6 +17,9 @@ interface Props {
   paymentStatus?: string | null;
   /** T-203 : paiement constaté sur place (paiement manuel) pour afficher le badge. */
   paymentMethodOffline?: boolean;
+  /** T-273 (audit n°8, F3) : état de remboursement — l'action « finaliser le
+   *  remboursement » n'est proposée que sur `none` (la voie PSP gère le reste). */
+  refundStatus?: string | null;
   /** Legacy : conservé pour compatibilité d’appel, non utilisé depuis T-207. */
   paymentIntentId?: string | null;
   messageArea?: "traveler" | "dashboard";
@@ -52,6 +56,7 @@ export function BookingRowActions({
   status,
   paymentStatus = null,
   paymentMethodOffline = false,
+  refundStatus = "none",
   messageArea = "traveler",
   canManageStay = false,
   viewerIsHost,
@@ -62,6 +67,8 @@ export function BookingRowActions({
   const [isPending, startTransition] = useTransition();
   const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // T-273 : dialogue de motif de finalisation de remboursement.
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
 
   async function cancel() {
     setError(null);
@@ -202,6 +209,36 @@ export function BookingRowActions({
     }
   }
 
+  // T-273 (audit n°8, F3) : l'hôte/admin finalise un remboursement déjà
+  // effectué hors plateforme (constat comptable, motif obligatoire tracé
+  // dans l'audit log). Le serveur reste la source de vérité (403 hors
+  // hôte/admin, 409 payé en ligne / déjà remboursé, idempotence).
+  async function finalizeRefund(reason: string) {
+    setError(null);
+    setBusyAction("refund");
+    try {
+      const r = await fetch(`/api/bookings/${bookingId}/refund`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        // Le dialogue reste ouvert avec l'erreur (le motif est conservé).
+        throw new Error(j.error ?? t("settings.error"));
+      }
+      setRefundDialogOpen(false);
+      router.refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("settings.error"));
+    } finally {
+      setBusyAction(null);
+    }
+  }
+
+  const canFinalizeRefund =
+    canManageStay && paymentStatus === "paid" && refundStatus === "none" && paymentMethodOffline;
+
   return (
     <>
       {/* T-229 (A9) : libellé par acteur. Le voyageur écrit à l'hébergeur ; dans
@@ -300,6 +337,36 @@ export function BookingRowActions({
           <FileText className="w-4 h-4 mr-2" />
 {t("book.invoiceReceipt")}
         </a>
+      )}
+      {/* T-273 (audit n°8, F3) : finaliser un remboursement déjà effectué hors
+          plateforme — paiement sur place, rien en cours, hôte/admin. */}
+      {canFinalizeRefund && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => setRefundDialogOpen(true)}
+          disabled={busyAction !== null}
+          className="text-teal-700 hover:text-teal-800 hover:bg-teal-50"
+        >
+          {busyAction === "refund" ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Undo2 className="w-4 h-4 mr-2" />
+          )}
+          {t("book.finalizeRefund")}
+        </Button>
+      )}
+      {canFinalizeRefund && (
+        <ReasonDialog
+          key={bookingId}
+          open={refundDialogOpen}
+          onClose={() => setRefundDialogOpen(false)}
+          onConfirm={(reason) => void finalizeRefund(reason)}
+          actionLabel={t("book.finalizeRefund")}
+          destructive={false}
+          busy={busyAction === "refund"}
+          error={error}
+        />
       )}
       {/* T-207 : plus aucun lien « Payer maintenant » ni reprise d'intent.
           Une réservation pending reste une demande à confirmer/traiter par

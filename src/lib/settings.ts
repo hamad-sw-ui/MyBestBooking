@@ -142,6 +142,9 @@ export const notificationsSchema = z.object({
   // à l'issue de la modération).
   reviewPublished: z.boolean(),
   reviewModerated: z.boolean(),
+  // T-272 (audit n°8, F2) : e-mail voyageur au no-show — défaut `true`
+  // (payloads stockés complétés par mergeDefaults, pattern T-221).
+  bookingNoShow: z.boolean(),
   // T-237 (audit n°3, F6) : décision de validation d'annonce — l'hôte était
   // laissé sans explication. Défaut actif.
   propertyApproved: z.boolean(),
@@ -282,6 +285,8 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     // T-225 : nouvelles notifications d'avis — actives par défaut.
     reviewPublished: true,
     reviewModerated: true,
+    // T-272 : no-show notifié au voyageur — actif par défaut.
+    bookingNoShow: true,
     // T-237 : décisions de validation d'annonce — notifiées par défaut.
     propertyApproved: true,
     propertyRejected: true,

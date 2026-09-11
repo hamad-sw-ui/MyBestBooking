@@ -111,13 +111,26 @@ export function formatCivilDate(
   if (!civil) return "—";
   // La chaîne est interprétée comme minuit **UTC** et rendue en UTC : le jour
   // civil affiché est exactement celui fourni.
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    ...options,
-    timeZone: "UTC",
-  }).format(new Date(`${civil}T00:00:00.000Z`));
+  // T-271 (audit n°8, F1) : comme `formatTimestamp`, les styles (`dateStyle`/
+  // `timeStyle`) sont exclusifs des composants (ECMA-402) : si le call site en
+  // passe, seuls les styles sont transmis (`timeZone` forcé à UTC — une date
+  // civile n'a pas d'heure, le `timeStyle` n'aurait aucun effet utile).
+  const { dateStyle, timeStyle, ...components } = options;
+  const usesStyles = dateStyle !== undefined || timeStyle !== undefined;
+  const intlOptions: Intl.DateTimeFormatOptions & { timeZone?: string } = usesStyles
+    ? {
+        ...(dateStyle !== undefined ? { dateStyle } : {}),
+        ...(timeStyle !== undefined ? { timeStyle } : {}),
+        timeZone: "UTC",
+      }
+    : {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        ...components,
+        timeZone: "UTC",
+      };
+  return new Intl.DateTimeFormat(intlLocale(locale), intlOptions).format(new Date(`${civil}T00:00:00.000Z`));
 }
 
 /**
@@ -134,15 +147,35 @@ export function formatTimestamp(
   const instant = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(instant.getTime())) return "—";
   const { timeZone = DEFAULT_TIME_ZONE, ...rest } = options;
-  return new Intl.DateTimeFormat(intlLocale(locale), {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    ...rest,
-    timeZone,
-  }).format(instant);
+  // T-271 (audit n°8, F1) : ECMA-402 interdit de mélanger `dateStyle`/
+  // `timeStyle` et des composants de format explicites (`day`, `month`, …) —
+  // la combinaison levait `RangeError: Invalid option` (500 sur
+  // /mes-reservations dès qu'une demande `pending` portait `requestExpiresAt`,
+  // champ posé sur 100 % des réservations). Quand le call site passe des
+  // styles, seuls les styles + le fuseau explicite sont transmis (les
+  // composants éventuellement mélangés — p. ex. par un pré-merge en amont —
+  // sont écartés : l'intention du call site est le style). Le chemin
+  // historique (composants) est strictement inchangé — aucun call site sain
+  // ne peut basculer dans la nouvelle branche (elle n'était atteignable
+  // qu'avec des options qui levaient).
+  const { dateStyle, timeStyle, ...components } = rest;
+  const usesStyles = dateStyle !== undefined || timeStyle !== undefined;
+  const intlOptions: Intl.DateTimeFormatOptions & { timeZone?: string } = usesStyles
+    ? {
+        ...(dateStyle !== undefined ? { dateStyle } : {}),
+        ...(timeStyle !== undefined ? { timeStyle } : {}),
+        timeZone,
+      }
+    : {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        ...components,
+        timeZone,
+      };
+  return new Intl.DateTimeFormat(intlLocale(locale), intlOptions).format(instant);
 }
 
 /**

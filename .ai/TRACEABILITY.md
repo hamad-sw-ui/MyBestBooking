@@ -278,3 +278,28 @@ l'état seed après chaque sonde (dernier état vérifié : 8 users seed, 8 prop
 `notification_prefs` toutes NULL, `email_outbox` 0, `wallet_transactions` 0, `price_alerts` 0,
 `wishlist_items` 0). HEAD de clôture : `370de58`.
 
+### 2026-09-11 — Audit n°8 — parcours d'exécution, constats mesurés à l'exécution (F1 → F5)
+
+Analyse source : `docs/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md` (copie
+`.ai/REPORTS/`). **Aucune migration** (toutes les colonnes existent), aucun contrat d'API
+existant modifié, FSM de statuts intacte, voie PSP exclusivement Stripe, e-mails existants
+strictement inchangés (gabarits ajoutés). Verrou i18n : **1770 → 1774** (T-273 +1,
+T-275 +3, FR/EN appariées).
+
+| ID | Objet | Niv | Statut | Preuves rejouables | Commit | Réf. |
+|---|---|---|---|---|---|---|
+| T-271 | F1 — 500 latent sur `/mes-reservations` (demande `pending` + `requestExpiresAt`) | S | CORRIGÉ (VALIDÉ) | `formatTimestamp` (`src/lib/dates.ts`) : styles Intl (`dateStyle`/`timeStyle`) exclusifs des composants + `timeZone` ; le chemin historique (composants explicites) est inchangé ; 🧪 `dates.t271` **35/35** (rendus FR `Intl` verrouillés : `« 5 avr. 2027 »`) ; ▶️ runtime : `/mes-reservations` **200** (customer seed + demande `pending` + échéance posée — avant : `RangeError` → 500) | HEAD+ | `REPORTS/validation_T271_T275_2026-09-11_audit8.md` §2 |
+| T-272 | F2 — no-show unilatéral sans e-mail voyageur | S | CORRIGÉ (VALIDÉ) | Gabarit `noShow` FR/EN + `sendNoShowNotificationIfNeeded` (idempotent `no-show:<id>`, best-effort post-commit, interrupteur `notifications.bookingNoShow` défaut `true`) hooké dans `PUT /api/bookings/[id]` à la transition `→ no_show` ; 🧪 `no-show-notification` **5/5** ; ▶️ runtime : no-show hôte → outbox `no-show:<id>` **sent** (sujet FR vérifié) | HEAD+ | `REPORTS/validation_T271_T275_2026-09-11_audit8.md` §3 |
+| T-273 | F3 — finalisation du remboursement hors plateforme inexistante | C | CORRIGÉ (VALIDÉ) | `POST /api/bookings/[id]/refund` : hôte du bien/admin (voyageur 403, tiers 403) ; `{reason}` 3–500 strict ; gardes `paid` + `refundStatus='none'` + `paymentIntentId IS NULL` + non-`pending` (sinon 409, idempotent 409) ; `FOR UPDATE` ; `refundStatus="refunded"` + `refundedAt` + `refundAmount=total` ; audit `booking.refund.manual` `{host, reason, refundAmount, currency}` ; e-mail `refund-finalized:<id>` best-effort ; UI : action « Finaliser le remboursement » (`ReasonDialog`) dans `BookingRowActions` + `booking-settlement-cell` (plomberie `refundStatus` dans `bookings-manager`/listes/détail) ; verrou i18n **+1** ; 🧪 `refund/route.t273` **10/10** ; ▶️ runtime : 200 → `refunded`/`200.00` + audit + e-mail sent, 2e appel → **409** | HEAD+ | `REPORTS/validation_T271_T275_2026-09-11_audit8.md` §4 · débat §15.2 |
+| T-274 | F4 — alertes prix d'un compte supprimé toujours notifiées | S | CORRIGÉ (VALIDÉ) | `anonymizeUserAccount` : `price_alerts.active=false` + `users.price_alert_enabled=false` **dans la même transaction** (dernier tarif de notification conservé) ; cron : requête extraite en `selectActivePriceAlerts()` (exportée) + garde `isNull(users.deletedAt)` (protège aussi les comptes supprimés avant le correctif) ; 🧪 `account-anonymization.t274` **2/2** + `cron/price-alerts/route.t274` **3/3** ; ▶️ runtime : compte supprimé + alerte active + flag on → `scanned:1` (exclu), **0 e-mail** ; contrôle : alerte d'un compte vivant notifiée (e-mail sent) | HEAD+ | `REPORTS/validation_T271_T275_2026-09-11_audit8.md` §5 |
+| T-275 | F5 — claim invité sans renvoi auto-service (impasse si le 1er e-mail est perdu) | C | CORRIGÉ (VALIDÉ) | `POST /api/auth/resend-guest-claim` : zod strict `{bookingReference (5–50), guestEmail}` ; double identification (réf. **et** e-mail exact, 1 requête jointe `bookings ⋈ users`) ; 4 gardes d'émission (`pending`, `passwordHash IS NULL`, `deletedAt IS NULL`) ; **réponse strictement générique 200** dans tous les cas (anti-énumération — prouvé message identique) ; rate-limit **IP 10/h puis email 3/h avant toute lecture** → 429 + `Retry-After` ; jeton `guest_claim` 24 h **non annulé** (le lien précédent reste valable, `consumeToken` atomique) ; gabarit `guestAccountClaim` réutilisé ; eventKey `guest-claim-resend:<id>:<ts>` (l'initiale idempotente n'est jamais rejouée) ; échec d'envoi best-effort sans 5xx ; UI : bouton « Renvoyer l'e-mail d'activation » step 4 du tunnel (`guestAccessPending`), verrou i18n **+3** ; 🧪 `resend-guest-claim/route.t275` **8/8** ; ▶️ runtime : demande guest réelle → 3 renvois = 3 e-mails **sent** + 4 jetons valides non consommés + lien `activer-compte?token=` dans le mail, 4e essai → **429** | HEAD+ | `REPORTS/validation_T271_T275_2026-09-11_audit8.md` §6 · débat §15.2 |
+
+**Clôture de l'audit n°8 (2026-09-11)** : F1 → F5 soldés, aucun item 🔴/🟠 ouvert. Chaîne CI
+complète verte : typecheck 0 · lint 0/0 · i18n (warn-only, 6 candidats préexistants) ·
+`ai:check` **19 OK / 1 warn (R7) / 0 fail** · vitest **161 fichiers / 858 tests, 0 échec**
+(28 skips DB-gated) · build production · smoke **95/95**. Runtime réel des 5 scénarios sur
+serveur dev. Base rendue à l'état seed exact (8 users, 0 outbox/audit/cron/sessions/tokens/
+alertes/wallet/conversations/messages, 33 bookings, 8 properties, 23 rooms, 1 wishlist).
+HEAD de clôture : `8b8b2e5` (analyse) puis commit d'implémentation ci-dessus (SHA à
+consigner en fin de session — motif R7).
+

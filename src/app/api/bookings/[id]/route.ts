@@ -17,6 +17,7 @@ import {
 } from "@/lib/maintenance";
 import { BookingCancellationError, cancelBooking, notifyBookingCancellation } from "@/lib/booking-cancellation";
 import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
+import { sendNoShowNotificationIfNeeded } from "@/lib/no-show-notification";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 
 const updateBookingSchema = z.object({
@@ -329,6 +330,16 @@ export async function PUT(
     if (data.status === "confirmed") {
       await sendBookingConfirmationIfNeeded(updatedBooking.id).catch((error) => {
         console.error("[bookings/[id]] confirmation mail failed:", error);
+      });
+    }
+
+    // T-272 (audit n°8, F2) : le no-show est notifié au voyageur, qui
+    // découvrait l'état terminal (et la perte de cashback) seul. Idempotent
+    // (eventKey `no-show:<id>`), best-effort : un échec d'e-mail ne remet pas
+    // en cause la transition déjà committée.
+    if (data.status === "no_show") {
+      await sendNoShowNotificationIfNeeded(updatedBooking.id).catch((error) => {
+        console.error("[bookings/[id]] no-show mail failed:", error);
       });
     }
 

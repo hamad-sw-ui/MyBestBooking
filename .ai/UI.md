@@ -140,6 +140,27 @@ Deux colonnes du dashboard pro sont directement actionnables :
   réponse d'hôte, 👍/👎, pays, type de voyageur, bouton « Utile ») avec une
   pagination « Précédent / page X sur Y / Suivant ».
 
+### Audit n°8 — écrans modifiés (T-271 / T-273 / T-275, 2026-09-11)
+
+- **`/mes-reservations` (T-271)** : plus aucun 500 pour un voyageur possédant une demande
+  `pending` — `formatTimestamp` (`src/lib/dates.ts`) n'applique les styles Intl
+  (`dateStyle`/`timeStyle`) qu'entre eux, avec `timeZone` ; les composants explicites
+  gardent le chemin historique. L'échéance de la demande s'affiche à nouveau.
+- **Finaliser le remboursement hors plateforme (T-273)** : dans `/dashboard/bookings`
+  (colonne Règlement) et `/dashboard/bookings/[id]`, une ligne `paid` hors plateforme
+  non encore remboursée expose une action « Finaliser le remboursement » (hôte du bien
+  ou admin, jamais le voyageur) qui ouvre le `ReasonDialog` existant (motif obligatoire,
+  3–500) puis appelle `POST /api/bookings/[id]/refund` ; la colonne passe à « Remboursé »
+  (`refundStatus="refunded"`) et l'action disparaît. Aucune autre ligne n'est affectée
+  (les réservations PSP conservent leur parcours Stripe).
+- **Renvoi du claim invité (T-275)** : l'écran de confirmation du tunnel de réservation
+  (step 4) propose, **uniquement quand la création est passée en `guestAccessPending`**,
+  un bouton « Renvoyer l'e-mail d'activation » qui envoie `{bookingReference, guestEmail}`
+  à `POST /api/auth/resend-guest-claim`. Le serveur répond toujours par un message générique
+  (jamais de confirmation différenciée) ; l'UI n'affiche qu'un état « renvoyé — vérifiez
+  aussi vos spams » ou « réessayez plus tard » (429/erreur). Les clés `reservation.resendClaim*`
+  sont FR/EN.
+
 ### T-217 — écrans ajoutés ou corrigés (2026-09-10)
 
 - `/dashboard/promotions/[id]` : édition d'un code promo (nom, date de fin,

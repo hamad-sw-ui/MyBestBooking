@@ -216,6 +216,20 @@ export const API_ERROR_EN: Record<string, string> = {
   "Code expiré": "Expired code",
   "Code épuisé": "Code exhausted",
   "Code promo inconnu": "Unknown promo code",
+  // T-273 (audit n°8, F3) — finalisation du remboursement hors plateforme.
+  "Réservation payée en ligne : le remboursement est géré par la plateforme de paiement":
+    "Online-paid booking: the refund is handled by the payment platform",
+  "Le paiement de cette réservation n'est pas constaté":
+    "Payment for this booking has not been recorded",
+  "Le remboursement a déjà été finalisé": "The refund has already been finalized",
+  "Un remboursement est déjà en cours pour cette réservation":
+    "A refund is already in progress for this booking",
+  "Le motif est requis (3 caractères minimum)": "A reason is required (at least 3 characters)",
+  "Le motif est trop long": "The reason is too long",
+  // T-275 (audit n°8, F5) — renvoi du claim invité.
+  "Référence de réservation invalide": "Invalid booking reference",
+  "Si une demande de réservation est en attente pour cet email, un e-mail d'activation vient de lui être envoyé.":
+    "If a booking request is pending for this email, an activation email has just been sent to it.",
   "Compte introuvable": "Account not found",
   "Plan tarifaire indisponible pour cette chambre": "Rate plan unavailable for this room",
   "Connectez-vous pour réserver avec cet email": "Sign in to book with this email",

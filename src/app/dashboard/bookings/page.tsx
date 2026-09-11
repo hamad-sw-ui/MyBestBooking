@@ -147,6 +147,8 @@ export default async function BookingsPage({
         : null,
       // T-222 : règlement déjà constaté sur place.
       paymentMethodOffline: r.booking.paymentMethodOffline === true,
+      // T-273 (audit n°8, F3) : état de remboursement (finalisation hors plateforme).
+      refundStatus: r.booking.refundStatus,
     },
     property: r.property,
     room: r.room,

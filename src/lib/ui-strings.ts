@@ -138,6 +138,10 @@ const FR = {
   "reservation.paymentTransmitted": "Votre demande de réservation a été transmise. L’hôte confirmera la disponibilité.",
   "reservation.confirmationEmail": "📧 Vous recevrez la confirmation après validation de l’hôte.",
   "reservation.confirmationEmailSent": "Un email de confirmation vous sera envoyé.",
+  // T-275 (audit n°8, F5) : le 1er e-mail d'activation invité est perdu ?
+  "reservation.resendClaim": "Renvoyer l'e-mail d'activation",
+  "reservation.resendClaimSent": "E-mail renvoyé — vérifiez aussi vos spams.",
+  "reservation.resendClaimError": "Renvoi impossible pour l'instant, réessayez plus tard.",
   // T-207 : réservation manuelle sans paiement plateforme — l'hôte confirme.
   "reservation.manualRequestSent": "📩 Demande envoyée",
   "reservation.manualRequestBody": "Votre demande de réservation a bien été transmise à l’hébergeur. Elle sera confirmée après validation de l’hôte ; aucun paiement en ligne n’est demandé par la plateforme.",
@@ -1534,6 +1538,8 @@ const FR = {
   "book.paymentAwaitingHost": "En attente de confirmation de l'hôte",
   "book.completeStayConfirm": "Confirmer que ce séjour est terminé ? La récompense BestRewards du voyageur sera alors créditée.",
   "book.noShowConfirm": "Marquer cette réservation comme non-présentation (no-show) ? Aucune récompense ne sera versée.",
+  // T-273 (audit n°8, F3) : finalisation d'un remboursement déjà effectué hors plateforme.
+  "book.finalizeRefund": "Finaliser le remboursement",
   "book.writeHost": "Écrire à l'hébergeur",
   "book.writeGuest": "Écrire au voyageur",
   "book.openConvFail": "Impossible d'ouvrir la conversation",
@@ -1948,6 +1954,10 @@ const EN: Record<UiStringKey, string> = {
   "reservation.paymentTransmitted": "Your booking request has been sent. The host will confirm availability.",
   "reservation.confirmationEmail": "📧 You will receive the final confirmation after host validation.",
   "reservation.confirmationEmailSent": "A confirmation email will be sent to you.",
+  // T-275 (audit n°8, F5) : the first guest activation e-mail is lost?
+  "reservation.resendClaim": "Resend activation e-mail",
+  "reservation.resendClaimSent": "E-mail resent — check your spam folder too.",
+  "reservation.resendClaimError": "Resend unavailable right now, please try again later.",
   // T-207 : réservation manuelle sans paiement plateforme — l'hôte confirme.
   "reservation.manualRequestSent": "📩 Request sent",
   "reservation.manualRequestBody": "Your booking request was sent to the host. It will be confirmed after host validation; no online payment is requested by the platform.",
@@ -3318,6 +3328,8 @@ const EN: Record<UiStringKey, string> = {
   "book.paymentAwaitingHost": "Awaiting host confirmation",
   "book.completeStayConfirm": "Confirm this stay is completed? The guest BestRewards award will then be credited.",
   "book.noShowConfirm": "Mark this booking as no-show? No reward will be paid.",
+  // T-273 (audit n°8, F3): finalization of an offline refund already made.
+  "book.finalizeRefund": "Finalize refund",
   "book.writeHost": "Message the host",
   "book.writeGuest": "Message the guest",
   "book.openConvFail": "Unable to open the conversation",

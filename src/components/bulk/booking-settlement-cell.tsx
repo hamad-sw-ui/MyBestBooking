@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { BadgeCheck, Loader2 } from "lucide-react";
+import { BadgeCheck, Loader2, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/ui-locale-provider";
+import { ReasonDialog } from "@/components/admin/reason-dialog";
 
 interface Props {
   bookingId: string;
@@ -16,6 +17,9 @@ interface Props {
   canManage: boolean;
   /** Séjour terminé (départ ≤ aujourd'hui) : le règlement est en retard. */
   overdue: boolean;
+  /** T-273 (audit n°8, F3) : état de remboursement — la finalisation
+   *  n'est proposée que sur `none` (la voie PSP gère le reste). */
+  refundStatus?: string | null;
 }
 
 /**
@@ -38,11 +42,15 @@ export function BookingSettlementCell({
   paymentMethodOffline,
   canManage,
   overdue,
+  refundStatus = "none",
 }: Props) {
   const t = useT();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // T-273 (audit n°8, F3) : dialogue de motif de finalisation de remboursement.
+  const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [refundBusy, setRefundBusy] = useState(false);
 
   const paid = paymentStatus === "paid";
   const label = paid
@@ -80,6 +88,34 @@ export function BookingSettlementCell({
     }
   }
 
+  // T-273 (audit n°8, F3) : finaliser un remboursement déjà effectué hors
+  // plateforme (constat comptable, motif obligatoire tracé dans l'audit log).
+  // Le serveur reste la source de vérité (403/409, idempotence).
+  async function finalizeRefund(reason: string) {
+    setError(null);
+    setRefundBusy(true);
+    try {
+      const res = await fetch(`/api/bookings/${bookingId}/refund`, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        // Le dialogue reste ouvert avec l'erreur (le motif est conservé).
+        throw new Error(payload.error ?? t("settings.error"));
+      }
+      setRefundDialogOpen(false);
+      router.refresh();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : t("settings.error"));
+    } finally {
+      setRefundBusy(false);
+    }
+  }
+
+  const canFinalizeRefund = paid && paymentMethodOffline && canManage && refundStatus === "none";
+
   return (
     <div className="flex flex-col items-start gap-1">
       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${tone}`}>
@@ -101,6 +137,36 @@ export function BookingSettlementCell({
           )}
           {t("bulk.markPaid")}
         </Button>
+      )}
+      {canFinalizeRefund && (
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          disabled={refundBusy}
+          onClick={() => setRefundDialogOpen(true)}
+          aria-label={t("book.finalizeRefund")}
+          className="text-teal-700 hover:text-teal-800 hover:bg-teal-50"
+        >
+          {refundBusy ? (
+            <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" aria-hidden="true" />
+          ) : (
+            <Undo2 className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+          )}
+          {t("book.finalizeRefund")}
+        </Button>
+      )}
+      {canFinalizeRefund && (
+        <ReasonDialog
+          key={bookingId}
+          open={refundDialogOpen}
+          onClose={() => setRefundDialogOpen(false)}
+          onConfirm={(reason) => void finalizeRefund(reason)}
+          actionLabel={t("book.finalizeRefund")}
+          destructive={false}
+          busy={refundBusy}
+          error={error}
+        />
       )}
       {error && (
         <span className="text-xs text-red-600" role="alert">

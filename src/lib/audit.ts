@@ -78,6 +78,9 @@ export const AUDIT_ACTIONS = {
   // T-216 — transition de statut d'une réservation (gestion manuelle
   // hôte/admin depuis la liste ou la page détail).
   bookingStatusUpdate: "booking.status.update",
+  // T-273 (audit n°8, F3) — finalisation par l'hôte/admin d'un remboursement
+  // déjà effectué HORS plateforme (constat comptable, jamais de contact PSP).
+  bookingRefundManual: "booking.refund.manual",
 } as const;
 
 export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];

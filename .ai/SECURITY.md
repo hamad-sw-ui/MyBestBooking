@@ -239,3 +239,38 @@ avec `userRole` ✅.
 | B-026 | Seeder en debug uniquement | 🟡 |
 | B-027 | Rôle porté par `Screen` | 🟡 |
 | — | Audit de `allowBackup` | 🟡 |
+
+## 11. Web (Next.js) — durcissements de l'audit n°8 (2026-09-11)
+
+Surface web (T-273 / T-275, audit runtime n°8) — décisions vérifiées dans le code :
+
+- **T-275 — `POST /api/auth/resend-guest-claim` (claim invité, route publique)** :
+  - **Anti-énumération** : réponse strictement générique `200` dans **tous** les cas
+    (référence inconnue, e-mail non concordant, demande non `pending`, compte déjà
+    claimé ou supprimé) — aucun code HTTP ni message ne révèle l'existence d'une
+    réservation (testé : message byte-identique entre les cas).
+  - **Double identification** : la référence (8 caractères) seule ne suffit pas,
+    l'e-mail seul non plus — les deux sont requis (une requête jointe).
+  - **Rate-limit double avant toute lecture** : 10/h par IP (brute-force de
+    références) puis 3/h par email (anti-spam de victimes) → `429` + `Retry-After`.
+  - **Jeton** : `guest_claim` 24 h, hashé en base (SHA-256, jamais le clair),
+    à usage unique (`consumeToken` atomique) ; le renvoi n'annule **pas** le jeton en
+    cours (pas de race « le lien dans la boîte mail ne marche plus ») ; **jamais de
+    jeton dans la réponse HTTP** (il n'est que dans l'e-mail).
+  - Échec d'envoi = best-effort : jamais de `5xx` (l'état est inchangé, le voyageur
+    peut réessayer dans la limite du quota).
+- **T-273 — `POST /api/bookings/[id]/refund` (finalisation remboursement hors
+  plateforme)** :
+  - **Autorisation** : hôte du bien ou admin uniquement (401/403/404/409 distingués ;
+    le voyageur et un hôte tiers sont refusés — testé).
+  - **Séparation PSP/manuel** : la garde `paymentIntentId IS NULL` rend la voie Stripe
+    exclusivement Stripe (webhook intact) ; le manuel ne touche jamais un intent PSP.
+  - **Idempotence** : `FOR UPDATE` + 409 au 2e appel (pas de double finalisation) ;
+    trace `booking.refund.manual` dans `audit_log` avec motif.
+- **T-274 — suppression de compte** : l'anonymisation coupe les alertes prix dans la
+  même transaction et le scan cron exclut `deleted_at` : un compte supprimé ne reçoit
+  plus d'e-mails (RGPD — fin des notifications vers des comptes supprimés).
+
+Preuves : `resend-guest-claim/route.t275` 8/8 · `refund/route.t273` 10/10 ·
+`cron/price-alerts/route.t274` 3/3 · `account-anonymization.t274` 2/2 (voir
+`REPORTS/validation_T271_T275_2026-09-11_audit8.md`).

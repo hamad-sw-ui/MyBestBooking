@@ -295,6 +295,34 @@ async function cleanupOrphanUploads(): Promise<number> {
   return removed;
 }
 
+/**
+ * T-274 (audit n°8, F4) — périmètre scanné du cron d'alertes prix : alertes
+ * **actives** de comptes **opt-in** **vivants**.
+ *
+ * La garde `isNull(users.deletedAt)` est une défense en profondeur :
+ * l'anonymisation (T-274, `anonymizeUserAccount`) désactive désormais les
+ * alertes et le flag à la suppression de compte ; cette garde protège les
+ * comptes supprimés **avant** le correctif et tout futur chemin de
+ * suppression qui oublierait l'anonymisation. Sans elle, une alerte active
+ * d'un compte mort était notifiée perpétuellement vers l'adresse anonymisée
+ * (prouvé runtime pendant l'audit : e-mail « sent » vers
+ * `deleted-…@anonymized.local`).
+ */
+export async function selectActivePriceAlerts() {
+  return db
+    .select({ alert: priceAlerts, user: users, property: properties })
+    .from(priceAlerts)
+    .leftJoin(users, eq(priceAlerts.userId, users.id))
+    .leftJoin(properties, eq(priceAlerts.propertyId, properties.id))
+    .where(
+      and(
+        eq(priceAlerts.active, true),
+        eq(users.priceAlertEnabled, true),
+        isNull(users.deletedAt),
+      ),
+    );
+}
+
 export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
@@ -355,14 +383,7 @@ async function runPriceAlertsJob() {
     // `priceAlertEnabled` l'étaient). Défaut `true` : comportement inchangé
     // tant qu'un admin ne coupe pas explicitement la fonctionnalité.
     const notifications = await getSetting("notifications");
-    const alerts = notifications.priceAlerts
-      ? await db
-          .select({ alert: priceAlerts, user: users, property: properties })
-          .from(priceAlerts)
-          .leftJoin(users, eq(priceAlerts.userId, users.id))
-          .leftJoin(properties, eq(priceAlerts.propertyId, properties.id))
-          .where(and(eq(priceAlerts.active, true), eq(users.priceAlertEnabled, true)))
-      : [];
+    const alerts = notifications.priceAlerts ? await selectActivePriceAlerts() : [];
 
     let notified = 0;
     for (const entry of alerts) {

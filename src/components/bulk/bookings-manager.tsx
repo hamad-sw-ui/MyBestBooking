@@ -33,6 +33,8 @@ export interface BookingRow {
     requestExpiresAt?: string | null;
     /** T-222 : règlement constaté sur place. */
     paymentMethodOffline?: boolean;
+    /** T-273 (audit n°8, F3) : état de remboursement (finalisation hors plateforme). */
+    refundStatus?: string | null;
   };
   property: {
     id: string;
@@ -461,6 +463,7 @@ export function BookingsManager({
                           bookingReference={booking.bookingReference}
                           paymentStatus={booking.paymentStatus}
                           paymentMethodOffline={booking.paymentMethodOffline === true}
+                          refundStatus={booking.refundStatus}
                           canManage
                           overdue={settlementDue({ booking } as BookingRow)}
                         />

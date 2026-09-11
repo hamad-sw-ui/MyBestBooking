@@ -90,6 +90,15 @@ interface MailStrings {
   // d'annulation quand un remboursement est dû (jamais ajoutée sinon).
   cancelRefundPending: string;
   cancelRefundOffline: string;
+  // T-272 (audit n°8, F2) : e-mail voyageur au passage `no_show` — l'état
+  // terminal était découvert seul par le voyageur (aucun envoi).
+  noShowSubject: string;
+  noShowBody: string;
+  noShowCta: string;
+  // T-273 (audit n°8, F3) : confirmation du remboursement finalisé hors
+  // plateforme (acte hôte/admin, `booking.refund.manual`).
+  refundFinalizedSubject: string;
+  refundFinalizedBody: string;
   reminderSubject: string;
   reminderBody: string;
   reviewSubject: string;
@@ -195,6 +204,18 @@ const FR: MailStrings = {
     "Le remboursement de {refundAmount} {currency} est en cours.",
   cancelRefundOffline:
     "Le remboursement de {refundAmount} {currency} sera traité directement par l'hébergeur.",
+  noShowSubject: "Votre séjour {bookingReference} a été marqué non-présentation",
+  noShowBody:
+    "Bonjour {firstName},\n\n" +
+    "Votre réservation {bookingReference} pour {propertyName} ({checkIn} → {checkOut}) a été marquée non-présentation par l'hébergeur.\n\n" +
+    "Le séjour n'est ni remboursé ni rémunéré : aucun montant ne vous est dû et aucune récompense ne vous est versée.\n\n" +
+    "Si vous pensez qu'il s'agit d'une erreur, contactez l'équipe depuis votre espace réservation.",
+  noShowCta: "Voir ma réservation",
+  refundFinalizedSubject: "Remboursement confirmé {bookingReference}",
+  refundFinalizedBody:
+    "Bonjour {firstName},\n\n" +
+    "Le remboursement de {refundAmount} {currency} lié à votre réservation {bookingReference} pour {propertyName} a été confirmé.\n\n" +
+    "Ce remboursement a été traité directement par l'hébergeur, hors de la plateforme MyBestBooking.",
   reminderSubject: "Votre séjour à {propertyName} approche ({checkIn})",
   reminderBody:
     "Bonjour {firstName},\n\n" +
@@ -305,6 +326,18 @@ const EN: MailStrings = {
     "The refund of {refundAmount} {currency} is in progress.",
   cancelRefundOffline:
     "The refund of {refundAmount} {currency} will be handled directly by the host.",
+  noShowSubject: "Your stay {bookingReference} was marked as no-show",
+  noShowBody:
+    "Hi {firstName},\n\n" +
+    "Your booking {bookingReference} for {propertyName} ({checkIn} → {checkOut}) was marked as no-show by the host.\n\n" +
+    "The stay is neither refunded nor rewarded: no amount is due to you and no reward will be credited.\n\n" +
+    "If you believe this is a mistake, please contact our team from your bookings page.",
+  noShowCta: "View my booking",
+  refundFinalizedSubject: "Refund confirmed {bookingReference}",
+  refundFinalizedBody:
+    "Hi {firstName},\n\n" +
+    "The refund of {refundAmount} {currency} for your booking {bookingReference} at {propertyName} has been confirmed.\n\n" +
+    "This refund was handled directly by the host, outside the MyBestBooking platform.",
   reminderSubject: "Your stay at {propertyName} is coming up ({checkIn})",
   reminderBody:
     "Hi {firstName},\n\n" +

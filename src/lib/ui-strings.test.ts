@@ -93,7 +93,9 @@ describe("uiStrings (T-132)", () => {
   //   T-266 (audit n°7, C2 : remboursement hors plateforme « à traiter par
   //   l'hébergeur », +1) = 1769 ; T-267 (C3 : état vide « pas de photos »,
   //   +1) = 1770.
-  expect(Object.keys(fr)).toHaveLength(1770);
+  //   T-273 (audit n°8, F3 : finaliser le remboursement hors plateforme,
+  //   +1) = 1771 ; T-275 (F5 : renvoi du claim invité, +3) = 1774.
+  expect(Object.keys(fr)).toHaveLength(1774);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {
