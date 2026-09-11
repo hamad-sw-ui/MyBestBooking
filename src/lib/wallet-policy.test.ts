@@ -54,5 +54,12 @@ describe("T-248 §3 — le wallet est un crédit futur (gel assumé)", () => {
     // 2) Aucune route ne calcule de réduction depuis le solde.
     const health = readFileSync(new URL("../app/api/wallet/transactions/route.ts", import.meta.url), "utf8");
     expect(health).not.toMatch(/method:\s*"(POST|PATCH|PUT|DELETE)"|export async function (POST|PATCH|PUT|DELETE)/);
+
+    // 3) T-262 (B8) : la suppression de compte **trace** le solde gelé sans le
+    // consommer (ligne `account_closed` à montant 0, dans la transaction).
+    const deleteRoute = readFileSync(new URL("../app/api/users/me/route.ts", import.meta.url), "utf8");
+    expect(deleteRoute).toMatch(/recordAccountClosureEntry\(tx/);
+    const ledgerSource = readFileSync(new URL("./wallet-ledger.ts", import.meta.url), "utf8");
+    expect(ledgerSource).toMatch(/amount:\s*"0\.00"/);
   });
 });

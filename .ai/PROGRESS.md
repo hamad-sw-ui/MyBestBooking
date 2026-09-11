@@ -7,6 +7,36 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-11 — Audit n°6, lot D : T-262 (B8) — le crédit gelé tracé à la suppression de compte
+
+- **Livré** : 🔨 **B8 → T-262**. `DELETE /api/users/me` anonymisait le compte sans toucher
+  `users.wallet_balance` : un crédit accumulé (BestRewards, parrainage, remboursements) restait
+  attaché à `deleted-…@anonymized.local`, ni consultable, ni utilisable (gel T-248 §3), ni
+  remboursé — et **sans aucune trace**. Désormais : (1) encart conditionnel avant l'action dans la
+  zone de danger (« Votre crédit accumulé de X sera perdu », montant dans la devise d'affichage) ;
+  (2) ligne de journal `wallet_transactions` `kind='account_closed'` (`amount = "0.00"`,
+  `balanceAfter` = solde) **dans la transaction de suppression**, écrite par
+  `recordAccountClosureEntry()` (le journal ignore les mouvements nuls) et **uniquement** si le
+  solde est > 0. **Aucune consommation** : solde inchangé, aucun versement, aucun blocage du droit
+  RGPD. Aucune migration (`kind` = `varchar(32)`).
+- **🔤 i18n** : +1 clé FR/EN (`account.deleteWalletWarning`), verrou **1748 → 1749**.
+- **🧪 Tests** : `route.t262` **2/2** (base réelle : compte à 12,50 → 1 ligne `0.00`/`12.50` et solde
+  intact, anonymisation T-242 intacte ; compte à 0 → aucune ligne), `delete-account-section`
+  **2/2** (encart rendu/absent), `wallet-ledger` 5/5, `wallet-policy` 3/3 (garde-fou du gel étendu à
+  la suppression), `ui-strings` 7/7 ; tsc 0 ; eslint 0/0.
+- **Runtime** : client jetable créé avec `wallet_balance = 12.50` → `DELETE /api/users/me` **200** →
+  base `deleted-1614ccca23f52f84@anonymized.local`, solde `12.50` **inchangé**, journal
+  `account_closed` `0.00` / `12.50` ; ligne + compte supprimés après la sonde (base seed intacte).
+- **🔧 Fragilité corrigée** : `reviews-page.t258.test.ts` codait « 2 avis existants » et supposait ses
+  avis plus récents que ceux du seed — faux avec un seed aléatoire (2 à 4 avis par bien) ou régénéré
+  récemment. Total désormais **calculé** et avis ancrés une seconde au-dessus du plus récent ; suite
+  complète **144 fichiers / 800 tests, 0 échec**.
+- **Étape suivante** : **B10 → T-263** (résidus T-207 : entrée `KNOWN_LIMITATIONS.md` + commentaires
+  `// legacy:`, aucune suppression de route) puis **B12 → T-264** (rate-limit en mémoire : checklist
+  de mise en production + avertissement unique au démarrage), puis **lot C** — **B7 → T-260**
+  (tri « Populaires », note minimale, « Autour de moi », brancher `search`) et **B9 → T-261**
+  (préférences de notification par utilisateur).
+
 ## 2026-09-11 — Audit n°6, lot B (suite) : T-259 (B6) — des colonnes publiques réparées
 
 - **Livré** : 🔨 **B6 → T-259**. `descriptionEn` (≤ 4 000) entre dans les schémas POST/PUT — elle

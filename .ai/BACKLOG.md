@@ -686,6 +686,18 @@ Numérotation de suivi : **B1→T-253**, **B2→T-254**, **B3→T-255**, **B11�
   lien, fiche toujours bornée à 5 ; page 1 = 20 lignes avec `?page=2`, page 2 = fin de liste ; slug
   inconnu → `notFound()`).
 
+- ✅ ~~**T-262 (M/P1) — *B8 — suppression de compte : un crédit gelé qui disparaît en silence.***~~
+  **FAIT (2026-09-11)** : `DELETE /api/users/me` écrit désormais, **dans la transaction** de
+  suppression, une ligne `wallet_transactions` `kind='account_closed'` (montant **0**, `balanceAfter`
+  = solde) quand un solde positif disparaît, et la zone de danger affiche avant l'action « Votre
+  crédit accumulé de X sera perdu… » (montant dans la devise d'affichage). **Aucune consommation**
+  (gel T-248 §3 : solde inchangé, aucun versement, aucun blocage RGPD). Écrivain dédié
+  `recordAccountClosureEntry()` (le journal ignore les mouvements nuls), aucune migration
+  (`kind` = `varchar(32)`). Verrou i18n **1748 → 1749** (+1). Preuves : `route.t262` **2/2** (compte
+  à 12,50 → ligne 0,00/12,50 et solde intact ; compte à 0 → aucune ligne),
+  `delete-account-section` **2/2**, `wallet-ledger` 5/5, `wallet-policy` 3/3 ; sonde runtime (compte
+  jetable supprimé, base revenue à l'état seed).
+
 ### Audit T-242 (2026-09-10) — audit de profondeur (analyse n°4)
 
 Analyse : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie

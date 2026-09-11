@@ -15,8 +15,11 @@ import { renderToStaticMarkup } from "react-dom/server";
  *      `?page=2` et « page 1 sur 2 » existent) ;
  *   3. un slug inconnu → 404 (`notFound()`), comme la fiche.
  *
- * Données de test : 22 avis approuvés ajoutés sur `b-b-toscana` (2 existants →
- * 24), supprimés puis agrégats recalculés en fin de test.
+ * Données de test : 22 avis approuvés ajoutés sur `b-b-toscana`, supprimés puis
+ * agrégats recalculés en fin de test. Le seed pose **2 à 4** avis par bien
+ * (`Math.random()` dans `api/seed`) : le total attendu est donc **calculé** sur
+ * la base au démarrage du test, jamais codé en dur (correction de fragilité
+ * constatée le 2026-09-11 : un seed à 3 avis faisait échouer « 24 avis »).
  */
 
 let dbAvailable = false;
@@ -61,25 +64,44 @@ const SLUG = "b-b-toscana";
 const ADDED = 22;
 let propertyId = "";
 let userId = "";
+/** Avis approuvés déjà présents (seed aléatoire : 2 à 4 par bien). */
+let baseCount = 0;
+/** Total attendu sur la fiche et la page dédiée : base + 22. */
+let totalReviews = 0;
 const createdReviewIds: string[] = [];
 
 beforeAll(async () => {
   if (!dbAvailable) return;
   const { db } = await import("@/db");
   const schema = await import("@/db/schema");
-  const { eq } = await import("drizzle-orm");
+  const { and, count, desc, eq } = await import("drizzle-orm");
   const [property] = await db
     .select({ id: schema.properties.id })
     .from(schema.properties)
     .where(eq(schema.properties.slug, SLUG));
   propertyId = property!.id;
+  const [baselineRow] = await db
+    .select({ n: count() })
+    .from(schema.reviews)
+    .where(and(eq(schema.reviews.propertyId, propertyId), eq(schema.reviews.status, "approved")));
+  baseCount = baselineRow?.n ?? 0;
+  totalReviews = baseCount + ADDED;
   const [customer] = await db
     .select({ id: schema.users.id })
     .from(schema.users)
     .where(eq(schema.users.email, "customer@mybestbooking.com"));
   userId = customer!.id;
 
-  const base = Date.now();
+  // Les 22 avis ajoutés doivent être **plus récents** que tous ceux du seed,
+  // sinon la fenêtre de 20 (tri `desc(createdAt)`) les mélange (fragilité
+  // constatée le 2026-09-11 : juste après un seed, ses avis sont récents).
+  const [newestExisting] = await db
+    .select({ at: schema.reviews.createdAt })
+    .from(schema.reviews)
+    .where(eq(schema.reviews.propertyId, propertyId))
+    .orderBy(desc(schema.reviews.createdAt))
+    .limit(1);
+  const anchor = Math.max(Date.now(), (newestExisting?.at?.getTime() ?? 0) + 60_000);
   for (let index = 0; index < ADDED; index += 1) {
     const [row] = await db
       .insert(schema.reviews)
@@ -92,8 +114,11 @@ beforeAll(async () => {
         helpfulCount: 0,
         travelerType: "couple",
         // Tri `desc(createdAt)` : un horodatage par avis rend la pagination
-        // déterministe — « avis 0 » est le plus récent, « avis 21 » le plus ancien.
-        createdAt: new Date(base - index * 60_000),
+        // déterministe — « avis 0 » est le plus récent, « avis 21 » le plus
+        // ancien. Espacement d'**une seconde** : les 22 avis tiennent dans
+        // l'intervalle `anchor` … `anchor − 21 s`, donc restent tous plus
+        // récents que le dernier avis du seed quel qu'il soit.
+        createdAt: new Date(anchor - index * 1_000),
       })
       .returning({ id: schema.reviews.id });
     createdReviewIds.push(row!.id);
@@ -123,9 +148,9 @@ dbTest("T-258 — compteur et page « tous les avis »", () => {
       })) as React.ReactElement,
     );
 
-    expect(html).toContain("24 avis");
+    expect(html).toContain(`${totalReviews} avis`);
     expect(html).toContain(`/hebergement/${SLUG}/avis`);
-    expect(html).toContain("Voir les 24 avis");
+    expect(html).toContain(`Voir les ${totalReviews} avis`);
     // La fiche reste bornée à 5 avis : le 6ᵉ (créé ici) n'y figure pas.
     expect(html).toContain("T258 avis 0");
     expect(html).not.toContain("T258 avis 5");
@@ -154,7 +179,7 @@ dbTest("T-258 — compteur et page « tous les avis »", () => {
     );
     expect(second).toContain("page 2 sur 2");
     expect(second).toContain("?page=1");
-    // Fin de liste : indices 20 et 21 (les 2 avis seed complètent la page).
+    // Fin de liste : indices 20 et 21 (les avis du seed complètent la page).
     expect(second).toContain("T258 avis 21");
     expect(second).not.toContain("T258 avis 19");
   });

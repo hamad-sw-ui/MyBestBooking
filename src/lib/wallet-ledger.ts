@@ -30,7 +30,12 @@ export type WalletEntryKind =
   | "booking_refund"
   /** Réservé à la consommation du solde (décision produit T-248 §3). */
   | "booking_payment"
-  | "manual_adjustment";
+  | "manual_adjustment"
+  /**
+   * T-262 (audit n°6, B8) : trace de clôture de compte. **Jamais un
+   * mouvement** — le solde gelé reste attaché au compte anonymisé.
+   */
+  | "account_closed";
 
 /**
  * Exécuteur : `db` ou la transaction courante. Le journal doit être écrit dans
@@ -73,6 +78,30 @@ export async function recordWalletEntry(
     bookingId: entry.bookingId ?? null,
     actorId: entry.actorId ?? null,
     note: entry.note ?? null,
+  });
+}
+
+/**
+ * T-262 (audit n°6, B8) — trace la clôture d'un compte qui laisse un solde
+ * positif derrière lui.
+ *
+ * Le gel T-248 §3 interdit toute consommation : cette ligne **ne modifie pas
+ * `users.wallet_balance`**, elle consigne seulement qu'un crédit de
+ * `balanceAfter` subsiste sur un compte anonymisé (ni visible, ni utilisable).
+ * `recordWalletEntry` ignore volontairement les mouvements nuls (un journal de
+ * zéros serait illisible) : cette écriture a donc sa propre fonction, appelée
+ * **dans la transaction de suppression**, et uniquement si un solde disparaît.
+ */
+export async function recordAccountClosureEntry(
+  executor: WalletExecutor,
+  input: { userId: string; balance: string | number },
+): Promise<void> {
+  await executor.insert(walletTransactions).values({
+    userId: input.userId,
+    amount: "0.00",
+    balanceAfter: Number(input.balance).toFixed(2),
+    kind: "account_closed",
+    note: "Suppression de compte — crédit gelé conservé sur le solde (non consommé)",
   });
 }
 

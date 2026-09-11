@@ -404,6 +404,7 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Fenêtre des listes `rooms` + `messages` | ✅ | `parsePageWindow` + `<ShowMore>` sur les 2 écrans ; branche hôte de `rooms` en **une** jointure (fin du N+1) ; `conversationScope()` partagé liste/compteur ; 3 tests RSC sur base réelle | T-257 (B4) |
+| Crédit gelé tracé à la suppression de compte | ✅ | encart « crédit perdu » dans la zone de danger + ligne `wallet_transactions` `account_closed` (montant 0), dans la transaction — **solde jamais consommé** (gel T-248 §3) ; 2 + 2 tests, sonde runtime | T-262 (B8) |
 | Champs d'hébergement éditables (description EN, région, coordonnées) | ✅ | schémas POST/PUT bornés + éditeur et création ; `src/lib/coordinates.ts` (bornes, virgule décimale, `""` ⇒ `null`, affichage normalisé) ; 4 + 3 tests | T-259 (B6) |
 | Avis complets sur la fiche publique | ✅ | compteur `property.totalReviews` + lien « Voir les N avis » ; page `/hebergement/[slug]/avis` (20/page, `?page=`, `generateMetadata`, 404 si invisible) ; composant partagé `PropertyReviewsList` ; 3 tests RSC sur base réelle | T-258 (B5) |
 

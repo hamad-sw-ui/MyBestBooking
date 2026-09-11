@@ -756,3 +756,37 @@ les colonnes existaient depuis l'origine.
 « 43,769 » → base `43.76900000`, relecture « 43.769 », puis valeurs du seed restaurées.
 Rapports : `REPORTS/validation_T259_2026-09-11_audit6_B6.md` (+ analyses d'impact et de conception).
 
+## T-262 — audit n°6, B8 : le crédit gelé ne disparaît plus en silence (2026-09-11)
+
+**Le seul scénario où le gel T-248 §3 se retourne contre l'utilisateur.** `DELETE /api/users/me`
+anonymisait l'identité (T-242) sans toucher `users.wallet_balance` : un solde accumulé
+(BestRewards, parrainage, remboursements) restait attaché à une ligne
+`deleted-…@anonymized.local` — ni consultable (session révoquée), ni utilisable (gel), ni
+remboursé, et **sans une ligne de journal**. Ni l'utilisateur ni le support ne pouvaient savoir ce
+qui s'était passé.
+
+**Deux gestes, aucun centime déplacé.** (1) La zone de danger affiche avant l'action un encart
+conditionnel « Votre crédit accumulé de X sera perdu : il s'agit d'un crédit futur, non utilisé et
+non remboursable » (montant dans la devise d'affichage, mêmes helpers que la carte wallet).
+(2) La transaction de suppression écrit une ligne `wallet_transactions` `account_closed`
+(`amount = "0.00"`, `balanceAfter` = solde) : le journal est append-only, le solde **n'est pas
+modifié**. `recordWalletEntry()` continue d'ignorer les mouvements nuls ; la clôture a son écrivain
+dédié `recordAccountClosureEntry()`. Écrire dans la transaction garantit qu'il n'existe ni
+suppression sans trace, ni trace orpheline. Aucune migration : `kind` est un `varchar(32)`. Le refus
+de suppression tant que le solde est > 0 a été examiné puis écarté (il bloquerait un droit RGPD).
+
+**Preuves.** `route.t262` **2/2** (compte à 12,50 → une ligne `0.00`/`12.50`, solde intact et
+anonymisation T-242 intacte ; compte à 0 → aucune ligne), `delete-account-section` **2/2**
+(encart rendu avec le montant, absent à 0), `wallet-ledger` 5/5, `wallet-policy` 3/3 (garde-fou du
+gel étendu à la suppression), `ui-strings` 7/7 (verrou **1748 → 1749**), tsc 0, eslint 0/0. Sonde
+runtime : client jetable à 12,50 supprimé → base `deleted-…@anonymized.local`, solde `12.50`
+inchangé, journal `account_closed` `0.00`/`12.50`, puis ménage (base revenue à l'état seed).
+Rapports : `REPORTS/validation_T262_2026-09-11_audit6_B8.md` (+ impact et conception).
+
+**Fragilité découverte au passage (test T-258).** Le test `reviews-page.t258.test.ts` supposait
+« 2 avis déjà présents sur B&B Toscana » et plaçait ses 22 avis d'essai **plus récents** que ceux du
+seed : faux dès qu'un seed fraîchement régénéré donne 3 avis au bien ou des avis de moins de
+20 minutes. Le socle du test calcule désormais le total attendu (`count()` sur les avis approuvés)
+et ancre ses avis une seconde d'écart **au-dessus** du plus récent avis existant — la suite est
+insensible au tirage aléatoire du seed (`Math.random()` dans `api/seed`).
+

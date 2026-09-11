@@ -373,7 +373,7 @@ export default function MyAccountPage() {
                 <TwoFactorSection initiallyEnabled={user.twoFactorEnabled || false} />
 
                 {/* T-030 : suppression compte réelle */}
-                <DeleteAccountSection />
+                <DeleteAccountSection walletBalance={user.walletBalance} />
               </>
             )}
 

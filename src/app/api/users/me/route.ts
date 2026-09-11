@@ -12,6 +12,7 @@ import { isValidTimezone } from "@/lib/timezone";
 import { apiError } from "@/lib/api-error";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 import { anonymizeUserAccount, anonymizedEmailFor } from "@/lib/account-anonymization";
+import { recordAccountClosureEntry } from "@/lib/wallet-ledger";
 
 // T-135 — langues de l'UI réellement traduites (fr/en). L'arabe n'a pas
 // de dictionnaire V1 : on le rejette ici plutôt que de stocker une
@@ -167,12 +168,20 @@ export async function DELETE() {
     // de l'identité (réservations, historique d'e-mails, journal d'audit) et
     // non plus la seule table `users` — sans toucher aux agrégats comptables.
     const anonymizedEmail = anonymizedEmailFor(user.email);
+    // T-262 (audit n°6, B8) : un solde de crédit gelé (T-248 §3) restait
+    // attaché à une ligne anonymisée sans laisser aucune trace. On journalise
+    // la clôture **dans la même transaction** — montant 0, solde inchangé
+    // (aucune consommation, conformément au gel).
+    const walletBalance = Number(user.walletBalance ?? 0);
     await db.transaction(async (tx) => {
       await anonymizeUserAccount(tx, {
         userId: user.id,
         originalEmail: user.email,
         anonymizedEmail,
       });
+      if (Number.isFinite(walletBalance) && walletBalance > 0) {
+        await recordAccountClosureEntry(tx, { userId: user.id, balance: walletBalance });
+      }
     });
     const jar = await cookies();
     jar.delete("session");

@@ -59,7 +59,12 @@
   fichiers / 796 tests**, sonde runtime (« 43,769 » → `43.76900000`, relecture « 43.769 », valeurs du
   seed restaurées). Rapports : `REPORTS/validation_T259_2026-09-11_audit6_B6.md` (+ impact et
   conception). **Reste** : lot D (B8/B10/B12 — le crédit gelé reste **non consommable**) puis lot C
-  (B7/B9). **Reste** : **B6 → T-259** (champs
+  (B7/B9). **B8 → T-262** : la suppression de compte trace et signale le crédit gelé sans jamais le
+  consommer — encart conditionnel dans la zone de danger et ligne `wallet_transactions`
+  `account_closed` (montant 0, `balanceAfter` = solde) écrite dans la transaction par
+  `recordAccountClosureEntry()` (verrou `wallet-policy` étendu) ; verrou i18n **1748 → 1749** ; preuves
+  `route.t262` 2/2, `delete-account-section` 2/2 et sonde runtime (solde `12.50` inchangé après
+  suppression). **Reste** : lot D (B10 → T-263, B12 → T-264) puis lot C (B7 → T-260, B9 → T-261). **Reste** : **B6 → T-259** (champs
   affichés jamais éditables), puis lot D (B8/B10/B12 — signalement et journal du crédit gelé,
   **aucune consommation**), puis lot C (B7/B9). `STATE.md` est à rafraîchir en fin de session (R7 : un
   commit ne peut pas citer son propre SHA).

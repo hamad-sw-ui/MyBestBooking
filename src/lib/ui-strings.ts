@@ -656,6 +656,8 @@ const FR = {
   "account.deleteConfirmWord": "SUPPRIMER",
   "account.deleteForever": "Supprimer définitivement",
   "account.deleteAria": "Confirmation de suppression",
+  // T-262 (audit n°6, B8) : le crédit gelé ne disparaît plus en silence.
+  "account.deleteWalletWarning": "Votre crédit accumulé de {amount} sera perdu : il s'agit d'un crédit futur, non utilisé et non remboursable.",
   "tfa.title": "Authentification à deux facteurs (TOTP)",
   "tfa.body": "Utilisez une application d'authentification. Le secret reste entre votre navigateur, votre application TOTP et MyBestBooking : aucun service QR tiers n'est appelé.",
   "tfa.enabled": "2FA activée. Remplacez-la seulement avec le facteur actif.",
@@ -2417,6 +2419,7 @@ const EN: Record<UiStringKey, string> = {
   "account.deleteConfirmWord": "DELETE",
   "account.deleteForever": "Delete permanently",
   "account.deleteAria": "Deletion confirmation",
+  "account.deleteWalletWarning": "Your accumulated credit of {amount} will be lost: it is a future credit, unused and non-refundable.",
   "tfa.title": "Two-factor authentication (TOTP)",
   "tfa.body": "Use an authenticator app. The secret stays between your browser, your TOTP app and MyBestBooking: no third-party QR service is called.",
   "tfa.enabled": "2FA enabled. Replace it only with the active factor.",

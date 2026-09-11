@@ -116,6 +116,9 @@ Deux colonnes du dashboard pro sont directement actionnables :
   plus », « Tout afficher », plafond 500, compteur « N résultats affichés sur M »
   (`ShowMore`, mêmes clés `show.*`). La branche hôte de `rooms` ne fait plus une
   requête par bien : une seule jointure `rooms ⋈ properties` filtrée par hôte.
+- **Zone de danger (T-262)** : `/mon-compte` affiche, **avant** la suppression du compte, un encart
+  conditionnel « Votre crédit accumulé de X sera perdu » (montant dans la devise d'affichage) quand
+  le solde gelé est positif — aucune saisie nouvelle, la suppression reste au même endroit.
 - **Champs réparés (T-259)** : l'éditeur d'annonce (`/dashboard/properties/[id]`) gagne
   « Description (EN) » (onglet Informations) et, dans la carte Localisation, « Région / État »
   (également disponible à la création) puis « Latitude » / « Longitude » avec un texte expliquant
