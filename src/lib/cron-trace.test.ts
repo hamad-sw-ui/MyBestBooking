@@ -131,9 +131,17 @@ dbTest("T-250 — traces et santé des crons", () => {
     expect(health.status).toBe("failed");
     expect(health.tasks[0]?.errorMessage).toBe("boom");
 
+    // B1 (audit n°6) : la cadence attendue est quotidienne → 20 h sans
+    // exécution est normal (pas « en retard »), 3 jours ne l'est plus.
     await clearRuns();
-    // 4 h (> 3 × cadence horaire) et dernière exécution réussie → en retard.
-    await insertRun({ startedAt: new Date("2026-09-11T08:00:00.000Z"), ok: true });
+    await insertRun({ startedAt: new Date("2026-09-10T16:00:00.000Z"), ok: true });
+    health = await cronTrace.getCronHealth(now);
+    expect(health.tasks[0]?.status).toBe("ok");
+    expect(health.tasks[0]?.ageMinutes).toBe(1200);
+
+    await clearRuns();
+    // 4 jours (> 3 × cadence quotidienne) et dernière exécution réussie → en retard.
+    await insertRun({ startedAt: new Date("2026-09-07T08:00:00.000Z"), ok: true });
     health = await cronTrace.getCronHealth(now);
     expect(health.tasks[0]?.status).toBe("stale");
     expect(health.status).toBe("stale");

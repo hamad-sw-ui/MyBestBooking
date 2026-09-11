@@ -10,6 +10,7 @@ import { makeT } from "@/lib/ui-strings";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { rateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-error";
+import { appBaseUrl } from "@/lib/app-url";
 import { parseApiPagination } from "@/lib/page-window";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
@@ -229,10 +230,11 @@ export async function POST(request: NextRequest) {
           if (recipient?.email) {
             // T-150 : bouton direct vers LA conversation, dans la bonne
             // section selon le rôle du destinataire (hôte → dashboard).
-            const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+            // B3 (audit n°6) : base unique `appBaseUrl()` (repli absolu
+            // documenté) — plus de lien relatif si la variable manque.
             const conversationUrl = ok.isGuest
-              ? `${appUrl}/dashboard/messages/${data.conversationId}`
-              : `${appUrl}/messages/${data.conversationId}`;
+              ? `${appBaseUrl()}/dashboard/messages/${data.conversationId}`
+              : `${appBaseUrl()}/messages/${data.conversationId}`;
             const mail = await templates.newMessage({
               firstName: recipient.firstName ?? "",
               senderName,

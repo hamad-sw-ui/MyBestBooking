@@ -8,12 +8,14 @@ import { getCurrentUser } from "@/lib/auth";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { langInitInlineScript } from "@/lib/ui-language";
+import { appBaseUrl } from "@/lib/app-url";
 import "./globals.css";
 
 // Les polices restent locales afin que le rendu initial ne dépende pas
 // d'un CDN externe, notamment dans les environnements sans réseau.
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// B3 (audit n°6) : base unique `appBaseUrl()` (repli absolu documenté).
+const APP_URL = appBaseUrl();
 
 export async function generateMetadata(): Promise<Metadata> {
   const locale = await getServerLocale();

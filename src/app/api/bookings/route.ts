@@ -24,6 +24,7 @@ import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules
 import { bookingGuestIdentity } from "@/lib/booking-identity";
 import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
+import { appBaseUrl } from "@/lib/app-url";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { bookingRequestExpiresAt } from "@/lib/booking-request-expiration";
 import { sendBookingRequestCreatedIfNeeded } from "@/lib/booking-request-notification";
@@ -566,11 +567,10 @@ export async function POST(request: NextRequest) {
       try {
         const { clear } = await issueToken(createdBooking.userId, "guest_claim");
         const [guestUser] = await db.select({ language: users.language }).from(users).where(eq(users.id, createdBooking.userId));
-        const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
         const mail = await templates.guestAccountClaim({
           firstName: createdBooking.guestFirstName,
           bookingReference: createdBooking.bookingReference,
-          url: `${base}/activer-compte?token=${encodeURIComponent(clear)}`,
+          url: `${appBaseUrl()}/activer-compte?token=${encodeURIComponent(clear)}`,
           language: guestUser?.language ?? null,
         });
         const eventKey = `guest-claim:${createdBooking.id}`;

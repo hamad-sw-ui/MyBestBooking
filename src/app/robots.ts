@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
+import { appBaseUrl } from "@/lib/app-url";
 
-const BASE = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// B3 (audit n°6) : base unique `appBaseUrl()` (repli absolu documenté).
+const BASE = appBaseUrl();
 
 export default function robots(): MetadataRoute.Robots {
   return {

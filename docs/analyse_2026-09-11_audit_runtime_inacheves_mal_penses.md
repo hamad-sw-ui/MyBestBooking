@@ -223,7 +223,13 @@ Avec la cadence réellement configurée (24 h), une exécution de 4 h est **norm
 
 **Impact.** Mesuré à 84–300 ms en local (donc invisible ici) ; avec une base distante ou un démarrage à froid, la navigation reste figée sans retour visuel : c'est aujourd'hui la seule différence de perception entre les deux moitiés de l'application.
 
-**Solution.** Copier les squelettes existants (`components/ui/*skeleton*`) dans les 10 dossiers : **purement additif**, aucune page modifiée, aucun test à adapter.
+**Solution — restriction importante découverte à l'implémentation.** Le dépôt interdit déjà un `loading.tsx` au-dessus d'une route qui appelle `notFound()` : la frontière `Suspense` figerait le statut HTTP à 200 avant la levée de l'exception (soft-404, **BUG-051**, rappelé en tête de `src/components/page-loading.tsx`). Sur les 10 écrans listés, **un seul** est compatible : `/mon-compte` (aucun enfant dynamique, aucun `notFound()`) — c'est celui qui a reçu un squelette.
+
+| Étape | Changement | Non-régression |
+|---|---|---|
+| 1 | `(main)/mon-compte/loading.tsx` (ré-export de `@/components/page-loading`) | Aucune page modifiée ; respecte la règle BUG-051 |
+| 2 | Les 9 autres écrans restent sans squelette de route : la solution non régressive est une frontière `Suspense` **dans** la page (après résolution du `notFound()`), ou une refonte qui sort ces pages du streaming — travail dédié, hors de cette passe | Aucun changement de statut HTTP (les soft-404 restent inchangés, cf. `KNOWN_LIMITATIONS.md`) |
+| 3 | La règle est inscrite dans `KNOWN_LIMITATIONS.md` pour ne pas être « re-corrigée » par erreur | Doc |
 
 ### B12 — Rate-limit en mémoire : limitation connue, à énoncer au déploiement
 

@@ -9,6 +9,7 @@ import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { zodErrorResponse } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
+import { appBaseUrl } from "@/lib/app-url";
 
 const schema = z.object({ email: z.string().email() });
 
@@ -45,8 +46,7 @@ export async function POST(request: NextRequest) {
     if (user && !user.deletedAt) {
       try {
         const { clear } = await issueToken(user.id, "password_reset");
-        const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-        const url = `${base}/reinitialiser?token=${encodeURIComponent(clear)}`;
+        const url = `${appBaseUrl()}/reinitialiser?token=${encodeURIComponent(clear)}`;
         const mail = await templates.passwordReset({ firstName: user.firstName, url, language: user.language });
         const eventKey = `password-reset:${user.id}:${hashToken(clear).slice(0, 24)}`;
         await enqueueEmail({ eventKey, to: user.email, ...mail });

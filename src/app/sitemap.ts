@@ -2,8 +2,10 @@ import type { MetadataRoute } from "next";
 import { db } from "@/db";
 import { properties } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import { appBaseUrl } from "@/lib/app-url";
 
-const BASE = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+// B3 (audit n°6) : base unique `appBaseUrl()` (repli absolu documenté).
+const BASE = appBaseUrl();
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const list = await db

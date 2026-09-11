@@ -19,9 +19,16 @@ import { desc, eq, lt, and, sql } from "drizzle-orm";
  *     à partir d'une cadence attendue déclarée.
  */
 
-/** Cadence attendue d'une tâche (sert au calcul de fraîcheur). */
+/**
+ * Cadence attendue d'une tâche (sert au calcul de fraîcheur), en millisecondes.
+ *
+ * B1 (audit n°6) : la valeur doit refléter **l'ordonnanceur réel** — elle était
+ * déclarée horaire alors que `vercel.json` planifie « 0 8 * * * » (quotidien),
+ * ce qui affichait « En retard » ~21 h sur 24. `cron-schedule.test.ts` vérifie
+ * désormais l'alignement entre ce registre et `vercel.json`.
+ */
 export const CRON_SCHEDULES: Record<string, number> = {
-  "price-alerts": 60 * 60 * 1000, // horaire (vercel.json : « 0 * * * * »)
+  "price-alerts": 24 * 60 * 60 * 1000, // quotidien 08:00 UTC (vercel.json : « 0 8 * * * »)
 };
 
 /** Tolérance avant de considérer une tâche en retard (3 périodes). */

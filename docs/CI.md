@@ -21,6 +21,15 @@ Joue exactement la chaîne de la CI distante :
 > une base (le smoke mute les données → tests transitoires en échec).
 > Le script l'impose structurellement : base jetable pour vitest.
 
+## Checklist de mise en production (audit n°6)
+
+| Point | Règle |
+|---|---|
+| `NEXT_PUBLIC_APP_URL` | **Obligatoire** : c'est la base des liens d'e-mails, de `robots.txt`, du sitemap et de `metadataBase`. Sans elle, `appBaseUrl()` (`src/lib/app-url.ts`) retombe sur `https://mybestbooking.com` et journalise un avertissement unique — jamais de lien relatif/localhost (`src/lib/app-url-usage.test.ts` verrouille la règle). |
+| `CRON_SECRET` | Obligatoire en production : sans lui, les crons répondent 401 et `/dashboard/cron` passe en `missing`. La planification vit dans `vercel.json` (`price-alerts`, quotidien 08:00 UTC) et la cadence attendue dans `CRON_SCHEDULES` (`src/lib/cron-trace.ts`) — les deux doivent rester alignés (`src/lib/cron-schedule.test.ts`). |
+| Rate-limit | Le limiteur est **en mémoire** : au-delà d'une instance, la limite effective est divisée par le nombre d'instances. Prévoir un stockage partagé (Redis) avant de passer à plusieurs instances. |
+| Purge technique | `purgeTechnicalData()` (cron) : sessions expirées > 7 j, `email_outbox` > 90 j, `cron_runs` > 90 j. Vérifier l'état sur `/dashboard/cron`. |
+
 ## Distante — GitHub Actions
 
 Le workflow prêt à l'emploi est [`ci-workflow.yml`](./ci-workflow.yml).

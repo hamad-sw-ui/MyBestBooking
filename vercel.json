@@ -3,10 +3,6 @@
     {
       "path": "/api/cron/price-alerts",
       "schedule": "0 8 * * *"
-    },
-    {
-      "path": "/api/cron/payouts",
-      "schedule": "0 8 * * *"
     }
   ]
 }

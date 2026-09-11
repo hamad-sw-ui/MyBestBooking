@@ -8,6 +8,7 @@ import { issueToken } from "@/lib/tokens";
 import { templates } from "@/lib/mail";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { apiError } from "@/lib/api-error";
+import { appBaseUrl } from "@/lib/app-url";
 
 /**
  * POST /api/auth/resend-verification (T-137, A3)
@@ -64,8 +65,7 @@ export async function POST() {
 
     try {
       const { clear } = await issueToken(user.id, "email_verification");
-      const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-      const url = `${base}/api/auth/verify?token=${encodeURIComponent(clear)}`;
+      const url = `${appBaseUrl()}/api/auth/verify?token=${encodeURIComponent(clear)}`;
       const mail = await templates.emailVerification({
         firstName: fresh?.firstName ?? user.firstName ?? "",
         url,

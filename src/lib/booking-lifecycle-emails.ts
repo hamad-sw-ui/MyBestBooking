@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { bookings, emailOutbox, properties, reviews, users } from "@/db/schema";
 import { templates } from "@/lib/mail";
 import { toMailLocale } from "@/lib/mail/strings";
+import { appBaseUrl } from "@/lib/app-url";
 import { enqueueEmail, deliverEmail } from "@/lib/email-outbox";
 import { getSetting } from "@/lib/settings";
 
@@ -18,7 +19,14 @@ import { getSetting } from "@/lib/settings";
  * restent éditables via `emailTemplates`.
  */
 
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "";
+/**
+ * B3 (audit n°6) : la base des liens d'e-mail passe par `appBaseUrl()`
+ * (T-165) — sans variable d'environnement, l'ancien `?? ""` produisait des
+ * boutons **relatifs** (`/mes-reservations`), inutilisables en boîte mail.
+ */
+function appUrl(): string {
+  return appBaseUrl();
+}
 
 function toIso(d: Date): string {
   return d.toISOString().slice(0, 10);
@@ -90,7 +98,7 @@ export async function sendBookingReminders(today = new Date()): Promise<number> 
         checkIn: String(row.checkIn),
         checkOut: String(row.checkOut),
         daysLabel: loc === "en" ? target.daysLabelEn : target.daysLabelFr,
-        url: `${APP_URL}/mes-reservations`,
+        url: `${appUrl()}/mes-reservations`,
         language: row.guestLanguage ?? null,
       });
       await enqueueEmail({ eventKey, to: row.guestEmail, ...mail });
@@ -154,7 +162,7 @@ export async function sendReviewRequests(today = new Date()): Promise<number> {
         firstName: row.guestFirstName,
         propertyName: row.propertyName ?? "",
         bookingReference: row.bookingReference,
-        url: `${APP_URL}/mes-reservations/avis/${row.id}`,
+        url: `${appUrl()}/mes-reservations/avis/${row.id}`,
         language: row.guestLanguage ?? null,
       });
       await enqueueEmail({ eventKey, to: row.guestEmail, ...mail });

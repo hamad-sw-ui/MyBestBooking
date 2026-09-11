@@ -207,6 +207,18 @@ l'outbox). Restent assumées :
   Reste : le compte démo seedé est public par nature (dev/preview).
 - **Rate-limit en mémoire** : présent sur les routes critiques, mais non
   distribué entre plusieurs instances. Voir la limite produit ci-dessus.
+  **Audit n°6 (B12)** : à rappeler au déploiement — au-delà d'une instance,
+  la limite effective est divisée par le nombre d'instances ; le remplacement
+  (Redis) est la seule évolution prévue, `docs/CI.md` porte la ligne de
+  checklist.
+- **Squelettes de chargement (`loading.tsx`) interdits au-dessus d'une route
+  qui appelle `notFound()`** (BUG-051, rappelé par `components/page-loading.tsx`).
+  **Audit n°6 (B11)** : `/dashboard`, `/dashboard/properties|bookings|rooms|
+  messages|promotions`, `/mes-reservations` (enfants dynamiques) et
+  `/hebergement/[slug]`, `/dashboard/properties/[id]` (`notFound()`) restent
+  donc **volontairement** sans squelette de route ; seul `/mon-compte` en a
+  reçu un. La solution non régressive est une frontière `Suspense` **dans** la
+  page, après résolution du `notFound()`, pas un `loading.tsx` de segment.
 - **Pages 404 dynamiques : statut HTTP 200 avec `noindex`.** (T-153, audit
   n°25, finding D.) Quand une route dynamique (`(main)/[slug]`,
   `reservation`, etc.) appelle `notFound()` après avoir commencé à streamer
@@ -268,6 +280,25 @@ réintroduites sans décision produit.
   `POST /api/webhooks/stripe` (compatibilité PSP), `POST /api/bookings/[id]/payment`
   (410), `GET /api/cron/payouts` (410). `GET /api/admin/audit` est désormais
   **branchée** par `/dashboard/audit` (T-217/P9).
+  **Audit n°6 (B2)** : `/api/cron/payouts` n'est **plus planifié** dans
+  `vercel.json` — la route répondait 410 chaque jour tant que
+  `platformPayoutsEnabled()` est faux, sans trace dans `/dashboard/cron`
+  (`CRON_SCHEDULES` ne déclare que `price-alerts`). Le jour où les versements
+  plateforme sont activés, il faut **ré-ajouter l'entrée `vercel.json`**,
+  déclarer sa cadence dans `CRON_SCHEDULES` et l'envelopper dans
+  `runWithTrace("payouts", …)` ; `src/lib/cron-schedule.test.ts` refuse toute
+  planification sans cadence déclarée et inversement.
+- **Dette T-207 (audit n°6, B10)** — résidus assumés de la sortie du paiement
+  en ligne, aucun n'étant appelé par un écran : `POST /api/bookings/[id]/payment`
+  (410 pour les anciens liens), `GET /api/providers/stripe` (stub
+  `onlinePaymentDisabled`, ne divulgue aucune clé), lecture de compatibilité
+  `propertyId`/`roomId` dans `(main)/reservation/reservation-form.tsx`,
+  `GET /api/cron/payouts` (410), et `/dashboard/rooms/[id]` (redirection serveur
+  vers le calendrier, conservée pour les favoris). Conditions de retrait :
+  aucune circulation de lien legacy (métrique d'accès nulle sur 30 jours), ou
+  remplacement par une page d'explication. `bookings.paymentMethodOffline`,
+  `paymentIntentId` et `paymentExpiresAt` restent **utilisés** (constat de
+  règlement sur place, expiration T-203) et ne sont pas de la dette.
 - Champs de payload inertes : `useWalletCredits` (`POST /api/bookings`) est
   accepté puis **ignoré** (`walletUsedEur = 0`) depuis T-207 — le wallet n'est
   pas déduit dans le tunnel. Le champ est conservé pour la compatibilité des
