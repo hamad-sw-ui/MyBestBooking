@@ -4,6 +4,41 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a0913d-mybestbooking` (branche Arena active)
+- **Analyse (2026-09-11, après l'audit n°7) : audit runtime n°8 — ANALYSIS DELIVERED** —
+  `docs/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md` (copie
+  `.ai/REPORTS/analyse_2026-09-11_audit_runtime_n8_parcours_execution.md`) :
+  5 constats **F1→F5** mesurés à l'exécution (base seed + fixtures n°8, purgés
+  après coup) — **F1 (majeur)** : 500 latent sur `/mes-reservations` pour tout
+  client possédant une demande `pending` : `requestExpiresAt` (toujours posé à
+  la création, route.ts:472/510) + `formatDate(…, { dateStyle, timeStyle })`
+  (page.tsx:229) → `formatTimestamp` (dates.ts:137) mélange styles Intl et
+  composants → `RangeError` ; préexistant `1ad5f2d` ; fix proposé : styles seuls
+  dans `formatTimestamp` quand `dateStyle`/`timeStyle` sont présents ;
+  **F2 (mineur)** : no-show unilatéral — 0 e-mail voyageur, aucun recours
+  (fixture `MBB-T8-NOSHOW` exécuté, outbox vide) ; **F3 (report produit)** :
+  finalisation du remboursement hors plateforme Stripe-only (`payment-events.ts`),
+  aucun action hôte/admin, `bookings.refundManual` sans suite ;
+  **F4 (mineur, prouvé)** : alertes prix d'un compte supprimé toujours notifiées —
+  `anonymizeUserAccount` ne touche pas `price_alerts`/`users.priceAlertEnabled`
+  et le scan cron n'exclut pas `users.deletedAt` → e-mail « sent » vers
+  `deleted-…@anonymized.local` (alerte `c9509c78`, cron `notified:1`) ; fix
+  proposé : `active=false` + flag à l'anonymisation (même tx) + garde
+  `isNull(users.deletedAt)` dans la requête cron ; **F5 (mineur)** : claim invité —
+  e-mail unique, jeton 24 h (demande aussi 24 h), `passwordHash=null` (pas de
+  connexion possible), `resend-verification` = `email_verification` auth seulement
+  → **aucun renvoi auto-service** si l'e-mail est perdu/la fenêtre dépassée ; fix
+  proposé : `POST /api/auth/resend-guest-claim` (réf. + email, rate-limit, réponse
+  générique) + lien UI. **Vérifié sain** (infirmé) : lien facture dans l'UI
+  (`booking-row-actions.tsx:294`), compteur non-lus (reset 2→0 au rendu), cycle
+  promo (incrément booking / décrément annulation `GREATEST(x-1,0)` / code
+  réutilisable), i18n EN des nouveaux labels (FR/EN symétriques, rendu EN vérifié),
+  cashback 0.00 niveau 2 (by design, Ambassador-only), review requests (fenêtre
+  14 j, idempotent), traces cron (GET + Bearer), double-booking 201+409, lifecycle,
+  suppression de compte (hors F4), claim à usage unique. **Aucune ligne de code
+  modifiée** ; base rendue à l'état seed (0 résidu fixture, `email_outbox` 0,
+  `cron_runs` 0, compteurs client 8→7, langue fr, `CRON_SECRET` retiré de
+  `.env.local`). **À trancher** : les 5 décisions § 5 de la doc (F1/F4 recommandés
+  sans débat).
 - **Implémentation de l'audit n°7 (2026-09-11) — audit entièrement soldé, lots A→C livrés (commit `b39fe89`)** :
   **lot A** — **C1 → T-265** : la confirmation d'une demande re-vérifie le bien et la
   chambre **dans la transaction** (annonce suspendue ou chambre désactivée → `409` au lieu d'un
