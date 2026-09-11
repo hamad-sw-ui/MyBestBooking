@@ -32,9 +32,14 @@
 - **Base** : remise à l'état seed exact — `bookings` 35, `email_outbox` 1, `review_votes` **0**,
   `price_alerts` **0**, `room_availability.stop_sell` **0**, `reviews.host_reply` **0**, `wishlists` 1,
   `conversations` 0 (contrôles SQL consignés au §5 du rapport).
-- **Étape suivante** : implémenter **T-247 → T-245 → T-249 → T-252 → T-246 → T-250 → T-251** puis
-  trancher la consommation du wallet avant **T-248** ; chaque correctif passe par `npm run ci` verte
-  et une vérification runtime.
+- **Correctifs courts livrés dans la foulée** (🔨 analyse → code) : **T-249** (bandeau « tri ignoré » :
+  `sortIgnored` + liste blanche + clé FR/EN, verrou i18n **1683**), **T-251** (messagerie :
+  `checkParticipant` discriminé → **404** « Conversation introuvable » / **403** « Accès refusé » +
+  codes machines, traduction EN) et **T-252** (`wallet-currency.ts` + test supprimés — aucun appelant
+  — et `useWalletCredits` documenté dans `KNOWN_LIMITATIONS.md`). 🧪 Tests ciblés **23/23** avant la CI
+  complète ; rapports d'impact et de conception `T245_T252_2026-09-11_execution.md` ajoutés.
+- **Étape suivante** : implémenter **T-247 → T-245 → T-246 → T-250** puis trancher la consommation du
+  wallet avant **T-248** ; chaque correctif passe par `npm run ci` verte et une vérification runtime.
 
 ## 2026-09-10 — Audit n°3 : T-232 (dates/fuseaux), T-233 (suspension d'hôte), T-234 (expiration paresseuse) + volet T-240
 

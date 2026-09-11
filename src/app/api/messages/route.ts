@@ -29,19 +29,36 @@ const schema = z.object({
  * (T-015)
  */
 
-async function checkParticipant(userId: string, conversationId: string, role?: string | null) {
+/**
+ * T-251 (audit n°5, A5) : « conversation inexistante » et « conversation d'un
+ * tiers » renvoyaient tous deux `null` → 403 « Accès refusé », si bien qu'un
+ * lien périmé était indiscernable d'un refus. On distingue désormais les deux
+ * cas, comme le fait déjà la page `/messages/[id]` (404 si absente, redirection
+ * si le visiteur n'est pas participant) : UUID non devinable, aucune énumération
+ * facilitée.
+ */
+type ParticipantCheck =
+  | { kind: "not_found" }
+  | { kind: "forbidden" }
+  | { kind: "ok"; conversation: typeof conversations.$inferSelect; isGuest: boolean; isHost: boolean; isAdmin: boolean };
+
+async function checkParticipant(
+  userId: string,
+  conversationId: string,
+  role?: string | null,
+): Promise<ParticipantCheck> {
   const [row] = await db
     .select({ conversation: conversations, property: properties })
     .from(conversations)
     .leftJoin(properties, eq(conversations.propertyId, properties.id))
     .where(eq(conversations.id, conversationId))
     .limit(1);
-  if (!row) return null;
+  if (!row) return { kind: "not_found" };
   const isGuest = row.conversation.userId === userId;
   const isHost = row.property?.hostId === userId;
   const isAdmin = role === "admin";
-  if (!isGuest && !isHost && !isAdmin) return null;
-  return { conversation: row.conversation, isGuest, isHost, isAdmin };
+  if (!isGuest && !isHost && !isAdmin) return { kind: "forbidden" };
+  return { kind: "ok", conversation: row.conversation, isGuest, isHost, isAdmin };
 }
 
 export async function GET(request: NextRequest) {
@@ -55,8 +72,20 @@ export async function GET(request: NextRequest) {
   if (!isUuid(conversationId)) {
     return NextResponse.json({ error: await apiError("conversationId invalide") }, { status: 400 });
   }
-  const ok = await checkParticipant(user.id, conversationId, user.role);
-  if (!ok) return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
+  const access = await checkParticipant(user.id, conversationId, user.role);
+  if (access.kind === "not_found") {
+    return NextResponse.json(
+      { error: await apiError("Conversation introuvable"), code: "CONVERSATION_NOT_FOUND" },
+      { status: 404 },
+    );
+  }
+  if (access.kind === "forbidden") {
+    return NextResponse.json(
+      { error: await apiError("Accès refusé"), code: "CONVERSATION_FORBIDDEN" },
+      { status: 403 },
+    );
+  }
+  const ok = access;
 
   const list = await db
     .select()
@@ -84,8 +113,20 @@ export async function POST(request: NextRequest) {
     const data = schema.parse(await request.json());
     const rl = rateLimit(`messages:user:${user.id}`, { limit: 60, windowMs: 60 * 60 * 1000 });
     if (!rl.ok) return NextResponse.json({ error: await apiError("Trop de messages, réessayez plus tard") }, { status: 429, headers: { "Retry-After": String(rl.retryAfter) } });
-    const ok = await checkParticipant(user.id, data.conversationId, user.role);
-    if (!ok) return NextResponse.json({ error: await apiError("Accès refusé") }, { status: 403 });
+    const access = await checkParticipant(user.id, data.conversationId, user.role);
+    if (access.kind === "not_found") {
+      return NextResponse.json(
+        { error: await apiError("Conversation introuvable"), code: "CONVERSATION_NOT_FOUND" },
+        { status: 404 },
+      );
+    }
+    if (access.kind === "forbidden") {
+      return NextResponse.json(
+        { error: await apiError("Accès refusé"), code: "CONVERSATION_FORBIDDEN" },
+        { status: 403 },
+      );
+    }
+    const ok = access;
 
     // T-144 (audit n°20) : un message d'espaces sans pièce jointe est un
     // message vide (l'UI envoie "(pièce jointe)" quand il n'y a que le

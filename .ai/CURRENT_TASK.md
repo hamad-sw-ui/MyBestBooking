@@ -3,7 +3,8 @@
 - **ID** : T-245 → T-252 (audit n°5 : exécution — parcours métier et fins de parcours)
 - **Titre** : Pagination des listes, favoris multi-listes, dialogues de motif, journal du wallet,
   bandeau « tri ignoré », supervision des crons, message de conversation, hygiène T-207
-- **Statut** : ANALYSE LIVRÉE (2026-09-11) — aucune ligne de code produit modifiée ; correctifs à mener
+- **Statut** : ANALYSE LIVRÉE + 3 CORRECTIFS COURTS VALIDÉS (2026-09-11) — T-249, T-251, T-252 ;
+  T-245, T-246, T-247, T-248, T-250 à mener
 - **Niveau** : S (passe d'analyse + correctifs de fin de parcours ; T-248 touche un solde monétaire et sera traité en dernier)
 - **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_execution.md`
   (copie `.ai/REPORTS/analyse_runtime_n5_2026-09-11_execution.md`)
@@ -41,10 +42,28 @@ propriétaire ; `/api/auth/verify` n'est pas morte (lien des e-mails) ; stop-sel
 dans les 2 e-mails ; promos 200/200/400/404 ; clamp `limit` 1–100 ; 0 bouton mort, 0
 `TODO/FIXME`, 0 `href="#"` ; rétention technique (T-243) et export analytique (T-241) déjà livrés.
 
+## Correctifs courts livrés (2026-09-11)
+
+Trois constats de l'analyse ont été corrigés dans la foulée, sans toucher aux surfaces sensibles :
+
+- **T-249 (A4) — bandeau « tri ignoré ».** `sortIgnored` ajouté à `SearchWarning` + liste blanche
+  `SORT_VALUES` (`rating`/`price_asc`/`price_desc`/`popularity`), clé `search.warn.sortIgnored` FR/EN,
+  verrou `ui-strings.test.ts` **1682 → 1683**. API inchangée (tolérance conservée, comme T-175).
+- **T-251 (A5) — messagerie.** `checkParticipant` renvoie `{ kind: "not_found" | "forbidden" | "ok" }` :
+  conversation absente → **404** « Conversation introuvable » (`code: CONVERSATION_NOT_FOUND`),
+  tiers → **403** inchangé (`code: CONVERSATION_FORBIDDEN`), variante alignée sur `/messages/[id]`
+  (404 si absente, redirection si non participant) ; traduction EN ajoutée dans `api-error.ts`.
+- **T-252 (A8) — hygiène T-207.** `src/lib/wallet-currency.ts` + son test supprimés (aucun appelant
+  applicatif) ; `useWalletCredits` (accepté puis ignoré) et la suppression documentés dans
+  `KNOWN_LIMITATIONS.md` § « Surfaces inactives », avec renvoi à T-248 pour la décision produit.
+
+Preuves : typecheck 0 erreur · tests ciblés 23/23 · `npm run ci` (voir `PROGRESS.md`) · runtime des
+deux routes modifiées (404/403 messages, bandeau tri).
+
 ## Suite
 
-- Ordre recommandé : **T-247 → T-245 → T-249 → T-252 → T-246 → T-250 → T-251 → T-248** (T-248 en
-  dernier : trancher d'abord la consommation du wallet — avoir au règlement sur place ou gel).
+- Ordre recommandé : **T-247 → T-245 → T-246 → T-250 → T-248** (T-248 en dernier : trancher d'abord
+  la consommation du wallet — avoir au règlement sur place ou gel).
 - Chaque correctif : `npm run ci` verte (typecheck · lint · i18n · ai:check · vitest · build · smoke)
   puis vérification runtime, avant commit `fix(...)`/`feat(...)`.
 - Resynchronisation de `STATE.md` sur le HEAD final (R7) avant clôture de session.

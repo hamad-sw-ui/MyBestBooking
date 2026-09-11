@@ -36,6 +36,7 @@ vi.mock("@/lib/auth", () => ({ getCurrentUser: vi.fn() }));
 
 dbTest("T-150 — POST /api/messages → email du destinataire localisé + CTA", () => {
   let POST: typeof import("./route").POST;
+  let GET: typeof import("./route").GET;
   let db: typeof import("@/db").db;
   let schema: typeof import("@/db/schema");
   let getCurrentUser: (typeof import("@/lib/auth"))["getCurrentUser"];
@@ -51,6 +52,7 @@ dbTest("T-150 — POST /api/messages → email du destinataire localisé + CTA",
   beforeAll(async () => {
     const routeMod = await import("./route");
     POST = routeMod.POST;
+    GET = routeMod.GET;
     const authMod = await import("@/lib/auth");
     getCurrentUser = authMod.getCurrentUser;
     const dbMod = await import("@/db");
@@ -160,6 +162,46 @@ dbTest("T-150 — POST /api/messages → email du destinataire localisé + CTA",
     }
     if (adminId) {
       await db.delete(schema.users).where(eq(schema.users.id, adminId));
+    }
+  });
+
+  /**
+   * T-251 (audit n°5, A5) : la route distingue désormais une conversation
+   * absente (404 `CONVERSATION_NOT_FOUND`) d'un tiers non participant
+   * (403 `CONVERSATION_FORBIDDEN` inchangé) — aligné sur `/messages/[id]`.
+   */
+  it("T-251 — GET : 200 participant, 404 absente, 403 tiers", async () => {
+    const { NextRequest } = await import("next/server");
+    const getter = (id: string) =>
+      new NextRequest(new URL(`http://localhost/api/messages?conversationId=${id}`));
+
+    // Voyageur propriétaire du fil → 200
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: guestId, role: "user" } as never);
+    expect((await GET(getter(convId))).status).toBe(200);
+
+    // UUID inexistant → 404 explicite (au lieu d'un 403 ambigu)
+    const missing = await GET(getter("00000000-0000-4000-8000-000000000000"));
+    expect(missing.status).toBe(404);
+    expect((await missing.json()).code).toBe("CONVERSATION_NOT_FOUND");
+
+    // Hôte d'une AUTRE annonce → 403 (aucune fuite d'existence pour un tiers)
+    const [outsider] = await db
+      .insert(schema.users)
+      .values({
+        email: `outsider-msg-t251-${Date.now()}@test.local`,
+        firstName: "Yves",
+        lastName: "Outsider",
+        role: "host",
+      })
+      .returning();
+    try {
+      vi.mocked(getCurrentUser).mockResolvedValue({ id: outsider.id, role: "host" } as never);
+      const forbidden = await GET(getter(convId));
+      expect(forbidden.status).toBe(403);
+      expect((await forbidden.json()).code).toBe("CONVERSATION_FORBIDDEN");
+    } finally {
+      const { eq } = await import("drizzle-orm");
+      await db.delete(schema.users).where(eq(schema.users.id, outsider.id));
     }
   });
 

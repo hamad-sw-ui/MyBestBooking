@@ -171,7 +171,7 @@ URL de recherche est partagée/retapée (les valeurs valides ne sont pas rappel�
 
 **Solution non régressive (T-249)** : ajouter `sortIgnored` au type `SearchWarning` et sa clé
 (`search.warn.sortIgnored`) consommée par le bandeau existant, sans toucher au comportement de l'API
-(tolérance conservée). Verrou i18n : **1682 → 1684** (2 clés FR + 2 EN). Tests : `search-warnings.test.ts`
+(tolérance conservée). Verrou i18n : **1682 → 1683** (1 clé FR + 1 clé EN — le verrou compte les clés FR). Tests : `search-warnings.test.ts`
 (cas inconnu → `["sortIgnored"]`, cas valide → `[]`), vérification runtime du bandeau.
 
 ---

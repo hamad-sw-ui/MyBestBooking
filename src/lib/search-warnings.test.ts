@@ -80,6 +80,15 @@ describe("searchFilterWarnings (T-175)", () => {
     expect(w).toHaveLength(3);
   });
 
+  it("sort hors liste blanche → sortIgnored ; valeurs connues → rien (T-249)", () => {
+    expect(searchFilterWarnings({ sort: "nimporte_quoi" })).toEqual(["sortIgnored"]);
+    expect(searchFilterWarnings({ sort: "Price_Asc" })).toEqual(["sortIgnored"]);
+    expect(searchFilterWarnings({ sort: "  " })).toEqual([]);
+    for (const sort of ["rating", "price_asc", "price_desc", "popularity"]) {
+      expect(searchFilterWarnings({ sort })).toEqual([]);
+    }
+  });
+
   it("chaque warning possède une clé de dictionnaire FR et EN renseignée", () => {
     const fr = uiStrings("fr");
     const en = uiStrings("en");

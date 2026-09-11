@@ -33,9 +33,15 @@ tâches **T-245 → T-252** au BACKLOG, base remise à l'état seed (contrôles 
    documenter** : l'observation O1 du BACKLOG a été reprise en tâche T-248 avec la mesure du problème
    (4 familles d'écriture, 21 mutations de solde, aucun journal).
 
-**Prochaine fois.** Implémenter dans l'ordre T-247 → T-245 → T-249 → T-252 → T-246 → T-250 → T-251,
-et trancher d'abord la consommation du wallet (avoir sur règlement sur place ou gel assumé) avant
-T-248.
+**Correctifs courts dans la foulée.** Trois constats corrigés immédiatement, choisis pour leur faible
+risque : T-249 (bandeau « tri ignoré » — le dernier filtre avalé sans avertissement), T-251
+(messagerie : `not_found` et `forbidden` enfin distingués, comme le faisait déjà la page) et T-252
+(suppression du code mort de T-207 + documentation de `useWalletCredits`). Aucun des trois ne touche un
+montant, une transaction ou un contrat d'API existant.
+
+**Prochaine fois.** Implémenter dans l'ordre T-247 (dialogue de motif) → T-245 (pagination) →
+T-246 (favoris) → T-250 (supervision des crons), et trancher d'abord la consommation du wallet
+(avoir sur règlement sur place ou gel assumé) avant T-248.
 
 
 

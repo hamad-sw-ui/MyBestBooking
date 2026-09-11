@@ -540,11 +540,13 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   20 derniers mouvements dans `/mon-compte`, puis décision produit : avoir au règlement sur place
   (`markPaidOffline`) **ou** gel explicite du programme. Tests : « 1 crédit = 1 ligne », idempotence
   du rejeu de cron, soldes inchangés après clôture manuelle et expiration.
-- 🟢 **T-249 (S/P3) — *A4 — tri ignoré en silence.** `GET /api/properties?sort=…` inconnu → 200 avec
+- ✅ ~~**T-249 (S/P3) — *A4 — tri ignoré en silence.***~~ **FAIT (2026-09-11)** : `GET /api/properties?sort=…` inconnu → 200 avec
   tri `rating` par défaut (`route.ts:216`) alors que les 4 autres filtres écartés déclenchent un
   bandeau (T-175, `search-warnings.ts`). Livrable : warning `sortIgnored` + clé
-  `search.warn.sortIgnored` (verrou i18n 1682 → **1684**), API inchangée (tolérance conservée),
-  test `search-warnings.test.ts` (inconnu → `["sortIgnored"]`, valide → `[]`).
+  `search.warn.sortIgnored` (verrou i18n 1682 → **1683**, le verrou comptant les clés FR), API inchangée (tolérance conservée),
+  test `search-warnings.test.ts` (inconnu/`Price_Asc`/blanc → `["sortIgnored"]` ou `[]`, 4 valeurs connues → `[]`).
+  **Livré** : `sortIgnored` ajouté à `SearchWarning` + liste blanche `SORT_VALUES`, clé FR/EN, verrou 1683 ;
+  23 tests ciblés verts (`search-warnings`, `ui-strings`, `api-error`, `messages`).
 - 🟢 **T-250 (S/P3) — *A7 — tâches planifiées sans trace.** Le cron `price-alerts` exécute 14
   opérations (rappels J-3/J-1, demandes d'avis, clôtures, expirations, alertes prix, purge
   technique) et n'écrit **aucune** trace (0 `recordAudit`) ; `/api/health` ne teste que PostgreSQL →
@@ -552,13 +554,16 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   `finished_at`, `ok`, `duration_ms`, `counters` JSONB, `error_message`) écrite en fin d'exécution
   **et** dans le `catch`, écran admin « Tâches planifiées » (dernier passage, âge, compteurs, badge
   rouge au-delà de 2× la période), purge intégrée à `purgeTechnicalData()` (T-243).
-- 🟢 **T-251 (XS/P3) — *A5 — messagerie : introuvable et interdit partagent le 403.**
+- ✅ ~~**T-251 (XS/P3) — *A5 — messagerie : introuvable et interdit partagent le 403.***~~ **FAIT (2026-09-11)** :
   `checkParticipant()` renvoie `null` dans les deux cas → `GET /api/messages` répond
   « Accès refusé » même pour un UUID inexistant (prouvé). Le cloisonnement est correct (aucune fuite)
-  mais un lien périmé est indiscernable d'un refus. Livrable : message neutre « Conversation
-  introuvable ou non accessible » + code machine additif `CONVERSATION_NOT_ACCESSIBLE` (le champ
-  `error` reste inchangé), page « conversation indisponible » avec retour à la liste.
-- 🟢 **T-252 (XS/P3) — *A8 — hygiène T-207.** `applyWalletToTotal()` (`wallet-currency.ts:28`) n'a
+  mais un lien périmé est indiscernable d'un refus.
+  **Livré (variante retenue, alignée sur `/messages/[id]`)** : `checkParticipant` renvoie un résultat
+  discriminé (`not_found` / `forbidden` / `ok`) → **404** « Conversation introuvable »
+  (`code: CONVERSATION_NOT_FOUND`) pour une conversation absente, **403** « Accès refusé »
+  (`code: CONVERSATION_FORBIDDEN`) inchangé pour un tiers ; traduction EN ajoutée
+  (`api-error.ts`), UUID non devinable (aucune énumération facilitée), GET et POST couverts.
+- ✅ ~~**T-252 (XS/P3) — *A8 — hygiène T-207.***~~ **FAIT (2026-09-11)** : `applyWalletToTotal()` (`wallet-currency.ts:28`) n'a
   plus aucun appelant applicatif (seul son test l'exerce) et `useWalletCredits` (accepté puis ignoré)
   n'est pas recensé dans `KNOWN_LIMITATIONS.md`. Livrable : suppression de la fonction et de son
   test **ou** annotation `@deprecated` + inscription dans les « surfaces inactives » ;

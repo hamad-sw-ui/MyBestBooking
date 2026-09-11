@@ -47,6 +47,7 @@ export const API_ERROR_EN: Record<string, string> = {
   "Confirmation de rotation requise": "Rotation confirmation required",
   "Confirmation du provider requise": "Provider confirmation required",
   "Connexion réussie": "Signed in successfully",
+  "Conversation introuvable": "Conversation not found",
   "Connexion validée": "Sign-in validated",
   "Corps de requête invalide ou manquant": "Invalid or missing request body",
   "Corps de requête invalide ou manquant (JSON attendu)":

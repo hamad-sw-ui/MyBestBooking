@@ -268,3 +268,11 @@ réintroduites sans décision produit.
   `POST /api/webhooks/stripe` (compatibilité PSP), `POST /api/bookings/[id]/payment`
   (410), `GET /api/cron/payouts` (410). `GET /api/admin/audit` est désormais
   **branchée** par `/dashboard/audit` (T-217/P9).
+- Champs de payload inertes : `useWalletCredits` (`POST /api/bookings`) est
+  accepté puis **ignoré** (`walletUsedEur = 0`) depuis T-207 — le wallet n'est
+  pas déduit dans le tunnel tant que le paiement en ligne est désactivé. Le
+  champ est conservé pour la compatibilité des appelants ; sa consommation
+  éventuelle est une décision produit (**T-248**, reprise de l'observation O1).
+- Code retiré par T-252 (audit n°5) : `src/lib/wallet-currency.ts`
+  (`applyWalletToTotal`) et son test — plus aucun appelant applicatif depuis
+  T-207 ; ne pas réintroduire sans la décision produit ci-dessus.

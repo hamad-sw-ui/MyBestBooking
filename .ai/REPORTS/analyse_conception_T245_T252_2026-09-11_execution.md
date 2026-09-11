@@ -115,7 +115,7 @@ export const walletTransactions = pgTable("wallet_transactions", {
 
 `SearchWarning` gagne `"sortIgnored"` ; `searchFilterWarnings` compare `params.sort` à la liste
 blanche `["price_asc", "price_desc", "popularity", "rating"]` ; `SEARCH_WARNING_KEY` gagne
-`search.warn.sortIgnored`. API inchangée (tolérance conservée). Verrou i18n **1682 → 1684**.
+`search.warn.sortIgnored`. API inchangée (tolérance conservée). Verrou i18n **1682 → 1683** (une clé par langue ; le verrou compte les clés FR).
 
 ---
 

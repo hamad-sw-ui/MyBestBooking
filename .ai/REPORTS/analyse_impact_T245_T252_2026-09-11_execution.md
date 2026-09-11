@@ -40,8 +40,10 @@
 5. **Cron** : la réponse JSON de `GET /api/cron/price-alerts` est consommée par le planificateur
    externe (et par les sondes) — les clés existantes doivent rester présentes avec la même sémantique ;
    les nouvelles informations passent par la table `cron_runs`.
-6. **i18n** : toute clé nouvelle suit la parité FR/EN ; le verrou `scripts/check-i18n.mjs` doit être mis
-   à jour **dans le même commit** (départ 1682 → attendu 1684 pour T-249, davantage pour T-246/T-250).
+6. **i18n** : toute clé nouvelle suit la parité FR/EN ; le verrou de `src/lib/ui-strings.test.ts`
+   (qui compte les clés **FR**) doit être mis à jour **dans le même commit** — départ 1682 → **1683**
+   pour T-249 (une clé par langue), davantage pour T-246/T-250. `npm run i18n:check` reste un
+   garde-fou avertisseur (WARN, non bloquant).
 
 ## 3. Risques de régression et parades
 

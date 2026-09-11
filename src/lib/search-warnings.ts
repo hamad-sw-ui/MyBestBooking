@@ -24,7 +24,9 @@ export type SearchWarning =
   /** minPrice > maxPrice (après conversion en devise de stockage). */
   | "priceInverted"
   /** guests présent mais pas un entier > 0. */
-  | "guestsIgnored";
+  | "guestsIgnored"
+  /** T-249 : `sort` présent mais hors liste blanche → tri par défaut (rating). */
+  | "sortIgnored";
 
 export interface SearchWarnParams {
   checkIn?: string;
@@ -33,7 +35,12 @@ export interface SearchWarnParams {
   maxPrice?: string;
   displayCurrency?: string;
   guests?: string;
+  /** T-249 : tri demandé (le moteur applique `rating` si la valeur est inconnue). */
+  sort?: string;
 }
+
+/** Valeurs de tri réellement traitées par `GET /api/properties` (route.ts:206-216). */
+const SORT_VALUES = ["rating", "price_asc", "price_desc", "popularity"] as const;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -48,6 +55,7 @@ export const SEARCH_WARNING_KEY: Record<SearchWarning, UiStringKey> = {
   pastDates: "search.warn.pastDates",
   priceInverted: "search.warn.priceInverted",
   guestsIgnored: "search.warn.guestsIgnored",
+  sortIgnored: "search.warn.sortIgnored",
 };
 
 export function searchFilterWarnings(params: SearchWarnParams): SearchWarning[] {
@@ -83,6 +91,13 @@ export function searchFilterWarnings(params: SearchWarnParams): SearchWarning[] 
   if (guests) {
     const n = Number(guests);
     if (!Number.isInteger(n) || n <= 0) warnings.push("guestsIgnored");
+  }
+
+  // T-249 : le moteur retombe sur `rating` quand `sort` n'est pas reconnu ;
+  // l'utilisateur doit savoir que son tri n'a pas été appliqué.
+  const sort = params.sort?.trim();
+  if (sort && !(SORT_VALUES as readonly string[]).includes(sort)) {
+    warnings.push("sortIgnored");
   }
 
   return warnings;
