@@ -121,12 +121,26 @@ dbTest("T-159 — PATCH settings partiel (merge + erreurs sans issues)", () => {
     await callPatch(original);
   });
 
-  it("Zod invalide → 400 avec { error } seul (aucun champ issues)", async () => {
+  it("Zod invalide → 400 avec { error } et des issues traduits (T-241)", async () => {
+    // T-159 avait retiré `issues` parce qu'ils étaient en anglais ; T-241 les
+    // réintroduit **traduits** (champ par champ). Le contrat vérifié reste le
+    // même sur le fond : aucune fuite de message Zod brut vers le client.
     const res = await callPatch({ siteName: "" });
     expect(res.status).toBe(400);
-    const text = await res.text();
-    expect(text).toContain("error");
-    expect(text).not.toContain("issues");
-    expect(text).not.toContain("path");
+    const body = (await res.json()) as {
+      error?: string;
+      issues?: Array<{ field: string; message: string }>;
+    };
+    expect(body.error).toBeTruthy();
+    expect(Array.isArray(body.issues)).toBe(true);
+    expect(body.issues?.length).toBeGreaterThan(0);
+    expect(body.issues?.[0].field).toBeTruthy();
+    for (const issue of body.issues ?? []) {
+      expect(issue.message).not.toMatch(/\b(Invalid|Expected|Required|Unrecognized)\b/);
+    }
+    // Aucun chemin interne ni objet Zod sérialisé tel quel.
+    const text = JSON.stringify(body);
+    expect(text).not.toContain("\"path\"");
+    expect(text).not.toContain("unrecognized_keys");
   });
 });

@@ -4,14 +4,14 @@ import { db } from "@/db";
 import { conversations, properties, bookings, messages } from "@/db/schema";
 import { and, eq, or, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const createSchema = z.object({
   propertyId: z.string().uuid(),
   bookingId: z.string().uuid().optional(),
-});
+}).strict()
 
 /**
  * GET : conversations du voyageur ou de l'hôte.
@@ -78,7 +78,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("conversations POST error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { apiError } from "@/lib/api-error";
 
 /**
  * Lecture tolérante du corps JSON d'une requête.
@@ -141,6 +142,69 @@ function issueToFrench(issue: {
  * messages personnalisés (déjà rédigés en français) et ne traduit que les
  * libellés Zod par défaut restés en anglais.
  */
+/**
+ * T-241 (F13) — Détail **champ par champ** des erreurs de validation.
+ *
+ * Constat d'audit : `frenchZodMessage()` ne renvoyait que la **première**
+ * erreur, si bien qu'un formulaire qui en envoie trois n'en découvrait
+ * qu'une par tentative. On ajoute ici un tableau `issues` **en plus** du
+ * message (champ additif : les clients existants continuent de lire
+ * `error`), chaque libellé passant par la même traduction que le message
+ * principal — aucun message Zod anglais ne fuit côté client (règle T-159).
+ */
+export function zodIssues(error: {
+  issues?: Array<{
+    code: string;
+    message: string;
+    path: PropertyKey[];
+    keys?: PropertyKey[];
+  }>;
+}): Array<{ field: string; message: string }> {
+  const issues = error?.issues ?? [];
+  const flat: Array<{ field: string; message: string }> = [];
+  for (const issue of issues) {
+    // Champ(s) inconnu(s) : zod v4 les regroupe dans `keys` (chemin vide).
+    // On les éclate pour que l'UI puisse annoter chaque champ fautif.
+    if (issue.code === "unrecognized_keys" && issue.keys?.length) {
+      for (const key of issue.keys) {
+        flat.push({
+          field: String(key),
+          message: `Champ inconnu : ${String(key)}`,
+        });
+      }
+      continue;
+    }
+    flat.push({
+      field: (issue.path ?? []).map((segment) => String(segment)).join(".") || "_",
+      message:
+        issue.message && !looksLikeDefaultZodEnglish(issue.message)
+          ? issue.message
+          : issueToFrench(issue),
+    });
+  }
+  return flat.slice(0, 20);
+}
+
+/**
+ * T-241 (F13) — Réponse **400** uniforme pour une `ZodError` :
+ * `{ error, issues: [{ field, message }] }`. Le message garde sa forme
+ * historique (première erreur, en français), `issues` permet à l'UI
+ * d'annoter les champs fautifs. `messageOverride` sert aux routes qui
+ * imposent un libellé métier (ex. rotation de credentials).
+ */
+export async function zodErrorResponse(
+  error: Parameters<typeof frenchZodMessage>[0],
+  messageOverride?: string,
+): Promise<NextResponse> {
+  return NextResponse.json(
+    {
+      error: await apiError(messageOverride ?? frenchZodMessage(error)),
+      issues: zodIssues(error),
+    },
+    { status: 400 },
+  );
+}
+
 export function frenchZodMessage(error: {
   issues?: Array<{
     code: string;

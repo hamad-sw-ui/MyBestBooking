@@ -1,15 +1,35 @@
 # Tâche courante
 
-- **ID** : T-235 + T-236 + T-237 + T-238 + T-239 (audit n°3, findings F4 → F8)
-- **Titre** : Finitions d'audit : quota de réservation par étape, heure d'arrivée restituée,
-  décision d'annonce notifiée avec motif, wishlist partagée assainie, désabonnement réel
-- **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-11 : les cinq constats sont corrigés, testés et couverts
-  par `npm run ci` (vitest 127 fichiers / 735 tests, smoke 95/95)
-- **Niveau** : S (agrégat de 4 × S + 1 × XS)
-- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (F4 → F8)
-- **Rapports de cette tâche** : `.ai/REPORTS/analyse_impact_T235_T239_2026-09-11_audit3_f4_f8.md` ·
-  `.ai/REPORTS/analyse_conception_T235_T239_2026-09-11_audit3_f4_f8.md` ·
-  `.ai/REPORTS/validation_T235_T239_2026-09-11_audit3_f4_f8.md`
+- **ID** : T-241 (audit n°3 : F11 + F12 + F13)
+- **Titre** : Finitions — « supprimé » vs « suspendu » (vérifié T-230), période analytique et export
+  CSV, erreurs d'API détaillées et schémas de mutation stricts
+- **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-11 : les trois volets sont traités et couverts par
+  `npm run ci` (vitest 129 fichiers / 743 tests, smoke 95/95)
+- **Niveau** : S
+- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (F11 → F13)
+- **Rapports de cette tâche** : `.ai/REPORTS/analyse_impact_T241_2026-09-11_analytics_erreurs_api.md` ·
+  `.ai/REPORTS/analyse_conception_T241_2026-09-11_analytics_erreurs_api.md` ·
+  `.ai/REPORTS/validation_T241_2026-09-11_analytics_erreurs_api.md`
+
+## Livraison T-241 (2026-09-11)
+
+**(a) F11 — « supprimé » ≠ « suspendu ».** Déjà livré par T-230 : `users.suspended_at` distinct de
+`deleted_at`, bouton **Réactiver** remplacé par « Compte anonymisé — non réactivable ». Vérifié en
+base et dans les deux catalogues ; aucun code ajouté.
+
+**(b) F12 — analytics.** Période `?from&to` (dates civiles, `src/lib/analytics-period.ts`), défaut
+inchangé (30 derniers jours comparés aux 30 précédents), étendue bornée à 366 jours ; agrégats
+partagés entre l'écran et l'export CSV (`src/lib/analytics.ts`) ; sélecteur + export localisé
+`GET /api/dashboard/analytics/export`.
+
+**(c) F13 — erreurs d'API.** `{ error, issues: [{ field, message }] }` traduits sur 20 routes
+(`zodIssues`/`zodErrorResponse`) ; `.strict()` sur les schémas de mutation : un champ inconnu est
+refusé en 400 au lieu d'un 200 silencieux.
+
+## Suite
+
+- Resynchronisation de `STATE.md` sur le HEAD final (R7) avant clôture.
+- BACKLOG : plus aucun item 🔴/🟠 ouvert (T-235 → T-241 tous livrés).
 
 ## Livraison T-235 → T-239 (2026-09-11)
 

@@ -542,3 +542,29 @@ estimée : 15:30 » ; `/desabonnement` → 200 `noindex` et `price_alert_enabled
 
 **Suites.** T-241 (finitions admin/analytics/erreurs d'API) puis resynchronisation de `STATE.md`
 en fin de session.
+
+## 2026-09-11 — T-241 : finitions d'audit (F11 + F12 + F13)
+
+**F11 — « supprimé » vs « suspendu ».** Déjà livré par T-230 : `suspended_at` et `deleted_at` sont
+deux colonnes distinctes, l'UI remplace **Réactiver** par « Compte anonymisé — non réactivable ».
+Vérifié en base et dans les deux catalogues de libellés ; aucun code ajouté.
+
+**F12 — analytics : période choisie et export.** `src/lib/analytics-period.ts` (pur, dates civiles,
+arithmétique UTC) accepte `?from&to` et rend **exactement** la fenêtre historique quand rien n'est
+passé (30 jours, comparaison de même longueur) ; étendue bornée à 366 jours, fin future ramenée à
+aujourd'hui. Les agrégats quittent la page pour `src/lib/analytics.ts` afin que l'écran et l'export
+CSV affichent les mêmes nombres. La page gagne deux champs de date, un bouton Appliquer et un export
+`GET /api/dashboard/analytics/export` (sections Résumé / Revenus par jour / Top hébergements,
+en-têtes localisés, devises jamais additionnées, protection anti-formule).
+
+**F13 — erreurs d'API lisibles, champs inconnus refusés.** `zodIssues`/`zodErrorResponse` renvoient
+400 avec `{ error, issues: [{ field, message }] }` — libellés traduits (aucune fuite d'anglais Zod,
+contrat T-159 conservé sous une nouvelle forme), champs inconnus éclatés un par un. Vingt routes
+adoptent le helper ; les schémas de mutation réellement utilisés par l'UI passent en `.strict()` :
+`PUT /api/bookings/[id]` avec `{ "paymentStatus": "paid" }` répond désormais 400 en nommant le champ
+au lieu d'un 200 silencieux.
+
+**Preuves.** `npm run ci` verte : typecheck 0 · lint 0 · i18n 0 candidat · **vitest 129 fichiers /
+743 tests** · build · **smoke 95/95** · `ai:check` 19 OK / 1 warn (R7). Runtime : export CSV 200
+(défaut et période explicite), 400 sur période inversée, 403 sans session ; page analytique 200 avec
+et sans paramètre.

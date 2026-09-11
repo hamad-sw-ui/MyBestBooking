@@ -7,7 +7,7 @@ import { rateLimit } from "@/lib/rate-limit";
 import { and, eq, ne } from "drizzle-orm";
 import { cookies } from "next/headers";
 import { apiError } from "@/lib/api-error";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 
 const schema = z.object({
   oldPassword: z.string().min(1),
@@ -59,9 +59,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("change-password error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

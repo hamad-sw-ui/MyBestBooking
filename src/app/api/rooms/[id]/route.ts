@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { rooms, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid, frenchZodMessage } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { validateRoomCapacity, ROOM_MAX_QUANTITY } from "@/lib/room-validation";
@@ -142,12 +142,7 @@ export async function PUT(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: await apiError(frenchZodMessage(error)) },
-        { status: 400 }
-      );
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Error updating room:", error);
     return NextResponse.json(
       { error: await apiError("Une erreur est survenue") },

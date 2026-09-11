@@ -6,7 +6,7 @@ import { verifyPassword, createSession } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 import { isDemoAccountEmail, serverDemoLoginEnabled } from "@/lib/demo-flags";
 import { consumeBackupCode, type StoredBackupCode } from "@/lib/backup-codes";
@@ -181,12 +181,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: await apiError(frenchZodMessage(error)) },
-        { status: 400 }
-      );
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Login error:", error);
     return NextResponse.json(
       { error: await apiError("Une erreur est survenue") },

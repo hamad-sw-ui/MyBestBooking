@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { bookings, properties, users, sessions } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { cookies } from "next/headers";
 import { and, eq, inArray, ne } from "drizzle-orm";
 import { DISPLAY_CURRENCIES } from "@/lib/i18n";
@@ -44,7 +44,7 @@ const schema = z.object({
   avatarUrl: z.string().url().max(500).optional().nullable(),
   // T-030 : préférence user
   priceAlertEnabled: z.boolean().optional(),
-});
+}).strict()
 
 /**
  * PATCH /api/users/me (T-016)
@@ -89,9 +89,7 @@ export async function PATCH(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("users/me PATCH error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

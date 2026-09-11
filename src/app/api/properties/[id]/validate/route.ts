@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { properties, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid, frenchZodMessage } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
@@ -173,9 +173,7 @@ export async function POST(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("property validate error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

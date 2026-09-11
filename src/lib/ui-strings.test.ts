@@ -77,8 +77,8 @@ describe("uiStrings (T-132)", () => {
   //   supprimés distincts des suspendus) = 1640 ; T-237 (décision de
   //   validation d'annonce notifiée à l'hôte, dont le motif affiché) = 1643 ; T-238
   //   (mention de partage wishlist + rotation) = 1645 ; T-239 (page de
-  //   désabonnement) = 1655.
-  expect(Object.keys(fr)).toHaveLength(1655);
+  //   désabonnement) = 1655 ; T-241 (période analytics + export CSV) = 1682.
+  expect(Object.keys(fr)).toHaveLength(1682);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { bookings, properties, rooms, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid, frenchZodMessage } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { getSetting } from "@/lib/settings";
@@ -25,7 +25,7 @@ const updateBookingSchema = z.object({
   // (paiement manuel). Passe la réservation à `paymentStatus:"paid"` +
   // `paymentMethodOffline:true`. Distinct de la transition de statut.
   markPaidOffline: z.boolean().optional(),
-});
+}).strict()
 
 function actorFor(role: string, isOwner: boolean): BookingActor {
   if (role === "admin") return "admin";
@@ -333,7 +333,7 @@ export async function PUT(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     if (error instanceof Error && error.message.startsWith("BOOKING_TRANSITION:")) {
       return NextResponse.json({ error: await apiError(error.message.replace("BOOKING_TRANSITION:", "")) }, { status: 409 });
     }

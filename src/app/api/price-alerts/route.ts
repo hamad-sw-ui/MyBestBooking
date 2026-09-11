@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { priceAlerts, properties, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { and, eq, desc } from "drizzle-orm";
 import { isStayPast } from "@/lib/price-alert-rules";
 import { apiError } from "@/lib/api-error";
@@ -116,7 +116,8 @@ export async function POST(request: NextRequest) {
     }
     if (e instanceof z.ZodError) {
       // T-137 (A1) : libellé français au lieu du message Zod anglais par défaut.
-      return NextResponse.json({ error: await apiError(frenchZodMessage(e)) }, { status: 400 });
+      // T-241 (F13) : + `issues` (mêmes libellés traduits).
+      return zodErrorResponse(e);
     }
     console.error("[price-alerts] POST", e);
     return NextResponse.json({ error: await apiError("Erreur") }, { status: 500 });

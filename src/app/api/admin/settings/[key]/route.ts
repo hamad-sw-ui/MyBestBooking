@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 import {
   SETTING_KEYS,
@@ -111,7 +111,9 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       // T-159 : message français seul — les détails internes de validation
       // (issues en anglais) ne sont plus exposés.
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+      // T-241 (F13) : `issues` est désormais renvoyé, mais chaque libellé est
+      // traduit par `zodIssues` — aucun message Zod anglais ne fuit.
+      return zodErrorResponse(error);
     }
     console.error(`[admin/settings/${key}] PATCH error:`, error);
     return NextResponse.json(

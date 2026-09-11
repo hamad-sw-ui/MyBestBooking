@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { apiError } from "@/lib/api-error";
-import { frenchZodMessage } from "@/lib/http";
+import { frenchZodMessage, zodErrorResponse } from "@/lib/http";
 import { isSupportedCurrency } from "@/lib/i18n";
 import { rateLimit } from "@/lib/rate-limit";
 import {
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     const parsed = bodySchema.safeParse(await request.json().catch(() => ({})));
     if (!parsed.success) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(parsed.error)) }, { status: 400 });
+      return zodErrorResponse(parsed.error);
     }
     const { provider, reference, currency, displayLabel } = parsed.data;
     const providerTyped = provider as PayoutAccountProvider;
@@ -112,9 +112,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof ProviderCredentialsError) {
       return NextResponse.json({ error: await apiError(error.message) }, { status: 503 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("[host/payout-account] POST", error);
     return NextResponse.json({ error: await apiError("Impossible d'enregistrer le compte de versement") }, { status: 502 });
   }

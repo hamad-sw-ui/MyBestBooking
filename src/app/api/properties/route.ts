@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { properties, rooms, reviews, bookings, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { generateSlug } from "@/lib/utils";
 import { stayNights } from "@/lib/booking-rules";
 import { eq, and, ilike, or, desc, asc, sql, min, count, gte, lte, lt, gt, ne, inArray, notInArray } from "drizzle-orm";
@@ -434,12 +434,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: await apiError(frenchZodMessage(error)) },
-        { status: 400 }
-      );
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Error creating property:", error);
     return NextResponse.json(
       { error: await apiError("Une erreur est survenue") },

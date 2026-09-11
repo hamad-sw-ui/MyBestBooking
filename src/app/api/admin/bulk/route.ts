@@ -13,7 +13,7 @@ import {
   reviewVotes,
 } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { reactivateHostListings, suspendHostListings } from "@/lib/host-suspension";
 import { invalidatePublicCatalog } from "@/lib/read-cache";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
@@ -510,12 +510,7 @@ export async function POST(request: NextRequest) {
     if (e instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (e instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: await apiError(frenchZodMessage(e)) },
-        { status: 400 },
-      );
-    }
+    if (e instanceof z.ZodError) return zodErrorResponse(e);
     return NextResponse.json({ error: await apiError("JSON invalide") }, { status: 400 });
   }
 

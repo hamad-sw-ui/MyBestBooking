@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { wishlists, wishlistItems, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage, isUuid } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
@@ -13,18 +13,18 @@ import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/l
 const createWishlistSchema = z.object({
   name: z.string().min(1, "Le nom est requis"),
   isPublic: z.boolean().optional(),
-});
+}).strict()
 
 const addItemSchema = z.object({
   wishlistId: z.string().uuid(),
   propertyId: z.string().uuid(),
-});
+}).strict()
 
 const updateWishlistSchema = z.object({
   wishlistId: z.string().uuid(),
   isPublic: z.boolean().optional(),
   rotateShareToken: z.boolean().optional(),
-});
+}).strict()
 
 export async function GET() {
   try {
@@ -174,12 +174,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: await apiError(frenchZodMessage(error)) },
-        { status: 400 }
-      );
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Error creating wishlist:", error);
     return NextResponse.json(
       { error: await apiError("Une erreur est survenue") },
@@ -217,7 +212,7 @@ export async function PATCH(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Error updating wishlist:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

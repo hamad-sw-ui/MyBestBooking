@@ -4,7 +4,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { rooms, properties, roomAvailability } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid, frenchZodMessage } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
 import { loadBookedCounts } from "@/lib/room-stock";
@@ -25,7 +25,7 @@ const dayEntry = z.object({
 
 const batchSchema = z.object({
   days: z.array(dayEntry).min(1).max(90),
-});
+}).strict()
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const MAX_CALENDAR_DAYS = 366;
@@ -171,9 +171,7 @@ export async function PUT(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("availability PUT error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

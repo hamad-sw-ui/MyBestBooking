@@ -4408,3 +4408,12 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   ai:check 19 OK / 1 warn R7) + runtime (10 essais invalides → 400 ×10 puis 201 ; fiche hôte
   « 15:30 » ; `/desabonnement` 200 `noindex` + préférence basculée). Reste **T-241** puis resync
   `STATE.md`.
+- **2026-09-11 — T-241 (audit n°3, F11+F12+F13)** : (a) distinction « supprimé »/« suspendu »
+  vérifiée déjà livrée par T-230 ; (b) `/dashboard/analytics` accepte `?from&to` (défaut inchangé :
+  30 derniers jours vs 30 précédents), agrégats extraits dans `src/lib/analytics.ts` et export CSV
+  localisé `GET /api/dashboard/analytics/export` (Résumé / Revenus par jour / Top hébergements,
+  devises séparées, anti-formule) ; (c) erreurs d'API : `zodIssues` + `zodErrorResponse`
+  (`{ error, issues[] }` traduits) sur 20 routes et `.strict()` sur 8 schémas de mutation — un champ
+  inconnu est refusé en 400 au lieu d'un 200 silencieux. **Preuves** : `npm run ci` verte (vitest
+  **129 fichiers / 743 tests**, smoke **95/95**, ai:check 19 OK / 1 warn R7) + runtime (export 200 /
+  400 / 403, page 200 avec et sans période). Verrou i18n **1682**.

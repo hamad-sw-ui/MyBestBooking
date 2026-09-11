@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { rooms, properties, ratePlans } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid, frenchZodMessage } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { and, eq } from "drizzle-orm";
 import { apiError } from "@/lib/api-error";
 
@@ -14,7 +14,7 @@ const createSchema = z.object({
   includesBreakfast: z.boolean().optional(),
   cancellationPolicy: z.enum(["free", "flexible", "moderate", "strict", "non_refundable"]),
   cancellationFreeDays: z.number().int().min(0).max(365).optional(),
-});
+}).strict()
 const updateSchema = createSchema.partial().extend({ id: z.string().uuid(), isActive: z.boolean().optional() });
 
 /**
@@ -84,9 +84,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("rate-plans POST error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
@@ -114,7 +112,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("rate-plans PATCH error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

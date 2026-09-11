@@ -4,7 +4,7 @@ import { users, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { z } from "zod";
 import { eq, and, isNull, inArray } from "drizzle-orm";
-import { isUuid, frenchZodMessage } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { apiError } from "@/lib/api-error";
 import { getSetting } from "@/lib/settings";
@@ -191,9 +191,7 @@ export async function PATCH(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("[admin/hosts] PATCH error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

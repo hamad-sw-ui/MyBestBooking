@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 import { rateLimit, ipFromRequest } from "@/lib/rate-limit";
 import { consumeToken } from "@/lib/tokens";
 import { createSession, hashPassword } from "@/lib/auth";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { apiError } from "@/lib/api-error";
 
 const schema = z.object({
@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("reset-password error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

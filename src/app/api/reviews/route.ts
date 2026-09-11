@@ -11,7 +11,7 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { rateLimit } from "@/lib/rate-limit";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { isReviewEligible, type BookingStatus } from "@/lib/booking-lifecycle";
 import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
 import { getSetting } from "@/lib/settings";
@@ -30,7 +30,7 @@ const reviewSchema = z.object({
   positiveComment: z.string().optional(),
   negativeComment: z.string().optional(),
   travelerType: z.enum(["solo", "couple", "family", "group", "business"]).optional(),
-});
+}).strict()
 
 const listSchema = z.object({
   propertyId: z.string().uuid().optional(),
@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Error fetching reviews:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Error creating review:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

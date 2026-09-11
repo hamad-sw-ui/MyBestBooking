@@ -618,8 +618,17 @@ Rapport de validation : `REPORTS/validation_T232_T234_2026-09-10_dates_suspensio
   (`TZ=Africa/Douala`, `Pacific/Kiritimati`) ajoutés, et « aujourd'hui » métier centralisé sur
   une date d'horizon explicite (`civilToday("UTC")`) dans `sendPaymentReminders`, `future-stay`,
   `room-remaining`, `search-warnings`.*
-- 🟡 **T-241 (S/P3)** — *F11 + F12 + F13 — finitions : (a) « Supprimé » vs « suspendu » dans
+- ✅ **T-241 (S/P3) — FAIT (2026-09-11)** — *F11 + F12 + F13 — finitions : (a) « Supprimé » vs « suspendu » dans
   l'admin (à fusionner au correctif T-230 : `suspended_at` distinct, bouton « Réactiver » masqué
   sur un compte anonymisé) ; (b) analytics : sélecteur de période + export CSV (reprend O6) ;
   (c) erreurs d'API : `issues` détaillées en complément du message et schémas de mutation
-  `.strict()` (le `PUT` accepte aujourd'hui un champ inconnu en 200 silencieux, vérifié).*
+  `.strict()` (le `PUT` accepte aujourd'hui un champ inconnu en 200 silencieux, vérifié).
+  **Livré** : (a) déjà couvert par T-230 (colonnes `suspended_at`/`deleted_at` distinctes, bouton
+  « Réactiver » remplacé par « Compte anonymisé — non réactivable ») — vérifié, aucun code ajouté ;
+  (b) période `?from&to` **civile** avec défaut inchangé (30 j), agrégats extraits dans
+  `src/lib/analytics.ts` (partagés écran + export), sélecteur + export CSV localisé
+  (`GET /api/dashboard/analytics/export`, sections Résumé / Revenus par jour / Top hébergements,
+  devises séparées) ; (c) `zodIssues`/`zodErrorResponse` → 400 `{ error, issues[] }` traduits sur
+  20 routes, `.strict()` sur les schémas de mutation (champ inconnu = 400, plus de 200 trompeur).
+  Tests : `analytics-period.test.ts` 5/5, `bookings/[id]/route.t241.test.ts` 3/3, contrat T-159
+  réécrit. Verrou i18n **1682**.*

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { reviews } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { isUuid, frenchZodMessage } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 import { eq } from "drizzle-orm";
@@ -101,12 +101,7 @@ export async function PATCH(
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json(
-        { error: await apiError(frenchZodMessage(error)) },
-        { status: 400 },
-      );
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("review moderate error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

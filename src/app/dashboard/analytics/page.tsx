@@ -1,217 +1,38 @@
 import { getCurrentUser } from "@/lib/auth";
-import { civilToday, formatCivilDate } from "@/lib/dates";
-import { db } from "@/db";
-import { bookings, properties, reviews, rooms, users } from "@/db/schema";
-import { eq, and, desc, sql, gte, lte } from "drizzle-orm";
+import { formatCivilDate } from "@/lib/dates";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
-import {
-  sumByCurrency,
-  topCurrency,
-  currenciesOf,
-  formatCurrencyBreakdown,
-  formatCurrencyConverted,
-} from "@/lib/currency-summary";
+import { formatCurrencyBreakdown, formatCurrencyConverted } from "@/lib/currency-summary";
 import { normalizeDisplayCurrency } from "@/lib/i18n";
+import { getAnalytics } from "@/lib/analytics";
+import { defaultPeriod, parseAnalyticsPeriod } from "@/lib/analytics-period";
 import {
   TrendingUp, TrendingDown, DollarSign, Calendar, 
   Users, Star, Building2, Eye, BarChart3 
 } from "lucide-react";
 
-async function getAnalytics(userId: string, isAdmin: boolean) {
-  const now = new Date();
-  const thirtyDaysAgo = new Date(now);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const sixtyDaysAgo = new Date(now);
-  sixtyDaysAgo.setDate(sixtyDaysAgo.getDate() - 60);
-
-  // Get properties
-  const propertiesQuery = isAdmin 
-    ? db.select().from(properties)
-    : db.select().from(properties).where(eq(properties.hostId, userId));
-  const allProperties = await propertiesQuery;
-  const propertyIds = allProperties.map(p => p.id);
-
-  if (propertyIds.length === 0 && !isAdmin) {
-    return null;
-  }
-
-  // Get all bookings
-  const allBookingsQuery = isAdmin
-    ? db.select().from(bookings)
-    : db.select().from(bookings).where(
-        sql`${bookings.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`
-      );
-  const allBookings = await allBookingsQuery;
-
-  // Get bookings for current period (last 30 days)
-  const currentPeriodBookings = allBookings.filter(
-    b => new Date(b.createdAt) >= thirtyDaysAgo && b.status !== "cancelled"
-  );
-
-  // Get bookings for previous period (30-60 days ago)
-  const previousPeriodBookings = allBookings.filter(
-    b => new Date(b.createdAt) >= sixtyDaysAgo && new Date(b.createdAt) < thirtyDaysAgo && b.status !== "cancelled"
-  );
-
-  // Calculate metrics — T-152 (audit n°24, C) : les totaux sont regroupés
-  // PAR DEVISE. On n'additionne jamais deux devises dans un montant affiché ;
-  // les pourcentages d'évolution restent calculés sur les flux (toutes
-  // devises mêlées = simple comparaison de flux, étiquetée comme telle).
-  const currentRevenueByCurrency = sumByCurrency(
-    currentPeriodBookings
-      .filter(b => b.paymentStatus === "paid")
-      .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })),
-  );
-  const previousRevenueByCurrency = sumByCurrency(
-    previousPeriodBookings
-      .filter(b => b.paymentStatus === "paid")
-      .map(b => ({ currency: b.currency, amount: parseFloat(b.total) })),
-  );
-  const comparisonCurrency = topCurrency(currentRevenueByCurrency) ?? topCurrency(previousRevenueByCurrency) ?? "EUR";
-  const currentRevenue = currentRevenueByCurrency[comparisonCurrency] ?? 0;
-  const previousRevenue = previousRevenueByCurrency[comparisonCurrency] ?? 0;
-
-  const revenueChange = previousRevenue > 0 
-    ? ((currentRevenue - previousRevenue) / previousRevenue) * 100 
-    : 100;
-
-  const currentBookingsCount = currentPeriodBookings.length;
-  const previousBookingsCount = previousPeriodBookings.length;
-  const bookingsChange = previousBookingsCount > 0
-    ? ((currentBookingsCount - previousBookingsCount) / previousBookingsCount) * 100
-    : 100;
-
-  // Average booking value (par devise, pour ne jamais afficher un panier
-  // moyen calculé sur des devises mélangées).
-  const currentPaidBookings = currentPeriodBookings.filter(b => b.paymentStatus === "paid");
-  const previousPaidBookings = previousPeriodBookings.filter(b => b.paymentStatus === "paid");
-  const avgBookingValueByCurrency: Record<string, number> = {};
-  for (const [currency, revenue] of Object.entries(currentRevenueByCurrency)) {
-    const count = currentPaidBookings.filter(b => (b.currency || "EUR").toUpperCase() === currency).length;
-    avgBookingValueByCurrency[currency] = count > 0 ? revenue / count : 0;
-  }
-  const currentComparisonCount = currentPaidBookings.filter(b => (b.currency || "EUR").toUpperCase() === comparisonCurrency).length;
-  const previousComparisonCount = previousPaidBookings.filter(b => (b.currency || "EUR").toUpperCase() === comparisonCurrency).length;
-  const avgBookingValue = currentComparisonCount > 0
-    ? currentRevenue / currentComparisonCount
-    : 0;
-
-  const previousAvgBookingValue = previousComparisonCount > 0
-    ? previousRevenue / previousComparisonCount
-    : 0;
-
-  // Occupation sur les nuits réellement situées dans la fenêtre, et non sur
-  // la date de création de la réservation. Les annulations sont exclues.
-  const propertyRooms = propertyIds.length > 0
-    ? await db.select({ quantity: rooms.quantity }).from(rooms).where(
-        and(eq(rooms.isActive, true), sql`${rooms.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`),
-      )
-    : [];
-  // T-232 : bornes de la fenêtre en dates civiles (indépendantes du fuseau).
-  const startDay = civilToday("UTC", thirtyDaysAgo);
-  const endDay = civilToday("UTC", now);
-  const occupiedNights = allBookings
-    .filter((booking) => booking.status !== "cancelled" && booking.checkIn <= endDay && booking.checkOut > startDay)
-    .reduce((sum, booking) => {
-      const from = booking.checkIn > startDay ? booking.checkIn : startDay;
-      const until = booking.checkOut < endDay ? booking.checkOut : endDay;
-      const nights = Math.max(0, Math.round((Date.parse(`${until}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000));
-      return sum + nights;
-    }, 0);
-  const potentialNights = propertyRooms.reduce((sum, room) => sum + (room.quantity ?? 1) * 30, 0);
-  const occupancyRate = potentialNights > 0 ? (occupiedNights / potentialNights) * 100 : 0;
-
-  // Average rating
-  const reviewsQuery = isAdmin
-    ? db.select().from(reviews)
-    : db.select().from(reviews).where(
-        sql`${reviews.propertyId} IN (${sql.join(propertyIds.map(id => sql`${id}`), sql`, `)})`
-      );
-  const allReviews = await reviewsQuery;
-  // T-205 : la note moyenne du dashboard doit rester alignée avec la fiche
-  // publique et `properties.averageRating` : seuls les avis approuvés comptent.
-  const approvedReviews = allReviews.filter((review) => review.status === "approved");
-  const avgRating = approvedReviews.length > 0
-    ? approvedReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0) / approvedReviews.length
-    : 0;
-
-  // Revenue by day (last 30 days) — T-152 (C) : une SEULE devise par série
-  // (la dominante de la période). Les autres devises ne sont pas mélangées
-  // dans les barres ; elles sont signalées à l'affichage.
-  const chartCurrency = topCurrency(currentRevenueByCurrency) ?? "EUR";
-  const otherCurrencies = currenciesOf(currentRevenueByCurrency).filter(c => c !== chartCurrency);
-  const revenueByDay: { date: string; revenue: number; currency: string }[] = [];
-  for (let i = 29; i >= 0; i--) {
-    const date = new Date(now);
-    date.setDate(date.getDate() - i);
-    const dateStr = date.toISOString().split('T')[0];
-    
-    const dayRevenue = currentPeriodBookings
-      .filter(b => {
-        const bDate = new Date(b.createdAt).toISOString().split('T')[0];
-        return bDate === dateStr && b.paymentStatus === "paid" &&
-          (b.currency || "EUR").toUpperCase() === chartCurrency;
-      })
-      .reduce((sum, b) => sum + parseFloat(b.total), 0);
-    
-    revenueByDay.push({ date: dateStr, revenue: dayRevenue, currency: chartCurrency });
-  }
-
-  // Top properties (répartition par devise, jamais additionnée à l'affichage)
-  const propertyRevenue = new Map<string, { name: string; revenueByCurrency: Record<string, number>; bookings: number }>();
-  for (const booking of allBookings) {
-    if (booking.status === "cancelled" || booking.paymentStatus !== "paid") continue;
-    const prop = allProperties.find(p => p.id === booking.propertyId);
-    if (!prop) continue;
-    
-    const current = propertyRevenue.get(prop.id) || { name: prop.name, revenueByCurrency: {}, bookings: 0 };
-    const currency = (booking.currency || "EUR").toUpperCase();
-    current.revenueByCurrency[currency] = (current.revenueByCurrency[currency] ?? 0) + parseFloat(booking.total);
-    current.bookings += 1;
-    propertyRevenue.set(prop.id, current);
-  }
-
-  const topProperties = Array.from(propertyRevenue.entries())
-    .sort((a, b) => (b[1].revenueByCurrency[chartCurrency] ?? 0) - (a[1].revenueByCurrency[chartCurrency] ?? 0))
-    .slice(0, 5)
-    .map(([id, data]) => ({ id, ...data }));
-
-
-  return {
-    currentRevenueByCurrency,
-    previousRevenueByCurrency,
-    avgBookingValueByCurrency,
-    currentRevenue,
-    previousRevenue,
-    revenueChange,
-    currentBookingsCount,
-    previousBookingsCount,
-    bookingsChange,
-    avgBookingValue,
-    previousAvgBookingValue,
-    occupancyRate,
-    avgRating,
-    totalReviews: allReviews.length,
-    revenueByDay,
-    chartCurrency,
-    otherCurrencies,
-    topProperties,
-    totalProperties: allProperties.length,
-    totalBookings: allBookings.length,
-  };
-}
-
-export default async function AnalyticsPage() {
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ from?: string; to?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
 
   const isAdmin = user.role === "admin";
-  const analytics = await getAnalytics(user.id, isAdmin);
+  // T-241 (F12) : `?from&to` (dates civiles) ; sans paramètre, la période
+  // reste « 30 derniers jours » — les chiffres affichés sont identiques à
+  // ceux d'avant l'ajout du sélecteur.
+  const { from, to } = await searchParams;
+  const parsed = parseAnalyticsPeriod(from, to);
+  const period = "period" in parsed ? parsed.period : defaultPeriod();
+  const analytics = await getAnalytics(user.id, isAdmin, period);
   const locale = await getServerLocale();
   const t = makeT(locale);
+  // Période invalide dans l'URL : on retombe sur le défaut et on le dit.
+  const periodNotice = "error" in parsed && (from || to) ? t("analytics.periodInvalid") : null;
   // T-195 — devise d'affichage (préférence compte) pour les totaux convertis.
   const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
 
@@ -234,14 +55,14 @@ export default async function AnalyticsPage() {
 
   const metrics = [
     {
-      title: t("analytics.revenue30"),
+      title: t("analytics.revenuePeriod").replace("{days}", String(analytics.period.days)),
       value: formatCurrencyConverted(analytics.currentRevenueByCurrency, displayCurrency, locale),
       change: analytics.revenueChange,
       icon: DollarSign,
       color: "bg-green-500",
     },
     {
-      title: t("analytics.bookings30"),
+      title: t("analytics.bookingsPeriod").replace("{days}", String(analytics.period.days)),
       value: analytics.currentBookingsCount.toString(),
       change: analytics.bookingsChange,
       icon: Calendar,
@@ -275,6 +96,54 @@ export default async function AnalyticsPage() {
           {t("analytics.subtitle")}
         </p>
       </div>
+
+      {/* T-241 (F12) — période analysée : deux dates, appliquer, exporter. */}
+      <Card className="mb-6">
+        <CardContent>
+          <form method="get" className="flex flex-wrap items-end gap-3">
+            <label className="flex flex-col text-sm text-gray-600">
+              {t("analytics.from")}
+              <input
+                type="date"
+                name="from"
+                defaultValue={analytics.period.from}
+                max={analytics.period.to}
+                className="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+              />
+            </label>
+            <label className="flex flex-col text-sm text-gray-600">
+              {t("analytics.to")}
+              <input
+                type="date"
+                name="to"
+                defaultValue={analytics.period.to}
+                className="mt-1 rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-900"
+              />
+            </label>
+            <button
+              type="submit"
+              className="rounded-md bg-[#1B3A6B] px-4 py-2 text-sm font-medium text-white hover:bg-[#152d54]"
+            >
+              {t("analytics.apply")}
+            </button>
+            <a
+              href={`/api/dashboard/analytics/export?from=${analytics.period.from}&to=${analytics.period.to}`}
+              className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              {t("analytics.exportCsv")}
+            </a>
+            <span className="text-xs text-gray-500">
+              {t("analytics.periodSummary")
+                .replace("{from}", formatCivilDate(analytics.period.from, { day: "numeric", month: "long", year: "numeric" }, locale))
+                .replace("{to}", formatCivilDate(analytics.period.to, { day: "numeric", month: "long", year: "numeric" }, locale))
+                .replace("{days}", String(analytics.period.days))}
+            </span>
+          </form>
+          {periodNotice && (
+            <p className="mt-3 text-sm text-amber-700">{periodNotice}</p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
@@ -334,8 +203,8 @@ export default async function AnalyticsPage() {
               })}
             </div>
             <div className="flex justify-between text-xs text-gray-400 mt-2">
-              <span>{t("analytics.daysAgo14")}</span>
-              <span>{t("analytics.today")}</span>
+              <span>{t("analytics.chartFrom")}</span>
+              <span>{formatCivilDate(analytics.revenueByDay[analytics.revenueByDay.length - 1]?.date ?? analytics.period.to, { day: "numeric", month: "numeric" }, locale)}</span>
             </div>
           </CardContent>
         </Card>

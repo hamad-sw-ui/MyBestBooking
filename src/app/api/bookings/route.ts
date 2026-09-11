@@ -18,7 +18,7 @@ import {
   maintenanceResponse,
 } from "@/lib/maintenance";
 import { GUEST_QUOTA_COOKIE, guestQuotaKey, rateLimit, rateLimitMessage } from "@/lib/rate-limit";
-import { frenchZodMessage, isUuid } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules";
 import { bookingGuestIdentity } from "@/lib/booking-identity";
 import { issueToken } from "@/lib/tokens";
@@ -584,7 +584,8 @@ export async function POST(request: NextRequest) {
     if (error instanceof z.ZodError) {
       // T-137 (A1) : libellé français (les messages Zod par défaut sont en
       // anglais et fuyaient jusqu'au client : « Too small… », « Invalid email »).
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
+      // T-241 (F13) : + `issues` champ par champ (même traduction).
+      return zodErrorResponse(error);
     }
     console.error("Error creating booking:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });

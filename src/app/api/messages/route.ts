@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@/db";
 import { conversations, messages, properties, uploadObjects, users } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
-import { frenchZodMessage, isUuid } from "@/lib/http";
+import { isUuid, zodErrorResponse } from "@/lib/http";
 import { and, eq, sql } from "drizzle-orm";
 import { templates } from "@/lib/mail";
 import { makeT } from "@/lib/ui-strings";
@@ -19,7 +19,7 @@ const schema = z.object({
   // fichiers privés sont référencés par key et servis après contrôle participant.
   attachmentKey: z.string().regex(/^uploads\/[A-Za-z0-9._-]+$/).optional(),
   attachmentMimeType: z.string().max(100).optional(),
-});
+}).strict()
 
 /**
  * GET /api/messages?conversationId= — liste les messages d'une
@@ -190,9 +190,7 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("messages POST error:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

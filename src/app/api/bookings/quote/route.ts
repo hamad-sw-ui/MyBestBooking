@@ -9,7 +9,7 @@ import { bookings, properties, ratePlans, rooms, roomAvailability } from "@/db/s
 import { getCurrentUser } from "@/lib/auth";
 import { evaluateBookingRules, stayNightsWithinLimit } from "@/lib/booking-rules";
 import { apiError } from "@/lib/api-error";
-import { frenchZodMessage } from "@/lib/http";
+import { zodErrorResponse } from "@/lib/http";
 import { getSetting } from "@/lib/settings";
 import {
   assertNotMaintenance,
@@ -211,9 +211,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof MaintenanceError) return maintenanceResponse(error.retryAfterSeconds);
-    if (error instanceof z.ZodError) {
-      return NextResponse.json({ error: await apiError(frenchZodMessage(error)) }, { status: 400 });
-    }
+    if (error instanceof z.ZodError) return zodErrorResponse(error);
     console.error("Error quoting booking:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });
   }

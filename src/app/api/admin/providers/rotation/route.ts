@@ -5,6 +5,7 @@ import { ProviderCredentialsError, rotateProviderCredentialEncryption } from "@/
 import { AUDIT_ACTIONS, recordAudit } from "@/lib/audit";
 import { rateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-error";
+import { zodErrorResponse } from "@/lib/http";
 
 const bodySchema = z.object({ confirm: z.literal("ROTATE_CREDENTIALS") });
 
@@ -36,7 +37,8 @@ export async function POST(request: NextRequest) {
     if (error instanceof SyntaxError) {
       return NextResponse.json({ error: await apiError("Corps de requête invalide ou manquant (JSON attendu)") }, { status: 400 });
     }
-    if (error instanceof z.ZodError) return NextResponse.json({ error: await apiError("Confirmation de rotation requise") }, { status: 400 });
+    // T-241 (F13) : `issues` détaillées, libellé métier conservé.
+    if (error instanceof z.ZodError) return zodErrorResponse(error, "Confirmation de rotation requise");
     if (error instanceof ProviderCredentialsError) return NextResponse.json({ error: await apiError(error.message) }, { status: 503 });
     console.error("[admin/providers/rotation]", error);
     return NextResponse.json({ error: await apiError("Impossible de réchiffrer les credentials providers") }, { status: 500 });
