@@ -82,7 +82,8 @@ describe("uiStrings (T-132)", () => {
   //   T-245 (fenêtre de liste) = 1693 ; T-246 (favoris multi-listes, +13) = 1706 ; T-250 (supervision cron, +22) = 1728 ;
   //   T-248 (journal wallet, +11) = 1739 ;
   //   T-258 (audit n°6, B5 : compteur, lien « voir les N avis », retour, +3) = 1742.
-  expect(Object.keys(fr)).toHaveLength(1742);
+  //   T-259 (audit n°6, B6 : description EN, région, coordonnées, +6) = 1748.
+  expect(Object.keys(fr)).toHaveLength(1748);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

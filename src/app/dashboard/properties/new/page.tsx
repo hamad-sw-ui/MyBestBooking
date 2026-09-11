@@ -40,6 +40,9 @@ export default function NewPropertyPage() {
     starRating: 3,
     addressLine: "",
     city: "",
+    // T-259 (audit n°6, B6) : la région était affichée dans l'adresse publique
+    // et acceptée par l'API, mais aucune création ne pouvait la renseigner.
+    state: "",
     postalCode: "",
     country: "FR",
     cancellationPolicy: "flexible",
@@ -197,13 +200,19 @@ export default function NewPropertyPage() {
               onChange={(e) => setFormData({ ...formData, addressLine: e.target.value })}
             />
 
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4">
               <Input
                 label={t("prop.city")}
                 placeholder={t("prop.cityPlaceholder")}
                 value={formData.city}
                 onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 required
+              />
+              <Input
+                label={t("prop.state")}
+                value={formData.state}
+                maxLength={100}
+                onChange={(e) => setFormData({ ...formData, state: e.target.value })}
               />
               <Input
                 label={t("prop.postal")}

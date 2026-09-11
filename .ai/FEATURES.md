@@ -404,6 +404,7 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
 | Fenêtre des listes `rooms` + `messages` | ✅ | `parsePageWindow` + `<ShowMore>` sur les 2 écrans ; branche hôte de `rooms` en **une** jointure (fin du N+1) ; `conversationScope()` partagé liste/compteur ; 3 tests RSC sur base réelle | T-257 (B4) |
+| Champs d'hébergement éditables (description EN, région, coordonnées) | ✅ | schémas POST/PUT bornés + éditeur et création ; `src/lib/coordinates.ts` (bornes, virgule décimale, `""` ⇒ `null`, affichage normalisé) ; 4 + 3 tests | T-259 (B6) |
 | Avis complets sur la fiche publique | ✅ | compteur `property.totalReviews` + lien « Voir les N avis » ; page `/hebergement/[slug]/avis` (20/page, `?page=`, `generateMetadata`, 404 si invisible) ; composant partagé `PropertyReviewsList` ; 3 tests RSC sur base réelle | T-258 (B5) |
 
 ## T-245 → T-250 — exécution de l'audit n°5 (2026-09-11)

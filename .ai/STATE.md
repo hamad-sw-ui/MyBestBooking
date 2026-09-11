@@ -15,7 +15,7 @@
   solutions non régressives par **lots A→D**, à trancher en oui/non. **Aucune ligne de code
   modifiée** ; balayage 45 pages × 3 rôles → 0 erreur applicative, 0 bouton mort, 0 texte en dur,
   0 route sans contrôle justifié.
-- **Implémentation de l'audit n°6 (2026-09-11) — lots A et B (partiel)** : décisions **oui ×4**
+- **Implémentation de l'audit n°6 (2026-09-11) — lots A et B (complet)** : décisions **oui ×4**
   reçues après l'analyse ; **lot A commité `11165d4`** — **B1** le seuil « stale » de `getCronHealth`
   suit la cadence **réellement déclarée** (`CRON_SCHEDULES`, 3 × 24 h pour `price-alerts` ; le seuil
   de 4 h héritait d'une cadence fantôme et faisait passer une tâche saine pour en retard) ; **B2**
@@ -50,7 +50,16 @@
   24 avis » + 5 avis seulement dans la section ; page dédiée → 20 avis en page 1 (« page 1 sur 2 »),
   fin de liste en page 2, EN servi (« Reviews », « Back to the property »), slug inconnu → 404 ; base
   rendue à l'état seed (8 users / 8 annonces / 23 rooms / 30 réservations / 21 avis, 0 favori, 0
-  alerte, 0 conversation). **Reste** : **B6 → T-259** (champs
+  alerte, 0 conversation). **B6 → T-259** : `descriptionEn` (≤ 4 000), `state` (≤ 100, colonne
+  `varchar(100)`) et `latitude`/`longitude` (bornées −90..90 / −180..180, virgule décimale normalisée,
+  `""` ⇒ `null`, affichage sans zéros inutiles via `src/lib/coordinates.ts`) entrent dans les schémas
+  POST/PUT **et** dans les formulaires (description EN + coordonnées dans l'éditeur, région aussi à la
+  création) ; la page `[id]` transmet les quatre colonnes à l'éditeur pour ne pas les effacer. Verrou
+  i18n **1742 → 1748** (+6). Preuves : `route.t259` 4/4, `coordinates` 3/3, vitest complet **142
+  fichiers / 796 tests**, sonde runtime (« 43,769 » → `43.76900000`, relecture « 43.769 », valeurs du
+  seed restaurées). Rapports : `REPORTS/validation_T259_2026-09-11_audit6_B6.md` (+ impact et
+  conception). **Reste** : lot D (B8/B10/B12 — le crédit gelé reste **non consommable**) puis lot C
+  (B7/B9). **Reste** : **B6 → T-259** (champs
   affichés jamais éditables), puis lot D (B8/B10/B12 — signalement et journal du crédit gelé,
   **aucune consommation**), puis lot C (B7/B9). `STATE.md` est à rafraîchir en fin de session (R7 : un
   commit ne peut pas citer son propre SHA).

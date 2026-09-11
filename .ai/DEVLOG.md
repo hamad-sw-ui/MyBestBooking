@@ -729,3 +729,30 @@ fin de liste ; slug inconnu → `notFound()`), fixtures purgées et agrégats re
 fichiers / 761 tests passés (789 collectés, 28 ignorés) · build 67 pages · smoke 95/95). Rapports :
 `REPORTS/validation_T257_T258_2026-09-11_audit6_B4_B5.md` + analyses d'impact et de conception
 T-257/T-258 (exigées par R12 pour une tâche de niveau S).
+
+## T-259 — audit n°6, B6 : description EN, région et coordonnées (2026-09-11)
+
+**Trois colonnes, deux affichages publics, zéro saisie.** `description_en` était lue par
+`LocalizedDescription` (repli FR systématique, 0/8 renseignée), `state` composait l'adresse publique
+(0/8) et `latitude`/`longitude` alimentaient `?near=` (8/8 — **par le seed uniquement**, donc toute
+annonce créée par un hôte était ignorée de « autour de moi »). Les schémas d'API acceptaient en plus
+n'importe quelle chaîne pour les coordonnées, et `state` sans borne alors que la colonne est un
+`varchar(100)` (saisie trop longue → 500).
+
+**Un helper, deux schémas, deux formulaires.** `src/lib/coordinates.ts` porte les bornes
+(−90..90 / −180..180), la tolérance à la virgule décimale (« 43,769 » → « 43.769 »), la conversion
+`""` ⇒ `null` (effacer une coordonnée plutôt qu'écrire une chaîne vide dans un `decimal`) et
+`displayCoordinate()` (PostgreSQL rend « 43.76900000 » — le champ ne montre plus une précision que
+l'utilisateur n'a jamais saisie). Le POST de création et le PUT d'édition partagent les mêmes règles ;
+le PUT restant **partiel** (`...data`), aucune écriture existante ne change. L'éditeur envoie
+désormais les quatre colonnes et la page `[id]` les transmet — sans cette transmission,
+l'enregistrement les aurait **effacées** (piège couvert par un test de restitution). Aucune migration :
+les colonnes existaient depuis l'origine.
+
+**Preuves.** `route.t259` **4/4** (persistance avec virgule, refus hors bornes et région > 100 sans
+écriture, effacement puis relecture via `toPublicProperty`, région acceptée à la création),
+`coordinates` **3/3**, `ui-strings` 7/7 (verrou **1742 → 1748**), vitest complet **142 fichiers /
+796 tests, 0 échec**, tsc 0, eslint 0/0. Sonde runtime sur un bien du seed : libellés rendus, PUT
+« 43,769 » → base `43.76900000`, relecture « 43.769 », puis valeurs du seed restaurées.
+Rapports : `REPORTS/validation_T259_2026-09-11_audit6_B6.md` (+ analyses d'impact et de conception).
+

@@ -7,6 +7,33 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-11 — Audit n°6, lot B (suite) : T-259 (B6) — des colonnes publiques réparées
+
+- **Livré** : 🔨 **B6 → T-259**. `descriptionEn` (≤ 4 000) entre dans les schémas POST/PUT — elle
+  était lue par `LocalizedDescription` sans qu'aucun écran ne puisse la saisir, donc les visiteurs
+  anglophones voyaient **toujours** le français. `state` est bornée à 100 (la colonne est un
+  `varchar(100)` : une saisie trop longue finissait en **500**) et devient saisissable **à la
+  création** et dans l'éditeur. `latitude`/`longitude` sont validées (−90..90 / −180..180), la
+  virgule décimale est acceptée puis normalisée, `""` efface la valeur, et l'éditeur les saisit enfin
+  — `?near=` ignorait silencieusement toute annonce créée par un hôte (8/8 des coordonnées venaient
+  du seed). `src/lib/coordinates.ts` porte ces règles **et** l'affichage (`43.76900000` → `43.769`).
+  La page `[id]` transmet désormais les quatre colonnes à l'éditeur : sans cela l'enregistrement les
+  aurait **effacées**.
+- **🔤 i18n** : +6 clés FR/EN (`prop.descriptionEn`, `prop.descriptionEnHint`, `prop.state`,
+  `prop.latitude`, `prop.longitude`, `prop.coordinatesHint`), verrou **1742 → 1748**. Aucune
+  migration : les colonnes existaient depuis l'origine.
+- **🧪 Tests** : `route.t259` **4/4** (persistance avec « 43,769 », refus hors bornes et région > 100
+  **sans écriture**, effacement par chaîne vide puis relecture via `toPublicProperty`, région
+  acceptée au POST), `coordinates` **3/3**, `ui-strings` 7/7, vitest complet **142 fichiers /
+  796 tests, 0 échec** ; tsc 0 ; eslint 0/0.
+- **Runtime** : `PUT /api/properties/<id>` avec `{"state":"Toscane","latitude":"43,769",…}` → **200**
+  et base `43.76900000` / `11.25580000` / `state='Toscane'` ; relecture de l'éditeur « 43.769 »,
+  « 11.2558 », « Toscane » ; valeurs du seed restaurées après la sonde (vérifié en base).
+- **Étape suivante** : **lot D** — **B8** (suppression de compte : signaler et journaliser le crédit
+  gelé, **sans jamais le consommer**, conformément au gel T-248 §3), **B10** (dette T-207
+  récapitulée), **B12** (rate-limit en mémoire énoncé au déploiement), puis **lot C** (B7 : exposer
+  `popularity`/`minRating`/`near`/`search` ; B9 : préférences de notification par utilisateur).
+
 ## 2026-09-11 — Audit n°6 (exécution) : mise en œuvre des lots A et B (T-253 → T-258)
 
 - **Livré — lot A (commit `11165d4`)** : 🔨 **B1** le seuil « stale » de `getCronHealth` suit la

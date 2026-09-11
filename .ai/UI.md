@@ -116,6 +116,10 @@ Deux colonnes du dashboard pro sont directement actionnables :
   plus », « Tout afficher », plafond 500, compteur « N résultats affichés sur M »
   (`ShowMore`, mêmes clés `show.*`). La branche hôte de `rooms` ne fait plus une
   requête par bien : une seule jointure `rooms ⋈ properties` filtrée par hôte.
+- **Champs réparés (T-259)** : l'éditeur d'annonce (`/dashboard/properties/[id]`) gagne
+  « Description (EN) » (onglet Informations) et, dans la carte Localisation, « Région / État »
+  (également disponible à la création) puis « Latitude » / « Longitude » avec un texte expliquant
+  leur usage par la recherche « Autour de moi ». Les coordonnées s'affichent sans zéros inutiles.
 - **Avis de la fiche (T-258)** : l'en-tête « Avis vérifiés ✓ » affiche le nombre
   total (« 24 avis ») et, au-delà de la fenêtre de 5, un bouton « Voir les 24
   avis » vers la page dédiée. La page `/hebergement/[slug]/avis` reprend

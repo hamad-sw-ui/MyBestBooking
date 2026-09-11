@@ -664,6 +664,17 @@ Numérotation de suivi : **B1→T-253**, **B2→T-254**, **B3→T-255**, **B11�
   compteur de conversations. Preuves : `list-window.t257.test.ts` **3/3** (23 chambres → aucun bandeau ;
   26 lignes → « 25 résultats affichés sur 26 » ; messages 26 fils idem). 0 clé i18n ajoutée (`show.*`
   déjà présentes en T-245).
+- ✅ ~~**T-259 (M/P2) — *B6 — des champs affichés que personne ne peut remplir.***~~ **FAIT
+  (2026-09-11)** : `descriptionEn` (≤ 4 000) entre dans les schémas POST/PUT et dans l'éditeur (onglet
+  Informations, avec la phrase de repli FR), `state` est bornée à 100 (colonne `varchar(100)` : une
+  saisie trop longue finissait en 500) et saisissable **à la création** et dans l'éditeur, et
+  `latitude`/`longitude` sont validées (−90..90 / −180..180, virgule décimale acceptée puis normalisée,
+  `""` ⇒ `null`) avec saisie dans l'éditeur et affichage sans zéros inutiles
+  (`src/lib/coordinates.ts`). La page `[id]` transmet désormais les quatre colonnes à l'éditeur —
+  sans quoi l'enregistrement les aurait **effacées**. Verrou i18n **1742 → 1748** (+6). Preuves :
+  `route.t259` **4/4** (persistance, bornes, effacement, création), `coordinates` **3/3**, sonde
+  runtime (PUT « 43,769 » → `43.76900000`, relecture « 43.769 », valeurs du seed restaurées).
+
 - ✅ ~~**T-258 (M/P2) — *B5 — cinq avis pour toujours, sans le dire.***~~ **FAIT (2026-09-11)** :
   compteur (`property.reviewsCount`) dans l'en-tête « Avis vérifiés ✓ » de la fiche, lien « Voir les N
   avis » (`property.reviewsSeeAll`) dès que `totalReviews > 5`, **nouvelle page**

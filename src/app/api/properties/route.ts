@@ -12,20 +12,26 @@ import { PROPERTY_TYPE_VALUES } from "@/lib/property-types";
 import { isValidTimezone } from "@/lib/timezone";
 import { hasInvalidRequestedStay, parseFutureStay } from "@/lib/future-stay";
 import { priceBoundToStorage } from "@/lib/i18n";
+import { coordinateField } from "@/lib/coordinates";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const propertySchema = z.object({
   name: z.string().min(3, "Le nom doit contenir au moins 3 caractères"),
   type: z.enum(PROPERTY_TYPE_VALUES),
   description: z.string().optional(),
+  // T-259 (audit n°6, B6) : colonne affichée aux voyageurs anglophones
+  // (`LocalizedDescription`), jamais alimentée par l'API ni par un formulaire.
+  descriptionEn: z.string().max(4000, "La description (EN) ne peut pas dépasser 4 000 caractères").optional(),
   starRating: z.number().min(0).max(5).optional(),
   addressLine: z.string().optional(),
   city: z.string().min(2, "La ville est requise"),
-  state: z.string().optional(),
+  // T-259 (audit n°6, B6) : `state` était accepté sans borne alors que la
+  // colonne est un `varchar(100)` (une saisie trop longue finissait en 500).
+  state: z.string().max(100, "La région ne peut pas dépasser 100 caractères").optional(),
   country: z.string().length(2, "Le code pays doit être de 2 caractères"),
   postalCode: z.string().optional(),
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
+  latitude: coordinateField("latitude"),
+  longitude: coordinateField("longitude"),
   cancellationPolicy: z.enum(["free", "flexible", "moderate", "strict", "non_refundable"]).optional(),
   petsAllowed: z.boolean().optional(),
   smokingAllowed: z.boolean().optional(),

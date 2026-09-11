@@ -14,20 +14,24 @@ import { getSetting } from "@/lib/settings";
 import { PROPERTY_TYPE_VALUES } from "@/lib/property-types";
 import { requireApprovedHost } from "@/lib/host-approval";
 import { isValidTimezone } from "@/lib/timezone";
+import { coordinateField } from "@/lib/coordinates";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const updatePropertySchema = z.object({
   name: z.string().min(3).optional(),
   type: z.enum(PROPERTY_TYPE_VALUES).optional(),
   description: z.string().optional(),
+  // T-259 (audit n°6, B6) : description EN, région et coordonnées — colonnes
+  // existantes, affichées en public, jusqu'ici inaccessibles depuis l'UI.
+  descriptionEn: z.string().max(4000, "La description (EN) ne peut pas dépasser 4 000 caractères").optional(),
   starRating: z.number().min(0).max(5).optional(),
   addressLine: z.string().optional(),
   city: z.string().min(2).optional(),
-  state: z.string().optional(),
+  state: z.string().max(100, "La région ne peut pas dépasser 100 caractères").optional(),
   country: z.string().length(2).optional(),
   postalCode: z.string().optional(),
-  latitude: z.string().optional(),
-  longitude: z.string().optional(),
+  latitude: coordinateField("latitude"),
+  longitude: coordinateField("longitude"),
   cancellationPolicy: z.enum(["free", "flexible", "moderate", "strict", "non_refundable"]).optional(),
   petsAllowed: z.boolean().optional(),
   smokingAllowed: z.boolean().optional(),

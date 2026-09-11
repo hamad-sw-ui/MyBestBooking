@@ -58,11 +58,18 @@ export default async function EditPropertyPage({
         slug: row.slug,
         type: row.type,
         description: row.description,
+        // T-259 (audit n°6, B6) : la page ne transmettait que les champs
+        // historiques — sans ces quatre lignes, l'éditeur aurait renvoyé des
+        // valeurs vides et **effacé** des colonnes existantes.
+        descriptionEn: row.descriptionEn,
         starRating: row.starRating,
         addressLine: row.addressLine,
         city: row.city,
+        state: row.state,
         postalCode: row.postalCode,
         country: row.country,
+        latitude: row.latitude,
+        longitude: row.longitude,
         cancellationPolicy: row.cancellationPolicy,
         petsAllowed: row.petsAllowed,
         smokingAllowed: row.smokingAllowed,

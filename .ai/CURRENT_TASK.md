@@ -3,8 +3,10 @@
 - **ID** : Audit n°6 — lots **A → D** (décisions **oui ×4** reçues le 2026-09-11)
 - **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution
 - **Statut** : 🔄 **IMPLÉMENTATION EN COURS (2026-09-11)** — **lot A livré** (`11165d4` : B1/B2/B3/B11)
-  et **lot B partiel livré** (B4 → **T-257**, B5 → **T-258**). Restent : **B6 → T-259**, puis lot D
-  (B8/B10/B12 — signalement et journal du crédit gelé, **aucune consommation**), puis lot C (B7/B9).
+  et **lot B livré** : B4 → **T-257**, B5 → **T-258** (commit `76ec5b9`), **B6 → T-259** (description
+  EN, région, coordonnées — commit courant). Restent le **lot D** (B8/B10/B12) et le **lot C**
+  (B7/B9). Le lot D reste sous le **gel wallet T-248 §3** : signalement et journal du crédit gelé,
+  **aucune consommation** du solde.
 - **Niveau** : S (correctifs de fin de parcours ; le lot D reste sous le gel wallet T-248 §3)
 - **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md`
   (copie `.ai/REPORTS/analyse_runtime_n6_2026-09-11_inacheves.md`)
@@ -15,8 +17,8 @@
   **B** (B4, B5, B6) finir ce qui est à moitié câblé · **C** (B7, B9) exposer les capacités de l'API ·
   **D** (B8, B10, B12) hygiène produit et dette. Ordre conseillé : A → D (crédit à la suppression de
   compte) → B → C.
-- **État de la base** : inchangé (8 users / 8 properties / 30 bookings / 21 reviews ; `cron_runs` 0 ;
-  `wallet_transactions` 0).
+- **État de la base** : inchangé (8 users / 8 properties / 23 rooms / 30 bookings / 21 reviews ;
+  `cron_runs` 0 ; `wallet_transactions` 0 ; `price_alerts` 0 ; `wishlist_items` 0).
 
 ---
 

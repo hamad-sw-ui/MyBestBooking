@@ -19,6 +19,7 @@ import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { SmartImage } from "@/components/ui/smart-image";
 import { propertyTypeOptions } from "@/lib/property-types";
 import { countryOptions } from "@/lib/countries";
+import { displayCoordinate } from "@/lib/coordinates";
 
 interface Property {
   id: string;
@@ -26,11 +27,18 @@ interface Property {
   slug: string;
   type: string;
   description: string | null;
+  // T-259 (audit n°6, B6) : colonnes existantes (affichées en public) jusqu'ici
+  // ni éditables ni envoyées à l'API.
+  descriptionEn?: string | null;
   starRating: number | null;
   addressLine: string | null;
   city: string;
+  state?: string | null;
   postalCode: string | null;
   country: string;
+  /** Coordonnées (`decimal` → chaîne côté drizzle), utilisées par `?near=`. */
+  latitude?: string | null;
+  longitude?: string | null;
   cancellationPolicy: string | null;
   petsAllowed: boolean | null;
   smokingAllowed: boolean | null;
@@ -112,11 +120,17 @@ export default function PropertyEditClient({
           name: property.name,
           type: property.type,
           description: property.description,
+          descriptionEn: property.descriptionEn ?? undefined,
           starRating: property.starRating,
           addressLine: property.addressLine,
           city: property.city,
+          state: property.state ?? undefined,
           postalCode: property.postalCode,
           country: property.country,
+          // T-259 : chaîne vide ⇒ null côté API (efface la coordonnée), la
+          // virgule décimale française est normalisée par le schéma.
+          latitude: (property.latitude ?? "").trim(),
+          longitude: (property.longitude ?? "").trim(),
           cancellationPolicy: property.cancellationPolicy,
           petsAllowed: property.petsAllowed,
           smokingAllowed: property.smokingAllowed,
@@ -392,6 +406,17 @@ export default function PropertyEditClient({
                 value={property.description || ""}
                 onChange={(e) => setProperty({ ...property, description: e.target.value })}
               />
+
+              {/* T-259 (audit n°6, B6) : la fiche sert la description EN quand
+                  elle existe (`LocalizedDescription`), mais aucun écran ne
+                  permettait de la saisir — repli FR systématique. */}
+              <Textarea
+                label={t("prop.descriptionEn")}
+                rows={4}
+                value={property.descriptionEn || ""}
+                onChange={(e) => setProperty({ ...property, descriptionEn: e.target.value })}
+              />
+              <p className="text-xs text-gray-500">{t("prop.descriptionEnHint")}</p>
             </CardContent>
           </Card>
 
@@ -413,17 +438,49 @@ export default function PropertyEditClient({
                   onChange={(e) => setProperty({ ...property, city: e.target.value })}
                 />
                 <Input
+                  label={t("prop.state")}
+                  maxLength={100}
+                  value={property.state || ""}
+                  onChange={(e) => setProperty({ ...property, state: e.target.value })}
+                />
+                <Input
                   label={t("prop.postal")}
                   value={property.postalCode || ""}
                   onChange={(e) => setProperty({ ...property, postalCode: e.target.value })}
                 />
-                <Select
-                  label={t("prop.country")}
-                  options={COUNTRY_OPTIONS}
-                  value={property.country}
-                  onChange={(e) => setProperty({ ...property, country: e.target.value })}
+              </div>
+
+              <Select
+                label={t("prop.country")}
+                options={COUNTRY_OPTIONS}
+                value={property.country}
+                onChange={(e) => setProperty({ ...property, country: e.target.value })}
+              />
+
+              {/* T-259 : `near=…` existait côté API et écartait silencieusement
+                  les annonces sans coordonnées — or rien ne permettait de les
+                  saisir. Bornes reprises du schéma serveur (−90..90 / −180..180). */}
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label={t("prop.latitude")}
+                  type="number"
+                  step="any"
+                  min={-90}
+                  max={90}
+                  value={displayCoordinate(property.latitude)}
+                  onChange={(e) => setProperty({ ...property, latitude: e.target.value })}
+                />
+                <Input
+                  label={t("prop.longitude")}
+                  type="number"
+                  step="any"
+                  min={-180}
+                  max={180}
+                  value={displayCoordinate(property.longitude)}
+                  onChange={(e) => setProperty({ ...property, longitude: e.target.value })}
                 />
               </div>
+              <p className="text-xs text-gray-500">{t("prop.coordinatesHint")}</p>
             </CardContent>
           </Card>
 
