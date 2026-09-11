@@ -47,7 +47,10 @@ export const API_ERROR_EN: Record<string, string> = {
   "Confirmation de rotation requise": "Rotation confirmation required",
   "Confirmation du provider requise": "Provider confirmation required",
   "Connexion réussie": "Signed in successfully",
+  "Ce favori n'est pas dans la liste d'origine": "This favorite is not in the source list",
+  "La liste de destination doit être différente": "The destination list must be different",
   "Conversation introuvable": "Conversation not found",
+  "Motif obligatoire pour masquer ou refuser un avis": "A reason is required to hide or reject a review",
   "Connexion validée": "Sign-in validated",
   "Corps de requête invalide ou manquant": "Invalid or missing request body",
   "Corps de requête invalide ou manquant (JSON attendu)":

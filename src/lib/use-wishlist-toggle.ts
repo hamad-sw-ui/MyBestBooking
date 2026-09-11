@@ -17,8 +17,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
  */
 
 type WishlistItem = { propertyId: string };
-type Wishlist = { id: string; items: WishlistItem[] };
-type WishlistsPayload = { wishlists: Wishlist[] };
+type Wishlist = { id: string; name?: string; items: WishlistItem[] };
+type WishlistsPayload = { wishlists: Wishlist[]; defaultWishlistId?: string | null };
 
 let cachedPayload: Promise<WishlistsPayload | null> | null = null;
 
@@ -71,6 +71,10 @@ export function useWishlistToggle(propertyId: string) {
   const [busy, setBusy] = useState(false);
   const [wishlistId, setWishlistId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // T-246 (audit n°5, A1) : listes de l'utilisateur, exposées pour proposer un
+  // choix explicite de destination (le défaut reste la liste historique).
+  const [lists, setLists] = useState<{ id: string; name: string }[]>([]);
+  const [defaultListId, setDefaultListId] = useState<string | null>(null);
   const aliveRef = useRef(true);
   // T-174 : rejoue la résolution quand la session change (login/register)
   // ou après mutation — sans cela l'état « favori » restait celui d'avant.
@@ -104,11 +108,13 @@ export function useWishlistToggle(propertyId: string) {
           }
           return;
         }
+        setLists(data.wishlists.map((w) => ({ id: w.id, name: w.name ?? "" })));
         const list = data.wishlists.find((w) =>
           w.items.some((i) => i.propertyId === propertyId),
         );
         setSaved(Boolean(list));
-        setWishlistId(list?.id ?? data.wishlists[0]?.id ?? null);
+        setDefaultListId(data.defaultWishlistId ?? data.wishlists[0]?.id ?? null);
+        setWishlistId(list?.id ?? data.defaultWishlistId ?? data.wishlists[0]?.id ?? null);
       })
       .catch(() => {
         /* silencieux : le cœur reste « vide », l'ajout affichera l'erreur */
@@ -135,7 +141,7 @@ export function useWishlistToggle(propertyId: string) {
 
       const data = await getCachedWishlists().get();
       if (data === null) return "unauthenticated";
-      let list = data.wishlists[0];
+      let list = data.wishlists.find((w) => w.id === (data.defaultWishlistId ?? undefined)) ?? data.wishlists[0];
       if (!list) {
         const created = await fetch("/api/wishlists", {
           method: "POST",
@@ -166,5 +172,41 @@ export function useWishlistToggle(propertyId: string) {
     }
   }, [busy, saved, wishlistId, propertyId]);
 
-  return { saved, busy, error, toggle };
+  /**
+   * T-246 : ajout explicite dans une liste choisie. Même chemin que `toggle`
+   * (création à la volée si l'utilisateur n'a aucune liste), mais la cible est
+   * celle que l'utilisateur vient de désigner.
+   */
+  const addTo = useCallback(
+    async (targetWishlistId: string): Promise<"ok" | "unauthenticated"> => {
+      if (busy) return "ok";
+      setBusy(true);
+      setError(null);
+      try {
+        const res = await fetch("/api/wishlists", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ wishlistId: targetWishlistId, propertyId }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          if (!String(body.error).includes("déjà")) {
+            throw new Error(body.error ?? "Impossible d'ajouter le favori");
+          }
+        }
+        setSaved(true);
+        setWishlistId(targetWishlistId);
+        getCachedWishlists().refresh();
+        return "ok";
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Erreur");
+        return "ok";
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, propertyId],
+  );
+
+  return { saved, busy, error, toggle, lists, defaultListId, addTo };
 }

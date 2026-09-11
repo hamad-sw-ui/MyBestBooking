@@ -20,6 +20,8 @@ import { DeleteAccountSection } from "@/components/delete-account-section";
 import { NotificationPrefsSection } from "@/components/notification-prefs-section";
 import { ReferralCard } from "@/components/referral-card";
 import { ResendVerificationButton } from "@/components/resend-verification-button";
+// T-248 (audit n°5, A6) : historique du wallet (lecture seule).
+import { WalletHistoryCard } from "@/components/wallet-history-card";
 
 interface UserData {
   id: string;
@@ -311,6 +313,7 @@ export default function MyAccountPage() {
                     <p className="text-sm text-gray-500 mt-3">
                       {t("account.walletHint")}
                     </p>
+                    <WalletHistoryCard />
                   </CardContent>
                 </Card>
 

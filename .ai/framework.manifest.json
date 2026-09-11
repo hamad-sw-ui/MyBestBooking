@@ -22,8 +22,12 @@
     "DEVLOG.md"
   ],
   "git": {
-    "branch_patterns": ["^arena/[0-9a-f]+-mybestbooking$"],
-    "protected_branches": ["main"]
+    "branch_patterns": [
+      "^arena/[0-9a-f]+-mybestbooking$"
+    ],
+    "protected_branches": [
+      "main"
+    ]
   },
   "product_coverage": {
     "exempted_tables": [
@@ -34,19 +38,52 @@
       "provider_test_logs"
     ],
     "endpoint_aliases": {
-      "review_votes": ["reviews"],
-      "upload_objects": ["uploads", "messages"],
-      "wishlist_items": ["wishlists"],
-      "provider_credentials": ["admin/providers", "providers/stripe"],
-      "audit_log": ["admin/audit"],
-      "payout_accounts": ["host/payout-account"]
+      "review_votes": [
+        "reviews"
+      ],
+      "upload_objects": [
+        "uploads",
+        "messages"
+      ],
+      "wishlist_items": [
+        "wishlists"
+      ],
+      "provider_credentials": [
+        "admin/providers",
+        "providers/stripe"
+      ],
+      "audit_log": [
+        "admin/audit"
+      ],
+      "payout_accounts": [
+        "host/payout-account"
+      ],
+      "cron_runs": [
+        "health"
+      ],
+      "wallet_transactions": [
+        "wallet"
+      ]
     },
     "expected_endpoint_tables": [],
     "ui_action_labels": [
-      "Envoyer", "Répondre", "Publier", "Annuler", "Valider",
-      "Supprimer", "Uploader", "Enregistrer", "Confirmer", "Créer",
-      "Modifier", "Approuver", "Rejeter", "Suspendre", "Réserver",
-      "Payer", "Contacter"
+      "Envoyer",
+      "Répondre",
+      "Publier",
+      "Annuler",
+      "Valider",
+      "Supprimer",
+      "Uploader",
+      "Enregistrer",
+      "Confirmer",
+      "Créer",
+      "Modifier",
+      "Approuver",
+      "Rejeter",
+      "Suspendre",
+      "Réserver",
+      "Payer",
+      "Contacter"
     ],
     "max_commits_without_features_update": 30,
     "max_commits_without_progress_update": 5,

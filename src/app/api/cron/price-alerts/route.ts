@@ -12,6 +12,7 @@ import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { getSetting } from "@/lib/settings";
 import { purgeTechnicalData } from "@/lib/technical-retention";
 import { calculateReferralReward } from "@/lib/referral";
+import { recordWalletEntry } from "@/lib/wallet-ledger";
 import { getUploader } from "@/lib/storage";
 import { getPaymentProvider } from "@/lib/payment";
 import { recoverPendingPaymentIntents } from "@/lib/payment-intents";
@@ -21,6 +22,8 @@ import { expireManualBookingRequests as expireRequestsNow } from "@/lib/booking-
 import { notifyExpiredRequest } from "@/lib/booking-request-notifications";
 import { templates } from "@/lib/mail";
 import { apiError } from "@/lib/api-error";
+// T-250 (audit n°5, A7) : chaque exécution laisse une trace `cron_runs`.
+import { runWithTrace } from "@/lib/cron-trace";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +83,28 @@ async function completeEligibleBookings(today: string): Promise<number> {
         refereeBonus = referralReward.refereeCredit;
       }
       const refereeWallet = (Number(loyalty.walletBalance) + refereeBonus).toFixed(2);
+      // T-248 (audit n°5, A6) : chaque mouvement du wallet est journalisé dans
+      // la transaction du solde — cashback puis bonus de parrainage, chacun
+      // avec son propre `balance_after` (la somme des lignes = le solde).
+      if (loyalty.cashback > 0) {
+        await recordWalletEntry(tx, {
+          userId: user.id,
+          amount: loyalty.cashback,
+          balanceAfter: (Number(user.walletBalance ?? "0") + loyalty.cashback).toFixed(2),
+          kind: "cashback",
+          bookingId: booking.id,
+          note: booking.bookingReference ?? null,
+        });
+      }
+      if (refereeBonus > 0) {
+        await recordWalletEntry(tx, {
+          userId: user.id,
+          amount: refereeBonus,
+          balanceAfter: refereeWallet,
+          kind: "referral_referee",
+          bookingId: booking.id,
+        });
+      }
       await tx.update(users).set({
         bestrewardsBookingsCount: loyalty.bookingsCount,
         bestrewardsLevel: loyalty.level,
@@ -100,6 +125,13 @@ async function completeEligibleBookings(today: string): Promise<number> {
             walletBalance: referrerWallet,
             updatedAt: new Date(),
           }).where(eq(users.id, referrer.id));
+          await recordWalletEntry(tx, {
+            userId: referrer.id,
+            amount: referralReward.referrerCredit,
+            balanceAfter: referrerWallet,
+            kind: "referral_referrer",
+            bookingId: booking.id,
+          });
         }
       }
 
@@ -137,7 +169,18 @@ async function expirePendingBookings(): Promise<number> {
       const walletUsed = Number(booking.walletCreditsUsed ?? "0");
       if (walletUsed > 0) {
         const [user] = await tx.select().from(users).where(eq(users.id, booking.userId)).for("update");
-        if (user) await tx.update(users).set({ walletBalance: (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2), updatedAt: new Date() }).where(eq(users.id, user.id));
+        if (user) {
+          const balanceAfter = (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2);
+          await tx.update(users).set({ walletBalance: balanceAfter, updatedAt: new Date() }).where(eq(users.id, user.id));
+          await recordWalletEntry(tx, {
+            userId: user.id,
+            amount: walletUsed,
+            balanceAfter,
+            kind: "booking_refund",
+            bookingId: booking.id,
+            note: booking.bookingReference ?? null,
+          });
+        }
       }
       await tx.update(bookings).set({
         status: "cancelled",
@@ -256,6 +299,36 @@ export async function GET(request: NextRequest) {
   if (!authorized(request)) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
   try {
+    // T-250 : la tâche est exécutée puis tracée (une ligne par exécution,
+    // succès comme échec). Le corps de la réponse reste identique.
+    const { value: payload } = await runWithTrace(
+      "price-alerts",
+      () => runPriceAlertsJob(),
+      (result) => ({
+        scanned: result.scanned,
+        notified: result.notified,
+        pastAlertsExpired: result.pastAlertsExpired,
+        completedBookings: result.completedBookings,
+        bookingRemindersSent: result.bookingRemindersSent,
+        reviewRequestsSent: result.reviewRequestsSent,
+        expiredPendingBookings: result.expiredPendingBookings,
+        expiredManualBookingRequests: result.expiredManualBookingRequests,
+      }),
+    );
+    return NextResponse.json({ ok: true, ...payload });
+  } catch (error) {
+    console.error("[cron price-alerts]", error);
+    return NextResponse.json({ error: await apiError("Échec du traitement des alertes prix") }, { status: 500 });
+  }
+}
+
+/**
+ * Corps de la tâche planifiée (inchangé depuis T-243) : la fonction retourne
+ * les compteurs au lieu de construire la réponse, afin que T-250 puisse les
+ * journaliser.
+ */
+async function runPriceAlertsJob() {
+  {
     const today = civilToday();
     const completedBookings = await completeEligibleBookings(today);
     // T-149 : e-mails de cycle de vie (rappels J-3/J-1 et demande d'avis),
@@ -343,9 +416,24 @@ export async function GET(request: NextRequest) {
     }
 
     const alertEmailDelivery = await deliverPendingEmails();
-    return NextResponse.json({ ok: true, priceAlertsEnabled: notifications.priceAlerts, scanned: alerts.length, notified, pastAlertsExpired, completedBookings, bookingRemindersSent, reviewRequestsSent, emailDelivery, alertEmailDelivery, paymentIntentRecovery, expiredPendingBookings, expiredManualBookingRequests, paymentRemindersSent, processedPaymentEvents, latePaymentRefunds, orphanUploadsRemoved, technicalPurge });
-  } catch (error) {
-    console.error("[cron price-alerts]", error);
-    return NextResponse.json({ error: await apiError("Échec du traitement des alertes prix") }, { status: 500 });
+    return {
+      priceAlertsEnabled: notifications.priceAlerts,
+      scanned: alerts.length,
+      notified,
+      pastAlertsExpired,
+      completedBookings,
+      bookingRemindersSent,
+      reviewRequestsSent,
+      emailDelivery,
+      alertEmailDelivery,
+      paymentIntentRecovery,
+      expiredPendingBookings,
+      expiredManualBookingRequests,
+      paymentRemindersSent,
+      processedPaymentEvents,
+      latePaymentRefunds,
+      orphanUploadsRemoved,
+      technicalPurge,
+    };
   }
 }

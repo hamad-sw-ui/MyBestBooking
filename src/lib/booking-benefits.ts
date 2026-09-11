@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { bookings, promotions, users } from "@/db/schema";
+import { recordWalletEntry } from "@/lib/wallet-ledger";
 
 /**
  * Relâche exactement une fois les ressources consommées au hold (promotion et
@@ -21,10 +22,20 @@ export async function releaseBookingBenefits(bookingId: string): Promise<boolean
     if (walletUsed > 0) {
       const [user] = await tx.select().from(users).where(eq(users.id, booking.userId)).for("update");
       if (user) {
+        const balanceAfter = (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2);
         await tx.update(users).set({
-          walletBalance: (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2),
+          walletBalance: balanceAfter,
           updatedAt: new Date(),
         }).where(eq(users.id, user.id));
+        // T-248 : le remboursement est journalisé dans la même transaction.
+        await recordWalletEntry(tx, {
+          userId: user.id,
+          amount: walletUsed,
+          balanceAfter,
+          kind: "booking_refund",
+          bookingId: booking.id,
+          note: booking.bookingReference,
+        });
       }
     }
     await tx.update(bookings).set({ benefitsReleasedAt: new Date(), updatedAt: new Date() }).where(eq(bookings.id, booking.id));

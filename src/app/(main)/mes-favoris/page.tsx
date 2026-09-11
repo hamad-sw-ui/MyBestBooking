@@ -169,6 +169,10 @@ export default async function FavoritesPage() {
                           property={property}
                           showFavorite={false}
                           removeFavoriteFrom={{ wishlistId: wishlist.id }}
+                          // T-246 : autres listes disponibles pour un déplacement.
+                          moveTargets={userWishlists
+                            .filter((other) => other.id !== wishlist.id)
+                            .map((other) => ({ id: other.id, name: other.name }))}
                         />
                       )
                     ))}

@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   LayoutDashboard, Building2, Calendar, Star,
   BarChart3, CreditCard, Users, Menu, X, Settings,
-  Tag, BedDouble, MessageSquare, LogOut, HelpCircle, ScrollText
+  Tag, BedDouble, MessageSquare, LogOut, HelpCircle, ScrollText, Activity
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/db/schema";
@@ -43,6 +43,7 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
         { href: "/dashboard/analytics", icon: BarChart3, label: t("dash.analytics") },
         { href: "/dashboard/billing", icon: CreditCard, label: t("dash.billing") },
         { href: "/dashboard/audit", icon: ScrollText, label: t("dash.audit") },
+        { href: "/dashboard/cron", icon: Activity, label: t("dash.cron") },
         { href: "/dashboard/settings", icon: Settings, label: t("dash.settings") },
       ]
     : [

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X, Ban } from "lucide-react";
+import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
@@ -19,11 +20,24 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
   const t = useT();
   const [loading, setLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  /** T-247 : décision en attente de motif (refus/suspension). */
+  const [pendingAction, setPendingAction] = useState<"reject" | "suspend" | null>(null);
 
-  async function run(action: "approve" | "reject" | "suspend") {
+  /**
+   * T-247 (audit n°5, A3) : le motif de refus/suspension se saisit dans un
+   * dialogue accessible et **obligatoire** (l'API l'accepte déjà ; aucune
+   * rupture de contrat). L'approbation reste immédiate.
+   */
+  function run(action: "approve" | "reject" | "suspend") {
     setError(null);
-    const reason = action === "approve" ? "" : window.prompt(t("mod.reasonPrompt")) ?? null;
-    if (reason === null) return;
+    if (action !== "approve") {
+      setPendingAction(action);
+      return;
+    }
+    void send(action, "");
+  }
+
+  async function send(action: "approve" | "reject" | "suspend", reason: string) {
     setLoading(action);
     try {
       const res = await fetch(`/api/properties/${propertyId}/validate`, {
@@ -33,6 +47,7 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? t("auth.genericError"));
+      setPendingAction(null);
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("auth.genericError"));
@@ -73,7 +88,22 @@ export function PropertyValidateActions({ propertyId, currentStatus }: Props) {
           {loading === "suspend" ? "…" : t("bulk.suspend")}
         </button>
       )}
-      {error && <span className="text-xs text-red-600">{error}</span>}
+      {error && !pendingAction && <span className="text-xs text-red-600">{error}</span>}
+
+      <ReasonDialog
+        key={pendingAction ?? "closed"}
+        open={pendingAction !== null}
+        onClose={() => {
+          setPendingAction(null);
+          setError(null);
+        }}
+        onConfirm={(reason) => {
+          if (pendingAction) void send(pendingAction, reason);
+        }}
+        actionLabel={pendingAction === "suspend" ? t("bulk.suspend") : t("mod.reject")}
+        busy={loading !== null}
+        error={pendingAction ? error : null}
+      />
     </div>
   );
 }

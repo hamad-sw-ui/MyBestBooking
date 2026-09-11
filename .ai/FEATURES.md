@@ -255,7 +255,7 @@ modification de code.
 
 | Feature | État | Preuve | Traçabilité |
 |---|---|---|---|
-| Health check DB (`/api/health`) | ✅ | `SELECT 1` | initial |
+| Health check DB (`/api/health`) | ✅ | `SELECT 1` + **état des tâches planifiées** (`cronStatus`, `crons[]`, `checkedAt` ; T-250, 5 tests `cron-trace`) | initial, T-250 |
 | Monitoring erreurs | ✅ | `src/lib/logger.ts` JSON one-liner + `safeMeta()` (redacte password/token/secret). Sentry = 🎯 credentials prod requis | T-028 |
 | Télémétrie applicative | ✅ | Logger structuré (T-028) exportable vers n'importe quel collecteur JSON (Loki/Datadog/GCP) | T-028 |
 | Logs structurés | ✅ | `src/lib/logger.ts` : 1 ligne JSON par événement + level + ts + safeMeta pour redaction. 5 tests | T-028 |
@@ -398,3 +398,15 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
   (ledger `export-payouts`) et « Export CSV (réservations) » sur
   `/dashboard/bookings` (`/api/dashboard/billing/export`). Routes et contenus
   inchangés.
+
+## T-245 → T-250 — exécution de l'audit n°5 (2026-09-11)
+
+| Feature | État | Preuve | Traçabilité |
+|---|---|---|---|
+| Fenêtre progressive des listes (6 écrans RSC) | ✅ | `parsePageWindow` (11 tests) + `<ShowMore>` ; 25 par défaut, plafond 500, `?limit=` conservé | T-245 |
+| Pagination opt-in des API de liste | ✅ | `GET /api/bookings` / `GET /api/messages` : sans paramètre réponse inchangée, sinon `limit` 1-100 / `offset` + `X-Total-Count`, bornes invalides → 400 | T-245 |
+| Favoris multi-listes | ✅ | tri stable + `defaultWishlistId`, renommage (`PATCH name`), `POST /api/wishlists/move` transactionnel, sélecteur et déplacement UI ; 4 tests route | T-246 |
+| Motif de décision obligatoire | ✅ | `Dialog` + `ReasonDialog` (0/500, focus trap), `hidden`/`rejected` sans motif → 400 `issues.field=moderationReason`, motif dans `audit_log` ; 8 tests route + 4 composant | T-247 |
+| Journal du wallet BestRewards | ✅ | table `wallet_transactions` (migration 0024) écrite dans les 4 transactions de solde ; `GET /api/wallet/transactions` ; historique dans `/mon-compte` ; 5 + 3 + 3 tests | T-248 |
+| Supervision des tâches planifiées | ✅ | table `cron_runs` (migration 0023) + `runWithTrace`, `getCronHealth`, `/api/health`, `/dashboard/cron` ; 5 tests | T-250 |
+| Consommation du solde wallet (décision produit) | 🎯 | Deux options documentées (avoir au règlement sur place **ou** gel explicite) — journal et historique livrés indépendamment | T-248 §3 |

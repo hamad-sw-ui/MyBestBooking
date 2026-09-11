@@ -155,6 +155,20 @@
       "when": 1789064514408,
       "tag": "0021_user_suspension_and_backup_codes",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1789999999000,
+      "tag": "0023_cron_runs",
+      "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1789999999500,
+      "tag": "0024_wallet_transactions",
+      "breakpoints": true
     }
   ]
 }

@@ -4,7 +4,7 @@ import { wishlists, wishlistItems, properties } from "@/db/schema";
 import { getCurrentUser } from "@/lib/auth";
 import { isUuid, zodErrorResponse } from "@/lib/http";
 import { rateLimit } from "@/lib/rate-limit";
-import { eq, and } from "drizzle-orm";
+import { eq, and, asc } from "drizzle-orm";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { apiError } from "@/lib/api-error";
@@ -24,6 +24,9 @@ const updateWishlistSchema = z.object({
   wishlistId: z.string().uuid(),
   isPublic: z.boolean().optional(),
   rotateShareToken: z.boolean().optional(),
+  // T-246 (audit n°5, A1) : renommage d'une liste — champ **optionnel**, donc
+  // les appels existants (partage, rotation) sont inchangés.
+  name: z.string().trim().min(1, "Le nom est requis").max(80, "Nom trop long (80 caractères maximum)").optional(),
 }).strict()
 
 export async function GET() {
@@ -36,10 +39,15 @@ export async function GET() {
       );
     }
 
+    // T-246 : ordre **déterministe** (le cœur écrivait jusqu'ici dans
+    // `wishlists[0]`, alors que la page affichait les listes par date
+    // décroissante — le favori pouvait atterrir dans une autre liste que celle
+    // affichée en premier).
     const userWishlists = await db
       .select()
       .from(wishlists)
-      .where(eq(wishlists.userId, user.id));
+      .where(eq(wishlists.userId, user.id))
+      .orderBy(asc(wishlists.createdAt), asc(wishlists.id));
 
     const wishlistsWithItems = await Promise.all(
       userWishlists.map(async (wishlist) => {
@@ -60,7 +68,11 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json({ wishlists: wishlistsWithItems });
+    return NextResponse.json({
+      wishlists: wishlistsWithItems,
+      // Liste cible par défaut du cœur (première liste, ordre stable ci-dessus).
+      defaultWishlistId: wishlistsWithItems[0]?.id ?? null,
+    });
   } catch (error) {
     console.error("Error fetching wishlists:", error);
     return NextResponse.json(
@@ -202,6 +214,8 @@ export async function PATCH(request: NextRequest) {
       .set({
         isPublic,
         shareToken: isPublic ? (shouldGenerateToken ? uuidv4() : wishlist.shareToken) : null,
+        // T-246 : renommage seulement si le champ est fourni (sinon inchangé).
+        ...(data.name !== undefined ? { name: data.name } : {}),
       })
       .where(eq(wishlists.id, wishlist.id))
       .returning();

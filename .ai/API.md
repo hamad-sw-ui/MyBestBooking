@@ -75,11 +75,13 @@ dédié). Un compte **suspendu** répond `401` avec le motif de suspension ; un 
 |---|---|---|---|
 | GET | `/api/wishlists` | 🔒 | Liste des wishlists de l'utilisateur avec items et propriétés jointes. |
 | POST | `/api/wishlists` | 🔒 | Crée une wishlist (`name`, `isPublic?`) ou ajoute un item (`wishlistId`, `propertyId`). |
-| PATCH | `/api/wishlists` | 🔒 propriétaire | Rend une liste publique/privée et génère ou renouvelle son `shareToken`. |
+| PATCH | `/api/wishlists` | 🔒 propriétaire | Rend une liste publique/privée et génère ou renouvelle son `shareToken`. **T-246** : accepte aussi `name` (1-80 caractères, `trim`) pour **renommer** ; champ optionnel, donc les appels de partage existants sont inchangés. |
 | DELETE | `/api/wishlists?wishlistId=…&propertyId?=…` | 🔒 propriétaire | Retire un item ou supprime la liste entière. |
+| POST | `/api/wishlists/move` | 🔒 propriétaire | **T-246** — déplace un favori : `{propertyId, fromWishlistId, toWishlistId}`. Insertion dans la liste cible **puis** suppression de la source dans une **même transaction** (aucun doublon, aucun favori perdu). `404` si une liste n'appartient pas à l'appelant ou si le favori n'est pas dans la source, `400` si les deux listes sont identiques ou si le bien est déjà présent. |
 | GET/POST | `/api/conversations` | 🔒 | Liste les fils accessibles ou ouvre/récupère le fil voyageur-hôte associé à une réservation. |
 | GET/POST | `/api/messages` | 🔒 participant | Liste ou envoie les messages ; les nouvelles pièces jointes utilisent `attachmentKey` privé. |
 | GET | `/api/messages/attachments/[id]` | 🔒 participant | Sert une pièce jointe privée après vérification conversation. |
+| GET | `/api/wallet/transactions` | 🔒 | **T-248** — historique du journal du wallet (`wallet_transactions`) de l'appelant : `{transactions: [{id, amount, balanceAfter, kind, bookingId, note, createdAt}], total, balance}`. Lecture seule ; `kind` ∈ `cashback\|referral_referee\|referral_referrer\|booking_refund\|booking_payment\|manual_adjustment`. Pagination opt-in (`limit` 1-100, défaut 20) + `X-Total-Count`. |
 | GET | `/api/cron/price-alerts` | 🔒 cron | Évalue alertes prix (quote de séjour si dates/voyageurs fournis, sinon prix de base), clôture séjours payés, reprend intents sans rattachement, expire holds, compense paiements tardifs et traite outbox/uploads ; `CRON_SECRET` obligatoire en production. |
 
 ## Validation et commission des hôtes
@@ -102,6 +104,23 @@ dédié). Un compte **suspendu** répond `401` avec le motif de suspension ; un 
 | POST | `/api/admin/providers/rotation` | 👤 admin | Réchiffre les overrides DB avec la clé primaire, après configuration temporaire de `CREDENTIALS_ENCRYPTION_KEY_PREVIOUS`. Ne reçoit ni ne retourne aucun secret. |
 
 | GET | `/api/dashboard/billing/export` | 👤 host/admin | Télécharge un CSV privé des bookings payés non annulés ; ce n’est pas une facture légale. |
+
+## Pagination (T-245, additive)
+
+`GET /api/bookings` et `GET /api/messages` acceptent `limit` (1-100, défaut 20) et
+`offset` (≥ 0) : **sans paramètre, la réponse historique est inchangée** (tableau
+complet, même enveloppe) ; avec, la réponse est bornée et l'en-tête
+`X-Total-Count` porte le total. Bornes invalides → `400` explicite
+(`limit` non entier, `offset` négatif, `limit=0`). Même mécanique sur
+`GET /api/wallet/transactions` (T-248).
+
+## Supervision (T-250, additive)
+
+`GET /api/health` conserve `{ok, database}` et ajoute `cronStatus`
+(`ok\|stale\|failed\|missing\|unknown`), `crons[]` (dernière exécution, âge,
+durée, compteurs, erreur, cadence attendue) et `checkedAt`. Le code HTTP reste
+`200` tant que la base répond : l'état des crons est **informatif**, il ne rend
+pas la sonde indisponible.
 
 ## Conventions
 

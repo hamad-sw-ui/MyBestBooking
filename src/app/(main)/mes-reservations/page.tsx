@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { bookings, properties, rooms, reviews } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { count, eq, desc } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ import { BookingRowActions } from "@/components/booking-row-actions";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { SmartImage } from "@/components/ui/smart-image";
+import { ShowMore } from "@/components/ui/show-more";
+import { parsePageWindow } from "@/lib/page-window";
 
 /**
  * T-172 — titre localisé + noindex (historique de réservations = données
@@ -28,7 +30,13 @@ export async function generateMetadata() {
   };
 }
 
-async function getMyBookings(userId: string) {
+/**
+ * T-245 (audit n°5, A2) : fenêtre de chargement (l'historique complet était
+ * rendu d'un coup). La séparation « à venir » / « passées » reste calculée sur
+ * les lignes chargées — le bandeau `ShowMore` indique le périmètre et permet
+ * de tout afficher.
+ */
+async function getMyBookings(userId: string, limit: number) {
   return db
     .select({
       booking: bookings,
@@ -57,10 +65,23 @@ async function getMyBookings(userId: string) {
     .leftJoin(rooms, eq(bookings.roomId, rooms.id))
     .leftJoin(reviews, eq(reviews.bookingId, bookings.id))
     .where(eq(bookings.userId, userId))
-    .orderBy(desc(bookings.checkIn));
+    .orderBy(desc(bookings.checkIn))
+    .limit(limit);
 }
 
-export default async function MyBookingsPage() {
+async function countMyBookings(userId: string) {
+  const [row] = await db
+    .select({ total: count() })
+    .from(bookings)
+    .where(eq(bookings.userId, userId));
+  return row?.total ?? 0;
+}
+
+export default async function MyBookingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ limit?: string }>;
+}) {
   const user = await getCurrentUser();
   const locale = await getServerLocale();
   const t = makeT(locale);
@@ -69,7 +90,12 @@ export default async function MyBookingsPage() {
     redirect("/connexion");
   }
 
-  const myBookings = await getMyBookings(user.id);
+  const window = parsePageWindow((await searchParams).limit);
+  const [rows, total] = await Promise.all([
+    getMyBookings(user.id, window.queryLimit),
+    countMyBookings(user.id),
+  ]);
+  const myBookings = rows.slice(0, window.size);
 
   // T-221 : horloge lue une seule fois par rendu serveur (règle react-hooks/purity).
   const nowMs = new Date().getTime();
@@ -341,6 +367,22 @@ export default async function MyBookingsPage() {
             )}
           </div>
         )}
+
+        {/* T-245 (audit n°5, A2) : périmètre du chargement, élargissable. */}
+        <ShowMore
+          shown={myBookings.length}
+          total={total}
+          hasMore={rows.length > myBookings.length}
+          basePath="/mes-reservations"
+          params={{}}
+          labels={{
+            shown: t("list.window.shown"),
+            showMore: t("list.window.showMore"),
+            showAll: t("list.window.showAll"),
+            limitReached: t("list.window.limitReached"),
+            filterScope: t("list.window.filterScope"),
+          }}
+        />
       </div>
     </div>
   );

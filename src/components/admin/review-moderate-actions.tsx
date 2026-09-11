@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { ReasonDialog } from "@/components/admin/reason-dialog";
 import { CheckCircle2, EyeOff, Ban, Clock } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
 
@@ -21,40 +22,56 @@ const STATUS_VARIANTS: Record<Status, "success" | "warning" | "danger" | "info">
   rejected: "danger",
 };
 
+/** Statuts exigeant un motif (validation serveur identique, T-247). */
+const REASON_REQUIRED: Status[] = ["hidden", "rejected"];
+
 /**
  * <ReviewModerateActions /> — bouton client (T-023).
  * Affiché uniquement pour les admins dans /dashboard/reviews.
- * Chaque action confirme, appelle PATCH /api/reviews/[id]/moderate,
- * puis `router.refresh()` pour recharger le RSC.
+ *
+ * T-247 (audit n°5, A3) : le motif n'est plus saisi dans `window.prompt` mais
+ * dans un dialogue accessible, et il est **obligatoire** pour masquer ou
+ * refuser un avis (le serveur refuse désormais l'absence de motif).
  */
 export function ReviewModerateActions({ reviewId, currentStatus }: Props) {
   const t = useT();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [pending, setPending] = useState<{ status: Status; verb: string } | null>(null);
   const status = (currentStatus ?? "approved") as Status;
 
-  function moderate(next: Status, verb: string) {
-    setError(null);
-    if (!confirm(t("mod.confirm").replace("{verb}", verb))) return;
-    const reason = next === "approved" ? "" : window.prompt(t("mod.reasonPrompt")) ?? null;
-    if (reason === null) return;
+  function send(next: Status, reason?: string) {
     startTransition(async () => {
       try {
         const res = await fetch(`/api/reviews/${reviewId}/moderate`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: next, ...(reason.trim() ? { moderationReason: reason.trim() } : {}) }),
+          body: JSON.stringify({
+            status: next,
+            ...(reason?.trim() ? { moderationReason: reason.trim() } : {}),
+          }),
         });
         if (!res.ok) {
           const j = await res.json().catch(() => ({ error: t("settings.error") }));
           throw new Error(j.error || t("settings.error"));
         }
+        setPending(null);
         router.refresh();
       } catch (e) {
         setError(e instanceof Error ? e.message : t("settings.error"));
       }
     });
+  }
+
+  function moderate(next: Status, verb: string) {
+    setError(null);
+    if (REASON_REQUIRED.includes(next)) {
+      setPending({ status: next, verb });
+      return;
+    }
+    if (!confirm(t("mod.confirm").replace("{verb}", verb))) return;
+    send(next);
   }
 
   return (
@@ -103,7 +120,24 @@ export function ReviewModerateActions({ reviewId, currentStatus }: Props) {
         </Button>
       )}
 
-      {error && <span className="text-xs text-red-600 w-full">{error}</span>}
+      {error && !pending && <span className="text-xs text-red-600 w-full">{error}</span>}
+
+      <ReasonDialog
+        key={pending ? `${pending.status}-${pending.verb}` : "closed"}
+        open={pending !== null}
+        onClose={() => {
+          setPending(null);
+          setError(null);
+        }}
+        onConfirm={(reason) => {
+          if (pending) send(pending.status, reason);
+        }}
+        actionLabel={
+          pending ? (pending.status === "hidden" ? t("mod.hide") : t("mod.reject")) : t("action.confirm")
+        }
+        busy={isPending}
+        error={pending ? error : null}
+      />
     </div>
   );
 }

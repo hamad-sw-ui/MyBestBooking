@@ -3,14 +3,16 @@
 - **ID** : T-245 → T-252 (audit n°5 : exécution — parcours métier et fins de parcours)
 - **Titre** : Pagination des listes, favoris multi-listes, dialogues de motif, journal du wallet,
   bandeau « tri ignoré », supervision des crons, message de conversation, hygiène T-207
-- **Statut** : ANALYSE LIVRÉE + 3 CORRECTIFS COURTS VALIDÉS (2026-09-11) — T-249, T-251, T-252 ;
-  T-245, T-246, T-247, T-248, T-250 à mener
+- **Statut** : ✅ **IMPLÉMENTATION LIVRÉE ET VALIDÉE (2026-09-11)** — T-245, T-246, T-247, T-248
+  (étapes 1-2), T-249, T-250, T-251, T-252. **Seule la décision produit de T-248 §3 reste ouverte**
+  (consommation du wallet ou gel explicite) : elle est isolée et n'affecte aucune livraison.
 - **Niveau** : S (passe d'analyse + correctifs de fin de parcours ; T-248 touche un solde monétaire et sera traité en dernier)
 - **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_execution.md`
   (copie `.ai/REPORTS/analyse_runtime_n5_2026-09-11_execution.md`)
 - **Rapports produits** : `.ai/REPORTS/analyse_impact_T245_T252_2026-09-11_execution.md` ·
   `.ai/REPORTS/analyse_conception_T245_T252_2026-09-11_execution.md`
-- **Rapport de validation attendu** : `.ai/REPORTS/validation_T245_T252_2026-09-11_execution.md` (à l'implémentation)
+- **Rapport de validation** : `.ai/REPORTS/validation_T245_T252_2026-09-11_execution.md` (livré, complété
+  par `validation_T245_T250_2026-09-11_implementation.md`)
 
 ## Analyse n°5 (2026-09-11) — méthode et constats
 

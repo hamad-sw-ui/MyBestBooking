@@ -10,6 +10,7 @@ import { makeT } from "@/lib/ui-strings";
 import { deliverEmail, enqueueEmail } from "@/lib/email-outbox";
 import { rateLimit } from "@/lib/rate-limit";
 import { apiError } from "@/lib/api-error";
+import { parseApiPagination } from "@/lib/page-window";
 import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/lib/maintenance";
 
 const schema = z.object({
@@ -87,11 +88,35 @@ export async function GET(request: NextRequest) {
   }
   const ok = access;
 
-  const list = await db
+  // T-245 (audit n°5, A2) : pagination **opt-in** — sans `limit`/`offset`, le
+  // fil complet est renvoyé comme avant ; avec paramètres, `X-Total-Count`
+  // porte le nombre total de messages du fil.
+  const { pagination, error: paginationError } = parseApiPagination(request.nextUrl.searchParams);
+  if (paginationError) {
+    return NextResponse.json({ error: await apiError(paginationError) }, { status: 400 });
+  }
+
+  const listQuery = db
     .select()
     .from(messages)
     .where(eq(messages.conversationId, conversationId))
     .orderBy(messages.createdAt);
+
+  let list: typeof listQuery extends Promise<infer R> ? Awaited<R> : never;
+  let total: number | null = null;
+  if (pagination) {
+    const [page, [counted]] = await Promise.all([
+      listQuery.limit(pagination.limit).offset(pagination.offset),
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(messages)
+        .where(eq(messages.conversationId, conversationId)),
+    ]);
+    list = page;
+    total = counted?.total ?? 0;
+  } else {
+    list = await listQuery;
+  }
 
   // Marque lu du côté de l'utilisateur courant
   if (!ok.isAdmin) {
@@ -101,7 +126,10 @@ export async function GET(request: NextRequest) {
       .where(eq(conversations.id, conversationId));
   }
 
-  return NextResponse.json({ messages: list });
+  return NextResponse.json(
+    { messages: list },
+    total === null ? undefined : { headers: { "X-Total-Count": String(total) } },
+  );
 }
 
 export async function POST(request: NextRequest) {

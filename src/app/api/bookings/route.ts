@@ -11,6 +11,7 @@ import { z } from "zod";
 import { applyPromoToTotal, isPromoUsable, normalizePromoForCurrency } from "@/lib/promotions";
 import { getSetting } from "@/lib/settings";
 import { apiError } from "@/lib/api-error";
+import { parseApiPagination } from "@/lib/page-window";
 import { resolveEffectiveCommissionRate } from "@/lib/commission";
 import {
   assertNotMaintenance,
@@ -86,6 +87,13 @@ export async function GET(request: NextRequest) {
     if (!user) return NextResponse.json({ error: await apiError("Non autorisé") }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
+    // T-245 (audit n°5, A2) : pagination **opt-in** — sans `limit`/`offset`, la
+    // réponse est strictement celle d'avant (tableau complet, aucun appelant
+    // cassé) ; avec paramètres, `X-Total-Count` porte le total filtré.
+    const { pagination, error: paginationError } = parseApiPagination(searchParams);
+    if (paginationError) {
+      return NextResponse.json({ error: await apiError(paginationError) }, { status: 400 });
+    }
     const status = searchParams.get("status");
     const propertyId = searchParams.get("propertyId");
     const conditions = [];
@@ -109,7 +117,9 @@ export async function GET(request: NextRequest) {
       conditions.push(eq(bookings.propertyId, propertyId));
     }
 
-    const results = await db
+    const whereClause = conditions.length ? and(...conditions) : undefined;
+
+    const query = db
       .select({
         booking: bookings,
         property: {
@@ -134,10 +144,27 @@ export async function GET(request: NextRequest) {
       .leftJoin(rooms, eq(bookings.roomId, rooms.id))
       .leftJoin(users, eq(bookings.userId, users.id))
       .leftJoin(reviews, eq(reviews.bookingId, bookings.id))
-      .where(conditions.length ? and(...conditions) : undefined)
+      .where(whereClause)
       .orderBy(desc(bookings.createdAt));
 
-    return NextResponse.json({ bookings: results });
+    if (!pagination) {
+      const results = await query;
+      return NextResponse.json({ bookings: results });
+    }
+
+    const [results, [counted]] = await Promise.all([
+      query.limit(pagination.limit).offset(pagination.offset),
+      db
+        .select({ total: sql<number>`count(*)::int` })
+        .from(bookings)
+        .leftJoin(properties, eq(bookings.propertyId, properties.id))
+        .where(whereClause),
+    ]);
+
+    return NextResponse.json(
+      { bookings: results },
+      { headers: { "X-Total-Count": String(counted?.total ?? 0) } },
+    );
   } catch (error) {
     console.error("Error fetching bookings:", error);
     return NextResponse.json({ error: await apiError("Une erreur est survenue") }, { status: 500 });

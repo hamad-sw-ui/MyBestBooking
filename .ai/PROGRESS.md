@@ -4451,3 +4451,31 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   inconnu est refusé en 400 au lieu d'un 200 silencieux. **Preuves** : `npm run ci` verte (vitest
   **129 fichiers / 743 tests**, smoke **95/95**, ai:check 19 OK / 1 warn R7) + runtime (export 200 /
   400 / 403, page 200 avec et sans période). Verrou i18n **1682**.
+- **2026-09-11 — T-245 → T-250 (implémentation de l'audit n°5, A1 → A7)** :
+  (a) **T-247** motif de décision obligatoire — `Dialog` accessible + `ReasonDialog` (compteur 0/500,
+  envoi bloqué si vide) remplacent les 3 `window.prompt` ; `reviews/[id]/moderate` refuse
+  `hidden`/`rejected` sans motif (400 `issues.field=moderationReason`, motif conservé dans
+  `audit_log`) ;
+  (b) **T-245** fenêtre progressive — `parsePageWindow` + `<ShowMore>` sur les 6 écrans de liste
+  (25 par défaut, +25, plafond 500, filtres/tri/compteurs client conservés) et pagination **opt-in**
+  de `GET /api/bookings` / `GET /api/messages` (sans paramètre : réponse historique identique ; avec :
+  `limit` 1-100, `offset`, `X-Total-Count` ; bornes invalides → 400) ;
+  (c) **T-246** favoris multi-listes — tri stable + `defaultWishlistId`, renommage par `PATCH name`,
+  `POST /api/wishlists/move` transactionnel (aucun doublon, aucun favori perdu), sélecteur de liste
+  sur le cœur et « Déplacer vers une liste » sur `/mes-favoris` ;
+  (d) **T-250** supervision — table `cron_runs` (migration 0023) alimentée par `runWithTrace` (trace
+  best-effort, l'échec n'interrompt jamais la tâche), `getCronHealth` exposé par `/api/health`
+  (`cronStatus` + `crons[]`, HTTP 200 conservé) et écran `/dashboard/cron`, purge 90 jours ;
+  (e) **T-248** journal du wallet — table `wallet_transactions` (migration 0024, append-only, montant
+  signé EUR + `balance_after`) écrite **dans les 4 transactions** qui mutent le solde (cashback,
+  bonus filleul, bonus parrain, remboursements), `GET /api/wallet/transactions` en lecture seule et
+  historique « Mouvements » dans `/mon-compte` ; `users.wallet_balance` reste la source de vérité.
+  **Preuves** : `npm run ci` verte (typecheck 0 · lint 0/0 · i18n 0 candidat · vitest **135 fichiers /
+  775 tests, 0 échec** · build production · smoke **95/95**) · `ai:check` 19 OK / 1 warn (R7, motif du
+  fichier auto-référent) · runtime (bandeau « 25 résultats affichés sur 30 » puis `?limit=50` sans
+  bandeau ; `limit=5` → 5 lignes + `X-Total-Count: 30` ; bornes invalides → 400 ×5 ; `/api/health`
+  `missing` → `ok` avec compteurs et durée après exécution du cron ; `cron-status-price-alerts` =
+  `ok` sur `/dashboard/cron` ; `/api/wallet/transactions` 200 / 401 / 400). Base remise à l'état seed
+  (8 users / 8 annonces / 30 réservations / 21 avis ; `price_alerts` 0, `wishlist_items` 0,
+  `cron_runs` 0, `wallet_transactions` 0). **Reste ouverte** la seule décision produit de T-248 §3
+  (consommation du solde ou gel explicite) — les étapes 1-2 sont livrées et n'en dépendent pas.

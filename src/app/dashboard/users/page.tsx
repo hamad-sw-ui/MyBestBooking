@@ -2,11 +2,13 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { users, properties } from "@/db/schema";
-import { desc, sql } from "drizzle-orm";
+import { count, desc, sql } from "drizzle-orm";
 import { UsersManager, type UserRow } from "@/components/bulk/users-manager";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { getSetting } from "@/lib/settings";
+import { ShowMore } from "@/components/ui/show-more";
+import { parsePageWindow } from "@/lib/page-window";
 
 /**
  * /dashboard/users (admin) — T-033 Session 12
@@ -19,8 +21,19 @@ import { getSetting } from "@/lib/settings";
  * explicite — l'admin voit ainsi l'impact réel d'une modification de taux.
  */
 
-async function getUsers() {
-  return db.select().from(users).orderBy(desc(users.createdAt));
+/**
+ * T-245 (audit n°5, A2) : le tableau chargeait **tous** les comptes.
+ * `UsersManager` conserve ses filtres client (recherche, rôle, statut) et sa
+ * sélection : ils portent sur la fenêtre chargée, élargissable depuis le
+ * bandeau `ShowMore`.
+ */
+async function getUsers(limit: number) {
+  return db.select().from(users).orderBy(desc(users.createdAt)).limit(limit);
+}
+
+async function countUsers() {
+  const [row] = await db.select({ total: count() }).from(users);
+  return row?.total ?? 0;
 }
 
 /**
@@ -55,20 +68,27 @@ async function getGlobalCommissionRate(): Promise<number> {
   }
 }
 
-export default async function UsersPage() {
+export default async function UsersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ limit?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user || user.role !== "admin") {
     redirect("/dashboard");
   }
   const t = makeT(await getServerLocale());
-  const [rows, rateBreakdown, globalRate] = await Promise.all([
-    getUsers(),
+  const window = parsePageWindow((await searchParams).limit);
+  const [rows, rateBreakdown, globalRate, total] = await Promise.all([
+    getUsers(window.queryLimit),
     getPropertyRateBreakdown(),
     getGlobalCommissionRate(),
+    countUsers(),
   ]);
+  const visible = rows.slice(0, window.size);
 
   // Sérialiser pour le composant client (dates → ISO string)
-  const serialized: UserRow[] = rows.map((u) => ({
+  const serialized: UserRow[] = visible.map((u) => ({
     id: u.id,
     email: u.email,
     firstName: u.firstName,
@@ -126,6 +146,20 @@ export default async function UsersPage() {
         users={serialized}
         currentUserId={user.id}
         globalCommissionRate={globalRate}
+      />
+      <ShowMore
+        shown={visible.length}
+        total={total}
+        hasMore={rows.length > visible.length}
+        basePath="/dashboard/users"
+        params={{}}
+        labels={{
+          shown: t("list.window.shown"),
+          showMore: t("list.window.showMore"),
+          showAll: t("list.window.showAll"),
+          limitReached: t("list.window.limitReached"),
+          filterScope: t("list.window.filterScope"),
+        }}
       />
     </div>
   );

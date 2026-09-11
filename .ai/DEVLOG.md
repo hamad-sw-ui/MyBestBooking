@@ -606,3 +606,47 @@ au lieu d'un 200 silencieux.
 743 tests** · build · **smoke 95/95** · `ai:check` 19 OK / 1 warn (R7). Runtime : export CSV 200
 (défaut et période explicite), 400 sur période inversée, 403 sans session ; page analytique 200 avec
 et sans paramètre.
+
+## T-245 → T-250 — exécution de l'audit n°5 (2026-09-11)
+
+**Une fenêtre, pas un paginateur.** Les six écrans de liste (`dashboard/bookings`, `users`,
+`reviews`, `properties`, `promotions`, `mes-reservations`) filtrent, trient et comptent **côté
+client** : un `?page=N` aurait rendu les filtres partiels et les compteurs faux. `parsePageWindow`
+borne donc le **chargement** (25 lignes, +25, plafond 500) et `<ShowMore>` dit ce que l'écran
+montre : « N résultats affichés sur M », « Afficher 25 de plus », « Tout afficher », avec un
+avertissement au plafond et un rappel que les filtres portent sur les lignes affichées. Les liens
+conservent `?status=` / `?payment=` et retirent `limit` au retour par défaut. Côté API, la
+pagination est **opt-in** (`parseApiPagination`) : sans paramètre la réponse historique est
+inchangée au caractère près, avec `limit`/`offset` elle est bornée et `X-Total-Count` porte le
+total ; `limit=0`, `limit=-3`, `limit=abc`, `limit=1.5`, `offset=-1` répondent 400.
+
+**Le motif se saisit, il ne se devine pas.** `Dialog` reproduit ce qu'un `window.prompt` ne fait
+pas : rôle, `aria-modal`, piège de focus Tab/Maj+Tab, Esc, verrouillage du scroll, retour du focus à
+l'élément déclencheur ; `ReasonDialog` impose un motif non vide (compteur 0/500) et le serveur
+refuse désormais `hidden`/`rejected` sans motif (400 nommant `moderationReason`), tout en conservant
+`approved`/`pending` inchangés.
+
+**Un favori va là où l'utilisateur le dit.** `GET /api/wishlists` trie (ordre stable) et expose
+`defaultWishlistId` — le cœur n'écrit plus dans un `wishlists[0]` implicite ; `PATCH` accepte `name`
+(1-80, `trim`) sans toucher au `shareToken` ; `POST /api/wishlists/move` insère la cible **puis**
+supprime la source dans la même transaction (404 si la liste appartient à un tiers, si le favori
+n'est pas dans la source, 400 si les listes sont identiques ou le bien déjà présent).
+
+**Le cron laisse une trace.** `runWithTrace` écrit une ligne `cron_runs` en fin d'exécution **et**
+dans le `catch` (jamais au prix de la tâche métier : l'échec d'insertion est journalisé et ignoré),
+`getCronHealth` classe chaque tâche (`ok` / `stale` au-delà de 3 périodes / `failed` / `missing`) et
+`/api/health` l'expose **sans changer son contrat** (`ok` reste `true` tant que la base répond).
+L'écran `/dashboard/cron` montre l'état, les compteurs et l'historique ; la purge de 90 jours
+rejoint `purgeTechnicalData()`.
+
+**Un solde s'explique.** `wallet_transactions` est append-only (`amount` **signé** en EUR,
+`balance_after`, `kind`, `booking_id`, `actor_id`, `note`) et chaque écriture de
+`users.wallet_balance` écrit sa ligne **dans la même transaction** : un échec du journal annule le
+crédit (prouvé par test). `users.wallet_balance` reste la source de vérité — aucun écran ne change de
+logique — et `/mon-compte` gagne un historique en lecture seule (`GET /api/wallet/transactions`).
+La **consommation** du solde reste une décision produit documentée, non tranchée ici.
+
+**Preuves.** `npm run ci` verte : typecheck 0 · lint 0 · vitest **135 fichiers / 775 tests** ·
+build · smoke **95/95** · `ai:check` 19 OK / 1 warn (R7). Runtime : fenêtre et plafond des listes,
+pagination API et ses bornes, `/api/health` avant/après exécution du cron, écran `/dashboard/cron`,
+`/api/wallet/transactions` (200 / 401 / 400). Base rendue à l'état seed après les sondes.

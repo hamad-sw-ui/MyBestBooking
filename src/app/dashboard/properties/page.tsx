@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { properties } from "@/db/schema";
-import { eq, desc } from "drizzle-orm";
+import { count, eq, desc } from "drizzle-orm";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import {
@@ -11,26 +11,50 @@ import {
 } from "@/components/bulk/properties-manager";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { ShowMore } from "@/components/ui/show-more";
+import { parsePageWindow } from "@/lib/page-window";
 
-async function getProperties(userId: string, isAdmin: boolean) {
+/**
+ * T-245 (audit n°5, A2) : fenêtre de chargement + total. Le filtre et le tri
+ * client de `PropertiesManager` restent inchangés (ils portent sur la fenêtre,
+ * comme l'indique le bandeau `ShowMore`).
+ */
+async function getProperties(userId: string, isAdmin: boolean, limit: number) {
   if (isAdmin) {
-    return db.select().from(properties).orderBy(desc(properties.createdAt));
+    return db.select().from(properties).orderBy(desc(properties.createdAt)).limit(limit);
   }
   return db
     .select()
     .from(properties)
     .where(eq(properties.hostId, userId))
-    .orderBy(desc(properties.createdAt));
+    .orderBy(desc(properties.createdAt))
+    .limit(limit);
 }
 
-export default async function PropertiesPage() {
+async function countProperties(userId: string, isAdmin: boolean) {
+  const [row] = isAdmin
+    ? await db.select({ total: count() }).from(properties)
+    : await db.select({ total: count() }).from(properties).where(eq(properties.hostId, userId));
+  return row?.total ?? 0;
+}
+
+export default async function PropertiesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ limit?: string }>;
+}) {
   const user = await getCurrentUser();
   if (!user) return null;
   const isAdmin = user.role === "admin";
   const t = makeT(await getServerLocale());
-  const rows = await getProperties(user.id, isAdmin);
+  const window = parsePageWindow((await searchParams).limit);
+  const [rows, total] = await Promise.all([
+    getProperties(user.id, isAdmin, window.queryLimit),
+    countProperties(user.id, isAdmin),
+  ]);
+  const visible = rows.slice(0, window.size);
 
-  const serialized: PropertyRow[] = rows.map((p) => ({
+  const serialized: PropertyRow[] = visible.map((p) => ({
     id: p.id,
     name: p.name,
     slug: p.slug,
@@ -71,6 +95,20 @@ export default async function PropertiesPage() {
         )}
       </div>
       <PropertiesManager properties={serialized} isAdmin={isAdmin} />
+      <ShowMore
+        shown={visible.length}
+        total={total}
+        hasMore={rows.length > visible.length}
+        basePath="/dashboard/properties"
+        params={{}}
+        labels={{
+          shown: t("list.window.shown"),
+          showMore: t("list.window.showMore"),
+          showAll: t("list.window.showAll"),
+          limitReached: t("list.window.limitReached"),
+          filterScope: t("list.window.filterScope"),
+        }}
+      />
     </div>
   );
 }

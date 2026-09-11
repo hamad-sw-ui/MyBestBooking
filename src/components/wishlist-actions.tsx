@@ -3,8 +3,9 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Share2, Trash2, Check, Loader2 } from "lucide-react";
+import { Share2, Trash2, Check, Loader2, Pencil } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
+import { Dialog } from "@/components/ui/dialog";
 
 interface Props {
   wishlistId: string;
@@ -27,6 +28,10 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
   const [shareTokenState, setShareTokenState] = useState(shareToken);
   const [updatingShare, setUpdatingShare] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // T-246 (audit n°5, A1) : renommage de la liste (champ `name` du PATCH).
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [renaming, setRenaming] = useState(false);
 
   async function share() {
     if (!isPublicState || !shareTokenState) return;
@@ -61,6 +66,29 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
     }
   }
 
+  /** T-246 : renomme la liste via `PATCH /api/wishlists` (champ optionnel `name`). */
+  async function rename() {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    setRenaming(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/wishlists", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ wishlistId, name: trimmed }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error ?? t("wish.renameFail"));
+      setRenameOpen(false);
+      router.refresh();
+    } catch (renameError) {
+      setError(renameError instanceof Error ? renameError.message : t("wish.renameFail"));
+    } finally {
+      setRenaming(false);
+    }
+  }
+
   function del() {
     if (!confirm(t("wish.deleteConfirm"))) return;
     setError(null);
@@ -89,6 +117,18 @@ export function WishlistActions({ wishlistId, isPublic, shareToken }: Props) {
           <span className="hidden sm:inline text-xs text-gray-500 mr-1" data-testid="wishlist-share-notice">
             {t("wish.shareNotice")}
           </span>
+<Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setNewName("");
+              setRenameOpen(true);
+            }}
+            aria-label={t("wish.rename")}
+            title={t("wish.rename")}
+          >
+            <Pencil className="w-4 h-4" />
+          </Button>
 <Button variant="ghost" size="sm" onClick={share} aria-label={t("wish.shareAria")}>
 {copied ? <><Check className="w-4 h-4 mr-2" /> {t("wishlist.copy")}</> : <><Share2 className="w-4 h-4 mr-2" /> {t("wishlist.share")}</>}
           </Button>
@@ -120,7 +160,42 @@ aria-label={t("wish.deleteAria")}
       >
         {isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
       </Button>
-      {error && <span className="text-xs text-red-600 ml-2">{error}</span>}
+      {error && !renameOpen && <span className="text-xs text-red-600 ml-2">{error}</span>}
+
+      <Dialog
+        open={renameOpen}
+        onClose={() => (renaming ? undefined : setRenameOpen(false))}
+        title={t("wish.renameTitle")}
+        description={t("wish.renameHint")}
+        closeLabel={t("action.close")}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRenameOpen(false)} disabled={renaming}>
+              {t("action.cancel")}
+            </Button>
+            <Button onClick={rename} disabled={renaming || !newName.trim()}>
+              {t("wish.rename")}
+            </Button>
+          </>
+        }
+      >
+        <label className="sr-only" htmlFor="wishlist-rename-input">
+          {t("wish.name")}
+        </label>
+        <input
+          id="wishlist-rename-input"
+          value={newName}
+          onChange={(event) => setNewName(event.target.value.slice(0, 80))}
+          maxLength={80}
+          placeholder={t("wish.namePlaceholder")}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#1B3A6B] focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+        />
+        {error && (
+          <p role="alert" className="mt-2 text-sm text-red-600">
+            {error}
+          </p>
+        )}
+      </Dialog>
     </div>
   );
 }

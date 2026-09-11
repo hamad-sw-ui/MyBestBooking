@@ -502,7 +502,7 @@ chambre, favoris, messagerie, matrice de rôles, analyse croisée des 66 endpoin
 Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état seed (contrôles SQL en
 §5 du rapport : `review_votes` 0, `price_alerts` 0, `stop_sell` 0, `bookings` 35).
 
-- 🟠 **T-245 (M/P2) — *A2 — aucune pagination sur les écrans de liste.** Les pages RSC
+- ✅ ~~**T-245 (M/P2) — *A2 — aucune pagination sur les écrans de liste.***~~ Les pages RSC
   `dashboard/bookings`, `users`, `reviews`, `properties`, `promotions` et `mes-reservations` n'ont
   aucun `.limit()` (grep : 0 occurrence) et chargent la totalité des lignes ; `GET /api/bookings` et
   `GET /api/messages` renvoient toutes les lignes alors que `GET /api/reviews` et
@@ -513,7 +513,17 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   pagination **opt-in** des API (`limit`/`offset` ignorés si absents → corps inchangé, en-tête
   `X-Total-Count`, bornes identiques à `/api/properties`). Tests de contrat « sans paramètre =
   réponse actuelle » + bornes (`limit=0/-1`, `offset=-1` → 400).
-- 🟠 **T-246 (M/P2) — *A1 — favoris : multi-listes à moitié câblé.** `GET /api/wishlists` ne trie
+  **Livré (variante retenue : fenêtre progressive, pas de `?page=N`)** : filtres, tri et compteurs
+  des 6 écrans étant **côté client**, un paginateur aurait restreint les filtres et faussé les
+  compteurs. `parsePageWindow` (défaut 25, +25, plafond 500, `queryLimit = size + 1`) et
+  `<ShowMore>` (compteur « N sur M », « Afficher 25 de plus », « Tout afficher », avertissement de
+  plafond, note de périmètre) branchent les 6 pages RSC ; l'API est **opt-in**
+  (`GET /api/bookings`, `GET /api/messages` : sans paramètre la réponse historique est identique,
+  avec `limit` 1-100 / `offset` ≥ 0 et `X-Total-Count` ; bornes invalides → 400). Verrou i18n
+  1688 → **1693**. Preuves : runtime (`/dashboard/bookings` → « 25 résultats affichés sur 30 »,
+  `?limit=50` → 30/30 sans bandeau, `limit=5` → 5 lignes + `X-Total-Count: 30`, `limit=0/-3/abc/1.5`
+  et `offset=-1` → 400) et tests `page-window` 11/11.
+- ✅ ~~**T-246 (M/P2) — *A1 — favoris : multi-listes à moitié câblé.***~~ `GET /api/wishlists` ne trie
   pas (0 `orderBy`) alors que le cœur écrit dans `wishlists[0]` (`use-wishlist-toggle.ts:138`) et
   que `/mes-favoris` affiche par `createdAt desc` → le favori peut atterrir dans une autre liste que
   celle affichée, sans choix possible ; `updateWishlistSchema` (`.strict()`) refuse `name` → pas de
@@ -521,7 +531,13 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   `defaultWishlistId`, `name` optionnel dans le PATCH (+ UI de renommage), sélecteur de liste dans le
   cœur (défaut = comportement actuel), action « déplacer » transactionnelle. Ajouts additifs, verrou
   i18n mis à jour.
-- 🟠 **T-247 (S/P2) — *A3 — motifs de modération en `window.prompt` et facultatifs.** Trois écrans
+  **Livré** : `GET /api/wishlists` trié (`createdAt`, `id`) et expose `defaultWishlistId` (le cœur
+  n'utilise plus un `wishlists[0]` implicite) ; `PATCH` accepte `name` (1-80, `trim`) sans toucher au
+  partage ; nouveau `POST /api/wishlists/move` transactionnel (insertion cible puis suppression
+  source, 404 si liste d'un tiers ou favori absent de la source, 400 si listes identiques ou bien
+  déjà présent) ; UI : « Choisir une liste » sur le cœur (≥ 2 listes), « Déplacer vers une liste »
+  sur `/mes-favoris`, renommage dans `WishlistActions`. Verrou i18n 1693 → **1706** ; tests `route.t246.test.ts` 4/4.
+- ✅ ~~**T-247 (S/P2) — *A3 — motifs de modération en `window.prompt` et facultatifs.***~~ Trois écrans
   admin (`review-moderate-actions.tsx:40`, `user-suspend-actions.tsx:63`,
   `property-validate-actions.tsx:25`) utilisent le dialogue natif (aucune validation, aucun style,
   dismiss silencieux, bloqué dans certains environnements) et `moderationReason` est `optional`
@@ -530,7 +546,12 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   Esc, compteur 500 car.) remplaçant les 3 `prompt` sans changer les appels réseau, et
   `superRefine` : motif obligatoire pour `hidden`/`rejected` (400 via `issues`), `approved`/`pending`
   inchangés. Tests route (400 sans motif) + dialogue + trace `audit_log.metadata.reason`.
-- 🟠 **T-248 (M/P2) — *A6 — wallet sans journal ni consommation (reprise de O1).**
+  **Livré** : `Dialog` accessible (rôle, `aria-modal`, piège de focus, Esc, verrouillage du scroll,
+  retour du focus) et `ReasonDialog` (motif obligatoire, compteur 0/500, envoi bloqué si vide) ;
+  les 3 `window.prompt` ont disparu (`grep` = 0) ; `reviews/[id]/moderate` refuse `hidden`/`rejected`
+  sans motif (400, `issues.field = moderationReason`, motif conservé dans `audit_log`). Verrou i18n
+  **1683 → 1688** ; tests route 8/8, `reason-dialog` 4/4.
+- ✅ ~~**T-248 (M/P2) — *A6 — wallet sans journal (reprise de O1).***~~
   `users.walletBalance` est muté par 4 familles de code (clôture manuelle, cron cashback/parrainage/
   remboursements, `booking-benefits`, `booking-request-expiration`) sans aucune trace ; depuis T-207
   (`useWalletCredits` ignoré, `walletUsedEur = 0`) le solde BestRewards ne peut **jamais** être
@@ -540,6 +561,17 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   20 derniers mouvements dans `/mon-compte`, puis décision produit : avoir au règlement sur place
   (`markPaidOffline`) **ou** gel explicite du programme. Tests : « 1 crédit = 1 ligne », idempotence
   du rejeu de cron, soldes inchangés après clôture manuelle et expiration.
+  **Livré (étapes 1 et 2 ; étape 3 = décision produit ouverte)** : migration **0024**
+  `wallet_transactions` (append-only, `amount` signé EUR, `balance_after`, `kind`, `booking_id`,
+  `actor_id`, `note`) écrite **dans les 4 transactions existantes** (`booking-benefits`,
+  `booking-request-expiration`, cron : cashback + bonus filleul + bonus parrain) ; `users.wallet_balance`
+  reste la source de vérité ; `GET /api/wallet/transactions` (lecture seule, 20 derniers, pagination
+  opt-in) et carte « Historique des mouvements » dans `/mon-compte`. Verrou i18n 1728 → **1739**.
+  Preuves : `wallet-ledger` 5/5 (dont « solde = somme des lignes » et « une erreur de journal annule
+  le solde »), `cron/price-alerts/route.t248.test.ts` 3/3 (clôture → 1 ligne de 5,00 EUR, rejeu
+  idempotent → toujours 1 ligne, trace `cron_runs` écrite), runtime `GET /api/wallet/transactions`
+  200/401/400. **Reste à trancher** : consommation du solde (avoir au règlement sur place) ou gel
+  explicite — l'étape 1 est utile seule et strictement additive.
 - ✅ ~~**T-249 (S/P3) — *A4 — tri ignoré en silence.***~~ **FAIT (2026-09-11)** : `GET /api/properties?sort=…` inconnu → 200 avec
   tri `rating` par défaut (`route.ts:216`) alors que les 4 autres filtres écartés déclenchent un
   bandeau (T-175, `search-warnings.ts`). Livrable : warning `sortIgnored` + clé
@@ -547,13 +579,21 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   test `search-warnings.test.ts` (inconnu/`Price_Asc`/blanc → `["sortIgnored"]` ou `[]`, 4 valeurs connues → `[]`).
   **Livré** : `sortIgnored` ajouté à `SearchWarning` + liste blanche `SORT_VALUES`, clé FR/EN, verrou 1683 ;
   23 tests ciblés verts (`search-warnings`, `ui-strings`, `api-error`, `messages`).
-- 🟢 **T-250 (S/P3) — *A7 — tâches planifiées sans trace.** Le cron `price-alerts` exécute 14
+- ✅ ~~**T-250 (S/P3) — *A7 — tâches planifiées sans trace.***~~ Le cron `price-alerts` exécute 14
   opérations (rappels J-3/J-1, demandes d'avis, clôtures, expirations, alertes prix, purge
   technique) et n'écrit **aucune** trace (0 `recordAudit`) ; `/api/health` ne teste que PostgreSQL →
   un cron muet (URL/clé/panne) est invisible. Livrable : table `cron_runs` (`name`, `started_at`,
   `finished_at`, `ok`, `duration_ms`, `counters` JSONB, `error_message`) écrite en fin d'exécution
   **et** dans le `catch`, écran admin « Tâches planifiées » (dernier passage, âge, compteurs, badge
   rouge au-delà de 2× la période), purge intégrée à `purgeTechnicalData()` (T-243).
+  **Livré** : migration **0023** `cron_runs` ; `runWithTrace(name, task, countersOf)` enveloppe le
+  corps du cron (trace best-effort : une panne de la table ne casse jamais la tâche métier) ;
+  `getCronHealth()` (`ok` / `stale` au-delà de 3 périodes / `failed` / `missing`) exposé par
+  `/api/health` (`cronStatus` + `crons[]`, additif, HTTP 200 conservé) et par l'écran
+  `/dashboard/cron` (lien sidebar + menu mobile) ; purge 90 jours dans `purgeTechnicalData()`.
+  Preuves : `cron-trace` 5/5, `cron/price-alerts/route.t248.test.ts` 3/3, runtime (`/api/health`
+  → `cronStatus: missing` avant exécution, `ok` avec compteurs et durée après ; page 200 pour
+  l'admin, redirection pour un voyageur). Verrou i18n 1706 → **1728**.
 - ✅ ~~**T-251 (XS/P3) — *A5 — messagerie : introuvable et interdit partagent le 403.***~~ **FAIT (2026-09-11)** :
   `checkParticipant()` renvoie `null` dans les deux cas → `GET /api/messages` répond
   « Accès refusé » même pour un UUID inexistant (prouvé). Le cloisonnement est correct (aucune fuite)

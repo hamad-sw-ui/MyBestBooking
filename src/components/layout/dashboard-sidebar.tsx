@@ -20,6 +20,7 @@ import {
   HelpCircle,
   Tag,
   ScrollText,
+  Activity,
 } from "lucide-react";
 import { useState } from "react";
 import type { User } from "@/db/schema";
@@ -67,6 +68,8 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
     { href: "/dashboard/analytics", icon: BarChart3, label: t("dash.analytics") },
     { href: "/dashboard/billing", icon: CreditCard, label: t("dash.billing") },
     { href: "/dashboard/audit", icon: ScrollText, label: t("dash.audit") },
+    // T-250 (audit n°5, A7) : supervision des tâches planifiées.
+    { href: "/dashboard/cron", icon: Activity, label: t("dash.cron") },
     { href: "/dashboard/settings", icon: Settings, label: t("dash.settings") },
   ];
 

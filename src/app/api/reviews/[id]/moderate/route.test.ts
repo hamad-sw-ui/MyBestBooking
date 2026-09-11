@@ -143,7 +143,7 @@ dbTest("PATCH /api/reviews/[id]/moderate (T-023)", () => {
 
   it("admin sur review inconnue → 404", async () => {
     currentMockUser = { id: hostId, email: "a@t.co", role: "admin" };
-    const { request, ctx } = await makeReq("00000000-0000-0000-0000-000000000000", { status: "hidden" });
+    const { request, ctx } = await makeReq("00000000-0000-0000-0000-000000000000", { status: "hidden", moderationReason: "test" });
     const res = await PATCH(request, ctx);
     expect(res.status).toBe(404);
   });
@@ -160,7 +160,10 @@ dbTest("PATCH /api/reviews/[id]/moderate (T-023)", () => {
     expect(previousTotalReviews).toBe(1);
     expect(parseFloat(previousAverageRating)).toBeGreaterThan(0);
 
-    const { request, ctx } = await makeReq(reviewId, { status: "hidden" });
+    const { request, ctx } = await makeReq(reviewId, {
+      status: "hidden",
+      moderationReason: "Contenu inapproprié (test T-023)",
+    });
     const res = await PATCH(request, ctx);
     expect(res.status).toBe(200);
     const body = await res.json();
@@ -182,5 +185,51 @@ dbTest("PATCH /api/reviews/[id]/moderate (T-023)", () => {
     const [prop] = await db.select().from(schema.properties).where(eq(schema.properties.id, propertyId));
     expect(prop.totalReviews).toBe(1);
     expect(parseFloat(prop.averageRating ?? "0")).toBeCloseTo(9.0, 1);
+  });
+
+  /**
+   * T-247 (audit n°5, A3) — un avis masqué ou refusé exige un motif :
+   * l'e-mail d'information partait sinon sans justification et `audit_log`
+   * ne conservait aucune raison.
+   */
+  it("T-247 — masquer/refuser sans motif → 400 avec `issues`", async () => {
+    currentMockUser = { id: hostId, email: "a@t.co", role: "admin" };
+    for (const status of ["hidden", "rejected"] as const) {
+      const { request, ctx } = await makeReq(reviewId, { status });
+      const res = await PATCH(request, ctx);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(Array.isArray(body.issues)).toBe(true);
+      expect(body.issues.some((i: { field: string }) => i.field === "moderationReason")).toBe(true);
+    }
+    // Motif uniquement composé d'espaces : refusé aussi.
+    const { request, ctx } = await makeReq(reviewId, { status: "hidden", moderationReason: "   " });
+    expect((await PATCH(request, ctx)).status).toBe(400);
+  });
+
+  it("T-247 — approuver ou remettre en attente reste possible sans motif", async () => {
+    currentMockUser = { id: hostId, email: "a@t.co", role: "admin" };
+    const pending = await makeReq(reviewId, { status: "pending" });
+    expect((await PATCH(pending.request, pending.ctx)).status).toBe(200);
+    const approved = await makeReq(reviewId, { status: "approved" });
+    expect((await PATCH(approved.request, approved.ctx)).status).toBe(200);
+  });
+
+  it("T-247 — le motif fourni est conservé dans audit_log", async () => {
+    currentMockUser = { id: hostId, email: "a@t.co", role: "admin" };
+    const { request, ctx } = await makeReq(reviewId, {
+      status: "rejected",
+      moderationReason: "Propos promotionnels (test T-247)",
+    });
+    expect((await PATCH(request, ctx)).status).toBe(200);
+
+    const { and, eq } = await import("drizzle-orm");
+    const [entry] = await db
+      .select()
+      .from(schema.auditLog)
+      .where(and(eq(schema.auditLog.entityId, reviewId), eq(schema.auditLog.action, "review.moderate")))
+      .orderBy((await import("drizzle-orm")).desc(schema.auditLog.createdAt))
+      .limit(1);
+    expect(entry?.metadata).toMatchObject({ to: "rejected", reason: "Propos promotionnels (test T-247)" });
   });
 });

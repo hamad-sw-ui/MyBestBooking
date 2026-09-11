@@ -1,7 +1,7 @@
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { bookings, properties, rooms, users } from "@/db/schema";
-import { eq, desc, or } from "drizzle-orm";
+import { count, eq, desc, or } from "drizzle-orm";
 import {
   BookingsManager,
   type BookingRow,
@@ -10,8 +10,16 @@ import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
+import { ShowMore } from "@/components/ui/show-more";
+import { parsePageWindow } from "@/lib/page-window";
 
-async function getBookings(userId: string, isAdmin: boolean) {
+/**
+ * T-245 (audit n°5, A2) : fenêtre de chargement. `BookingsManager` garde ses
+ * filtres (statut, recherche, dates, règlement), ses statistiques et sa
+ * sélection ; ils portent sur les lignes affichées, élargissables via le
+ * bandeau `ShowMore`.
+ */
+async function getBookings(userId: string, isAdmin: boolean, limit: number) {
   if (isAdmin) {
     return db
       .select({
@@ -37,7 +45,8 @@ async function getBookings(userId: string, isAdmin: boolean) {
       .leftJoin(properties, eq(bookings.propertyId, properties.id))
       .leftJoin(rooms, eq(bookings.roomId, rooms.id))
       .leftJoin(users, eq(bookings.userId, users.id))
-      .orderBy(desc(bookings.createdAt));
+      .orderBy(desc(bookings.createdAt))
+      .limit(limit);
   }
   const hostProperties = await db
     .select({ id: properties.id })
@@ -70,7 +79,21 @@ async function getBookings(userId: string, isAdmin: boolean) {
     .leftJoin(rooms, eq(bookings.roomId, rooms.id))
     .leftJoin(users, eq(bookings.userId, users.id))
     .where(or(...propertyIds.map((id) => eq(bookings.propertyId, id))))
-    .orderBy(desc(bookings.createdAt));
+    .orderBy(desc(bookings.createdAt))
+    .limit(limit);
+}
+
+async function countBookings(userId: string, isAdmin: boolean) {
+  if (isAdmin) {
+    const [row] = await db.select({ total: count() }).from(bookings);
+    return row?.total ?? 0;
+  }
+  const [row] = await db
+    .select({ total: count() })
+    .from(bookings)
+    .leftJoin(properties, eq(bookings.propertyId, properties.id))
+    .where(eq(properties.hostId, userId));
+  return row?.total ?? 0;
 }
 
 export default async function BookingsPage({
@@ -78,7 +101,7 @@ export default async function BookingsPage({
 }: {
   // T-221/T-222 : les cartes du tableau de bord relient directement aux vues
   // filtrées (`?status=pending`, `?payment=due`).
-  searchParams: Promise<{ status?: string; payment?: string }>;
+  searchParams: Promise<{ status?: string; payment?: string; limit?: string }>;
 }) {
   const user = await getCurrentUser();
   if (!user) return null;
@@ -90,9 +113,14 @@ export default async function BookingsPage({
       ? params.status
       : "all";
   const initialPaymentFilter = params.payment === "due" ? "due" : "all";
-  const rows = await getBookings(user.id, isAdmin);
+  const window = parsePageWindow(params.limit);
+  const [rows, total] = await Promise.all([
+    getBookings(user.id, isAdmin, window.queryLimit),
+    countBookings(user.id, isAdmin),
+  ]);
+  const visible = rows.slice(0, window.size);
 
-  const serialized: BookingRow[] = rows.map((r) => ({
+  const serialized: BookingRow[] = visible.map((r) => ({
     booking: {
       id: r.booking.id,
       bookingReference: r.booking.bookingReference,
@@ -152,6 +180,20 @@ export default async function BookingsPage({
         isAdmin={isAdmin}
         initialStatus={initialStatus}
         initialPaymentFilter={initialPaymentFilter}
+      />
+      <ShowMore
+        shown={visible.length}
+        total={total}
+        hasMore={rows.length > visible.length}
+        basePath="/dashboard/bookings"
+        params={{ status: params.status, payment: params.payment }}
+        labels={{
+          shown: t("list.window.shown"),
+          showMore: t("list.window.showMore"),
+          showAll: t("list.window.showAll"),
+          limitReached: t("list.window.limitReached"),
+          filterScope: t("list.window.filterScope"),
+        }}
       />
     </div>
   );

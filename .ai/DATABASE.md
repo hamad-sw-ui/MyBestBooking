@@ -7,12 +7,24 @@
 
 - Schéma Drizzle : `src/db/schema.ts`; migrations SQL additives `0000` à
   `0013_orchestration-resilience.sql`.
-- Dernière migration : `0021_user_suspension_and_backup_codes.sql` (T-230/T-231,
+- Dernière migration : `0024_wallet_transactions.sql` (T-248, 2026-09-11) —
+  additive : table `wallet_transactions`, journal **append-only** des mouvements
+  du wallet BestRewards (`user_id`, `amount` **signé** en EUR, `balance_after`,
+  `kind` ∈ `cashback|referral_referee|referral_referrer|booking_refund|booking_payment|manual_adjustment`,
+  `booking_id`/`actor_id`/`note` nullables). `users.wallet_balance` **reste la
+  source de vérité** ; chaque écriture du solde écrit sa ligne dans la **même
+  transaction** (sinon tout est annulé).
+- Migration `0023_cron_runs.sql` (T-250, 2026-09-11) — additive : table
+  `cron_runs` (`name`, `started_at`, `finished_at`, `ok`, `duration_ms`,
+  `counters` jsonb, `error_message`), une ligne par exécution de tâche
+  planifiée, purgée à 90 jours par `purgeTechnicalData()`.
+- Migrations antérieures : `0021_user_suspension_and_backup_codes.sql` (T-230/T-231,
   2026-09-10) — additive : `users.suspended_at` + `users.suspended_reason`
   (suspension **distincte** de `deleted_at`, qui reste la marque de suppression),
   migration des suspensions existantes (`deleted_at` renseigné sans e-mail
   anonymisé → devient `suspended_at`), `users.two_factor_backup_codes` (jsonb,
-  empreintes bcrypt `[{hash, usedAt}]`, jamais de code en clair).
+  empreintes bcrypt `[{hash, usedAt}]`, jamais de code en clair) ; et
+  `0022_property_review_reason.sql` (T-237).
 - T-107 ajoute `bookings.benefits_released_at`,
   `email_outbox.provider_message_id` et remplace les FK `review_votes` par
   `ON DELETE CASCADE`. La migration `0014` ajoute
@@ -26,7 +38,8 @@
   expirées depuis plus de **7 jours** et les lignes `email_outbox` `sent`/`failed`
   de plus de **90 jours** sont purgées en fin de cron ; `audit_log` n'est jamais
   purgé (seule une mesure `auditRows`/`oldestAuditAt` est remontée). Les lignes
-  `pending`/`sending` sont toujours conservées.
+  `pending`/`sending` sont toujours conservées. Les traces `cron_runs` de plus
+  de 90 jours sont purgées au même moment (T-250).
 
 
 | Élément | Valeur |

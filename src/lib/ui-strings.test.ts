@@ -78,8 +78,10 @@ describe("uiStrings (T-132)", () => {
   //   validation d'annonce notifiée à l'hôte, dont le motif affiché) = 1643 ; T-238
   //   (mention de partage wishlist + rotation) = 1645 ; T-239 (page de
   //   désabonnement) = 1655 ; T-241 (période analytics + export CSV) = 1682 ;
-  //   T-249 (bandeau « tri ignoré ») = 1683.
-  expect(Object.keys(fr)).toHaveLength(1683);
+  //   T-249 (bandeau « tri ignoré ») = 1683 ; T-247 (dialogue de motif) = 1688 ;
+  //   T-245 (fenêtre de liste) = 1693 ; T-246 (favoris multi-listes, +13) = 1706 ; T-250 (supervision cron, +22) = 1728 ;
+  //   T-248 (journal wallet, +11) = 1739.
+  expect(Object.keys(fr)).toHaveLength(1739);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

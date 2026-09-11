@@ -33,6 +33,8 @@ Logo : `✦ mybest booking` — l'étoile est en `#F5A623`, `mybest` en primaire
 | `Input`, `Textarea`, `Select` | `input.tsx` |
 | `Badge` | `badge.tsx` |
 | `Modal` | `modal.tsx` |
+| `Dialog` (accessible : `role=dialog`, `aria-modal`, piège de focus, Esc, retour du focus) | `dialog.tsx` (T-247) |
+| `ShowMore` (fenêtre de liste : compteur, « Afficher N de plus », « Tout afficher ») | `show-more.tsx` (T-245) |
 | `Skeleton` | `skeleton.tsx` |
 | `EmptyState` | `empty-state.tsx` |
 | `ToastProvider` + `useToast` | `toast.tsx` (monté dans root layout) |
@@ -68,7 +70,8 @@ Utilitaire `cn(...)` (`clsx` + `tailwind-merge`) exposé par `@/lib/utils`.
 
 `page.tsx` (KPI + activité), `properties` (+ `[id]`, `new`), `rooms`,
 `bookings` (+ `[id]`), `reviews`, `messages`, `promotions`, `analytics`,
-`billing`, `users`, `settings`.
+`billing`, `users`, `settings`, `audit`, `cron` (T-250, supervision des tâches
+planifiées : état par tâche, compteurs, historique des exécutions).
 
 Deux colonnes du dashboard pro sont directement actionnables :
 
@@ -82,6 +85,28 @@ Deux colonnes du dashboard pro sont directement actionnables :
   (`pending → confirmed|cancelled`, `confirmed → cancelled|completed|no_show`,
   clôture seulement après le départ et paiement constaté). États terminaux et
   cas non couverts : badge seul, avec infobulle explicative.
+
+### T-245 → T-250 — écrans modifiés (2026-09-11)
+
+- **Fenêtre progressive (T-245)** : `/dashboard/bookings`, `/dashboard/users`,
+  `/dashboard/reviews`, `/dashboard/properties`, `/dashboard/promotions` et
+  `/mes-reservations` chargent **25 lignes** par défaut (au lieu de tout) et
+  affichent le bandeau `ShowMore` : « N résultats affichés sur M », « Afficher 25
+  de plus », « Tout afficher (M) », plafond 500 avec avertissement, et rappel
+  que les filtres/tri/compteurs client portent sur les lignes affichées. Le
+  paramètre `?limit=` est conservé dans les liens (les filtres `?status=` /
+  `?payment=` aussi) et retiré au retour par défaut.
+- **Motif de décision (T-247)** : masquer/refuser un avis, suspendre un compte ou
+  rejeter une annonce passent par `ReasonDialog` (motif **obligatoire**, 0/500,
+  bouton désactivé tant que le champ est vide) au lieu de `window.prompt`.
+- **Favoris (T-246)** : le cœur propose « Choisir une liste » quand l'utilisateur
+  en a plusieurs ; `/mes-favoris` ajoute « Déplacer vers une liste » sur chaque
+  carte, et chaque liste est renommable (icône crayon dans `WishlistActions`).
+- **Wallet (T-248)** : `/mon-compte` → « Historique des mouvements » (20 derniers
+  mouvements, montant signé, solde après) sous le solde BestRewards.
+- **Supervision (T-250)** : `/dashboard/cron` (lien de navigation admin) montre
+  l'état de chaque tâche (`ok` / `overdue` / `failed` / `never ran`) et
+  l'historique des exécutions.
 
 ### T-217 — écrans ajoutés ou corrigés (2026-09-10)
 

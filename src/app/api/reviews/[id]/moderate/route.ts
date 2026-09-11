@@ -11,10 +11,28 @@ import { recomputePropertyReviewAggregate } from "@/lib/review-aggregates";
 import { apiError } from "@/lib/api-error";
 import { notifyReviewModerated } from "@/lib/review-notifications";
 
-const schema = z.object({
-  status: z.enum(["approved", "pending", "hidden", "rejected"]),
-  moderationReason: z.string().max(500).optional(),
-});
+/**
+ * T-247 (audit n°5, A3) : masquer ou refuser un avis exige un **motif**.
+ * Il est enregistré dans `audit_log`, affiché à l'auteur par l'e-mail de
+ * modération (T-225) et sert de justification au support. Approuver ou
+ * remettre en attente reste possible sans motif (comportement historique).
+ */
+const schema = z
+  .object({
+    status: z.enum(["approved", "pending", "hidden", "rejected"]),
+    moderationReason: z.string().max(500).optional(),
+  })
+  .strict()
+  .superRefine((data, ctx) => {
+    const requiresReason = data.status === "hidden" || data.status === "rejected";
+    if (requiresReason && !data.moderationReason?.trim()) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["moderationReason"],
+        message: "Motif obligatoire pour masquer ou refuser un avis",
+      });
+    }
+  });
 
 /**
  * PATCH /api/reviews/[id]/moderate — admin uniquement (T-023).

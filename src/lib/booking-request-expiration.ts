@@ -6,6 +6,7 @@
  * réactiver la sémantique « paiement à finaliser ».
  */
 import { db } from "@/db";
+import { recordWalletEntry } from "@/lib/wallet-ledger";
 import { bookings, promotions, users } from "@/db/schema";
 import { and, eq, gt, isNull, lt, lte, ne, sql } from "drizzle-orm";
 
@@ -32,7 +33,7 @@ export const BOOKING_REQUEST_EXPIRED_REASON =
   "Demande de réservation expirée automatiquement faute de confirmation de l'hôte";
 
 /** Exécuteur compatible `db` ou transaction Drizzle. */
-type Executor = Pick<typeof db, "select" | "update">;
+type Executor = Pick<typeof db, "select" | "update" | "insert">;
 
 export interface ExpiredRequest {
   id: string;
@@ -93,13 +94,23 @@ export async function expireRequestInExecutor(
       .where(eq(users.id, booking.userId))
       .for("update");
     if (user) {
+      const balanceAfter = (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2);
       await executor
         .update(users)
         .set({
-          walletBalance: (Number(user.walletBalance ?? "0") + walletUsed).toFixed(2),
+          walletBalance: balanceAfter,
           updatedAt: now,
         })
         .where(eq(users.id, user.id));
+      // T-248 : journal du remboursement, dans la transaction d'expiration.
+      await recordWalletEntry(executor, {
+        userId: user.id,
+        amount: walletUsed,
+        balanceAfter,
+        kind: "booking_refund",
+        bookingId: booking.id,
+        note: booking.bookingReference ?? null,
+      });
     }
   }
 

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { MapPin, Heart, Loader2 } from "lucide-react";
+import { MapPin, Heart, Loader2, FolderInput, FolderPlus } from "lucide-react";
 import { formatPrice, getPropertyTypeLabel, intlLocale } from "@/lib/utils";
 import { countryLabel } from "@/lib/country-label";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +15,8 @@ import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 // T-154d (audit n°26, P2-8) : confirmation favori via ToastProvider.
 import { useToast } from "@/components/ui/toast";
+// T-246 (audit n°5, A1) : choix explicite de la liste de destination.
+import { Dialog } from "@/components/ui/dialog";
 
 interface PropertyCardProps {
   property: PublicPropertyCard;
@@ -24,14 +26,19 @@ interface PropertyCardProps {
   /** T-154c (audit n°26, P2-6) : carte affichée dans une liste de favoris —
    *  le cœur devient un retrait unitaire via DELETE ?wishlistId&propertyId. */
   removeFavoriteFrom?: { wishlistId: string };
+  /** T-246 : autres listes de l'utilisateur, pour un déplacement en un clic. */
+  moveTargets?: { id: string; name: string }[];
 }
 
-export function PropertyCardClient({ property, showFavorite = true, searchQuery, removeFavoriteFrom }: PropertyCardProps) {
+export function PropertyCardClient({ property, showFavorite = true, searchQuery, removeFavoriteFrom, moveTargets = [] }: PropertyCardProps) {
   const router = useRouter();
   const { addToast } = useToast();
   const favorite = useWishlistToggle(property.id);
   const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
+  /** T-246 : dialogue « Ajouter / déplacer vers une liste ». */
+  const [listDialog, setListDialog] = useState<"add" | "move" | null>(null);
+  const [moving, setMoving] = useState(false);
   const rating = property.averageRating ? parseFloat(property.averageRating) : null;
 
   // T-131/T-132 : préférences d'affichage (devise = XAF par défaut plateforme,
@@ -89,7 +96,52 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
     }
   }
 
+  /** T-246 : déplacement transactionnel vers la liste choisie. */
+  async function moveTo(targetWishlistId: string) {
+    if (!removeFavoriteFrom) return;
+    setMoving(true);
+    setRemoveError(null);
+    try {
+      const res = await fetch("/api/wishlists/move", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          propertyId: property.id,
+          fromWishlistId: removeFavoriteFrom.wishlistId,
+          toWishlistId: targetWishlistId,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? t("fav.moveFail"));
+      }
+      addToast("success", t("fav.moved"));
+      setListDialog(null);
+      router.refresh();
+    } catch (e) {
+      const message = e instanceof Error ? e.message : t("settings.error");
+      setRemoveError(message);
+      addToast("error", message);
+    } finally {
+      setMoving(false);
+    }
+  }
+
+  /** T-246 : ajout dans une liste choisie (cœur de la carte de recherche). */
+  async function addToList(targetWishlistId: string) {
+    const outcome = await favorite.addTo(targetWishlistId);
+    if (outcome === "unauthenticated") {
+      // `assign` plutôt qu'une affectation : la règle react-hooks/immutability
+      // du dépôt interdit la mutation d'une valeur globale.
+      window.location.assign("/connexion?next=%2Frecherche");
+      return;
+    }
+    addToast("success", t("headerActions.favoriteAdded"));
+    setListDialog(null);
+  }
+
   return (
+    <>
     <Link
       href={`/hebergement/${property.slug}${searchQuery ? `?${searchQuery}` : ""}`}
       className="group bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-lg transition-shadow"
@@ -106,14 +158,30 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
           className="object-cover transition-transform duration-300 group-hover:scale-105"
         />
         {removeFavoriteFrom ? (
-          <button
-            onClick={removeFromFavorites}
-            aria-label={t("fav.remove")}
-            title={removeError ?? (t("fav.remove"))}
-            className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
-          >
-            {removing ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className="w-5 h-5 fill-[#FF5A5F] text-[#FF5A5F]" aria-hidden="true" />}
-          </button>
+          <>
+            <button
+              onClick={removeFromFavorites}
+              aria-label={t("fav.remove")}
+              title={removeError ?? (t("fav.remove"))}
+              className="absolute top-3 right-3 p-2 rounded-full bg-white/80 hover:bg-white transition-colors"
+            >
+              {removing ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className="w-5 h-5 fill-[#FF5A5F] text-[#FF5A5F]" aria-hidden="true" />}
+            </button>
+            {moveTargets.length > 0 && (
+              <button
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  setListDialog("move");
+                }}
+                aria-label={t("fav.moveToList")}
+                title={t("fav.moveToList")}
+                className="absolute top-3 right-14 p-2 rounded-full bg-white/80 hover:bg-white text-gray-600 transition-colors"
+              >
+                <FolderInput className="w-5 h-5" aria-hidden="true" />
+              </button>
+            )}
+          </>
         ) : showFavorite ? (
           <button
             onClick={addToFavorites}
@@ -124,6 +192,20 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
             {favorite.busy ? <Loader2 className="w-5 h-5 text-gray-600 animate-spin" /> : <Heart className={`w-5 h-5 ${favorite.saved ? "fill-[#FF5A5F] text-[#FF5A5F]" : "text-gray-600"}`} aria-hidden="true" />}
           </button>
         ) : null}
+        {!removeFavoriteFrom && showFavorite && favorite.lists.length > 1 && (
+          <button
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              setListDialog("add");
+            }}
+            aria-label={t("fav.chooseList")}
+            title={t("fav.chooseList")}
+            className="absolute top-12 right-3 p-1.5 rounded-full bg-white/80 hover:bg-white text-gray-600 transition-colors"
+          >
+            <FolderPlus className="w-4 h-4" aria-hidden="true" />
+          </button>
+        )}
         {property.isBestrewards && (
           <div className="absolute top-3 left-3">
             <Badge variant="bestrewards">💎 BestRewards</Badge>
@@ -195,5 +277,49 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
         </div>
       </div>
     </Link>
+
+    {/* T-246 — dialogue monté hors du <Link> : un clic dans la boîte ne doit
+        jamais ouvrir la fiche du logement. */}
+    <Dialog
+      open={listDialog !== null}
+      onClose={() => (moving ? undefined : setListDialog(null))}
+      title={listDialog === "move" ? t("fav.moveToList") : t("fav.chooseList")}
+      description={listDialog === "move" ? t("fav.moveHint") : t("fav.chooseHint")}
+      closeLabel={t("action.close")}
+      footer={
+        <button
+          type="button"
+          onClick={() => setListDialog(null)}
+          disabled={moving}
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+        >
+          {t("action.cancel")}
+        </button>
+      }
+    >
+      <ul className="space-y-1">
+        {(listDialog === "move" ? moveTargets : favorite.lists).map((list) => (
+          <li key={list.id}>
+            <button
+              type="button"
+              disabled={moving}
+              onClick={() => (listDialog === "move" ? moveTo(list.id) : addToList(list.id))}
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              {list.name || t("fav.listUnnamed")}
+            </button>
+          </li>
+        ))}
+      </ul>
+      {listDialog === "move" && (
+        <p className="mt-3 text-xs text-gray-500">{t("fav.moveFrom")}</p>
+      )}
+      {removeError && listDialog !== null && (
+        <p role="alert" className="mt-2 text-sm text-red-600">
+          {removeError}
+        </p>
+      )}
+    </Dialog>
+    </>
   );
 }

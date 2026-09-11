@@ -603,6 +603,53 @@ export const auditLog = pgTable("audit_log", {
   index("idx_audit_log_action").on(table.action, table.createdAt),
 ]);
 
+// ═══════════════════════════════════════════════
+// WALLET_TRANSACTIONS (T-248, audit n°5 — constat A6)
+// Journal **append-only** du wallet BestRewards. `users.wallet_balance` reste
+// la source de vérité (aucun écran ne change de logique) ; chaque mutation du
+// solde écrit une ligne **dans la même transaction**, ce qui permet
+// d'expliquer un solde à un utilisateur et de détecter un doublon de crédit.
+// `amount` est signé (crédit > 0, débit < 0) et libellé EUR, comme le solde.
+// ═══════════════════════════════════════════════
+export const walletTransactions = pgTable("wallet_transactions", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  balanceAfter: decimal("balance_after", { precision: 10, scale: 2 }).notNull(),
+  // cashback | referral_referee | referral_referrer | booking_refund |
+  // manual_adjustment | booking_payment (réservé à la consommation, T-248 §3)
+  kind: varchar("kind", { length: 32 }).notNull(),
+  bookingId: uuid("booking_id").references(() => bookings.id, { onDelete: "set null" }),
+  actorId: uuid("actor_id"),
+  note: varchar("note", { length: 255 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_wallet_transactions_user_created").on(table.userId, table.createdAt),
+  index("idx_wallet_transactions_kind_created").on(table.kind, table.createdAt),
+]);
+
+// ═══════════════════════════════════════════════
+// CRON_RUNS (T-250, audit n°5 — constat A7)
+// Trace d'exécution des tâches planifiées : le cron renvoyait 14 compteurs
+// dans sa réponse HTTP, mais **rien** ne les conservait. Un ordonnanceur
+// muet (URL changée, secret absent, conteneur arrêté) rendait invisible
+// l'arrêt des rappels et des alertes prix. Une ligne par exécution, purgée
+// par `purgeTechnicalData()` (comme `sessions` / `email_outbox`).
+// ═══════════════════════════════════════════════
+export const cronRuns = pgTable("cron_runs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  name: varchar("name", { length: 64 }).notNull(),
+  startedAt: timestamp("started_at").notNull(),
+  finishedAt: timestamp("finished_at"),
+  ok: boolean("ok").notNull().default(false),
+  durationMs: integer("duration_ms"),
+  counters: jsonb("counters"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("idx_cron_runs_name_started").on(table.name, table.startedAt),
+]);
+
 // Type exports
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
@@ -618,6 +665,10 @@ export type AppSetting = typeof appSettings.$inferSelect;
 export type NewAppSetting = typeof appSettings.$inferInsert;
 export type AuditLog = typeof auditLog.$inferSelect;
 export type NewAuditLog = typeof auditLog.$inferInsert;
+export type WalletTransaction = typeof walletTransactions.$inferSelect;
+export type NewWalletTransaction = typeof walletTransactions.$inferInsert;
+export type CronRun = typeof cronRuns.$inferSelect;
+export type NewCronRun = typeof cronRuns.$inferInsert;
 export type PriceAlert = typeof priceAlerts.$inferSelect;
 export type NewPriceAlert = typeof priceAlerts.$inferInsert;
 export type ReviewVote = typeof reviewVotes.$inferSelect;
