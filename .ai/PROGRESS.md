@@ -7,6 +7,35 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-11 — Audit n°5 (exécution) : 8 constats A1→A8, tâches T-245 → T-252
+
+- **Livré** : l'analyse `docs/analyse_2026-09-11_audit_runtime_execution.md` (copie
+  `REPORTS/analyse_runtime_n5_2026-09-11_execution.md`) — **aucune ligne de code produit modifiée**.
+  🔍 Scénarios rejoués : promos (200/200/400/404), stop-sell de bout en bout (recherche 8 → 7, fiche
+  « indisponible », devis et réservation **409**), réponse d'hôte (200, visible sur la fiche publique,
+  tiers 403), heure d'arrivée dans les 2 e-mails, alerte de prix créée puis supprimée par la route de
+  l'UI (201/200/404/400), disponibilité de chambre posée par l'hôte propriétaire (200, `stop_sell`
+  persisté), matrice de rôles (hôte → 307 sur les écrans admin, voyageur → 307 sur `/dashboard/*`).
+- **Constats** : **A1** favoris multi-listes à moitié câblé (tri API absent, pas de renommage, pas de
+  choix/déplacement) → **T-246** ; **A2** aucune pagination sur 6 écrans de liste et
+  `GET /api/bookings`/`/api/messages` sans borne (alors que `/api/reviews` et `/api/properties` le
+  sont) → **T-245** ; **A3** motifs de modération en `window.prompt` + `moderationReason` optionnel
+  → **T-247** ; **A4** `sort` inconnu ignoré en silence → **T-249** ; **A5** « conversation
+  inexistante » et « interdite » → même 403 → **T-251** ; **A6** wallet sans journal et non
+  dépensable depuis T-207 (reprise de **O1**) → **T-248** ; **A7** crons sans trace d'exécution →
+  **T-250** ; **A8** résidus T-207 (`applyWalletToTotal` sans appelant) → **T-252**.
+- **Hypothèses infirmées** (à ne pas rouvrir) : `DELETE /api/price-alerts/[id]` fonctionne et l'UI
+  `/mes-favoris` est complète ; `PUT /api/rooms/[id]/availability` fonctionne avec `{ days: [...] }` ;
+  `/api/auth/verify` n'est pas morte (lien des e-mails) ; **0** bouton mort sur **66** endpoints UI ;
+  **0** `TODO/FIXME` ; **0** `href="#"` ; clamp `limit` 1–100 ; rétention technique (T-243) et export
+  analytique (T-241) déjà livrés.
+- **Base** : remise à l'état seed exact — `bookings` 35, `email_outbox` 1, `review_votes` **0**,
+  `price_alerts` **0**, `room_availability.stop_sell` **0**, `reviews.host_reply` **0**, `wishlists` 1,
+  `conversations` 0 (contrôles SQL consignés au §5 du rapport).
+- **Étape suivante** : implémenter **T-247 → T-245 → T-249 → T-252 → T-246 → T-250 → T-251** puis
+  trancher la consommation du wallet avant **T-248** ; chaque correctif passe par `npm run ci` verte
+  et une vérification runtime.
+
 ## 2026-09-10 — Audit n°3 : T-232 (dates/fuseaux), T-233 (suspension d'hôte), T-234 (expiration paresseuse) + volet T-240
 
 - **Livré** : les constats **F1/F9/F10** (T-232), **F2** (T-233) et **F3** (T-234) de

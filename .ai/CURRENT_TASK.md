@@ -1,17 +1,55 @@
 # Tâche courante
 
-- **ID** : T-241 (audit n°3 : F11 + F12 + F13)
-- **Titre** : Finitions — « supprimé » vs « suspendu » (vérifié T-230), période analytique et export
-  CSV, erreurs d'API détaillées et schémas de mutation stricts
-- **Statut** : CORRIGÉ (VALIDÉ) — 2026-09-11 : les trois volets sont traités et couverts par
-  `npm run ci` (vitest 129 fichiers / 743 tests, smoke 95/95)
-- **Niveau** : S
-- **Analyse source** : `docs/analyse_2026-09-10_audit_runtime_scenarios.md` (F11 → F13)
-- **Rapports de cette tâche** : `.ai/REPORTS/analyse_impact_T241_2026-09-11_analytics_erreurs_api.md` ·
-  `.ai/REPORTS/analyse_conception_T241_2026-09-11_analytics_erreurs_api.md` ·
-  `.ai/REPORTS/validation_T241_2026-09-11_analytics_erreurs_api.md`
+- **ID** : T-245 → T-252 (audit n°5 : exécution — parcours métier et fins de parcours)
+- **Titre** : Pagination des listes, favoris multi-listes, dialogues de motif, journal du wallet,
+  bandeau « tri ignoré », supervision des crons, message de conversation, hygiène T-207
+- **Statut** : ANALYSE LIVRÉE (2026-09-11) — aucune ligne de code produit modifiée ; correctifs à mener
+- **Niveau** : S (passe d'analyse + correctifs de fin de parcours ; T-248 touche un solde monétaire et sera traité en dernier)
+- **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_execution.md`
+  (copie `.ai/REPORTS/analyse_runtime_n5_2026-09-11_execution.md`)
+- **Rapports produits** : `.ai/REPORTS/analyse_impact_T245_T252_2026-09-11_execution.md` ·
+  `.ai/REPORTS/analyse_conception_T245_T252_2026-09-11_execution.md`
+- **Rapport de validation attendu** : `.ai/REPORTS/validation_T245_T252_2026-09-11_execution.md` (à l'implémentation)
 
-## Livraison T-241 (2026-09-11)
+## Analyse n°5 (2026-09-11) — méthode et constats
+
+Cinquième passe d'exécution : les scénarios métier ont été rejoués (promos, stop-sell de bout en
+bout, réponse d'hôte publique, heure d'arrivée dans les e-mails, alertes prix, disponibilité de
+chambre par l'hôte, favoris, messagerie) **et** des surfaces jamais sondées ont été attaquées
+(volumétrie des écrans de liste, cycle de vie complet d'une liste de favoris, saisie des motifs de
+modération, traçabilité du wallet, supervision des tâches planifiées). Moyens : matrice de rôles
+(3 rôles), sonde d'endpoints, sonde de flux, 3 scripts de scénarios, analyse croisée des **66
+endpoints appelés par l'UI** (0 manquant), contrôles SQL après chaque écriture. Base remise à l'état
+seed : `bookings` 35, `email_outbox` 1, `review_votes` 0, `price_alerts` 0, `stop_sell` 0,
+`host_reply` 0, `wishlists` 1, `conversations` 0.
+
+| # | Constat | Tâche | Niveau |
+|---|---|---|---|
+| A1 | Favoris : multi-listes à moitié câblé (ordre non déterministe, pas de renommage, pas de choix/déplacement de liste) | T-246 | M |
+| A2 | Aucune pagination sur 6 écrans de liste ; `GET /api/bookings` et `/api/messages` renvoient tout | T-245 | M |
+| A3 | Motifs de modération en `window.prompt`, `moderationReason` optionnel côté API | T-247 | S |
+| A4 | `sort` inconnu ignoré en silence (seul filtre sans bandeau T-175) | T-249 | S |
+| A5 | Messagerie : « introuvable » et « interdit » → même 403 | T-251 | XS |
+| A6 | Wallet : 4 familles d'écriture sans journal ; solde non dépensable depuis T-207 (O1) | T-248 | M |
+| A7 | Crons sans trace d'exécution ni supervision | T-250 | S |
+| A8 | Résidus T-207 : `applyWalletToTotal` sans appelant, `useWalletCredits` non documenté | T-252 | XS |
+
+**Vérifié sain et à ne pas rouvrir** : `DELETE /api/price-alerts/[id]` (200/404/400) et UI
+`/mes-favoris` complète ; `PUT /api/rooms/[id]/availability` avec `{ days: [...] }` par l'hôte
+propriétaire ; `/api/auth/verify` n'est pas morte (lien des e-mails) ; stop-sell appliqué
+(recherche 8 → 7, devis et réservation 409) ; réponse d'hôte publiée sur la fiche ; heure d'arrivée
+dans les 2 e-mails ; promos 200/200/400/404 ; clamp `limit` 1–100 ; 0 bouton mort, 0
+`TODO/FIXME`, 0 `href="#"` ; rétention technique (T-243) et export analytique (T-241) déjà livrés.
+
+## Suite
+
+- Ordre recommandé : **T-247 → T-245 → T-249 → T-252 → T-246 → T-250 → T-251 → T-248** (T-248 en
+  dernier : trancher d'abord la consommation du wallet — avoir au règlement sur place ou gel).
+- Chaque correctif : `npm run ci` verte (typecheck · lint · i18n · ai:check · vitest · build · smoke)
+  puis vérification runtime, avant commit `fix(...)`/`feat(...)`.
+- Resynchronisation de `STATE.md` sur le HEAD final (R7) avant clôture de session.
+
+## Livraison T-241 (2026-09-11) — audit n°3, volets F11 + F12 + F13
 
 **(a) F11 — « supprimé » ≠ « suspendu ».** Déjà livré par T-230 : `users.suspended_at` distinct de
 `deleted_at`, bouton **Réactiver** remplacé par « Compte anonymisé — non réactivable ». Vérifié en

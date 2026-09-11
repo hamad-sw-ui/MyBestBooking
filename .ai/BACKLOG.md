@@ -493,6 +493,87 @@ Analyse complète : `docs/analyse_2026-09-10_audit_runtime_inacheves.md` (11 con
 - 🟢 **O6** — Pas d'export CSV dans `/dashboard/analytics`.
 
 
+### Audit n°5 (2026-09-11) — exécution : parcours métier et fins de parcours
+
+Analyse complète : `docs/analyse_2026-09-11_audit_runtime_execution.md` (copie
+`.ai/REPORTS/analyse_runtime_n5_2026-09-11_execution.md`) — 8 constats A1→A8, tous vérifiés au
+runtime (promos, stop-sell, réponses d'avis, heure d'arrivée, alertes prix, disponibilité de
+chambre, favoris, messagerie, matrice de rôles, analyse croisée des 66 endpoints appelés par l'UI).
+Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état seed (contrôles SQL en
+§5 du rapport : `review_votes` 0, `price_alerts` 0, `stop_sell` 0, `bookings` 35).
+
+- 🟠 **T-245 (M/P2) — *A2 — aucune pagination sur les écrans de liste.** Les pages RSC
+  `dashboard/bookings`, `users`, `reviews`, `properties`, `promotions` et `mes-reservations` n'ont
+  aucun `.limit()` (grep : 0 occurrence) et chargent la totalité des lignes ; `GET /api/bookings` et
+  `GET /api/messages` renvoient toutes les lignes alors que `GET /api/reviews` et
+  `GET /api/properties` sont paginés (clamp 1–100, prouvé : `?limit=1000` → `limit=100`) ;
+  `audit-filter.tsx:27` documente lui-même « pas de pagination API ». Invisible sur le seed
+  (8 users / 35 réservations / 26 avis) = mur de charge. Livrable : pagination **côté page** pour les
+  écrans RSC (`?page=N`, 25 lignes, composant `Pagination` partagé, compteur « X résultats ») et
+  pagination **opt-in** des API (`limit`/`offset` ignorés si absents → corps inchangé, en-tête
+  `X-Total-Count`, bornes identiques à `/api/properties`). Tests de contrat « sans paramètre =
+  réponse actuelle » + bornes (`limit=0/-1`, `offset=-1` → 400).
+- 🟠 **T-246 (M/P2) — *A1 — favoris : multi-listes à moitié câblé.** `GET /api/wishlists` ne trie
+  pas (0 `orderBy`) alors que le cœur écrit dans `wishlists[0]` (`use-wishlist-toggle.ts:138`) et
+  que `/mes-favoris` affiche par `createdAt desc` → le favori peut atterrir dans une autre liste que
+  celle affichée, sans choix possible ; `updateWishlistSchema` (`.strict()`) refuse `name` → pas de
+  renommage ; aucun retrait/déplacement d'un favori depuis `/mes-favoris`. Livrable : tri stable +
+  `defaultWishlistId`, `name` optionnel dans le PATCH (+ UI de renommage), sélecteur de liste dans le
+  cœur (défaut = comportement actuel), action « déplacer » transactionnelle. Ajouts additifs, verrou
+  i18n mis à jour.
+- 🟠 **T-247 (S/P2) — *A3 — motifs de modération en `window.prompt` et facultatifs.** Trois écrans
+  admin (`review-moderate-actions.tsx:40`, `user-suspend-actions.tsx:63`,
+  `property-validate-actions.tsx:25`) utilisent le dialogue natif (aucune validation, aucun style,
+  dismiss silencieux, bloqué dans certains environnements) et `moderationReason` est `optional`
+  (`reviews/[id]/moderate/route.ts:16`) → un avis `hidden`/`rejected` peut l'être sans motif (e-mail
+  à l'auteur et `audit_log` sans raison). Livrable : composant `Dialog` réutilisable (rôle, focus,
+  Esc, compteur 500 car.) remplaçant les 3 `prompt` sans changer les appels réseau, et
+  `superRefine` : motif obligatoire pour `hidden`/`rejected` (400 via `issues`), `approved`/`pending`
+  inchangés. Tests route (400 sans motif) + dialogue + trace `audit_log.metadata.reason`.
+- 🟠 **T-248 (M/P2) — *A6 — wallet sans journal ni consommation (reprise de O1).**
+  `users.walletBalance` est muté par 4 familles de code (clôture manuelle, cron cashback/parrainage/
+  remboursements, `booking-benefits`, `booking-request-expiration`) sans aucune trace ; depuis T-207
+  (`useWalletCredits` ignoré, `walletUsedEur = 0`) le solde BestRewards ne peut **jamais** être
+  dépensé, alors que 3 écrans l'affichent comme un avantage. Livrable : table append-only
+  `wallet_transactions` (migration **0023**, montant EUR, `kind`, `booking_id`, `balance_after`)
+  écrite **dans les transactions existantes** (balance inchangée = source de vérité), historique des
+  20 derniers mouvements dans `/mon-compte`, puis décision produit : avoir au règlement sur place
+  (`markPaidOffline`) **ou** gel explicite du programme. Tests : « 1 crédit = 1 ligne », idempotence
+  du rejeu de cron, soldes inchangés après clôture manuelle et expiration.
+- 🟢 **T-249 (S/P3) — *A4 — tri ignoré en silence.** `GET /api/properties?sort=…` inconnu → 200 avec
+  tri `rating` par défaut (`route.ts:216`) alors que les 4 autres filtres écartés déclenchent un
+  bandeau (T-175, `search-warnings.ts`). Livrable : warning `sortIgnored` + clé
+  `search.warn.sortIgnored` (verrou i18n 1682 → **1684**), API inchangée (tolérance conservée),
+  test `search-warnings.test.ts` (inconnu → `["sortIgnored"]`, valide → `[]`).
+- 🟢 **T-250 (S/P3) — *A7 — tâches planifiées sans trace.** Le cron `price-alerts` exécute 14
+  opérations (rappels J-3/J-1, demandes d'avis, clôtures, expirations, alertes prix, purge
+  technique) et n'écrit **aucune** trace (0 `recordAudit`) ; `/api/health` ne teste que PostgreSQL →
+  un cron muet (URL/clé/panne) est invisible. Livrable : table `cron_runs` (`name`, `started_at`,
+  `finished_at`, `ok`, `duration_ms`, `counters` JSONB, `error_message`) écrite en fin d'exécution
+  **et** dans le `catch`, écran admin « Tâches planifiées » (dernier passage, âge, compteurs, badge
+  rouge au-delà de 2× la période), purge intégrée à `purgeTechnicalData()` (T-243).
+- 🟢 **T-251 (XS/P3) — *A5 — messagerie : introuvable et interdit partagent le 403.**
+  `checkParticipant()` renvoie `null` dans les deux cas → `GET /api/messages` répond
+  « Accès refusé » même pour un UUID inexistant (prouvé). Le cloisonnement est correct (aucune fuite)
+  mais un lien périmé est indiscernable d'un refus. Livrable : message neutre « Conversation
+  introuvable ou non accessible » + code machine additif `CONVERSATION_NOT_ACCESSIBLE` (le champ
+  `error` reste inchangé), page « conversation indisponible » avec retour à la liste.
+- 🟢 **T-252 (XS/P3) — *A8 — hygiène T-207.** `applyWalletToTotal()` (`wallet-currency.ts:28`) n'a
+  plus aucun appelant applicatif (seul son test l'exerce) et `useWalletCredits` (accepté puis ignoré)
+  n'est pas recensé dans `KNOWN_LIMITATIONS.md`. Livrable : suppression de la fonction et de son
+  test **ou** annotation `@deprecated` + inscription dans les « surfaces inactives » ;
+  `useWalletCredits` documenté avec la décision T-207.
+
+Confirmations de la même campagne (aucune ligne de BACKLOG ajoutée pour elles, à ne pas rouvrir) :
+`DELETE /api/price-alerts/[id]` fonctionne (200 / 404 / 400) et l'UI `/mes-favoris` est complète ;
+`PUT /api/rooms/[id]/availability` fonctionne avec le corps `{ days: [...] }` par l'hôte propriétaire ;
+`/api/auth/verify` n'est pas une route morte (lien des e-mails `register`/`resend-verification`) ;
+stop-sell réellement appliqué (recherche 8 → 7, page sans la fiche, devis et réservation 409) ;
+réponse d'hôte publiée et visible sur la fiche ; heure d'arrivée présente dans les 2 e-mails ;
+promos valides/en minuscule/sous minimum/inconnues → 200/200/400/404 ; **0 bouton mort** (66 endpoints
+UI ↔ routes), **0** `TODO/FIXME`, **0** `href="#"`. La rétention technique (T-243) et l'export
+analytique (T-241/O6) sont déjà livrés.
+
 ### Audit T-242 (2026-09-10) — audit de profondeur (analyse n°4)
 
 Analyse : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie

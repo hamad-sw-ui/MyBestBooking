@@ -5,7 +5,39 @@ en haut). Aucun format imposé — quelques lignes suffisent : ce qu'on a fait,
 ce qu'on a appris, ce qu'on laisse pour la prochaine fois.
 
 ---
-## 2026-09-10 — T-221 → T-231, T-242 → T-244 : mise en œuvre des remarques d'audit
+## 2026-09-11 — Audit n°5 (exécution) : parcours métier et fins de parcours
+
+**Fait.** Cinquième passe d'analyse à l'exécution (aucune ligne de code produit modifiée) :
+rejeu des scénarios métier (promos valide/minuscule/sous minimum/inconnue, stop-sell de bout
+en bout — recherche 8 → 7, devis et réservation 409 —, réponse d'hôte publiée puis retirée,
+heure d'arrivée dans les 2 e-mails, alerte de prix créée puis supprimée par la route de l'UI,
+disponibilité de chambre posée par l'hôte propriétaire) et attaque de surfaces jamais sondées
+(volumétrie des écrans de liste, cycle de vie complet d'une liste de favoris, saisie des motifs
+de modération, traçabilité du wallet, supervision des crons). Huit constats A1→A8 documentés dans
+`docs/analyse_2026-09-11_audit_runtime_execution.md` (copie `REPORTS/analyse_runtime_n5_2026-09-11_execution.md`),
+tâches **T-245 → T-252** au BACKLOG, base remise à l'état seed (contrôles SQL).
+
+**Appris.**
+1. Deux « 405 » et un « 400 » de la campagne d'échantillonnage étaient **mes** erreurs, pas celles du
+   site : le `DELETE` des alertes prix passait par la collection (l'UI utilise `/[id]`, qui répond 200),
+   et `PUT /rooms/[id]/availability` attend un lot `{ days: [...] }`. Vérifier le corps attendu et la
+   route réellement appelée **avant** de conclure à un bouton cassé.
+2. Une route sans `fetch` appelant n'est pas morte : `/api/auth/verify` est le **lien cliquable**
+   construit dans les e-mails d'inscription. Grâce aux recherches d'appelants littéraux, les routes
+   « invisibles » doivent être recoupées avec les chaînes interpolées des gabarits d'e-mails.
+3. Les défauts les plus utiles trouvés cette fois ne sont pas des bugs mais des **fins de parcours** :
+   un multi-listes qui ne permet pas de choisir sa liste, des tableaux qui chargent tout, un motif de
+   modération facultatif côté API alors qu'il est demandé à l'écran, un tri ignoré sans bandeau, un
+   wallet crédité sans journal, des crons sans trace. Le socle métier, lui, tient à l'exécution.
+4. Une fonctionnalité « désactivée » (wallet non dépensable depuis T-207) reste un **choix produit à
+   documenter** : l'observation O1 du BACKLOG a été reprise en tâche T-248 avec la mesure du problème
+   (4 familles d'écriture, 21 mutations de solde, aucun journal).
+
+**Prochaine fois.** Implémenter dans l'ordre T-247 → T-245 → T-249 → T-252 → T-246 → T-250 → T-251,
+et trancher d'abord la consommation du wallet (avoir sur règlement sur place ou gel assumé) avant
+T-248.
+
+
 
 **Fait.** Les onze constats A1→A11 (audit n°2) et les trois constats N1→N3
 (audit n°4) sont implémentés et validés. Ordre suivi : A1+A2 (échéance des
