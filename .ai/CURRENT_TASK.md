@@ -1,6 +1,62 @@
 # Tâche courante
 
-- **ID** : Audit n°6 — lots **A → D** (décisions **oui ×4** reçues le 2026-09-11)
+- **ID** : Audit n°7 — analyse runtime « fins de parcours », constats **C1 → C6** (2026-09-11)
+- **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution (7ᵉ passe)
+- **Statut** : ✅ **ENTIÈREMENT SOLDÉ (2026-09-11) — les 3 lots livrés et validés** :
+  **lot A** (commit 1/3 de cette pile) (C1 → **T-265** re-vérification du bien avant confirmation, C2 → **T-266**
+  remboursement hors plateforme finalisable par l'hôte + label « à traiter par l'hébergeur »),
+  **lot B** (commit 2/3) (C3 → **T-267** visuel neutre + état vide « Pas encore de photos »,
+  C4 → **T-268** claim invité pose `emailVerified`), **lot C** (commit 3/3) (C5 → **T-269** colonne
+  `bookings.confirmed_at` posée dans la transaction de confirmation + timeline qui la lit,
+  C6 → **T-270** `/messages` : dernier message en **une** requête IN-liste + fenêtre T-245
+  (25 par défaut, « Afficher 25 de plus », plafond 500) + même condition SQL pour la liste et
+  le compteur du bandeau).
+- **Preuves du lot C** : `route.t269.test.ts` **4/4** (pose ≈ maintenant, stabilité après
+  `markPaidOffline`, timeline RSC = date de confirmation et non du dernier update, repli
+  `updated_at` sur ligne historique NULL) ; `page.t270.test.ts` **4/4** (25 sur 30 + liens,
+  `?limit=100` complet sans bandeau, 0 requête N+1 et 1 IN-liste comptées sur le pool, fils
+  vides > 7 jours ni affichés ni comptés) ; correctif de robustesse `list-window.t257`
+  (23 chambres codées en dur → comptage dynamique, le seed est aléatoire) ; **chaîne CI
+  complète verte** (typecheck 0 · lint 0/0 · i18n · ai:check · vitest intégral · build ·
+  smoke 95/95) ; runtime sur serveur réel : confirmation → `confirmed_at` stable après
+  `markPaidOffline` (timeline « 11 sept. 2026, 18:00 ») et `/messages` 200 avec bandeau
+  « 25 résultats affichés sur 30 » / `?limit=100` complet. Base rendue à l'état seed exact.
+- **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_n7_fins_de_parcours.md`
+  (copie `.ai/REPORTS/analyse_2026-09-11_audit_runtime_n7_fins_de_parcours.md`)
+- **Moyens** : base neuve + seed complet, 46 pages × 4 rôles balayées (0 erreur applicative),
+  78 liens internes dashboard sondés (tous résolus), cycles rejoués de bout en bout (demande →
+  confirmation → paiement sur place → facture → annulation avec devis → clôture → avis),
+  scénario d'exception « demande confirmée après suspension de l'annonce » (C1), annulation
+  d'un paiement sur place (C2), claim invité (C4), favoris multi-listes + partage, 2FA,
+  alerte prix, cron d'expiration, validation d'annonce, suspension de compte, promotions.
+- **Constats** : **C1** (demande pending confirmable après suspension de l'annonce /
+  désactivation de la chambre — transition sans re-vérification du bien ; fiche publique 404) ·
+  **C2** (remboursement hors plateforme « en cours » indéfiniment — `refundStatus=pending` sans
+  aucun chemin vers `refunded`, ni action hôte) · **C3** (annonce sans photo : la
+  `placeholder-property.jpg` est une copie de `villa-azure-1.jpg` — photo d'autrui en galerie) ·
+  **C4** (claim invité : `emailVerified` reste `false` malgré la preuve de la boîte mail) ·
+  **C5** (timeline : étape « confirmée » datée de `updated_at` — colonne `confirmed_at` absente) ·
+  **C6** (`/messages` voyageur : 1+N requêtes + pas de fenêtre `parsePageWindow`, contrairement
+  aux 9 autres écrans T-245/T-257). **Tous les six sont corrigés** (T-265 → T-270).
+- **Lots livrés** : **A** (C1, C2) intégrité cycle de réservation + état de remboursement
+  (commit 1/3) · **B** (C3, C4) visuels honnêtes + fin de parcours du claim (commit 2/3) ·
+  **C** (C5, C6) timeline précise + cohérence du contrat de fenêtre (ce commit). Tous les
+  correctifs sont **non régressifs** (aucun contrat existant modifié).
+- **Vérifié sain (à ne pas rouvrir)** : balayage 4 rôles 0 erreur ; 78 liens OK ; cycle de vie
+  complet (e-mails ×2 à chaque étape, clôture refusée avant paiement) ; expiration cron (e-mails
+  voyageur + hôte) ; avis de bout en bout (agrégats, réponse hôte, modération + motif, vote utile
+  auto-vote 400 / double 409) ; 2FA (setup → TOTP → code erroné 401 → désactivation) ; claim
+  invité (token consommé, login) ; alerte prix (seuils, idempotence) ; validation (hôte 403,
+  e-mail hôte) ; suspension (login 401 → réactivation) ; favoris (partage 200 anonyme, move
+  atomique, IDOR 404) ; promotions (aperçu + compteur) ; i18n warn-only (6 candidats
+  pré-existants) ; cookies session httpOnly + secure(prod) + sameSite=lax.
+- **État de la base** : rendu à l'état seed exact après le lot C (8 properties / 8 users /
+  33 bookings / 0 outbox / 0 audit_log / 0 conversations / 0 sessions — le seed est aléatoire,
+  le total de bookings/rooms varie à chaque seed : 23 rooms sur cette passe).
+
+---
+
+## Livraison précédente — Audit n°6 (lots **A → D**, décisions **oui ×4** reçues le 2026-09-11)
 - **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution
 - **Statut** : ✅ **IMPLÉMENTATION LIVRÉE (2026-09-11) — audit n°6 entièrement soldé (B1 → B12)** — **lot A livré** (`11165d4` : B1/B2/B3/B11),
   **lot B livré** (B4 → **T-257**, B5 → **T-258**, `76ec5b9` ; B6 → **T-259**, `dfd0a5e`) et

@@ -23,9 +23,13 @@ import { resolve } from "node:path";
  * Alias documentés (copies locales volontaires, fidélité historique) :
  * - `dest-tunis.jpg` = `dar-el-medina-1.jpg` (médina de Tunis : la même
  *   photo Unsplash servait historiquement la fiche ET la destination) ;
- * - `hero-home.jpg` = `dar-el-medina-1.jpg` (idem pour le fond du hero) ;
- * - `placeholder-property.jpg` = `villa-azure-1.jpg` (placeholder
- *   d'attente — pourra être remplacé par un visuel dédié neutre).
+ * - `hero-home.jpg` = `dar-el-medina-1.jpg` (idem pour le fond du hero).
+ *
+ * `placeholder-property.jpg` est un **visuel neutre dédié** (fond dégradé
+ * abstrait, sans photo de bien) : T-267 (audit n°7, C3) l'a remplacé car il
+ * était jadis une copie de `villa-azure-1.jpg` — une annonce sans photo
+ * affichait ainsi la photo **d'une autre propriété**. Ne jamais le recopier
+ * depuis un visuel de bien réel.
  *
  * Le chemin servi est PUBLIC (statique Next) ; avec l'optimizer activé
  * (T-186 étape 2) ces mêmes chemins passeront par `/_next/image` en

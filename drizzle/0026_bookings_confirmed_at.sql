@@ -1,0 +1,12 @@
+-- T-269 (audit n°7, C5) — migration additive : date réelle de confirmation.
+--
+-- La timeline de la fiche réservation (dashboard) datait l'étape
+-- « Réservation confirmée » avec `updated_at` : après tout update postérieur
+-- (paiement constaté sur place, annulation…), la date affichée dérivait.
+-- `confirmed_by` existait déjà, mais la DATE de l'acte manquait (alors que
+-- `cancelled_at`, `refunded_at`, `loyalty_awarded_at` existent).
+--
+-- Nullable, sans défaut : les lignes historiques restent NULL et la timeline
+-- replie sur `updated_at` (comportement d'affichage actuel, inchangé pour
+-- l'existant). La colonne est posée dans la transaction de confirmation.
+ALTER TABLE "bookings" ADD COLUMN IF NOT EXISTS "confirmed_at" timestamp;

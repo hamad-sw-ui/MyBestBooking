@@ -122,7 +122,14 @@ dbTest("T-257 — /dashboard/rooms : une requête pour toutes les chambres de l'
   it("au-delà de 25 chambres, la fenêtre borne et le bandeau propose d'élargir", async () => {
     const { db } = await import("@/db");
     const schema = await import("@/db/schema");
+    const { inArray } = await import("drizzle-orm");
     const propertyId = hostPropertyIds[0]!;
+    // Le seed est aléatoire (2–4 chambres par bien) : on compte les chambres
+    // existantes de l'hôte plutôt que d'en coder un total en dur.
+    const existing = await db
+      .select({ id: schema.rooms.id })
+      .from(schema.rooms)
+      .where(inArray(schema.rooms.propertyId, hostPropertyIds));
     for (let index = 0; index < 3; index += 1) {
       const [room] = await db
         .insert(schema.rooms)
@@ -145,7 +152,8 @@ dbTest("T-257 — /dashboard/rooms : une requête pour toutes les chambres de l'
       (await page({ searchParams: Promise.resolve({}) })) as React.ReactElement,
     );
 
-    const total = 23 + 3; // 23 chambres seed de l'hôte + les 3 créées ici
+    const total = existing.length + 3;
+    expect(total).toBeGreaterThan(25); // précondition : la fenêtre doit mordre
     expect(html).toContain(`25 résultats affichés sur ${total}`);
     expect(html).toContain("limit=50");
     expect(html).toContain(`Tout afficher (${total})`);

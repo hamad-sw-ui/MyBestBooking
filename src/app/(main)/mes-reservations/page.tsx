@@ -296,7 +296,7 @@ export default async function MyBookingsPage({
                           
                           {booking.status === "cancelled" && (
                             <div className="mt-3 text-sm rounded-lg bg-amber-50 border border-amber-200 p-3 text-amber-900">
-                              {t("bookings.fee")} : {formatPrice(booking.cancellationFee ?? "0", booking.currency, locale)} · {t("bookings.refund")} : {formatPrice(booking.refundAmount ?? "0", booking.currency, locale)} ({booking.refundStatus === "refunded" ? t("bookings.refundDone") : booking.refundStatus === "pending" ? t("bookings.refundPending") : t("bookings.refundNone")})
+                              {t("bookings.fee")} : {formatPrice(booking.cancellationFee ?? "0", booking.currency, locale)} · {t("bookings.refund")} : {formatPrice(booking.refundAmount ?? "0", booking.currency, locale)} ({booking.refundStatus === "refunded" ? t("bookings.refundDone") : booking.refundStatus === "pending" ? (booking.paymentMethodOffline ? t("bookings.refundManual") : t("bookings.refundPending")) : t("bookings.refundNone")})
                             </div>
                           )}
                           {/* T-153 (audit n°25, G) : séjour passé mais non

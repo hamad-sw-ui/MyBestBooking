@@ -7,6 +7,8 @@ import { getPaymentProvider } from "@/lib/payment";
 import { releaseBookingBenefits } from "@/lib/booking-benefits";
 import { enqueueEmail, deliverEmail } from "@/lib/email-outbox";
 import { templates } from "@/lib/mail";
+import { mailStrings, toMailLocale } from "@/lib/mail/strings";
+import { renderTemplate } from "@/lib/mail/render";
 import { refundLateCapturedPayment } from "@/lib/payment-events";
 
 export class BookingCancellationError extends Error {}
@@ -105,6 +107,26 @@ export async function notifyBookingCancellation(
   // T-156 : annulation par l'hébergeur/admin → e-mail plateforme
   // « remboursement intégral » (jamais « frais appliqués ») ; annulation
   // voyageur → template admin historique (inchangé).
+  // T-266 (audit n°7, C2) : quand un remboursement est dû, l'e-mail voyageur
+  // dit le montant ET la modalité. Le paiement hors plateforme n'a aucun
+  // réconciliateur en arrière-plan : « en cours » y serait un mensonge —
+  // c'est l'hébergeur qui le traite. Aucun remboursement (demande non payée
+  // annulée) → `refundLine` null, l'e-mail est strictement inchangé.
+  let refundLine: string | null = null;
+  if (
+    actor === "customer" &&
+    outcome.booking.refundStatus === "pending" &&
+    Number(outcome.booking.refundAmount ?? 0) > 0
+  ) {
+    const refundLocale = toMailLocale(guest?.language ?? null);
+    const refundAmount = Number(outcome.booking.refundAmount ?? 0).toFixed(2);
+    const currency = outcome.booking.currency ?? "EUR";
+    const s = mailStrings(refundLocale);
+    refundLine = renderTemplate(
+      outcome.booking.paymentMethodOffline ? s.cancelRefundOffline : s.cancelRefundPending,
+      { refundAmount, currency },
+    );
+  }
   const mail = actor === "host" || actor === "admin"
     ? await templates.bookingCancelledByOperator({
         firstName: outcome.booking.guestFirstName,
@@ -121,6 +143,7 @@ export async function notifyBookingCancellation(
         propertyName: outcome.propertyName,
         cancellationFee: outcome.cancellationFee.toFixed(2),
         currency: outcome.booking.currency ?? "EUR",
+        refundLine,
         language: guest?.language ?? null,
       });
   const eventKey = `booking-cancellation:${outcome.booking.id}`;

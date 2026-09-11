@@ -28,7 +28,22 @@ export async function POST(request: NextRequest) {
     if (!userId) return NextResponse.json({ error: await apiError("Lien invalide ou expiré") }, { status: 400 });
 
     const passwordHash = await hashPassword(password);
-    await db.update(users).set({ passwordHash, updatedAt: new Date() }).where(eq(users.id, userId));
+    // T-268 (audit n°7, C4) : le lien de claim a été LIVRÉ et SUIVI dans la
+    // boîte mail revendiquée — la maîtrise de l'adresse est prouvée par
+    // définition du flux. On pose donc emailVerified (le bouton « renvoyer la
+    // vérification » n'a plus aucun sens juste après un claim réussi). Le
+    // flux historique (mot de passe oublié) reste strictement inchangé : le
+    // périmètre du correctif est le constat C4 (claim invité), et le contrat
+    // d'inscription classique (« vérifié » = lien de vérification suivi) est
+    // conservé tel quel.
+    await db
+      .update(users)
+      .set({
+        passwordHash,
+        updatedAt: new Date(),
+        ...(claimGuest ? { emailVerified: true } : {}),
+      })
+      .where(eq(users.id, userId));
     await db.delete(sessions).where(eq(sessions.userId, userId));
     if (claimGuest) {
       await createSession(userId);

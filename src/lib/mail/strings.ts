@@ -86,6 +86,10 @@ interface MailStrings {
   requestCtaHost: string;
   cancelSubject: string;
   cancelBody: string;
+  // T-266 (audit n°7, C2) : ligne de remboursement ajoutée à l'e-mail
+  // d'annulation quand un remboursement est dû (jamais ajoutée sinon).
+  cancelRefundPending: string;
+  cancelRefundOffline: string;
   reminderSubject: string;
   reminderBody: string;
   reviewSubject: string;
@@ -187,6 +191,10 @@ const FR: MailStrings = {
     "Bonjour {firstName},\n\n" +
     "Votre réservation {bookingReference} pour {propertyName} a été annulée.\n\n" +
     "Frais d'annulation appliqués : {cancellationFee} {currency}.",
+  cancelRefundPending:
+    "Le remboursement de {refundAmount} {currency} est en cours.",
+  cancelRefundOffline:
+    "Le remboursement de {refundAmount} {currency} sera traité directement par l'hébergeur.",
   reminderSubject: "Votre séjour à {propertyName} approche ({checkIn})",
   reminderBody:
     "Bonjour {firstName},\n\n" +
@@ -293,6 +301,10 @@ const EN: MailStrings = {
     "Hi {firstName},\n\n" +
     "Your booking {bookingReference} for {propertyName} has been cancelled.\n\n" +
     "Cancellation fee applied: {cancellationFee} {currency}.",
+  cancelRefundPending:
+    "The refund of {refundAmount} {currency} is in progress.",
+  cancelRefundOffline:
+    "The refund of {refundAmount} {currency} will be handled directly by the host.",
   reminderSubject: "Your stay at {propertyName} is coming up ({checkIn})",
   reminderBody:
     "Hi {firstName},\n\n" +

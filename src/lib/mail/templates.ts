@@ -263,10 +263,15 @@ export const templates = {
   },
 
   async bookingCancellation({
-    firstName, bookingReference, propertyName, cancellationFee, currency, language,
+    firstName, bookingReference, propertyName, cancellationFee, currency, refundLine, language,
   }: {
     firstName: string; bookingReference: string; propertyName: string;
-    cancellationFee: string; currency: string; language?: string | null;
+    cancellationFee: string; currency: string;
+    /** T-266 (audit n°7, C2) : ligne de remboursement (montant + modalité),
+     *  calculée par l'appelant ; `null` = aucun remboursement dû (la ligne
+     *  est alors absente, gabarits existants inchangés). */
+    refundLine?: string | null;
+    language?: string | null;
   }) {
     const loc = toMailLocale(language);
     const s = mailStrings(loc);
@@ -277,7 +282,10 @@ export const templates = {
       { subject: s.cancelSubject, body: s.cancelBody },
     );
     const subject = renderTemplate(tpl.subject, vars);
-    const bodyRendered = renderTemplate(bodyToHtml(tpl.body), vars);
+    // La ligne est ajoutée par la plateforme (pas un placeholder du gabarit
+    // admin) : un gabarit personnalisé qui ne la référence pas reste valide.
+    const body = refundLine ? `${tpl.body}\n\n${refundLine}` : tpl.body;
+    const bodyRendered = renderTemplate(bodyToHtml(body), vars);
     const html = layout(bodyRendered, loc);
     return { subject, html, text: stripHtml(html) };
   },

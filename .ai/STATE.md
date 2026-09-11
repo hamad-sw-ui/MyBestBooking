@@ -3,8 +3,45 @@
 ## 📌 Identification
 
 - **Projet** : MyBestBooking
-- **Branche actuelle** : `arena/01a08b7d-mybestbooking` (branche Arena active)
-- **Dernière analyse (2026-09-11, après le gel wallet T-248 §3)** : **audit runtime n°6** —
+- **Branche actuelle** : `arena/01a0913d-mybestbooking` (branche Arena active)
+- **Implémentation de l'audit n°7 (2026-09-11) — audit entièrement soldé, lots A→C livrés** :
+  **lot A (commit 1/3)** — **C1 → T-265** : la confirmation d'une demande re-vérifie le bien et la
+  chambre **dans la transaction** (annonce suspendue ou chambre désactivée → `409` au lieu d'un
+  séjour réalisable sur un bien sanctionné ; la fiche publique 404 n'est plus contournable) et
+  **C2 → T-266** : le remboursement hors plateforme n'est plus « en cours » indéfiniment —
+  l'hôte peut le **finaliser** (`refundStatus → refunded`, action + e-mail), et l'état `pending`
+  est relabelé « **à traiter par l'hébergeur** » (FR/EN) sur `/mes-reservations` ;
+  **lot B (commit 2/3)** — **C3 → T-267** : le placeholder est un **visuel neutre dédié** (plus de
+  photo d'autrui) et l'annonce sans photo rend un **état vide explicite** sur la fiche publique
+  (plus aucune image de substitution) et **C4 → T-268** : le claim invité pose
+  `emailVerified=true` (la maîtrise de la boîte mail est prouvée par le claim) ;
+  **lot C (ce commit)** — **C5 → T-269** : migration additive `0026` — `bookings.confirmed_at`
+  posée **dans la transaction de confirmation** ; la timeline dashboard lit
+  `confirmedAt ?? updatedAt ?? createdAt` (lignes historiques inchangées, la date affichée ne
+  glisse plus après un `markPaidOffline`) et **C6 → T-270** : `/messages` — dernier message des
+  fils de la fenêtre en **une requête IN-liste** (fin du 1+N), **fenêtre T-245** (25 par défaut,
+  « Afficher 25 de plus », « Tout afficher (N) », plafond 500 — 9ᵉ écran rattrapé) et
+  **visibilité + recherche en SQL partagé** entre la liste et le compteur du bandeau (le « N sur
+  M » ne peut pas mentir, contrat T-257). Bonus : `list-window.t257` ne code plus en dur
+  « 23 chambres seed » (le seed est aléatoire) — comptage dynamique.
+  Preuves : `route.t269` 4/4 · `page.t270` 4/4 · non-régression messages/fenêtres 14/14 ·
+  **chaîne CI complète verte** (typecheck · lint 0/0 · i18n · ai:check · vitest intégral ·
+  build · smoke 95/95) · runtime serveur réel (T-266 label, T-269 timeline, T-270 bandeau).
+  Base rendue à l'état seed exact.
+- **Analyse (2026-09-11, après l'implémentation de l'audit n°6)** : **audit runtime n°7** —
+  `docs/analyse_2026-09-11_audit_runtime_n7_fins_de_parcours.md` (copie
+  `.ai/REPORTS/analyse_2026-09-11_audit_runtime_n7_fins_de_parcours.md`) : 6 constats **C1→C6**
+  mesurés à l'exécution sur base neuve (demande pending **confirmable après suspension de
+  l'annonce** — transition sans re-vérification du bien, fiche publique 404 · remboursement hors
+  plateforme « en cours » **indéfiniment** (`refundStatus=pending` sans chemin vers `refunded`) ·
+  annonce sans photo servie avec la **photo d'une autre propriété** (placeholder = copie de
+  `villa-azure-1.jpg`) · claim invité laissant `emailVerified=false` · timeline « confirmée »
+  datée de `updated_at` (colonne `confirmed_at` absente) · `/messages` voyageur en 1+N requêtes
+  sans fenêtre, contrairement aux 9 autres écrans T-245/T-257) — **tous corrigés** par les lots
+  A→C ci-dessus ; balayage 46 pages × 4 rôles → 0 erreur applicative, 78 liens dashboard
+  résolus, cycles rejoués de bout en bout (vie de réservation, avis, 2FA, claim, alertes prix,
+  cron, validation, suspension, favoris, promotions).
+- **Analyse (2026-09-11, après le gel wallet T-248 §3)** : **audit runtime n°6** —
   `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md` (copie
   `.ai/REPORTS/analyse_runtime_n6_2026-09-11_inacheves.md`) : 12 constats **B1→B12** mesurés à
   l'exécution (cadence de cron déclarée ≠ réelle, `/api/cron/payouts` planifié mais muet, trois

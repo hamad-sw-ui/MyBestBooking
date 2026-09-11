@@ -369,6 +369,9 @@ const FR = {
   "property.reviewsCount": "{n} avis",
   "property.reviewsSeeAll": "Voir les {n} avis",
   "property.backToProperty": "Retour à l'hébergement",
+  // T-267 (audit n°7, C3) : état vide de la galerie — l'annonce n'a encore
+  // aucune photo (plus de substitution par la photo d'un autre bien).
+  "property.noPhotos": "Pas encore de photos pour cet hébergement",
   "property.policies": "Politiques",
   // Réservation / tunnel
   "reservation.title": "Finaliser la réservation",
@@ -421,6 +424,9 @@ const FR = {
   "bookings.refund": "Remboursement",
   "bookings.refundDone": "effectué",
   "bookings.refundPending": "en cours",
+  // T-266 (audit n°7, C2) : paiement hors plateforme — le remboursement est
+  // à la charge de l'hébergeur, rien ne « s'exécute » en arrière-plan.
+  "bookings.refundManual": "à traiter par l'hébergeur",
   "bookings.refundNone": "non requis",
   "status.pending": "En attente",
   "status.confirmed": "Confirmée",
@@ -2161,6 +2167,9 @@ const EN: Record<UiStringKey, string> = {
   "property.reviewsCount": "{n} reviews",
   "property.reviewsSeeAll": "See all {n} reviews",
   "property.backToProperty": "Back to the property",
+  // T-267 (audit n°7, C3) : empty gallery state — the property has no photos
+  // yet (no more substitution with another property's photo).
+  "property.noPhotos": "No photos for this property yet",
   "property.policies": "Policies",
   "reservation.title": "Complete your booking",
   "reservation.continuePayment": "Send request",
@@ -2212,6 +2221,9 @@ const EN: Record<UiStringKey, string> = {
   "bookings.refund": "Refund",
   "bookings.refundDone": "done",
   "bookings.refundPending": "pending",
+  // T-266 (audit n°7, C2) : off-platform payment — the refund is the host's
+  // responsibility, nothing runs in the background.
+  "bookings.refundManual": "to be handled by the host",
   "bookings.refundNone": "not required",
   "status.pending": "Pending",
   "status.confirmed": "Confirmed",

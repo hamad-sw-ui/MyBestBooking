@@ -8,6 +8,7 @@ import { z } from "zod";
 import { getSetting } from "@/lib/settings";
 import { calculateLoyaltyAward } from "@/lib/loyalty";
 import { transitionError, type BookingActor, type BookingStatus } from "@/lib/booking-lifecycle";
+import { confirmBookingAvailabilityError } from "@/lib/booking-availability";
 import { apiError } from "@/lib/api-error";
 import {
   assertNotMaintenance,
@@ -128,6 +129,14 @@ export async function PUT(
     });
     if (transition) return NextResponse.json({ error: await apiError(transition) }, { status: 400 });
 
+    // T-265 (audit n°7, C1) : un bien suspendu/retiré entre la création de la
+    // demande et la confirmation ne peut plus être confirmé (prédicats de
+    // POST /api/bookings). Vérification rapide hors transaction ; la re-vérification
+    // autoritatoire a lieu sous le lock ci-dessous.
+    if (data.status === "confirmed" && (!existing.property || existing.property.status !== "active")) {
+      return NextResponse.json({ error: await apiError("Hébergement non disponible") }, { status: 409 });
+    }
+
     // Annulation : une seule commande métier pour route individuelle et bulk.
     // Elle conserve les états refund, libère les avantages et émet l’outbox.
     if (data.status === "cancelled") {
@@ -226,6 +235,9 @@ export async function PUT(
     // écran ou cron de paiement ne puisse la reprendre.
     if (data.status === "confirmed") {
       updateData.confirmedBy = user.id;
+      // T-269 (audit n°7, C5) : la date de confirmation est posée une fois,
+      // dans l'acte — la timeline ne la dérive plus avec les updates suivants.
+      updateData.confirmedAt = new Date();
       updateData.paymentExpiresAt = null;
       if (existing.booking.paymentStatus !== "paid") {
         updateData.paymentIntentId = null;
@@ -251,6 +263,11 @@ export async function PUT(
       });
       if (lockedTransition) throw new Error(`BOOKING_TRANSITION:${lockedTransition}`);
       if (data.status === "confirmed") {
+        // T-265 (audit n°7, C1) : re-vérification autoritatoire sous le lock —
+        // le bien peut avoir été suspendé (ou sa chambre désactivée) entre la
+        // lecture initiale et le commit. Mêmes prédicats que POST /api/bookings.
+        const availabilityError = await confirmBookingAvailabilityError(tx, lockedBooking);
+        if (availabilityError) throw new Error(`BOOKING_UNAVAILABLE:${availabilityError}`);
         updateData.paymentExpiresAt = null;
         if (lockedBooking.paymentStatus !== "paid") {
           updateData.paymentIntentId = null;
@@ -336,6 +353,9 @@ export async function PUT(
     if (error instanceof z.ZodError) return zodErrorResponse(error);
     if (error instanceof Error && error.message.startsWith("BOOKING_TRANSITION:")) {
       return NextResponse.json({ error: await apiError(error.message.replace("BOOKING_TRANSITION:", "")) }, { status: 409 });
+    }
+    if (error instanceof Error && error.message.startsWith("BOOKING_UNAVAILABLE:")) {
+      return NextResponse.json({ error: await apiError(error.message.replace("BOOKING_UNAVAILABLE:", "")) }, { status: 409 });
     }
     if (error instanceof Error && error.message.startsWith("BOOKING_PAYMENT_REQUIRED:")) {
       return NextResponse.json({ error: await apiError(error.message.replace("BOOKING_PAYMENT_REQUIRED:", "")) }, { status: 409 });

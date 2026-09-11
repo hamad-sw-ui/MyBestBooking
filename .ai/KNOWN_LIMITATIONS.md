@@ -166,6 +166,24 @@ limite peut redevenir un bug si le contexte change — la déplacer alors dans
 - **Mode invité limité.** Le checkout accepte un email non enregistré et crée
   un profil sans mot de passe. Un email déjà associé à un compte doit être
   utilisé après connexion pour éviter le rattachement de données.
+- **Remboursements hors plateforme — suivi hôte (audit n°7, C2).** Depuis
+  T-266, le voyageur voit et reçoit l'information complète (« à traiter par
+  l'hébergeur » + montant, à l'écran et par e-mail), mais le hôte n'a ni badge
+  « remboursement à traiter » dans `/dashboard/bookings`, ni action
+  « remboursement constaté » (qui poserait `refundStatus='refunded'` +
+  `refundedAt` + e-mail de confirmation). Le champ `refund_status` reste
+  `pending` tant que le hôte n'a pas le moyen de le clôturer — l'information
+  est juste, le suivi n'est pas encore un écran. Ouverture = décision produit
+  (badge + action hôte), non bloquante.
+- **Demandes pending à la suspension d'une annonce (audit n°7, C1).** Depuis
+  T-265, une demande `pending` ne peut **plus** être confirmée si le bien a
+  été suspendu, l'hôte sanctionné ou la chambre désactivée (409). Ce qui reste
+  ouvert : à la suspension par l'admin, les demandes pending existantes ne
+  sont ni annulées ni notifiées — elles restent `pending` (inconfirmables)
+  jusqu'à leur expiration cron (`requestExpiresAt`) ou à la réactivation du
+  bien. Annuler à la suspension (frais 0 ? motif ?) ou notifier voyageurs +
+  hôte est une **décision produit** — les deux options changent le contrat
+  annulation/frais.
 
 ## E-mails (hôtes ↔ clients)
 

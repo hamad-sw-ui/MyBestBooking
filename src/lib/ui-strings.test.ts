@@ -90,7 +90,10 @@ describe("uiStrings (T-132)", () => {
   //   T-263/T-264 (audit n°6, B10/B12) = 1762 (aucune clé ajoutée) ;
   //   T-261 (audit n°6, B9 : catégories de notification réglables par
   //   l'utilisateur, +6) = 1768.
-  expect(Object.keys(fr)).toHaveLength(1768);
+  //   T-266 (audit n°7, C2 : remboursement hors plateforme « à traiter par
+  //   l'hébergeur », +1) = 1769 ; T-267 (C3 : état vide « pas de photos »,
+  //   +1) = 1770.
+  expect(Object.keys(fr)).toHaveLength(1770);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

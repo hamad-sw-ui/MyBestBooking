@@ -7,7 +7,14 @@
 
 - Schéma Drizzle : `src/db/schema.ts`; migrations SQL additives `0000` à
   `0013_orchestration-resilience.sql`.
-- Dernière migration : `0025_user_notification_prefs.sql` (T-261, 2026-09-11) —
+- Dernière migration : `0026_bookings_confirmed_at.sql` (T-269, 2026-09-11) —
+  additive : `bookings.confirmed_at` (timestamp, **nullable**). La date de
+  confirmation est un **état** posé dans la transaction de confirmation
+  (`PUT /api/bookings/[id]`), plus un dérivé de `updated_at` : après un
+  `markPaidOffline` ou toute autre mutation, la timeline de la fiche dashboard
+  affiche la date de confirmation réelle. Les lignes historiques (`NULL`)
+  replient sur `updated_at` (affichage d'avant T-269, inchangé).
+- Migration `0025_user_notification_prefs.sql` (T-261, 2026-09-11) —
   additive : `users.notification_prefs` (jsonb, **nullable, sans défaut**). `NULL`
   = héritage du réglage global `app_settings.notifications` (aucun envoi ne
   change pour les comptes existants) ; les trois catégories réglables par

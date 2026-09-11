@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { db } from "@/db";
 import { conversations, messages, properties, users, bookings } from "@/db/schema";
-import { eq, desc, or, and } from "drizzle-orm";
+import { eq, desc, or, and, inArray, count, sql, ilike } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -13,7 +13,9 @@ import Link from "next/link";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { SmartImage } from "@/components/ui/smart-image";
-import { isConversationVisible } from "@/lib/conversation-visibility";
+import { isConversationVisible, EMPTY_THREAD_VISIBLE_DAYS } from "@/lib/conversation-visibility";
+import { ShowMore } from "@/components/ui/show-more";
+import { parsePageWindow } from "@/lib/page-window";
 
 /**
  * T-172 — titre localisé + noindex (messagerie privée, non indexable).
@@ -26,8 +28,43 @@ export async function generateMetadata() {
   };
 }
 
-async function getConversations(userId: string, search = "") {
-  const userConversations = await db
+/**
+ * T-270 (audit n°7, C6) — périmètre « conversation visible » en SQL, IDENTIQUE
+ * à la règle JS T-217/P7 (`isConversationVisible`) : au moins un message, OU
+ * fil vide créé depuis moins de 7 jours. La liste et le compteur partagent
+ * exactement la même condition (visibilité + recherche) : le bandeau
+ * « N sur M » ne peut pas mentir (contrat T-257).
+ */
+function conversationConditions(userId: string, needle?: string) {
+  const participant = or(
+    eq(conversations.userId, userId),
+    eq(properties.hostId, userId)
+  );
+  const visible = sql`(
+    EXISTS (SELECT 1 FROM ${messages} m WHERE m.conversation_id = ${conversations.id})
+    OR ${conversations.createdAt} > (now() - (${EMPTY_THREAD_VISIBLE_DAYS} || ' days')::interval)
+  )`;
+  if (!needle) return and(participant, visible);
+  // Miroir SQL du filtre JS de recherche : nom/ville de l'hébergement, ou
+  // contenu du DERNIER message du fil.
+  const search = or(
+    ilike(properties.name, `%${needle}%`),
+    ilike(properties.city, `%${needle}%`),
+    sql`EXISTS (
+      SELECT 1 FROM ${messages} m
+      WHERE m.conversation_id = ${conversations.id}
+        AND m.content ILIKE ${`%${needle}%`}
+        AND m.created_at = (
+          SELECT max(m2.created_at) FROM ${messages} m2
+          WHERE m2.conversation_id = ${conversations.id}
+        )
+    )`
+  );
+  return and(participant, visible, search);
+}
+
+async function getConversations(userId: string, search: string, limit: number) {
+  const rows = await db
     .select({
       conversation: conversations,
       property: {
@@ -47,35 +84,44 @@ async function getConversations(userId: string, search = "") {
     .from(conversations)
     .leftJoin(properties, eq(conversations.propertyId, properties.id))
     .leftJoin(bookings, eq(conversations.bookingId, bookings.id))
-    .where(
-      or(
-        eq(conversations.userId, userId),
-        eq(properties.hostId, userId)
-      )
-    )
-    .orderBy(desc(conversations.lastMessageAt));
+    .where(conversationConditions(userId, needleOf(search)))
+    .orderBy(desc(conversations.lastMessageAt))
+    .limit(limit);
 
-  // Get last message for each conversation
-  const conversationsWithMessages = await Promise.all(
-    userConversations.map(async (conv) => {
-      const [lastMessage] = await db
-        .select()
-        .from(messages)
-        .where(eq(messages.conversationId, conv.conversation.id))
-        .orderBy(desc(messages.createdAt))
-        .limit(1);
+  // Dernier message des fils chargés, en UNE requête (l'ancien 1 + N : une
+  // requête par conversation, est remplacé). Premier message par fil dans le
+  // tri `createdAt desc` = le plus récent.
+  const convIds = rows.map((r) => r.conversation.id).filter(Boolean);
+  const lastMessages = new Map<string, { content: string; senderType: string; createdAt: Date } | null>();
+  for (const id of convIds) lastMessages.set(id, null);
+  if (convIds.length > 0) {
+    const loaded = await db
+      .select({
+        conversationId: messages.conversationId,
+        content: messages.content,
+        senderType: messages.senderType,
+        createdAt: messages.createdAt,
+      })
+      .from(messages)
+      .where(inArray(messages.conversationId, convIds))
+      .orderBy(desc(messages.createdAt));
+    for (const m of loaded) {
+      if (lastMessages.get(m.conversationId) === null) {
+        lastMessages.set(m.conversationId, {
+          content: m.content,
+          senderType: m.senderType,
+          createdAt: m.createdAt,
+        });
+      }
+    }
+  }
 
-      return {
-        ...conv,
-        lastMessage,
-      };
-    })
-  );
+  const conversationsWithMessages = rows.map((conv) => ({
+    ...conv,
+    lastMessage: lastMessages.get(conv.conversation.id) ?? null,
+  }));
 
-  // T-206/F9 : les fils sans message restaient masqués pour ne pas polluer la
-  // boîte de réception. T-217/P7 : fenêtre de rattrapage de 7 jours pour les
-  // fils vides (le fil « Contacter l'hôte » créé puis quitté sans écrire est
-  // de nouveau visible et cliquable) ; au-delà, règle F9 inchangée.
+  // Garde-fou JS (règle pure, inchangée) : même sémantique que le filtre SQL.
   const visibleConversations = conversationsWithMessages.filter(({ conversation, lastMessage }) =>
     isConversationVisible({ hasMessage: Boolean(lastMessage), createdAt: conversation.createdAt }),
   );
@@ -88,10 +134,32 @@ async function getConversations(userId: string, search = "") {
   );
 }
 
+/** Aiguille de recherche (trim + minuscules) ; `undefined` si vide. */
+function needleOf(search: string): string | undefined {
+  const n = search.trim().toLocaleLowerCase("fr");
+  return n || undefined;
+}
+
+async function countVisibleConversations(userId: string, search: string): Promise<number> {
+  const [row] = await db
+    .select({ total: count() })
+    .from(conversations)
+    .leftJoin(properties, eq(conversations.propertyId, properties.id))
+    .where(conversationConditions(userId, needleOf(search)));
+  return row?.total ?? 0;
+}
+
+/**
+ * T-270 (audit n°7, C6) : fenêtre de chargement (contrat T-245, 9ᵉ écran
+ * rattrapé) — 25 fils par défaut, « Afficher 25 de plus », plafond 500.
+ * La fenêtre borne le **chargement** : la recherche porte sur la fenêtre
+ * affichée (comme les autres écrans), et le compteur total est calculé avec
+ * la MÊME condition de visibilité que la liste.
+ */
 export default async function MessagesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{ search?: string; limit?: string }>;
 }) {
   const user = await getCurrentUser();
 
@@ -99,8 +167,13 @@ export default async function MessagesPage({
     redirect("/connexion");
   }
 
-  const { search = "" } = await searchParams;
-  const userConversations = await getConversations(user.id, search);
+  const { search = "", limit } = await searchParams;
+  const window = parsePageWindow(limit);
+  const [loaded, total] = await Promise.all([
+    getConversations(user.id, search, window.queryLimit),
+    countVisibleConversations(user.id, search),
+  ]);
+  const userConversations = loaded.slice(0, window.size);
   const locale = await getServerLocale();
   const t = makeT(locale);
 
@@ -231,6 +304,23 @@ export default async function MessagesPage({
             })}
           </div>
         )}
+
+        {/* T-270 : la fenêtre borne le chargement ; le bandeau porte le total
+            VISIBLE (même condition SQL que la liste) et conserve la recherche. */}
+        <ShowMore
+          shown={userConversations.length}
+          total={total}
+          hasMore={loaded.length > userConversations.length}
+          basePath="/messages"
+          params={{ search: search || undefined }}
+          labels={{
+            shown: t("list.window.shown"),
+            showMore: t("list.window.showMore"),
+            showAll: t("list.window.showAll"),
+            limitReached: t("list.window.limitReached"),
+            filterScope: t("list.window.filterScope"),
+          }}
+        />
 
         {/* Help */}
         <Card className="mt-8 bg-gray-50">

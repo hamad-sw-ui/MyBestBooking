@@ -380,6 +380,9 @@ export const bookings = pgTable("bookings", {
   paymentMethodOffline: boolean("payment_method_offline").default(false).notNull(),
   // T-202 — qui a confirmé la réservation à la main (hôte ou admin). Additif.
   confirmedBy: uuid("confirmed_by").references((): AnyPgColumn => users.id),
+  // T-269 (audit n°7, C5) — quand la réservation a été confirmée. Nullable :
+  // les lignes historiques restent NULL (repli d'affichage sur updated_at).
+  confirmedAt: timestamp("confirmed_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 }, (table) => [

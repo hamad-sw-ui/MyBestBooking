@@ -111,7 +111,10 @@ export default async function BookingDetailPage({ params }: BookingDetailPagePro
     },
     {
       label: t("host.bookingConfirmed"),
-      date: booking.updatedAt ?? booking.createdAt,
+      // T-269 (audit n°7, C5) : la date de l'acte de confirmation (posée dans
+      // sa transaction) ; les lignes historiques (NULL) replient sur
+      // updated_at — affichage actuel inchangé pour l'existant.
+      date: booking.confirmedAt ?? booking.updatedAt ?? booking.createdAt,
       icon: CheckCircle,
       completed: booking.status === "confirmed" || booking.status === "completed"
     },

@@ -68,7 +68,7 @@ import { cancellationPolicyLabel } from "@/lib/cancellation-label";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import {
   Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
-  Dumbbell, Wind, Users, Calendar, Shield, MessageCircle
+  Dumbbell, Wind, Users, Calendar, Shield, MessageCircle, ImageOff
 } from "lucide-react";
 import Link from "next/link";
 
@@ -365,28 +365,49 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
 
         {/* Image Gallery — T-188 : SmartImage (next/image si source
             auto-hébergée, sinon <img> lazy) ; conteneurs `relative` requis
-            par fill. */}
-        <div className="grid grid-cols-4 gap-2 mb-8 rounded-xl overflow-hidden">
-          <div className="col-span-2 row-span-2 relative">
-            <SmartImage
-              src={property.mainImage || images[0] || "/seed-images/placeholder-property.jpg"}
-              alt={property.name}
-              className="w-full h-full object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
-            />
-          </div>
-          {(images.length > 0 ? images.slice(0, 4) : [1, 2, 3, 4]).map((img, i) => (
-            <div key={i} className="aspect-[4/3] relative">
+            par fill.
+            T-267 (audit n°7, C3) : plus aucune image de substitution —
+            jadis, sans photo, le slot principal ET les 4 slots de galerie
+            servaient un placeholder qui était une copie de la photo
+            d'AUTRE propriété (villa-azure-1). Maintenant : les vraies
+            photos si elles existent, sinon un état vide explicite. */}
+        {property.mainImage || images.length > 0 ? (
+          <div className="grid grid-cols-4 gap-2 mb-8 rounded-xl overflow-hidden">
+            <div
+              className={
+                images.length > 0
+                  ? "col-span-2 row-span-2 relative"
+                  : "col-span-4 row-span-1 aspect-[21/9] relative"
+              }
+            >
               <SmartImage
-                src={typeof img === "string" ? img : "/seed-images/placeholder-property.jpg"}
-                alt=""
+                src={property.mainImage || images[0]}
+                alt={property.name}
                 className="w-full h-full object-cover"
-                sizes="(max-width: 768px) 50vw, 25vw"
+                sizes={images.length > 0 ? "(max-width: 768px) 100vw, 50vw" : "(max-width: 768px) 100vw, 100vw"}
+                priority
               />
             </div>
-          ))}
-        </div>
+            {images.slice(0, 4).map((img, i) => (
+              <div key={i} className="aspect-[4/3] relative">
+                <SmartImage
+                  src={img}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  sizes="(max-width: 768px) 50vw, 25vw"
+                />
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            className="mb-8 rounded-xl border border-gray-200 bg-gray-100 flex flex-col items-center justify-center gap-2 py-16 text-gray-500"
+            data-testid="no-photos"
+          >
+            <ImageOff className="w-8 h-8" aria-hidden="true" />
+            <p className="text-sm">{t("property.noPhotos")}</p>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content */}
