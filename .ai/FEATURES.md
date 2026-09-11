@@ -409,4 +409,4 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
 | Motif de décision obligatoire | ✅ | `Dialog` + `ReasonDialog` (0/500, focus trap), `hidden`/`rejected` sans motif → 400 `issues.field=moderationReason`, motif dans `audit_log` ; 8 tests route + 4 composant | T-247 |
 | Journal du wallet BestRewards | ✅ | table `wallet_transactions` (migration 0024) écrite dans les 4 transactions de solde ; `GET /api/wallet/transactions` ; historique dans `/mon-compte` ; 5 + 3 + 3 tests | T-248 |
 | Supervision des tâches planifiées | ✅ | table `cron_runs` (migration 0023) + `runWithTrace`, `getCronHealth`, `/api/health`, `/dashboard/cron` ; 5 tests | T-250 |
-| Consommation du solde wallet (décision produit) | 🎯 | Deux options documentées (avoir au règlement sur place **ou** gel explicite) — journal et historique livrés indépendamment | T-248 §3 |
+| Politique du solde wallet (décision produit) | ✅ | **Gel assumé** : le solde est un « crédit futur » tracé et non déductible ; libellés FR/EN explicites + `wallet-policy.test.ts` (3 tests) verrouillent la décision, documentée dans `KNOWN_LIMITATIONS.md` | T-248 §3 |

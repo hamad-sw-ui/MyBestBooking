@@ -4,8 +4,9 @@
 - **Titre** : Pagination des listes, favoris multi-listes, dialogues de motif, journal du wallet,
   bandeau « tri ignoré », supervision des crons, message de conversation, hygiène T-207
 - **Statut** : ✅ **IMPLÉMENTATION LIVRÉE ET VALIDÉE (2026-09-11)** — T-245, T-246, T-247, T-248
-  (étapes 1-2), T-249, T-250, T-251, T-252. **Seule la décision produit de T-248 §3 reste ouverte**
-  (consommation du wallet ou gel explicite) : elle est isolée et n'affecte aucune livraison.
+  (étapes 1-2), T-249, T-250, T-251, T-252. **Décision produit T-248 §3 tranchée : gel explicite du
+  wallet** (crédit futur tracé, non déductible ; libellés FR/EN + test de politique) — **plus aucune
+  ligne de l'audit n°5 ouverte**.
 - **Niveau** : S (passe d'analyse + correctifs de fin de parcours ; T-248 touche un solde monétaire et sera traité en dernier)
 - **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_execution.md`
   (copie `.ai/REPORTS/analyse_runtime_n5_2026-09-11_execution.md`)

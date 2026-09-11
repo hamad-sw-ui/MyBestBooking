@@ -66,10 +66,17 @@ Résidus de smoke et de tests purgés ; retour à l'état seed :
 `price_alerts` **0** · `wishlist_items` **0** · `cron_runs` **0** · `wallet_transactions` **0** ·
 comptes `@test.local` supprimés (5) · 30 e-mails résiduels supprimés.
 
-## 6. Reste ouvert (décision produit, hors périmètre technique)
+## 6. Décision produit T-248 §3 — tranchée le 2026-09-11
 
-**T-248 §3 — consommation du solde BestRewards.** Deux options documentées dans l'analyse :
-(a) « avoir au règlement sur place » (l'hôte constate le paiement et un montant de wallet est déduit,
-dans une transaction, avec une ligne de journal `kind: "booking_payment"`) ; (b) **gel assumé** du
-programme (retirer le cashback de la page BestRewards ou l'afficher explicitement comme « crédit
-futur »). Les étapes 1-2 livrées ici (journal + historique) sont utiles seules et n'en dépendent pas.
+**Le wallet BestRewards est gelé (gel explicite assumé).** Le solde reste un **crédit futur** tracé
+(journal `wallet_transactions` + historique `/mon-compte`) ; aucun code de déduction n'est ajouté, ni
+dans le tunnel ni au règlement sur place. Les libellés FR et EN qui parlent du solde annoncent
+désormais le gel (14 valeurs révisées : `account.availableBalance`, `account.walletHint`,
+`search.walletBanner`, `reservation.walletReductionNote`, `bestrewards.benefitCashback`,
+`bestrewards.how3Desc`, `bestrewards.faq4A` — verrou i18n inchangé, **1739**, aucune clé ajoutée).
+La décision est inscrite dans `.ai/KNOWN_LIMITATIONS.md` et verrouillée par
+`src/lib/wallet-policy.test.ts` (3 tests) : le test échoue si les libellés cessent d'annoncer le gel
+ou si `applyWalletToTotal` / une déduction réapparaît. Ouvrir la consommation (avoir au règlement sur
+place, ligne de journal `kind: "booking_payment"`) devient donc un **choix produit explicite**.
+
+**Aucune ligne de l'audit n°5 n'est ouverte.**

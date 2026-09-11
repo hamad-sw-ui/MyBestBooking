@@ -270,9 +270,20 @@ réintroduites sans décision produit.
   **branchée** par `/dashboard/audit` (T-217/P9).
 - Champs de payload inertes : `useWalletCredits` (`POST /api/bookings`) est
   accepté puis **ignoré** (`walletUsedEur = 0`) depuis T-207 — le wallet n'est
-  pas déduit dans le tunnel tant que le paiement en ligne est désactivé. Le
-  champ est conservé pour la compatibilité des appelants ; sa consommation
-  éventuelle est une décision produit (**T-248**, reprise de l'observation O1).
+  pas déduit dans le tunnel. Le champ est conservé pour la compatibilité des
+  appelants.
+- **Décision produit T-248 §3 (2026-09-11) — le wallet BestRewards est GELÉ.**
+  Le solde n'est ni déduit dans le tunnel, ni au règlement sur place : c'est un
+  **crédit futur** tracé (journal `wallet_transactions` + historique dans
+  `/mon-compte`, T-248 §1-2) dont l'usage n'est pas ouvert. Les libellés le
+  disent explicitement (`account.walletHint`, `account.availableBalance`,
+  `search.walletBanner`, `reservation.walletReductionNote`,
+  `bestrewards.benefitCashback`, `bestrewards.how3Desc`, `bestrewards.faq4A`,
+  FR et EN), et `src/lib/wallet-policy.test.ts` verrouille la décision : il
+  échoue si les libellés cessent d'annoncer le gel ou si un chemin de déduction
+  réapparaît. Ouvrir la consommation (avoir au règlement sur place avec une
+  ligne de journal `kind: "booking_payment"`) est donc un **choix produit
+  explicite**, pas une évolution technique silencieuse.
 - Code retiré par T-252 (audit n°5) : `src/lib/wallet-currency.ts`
   (`applyWalletToTotal`) et son test — plus aucun appelant applicatif depuis
   T-207 ; ne pas réintroduire sans la décision produit ci-dessus.

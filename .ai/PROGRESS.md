@@ -4477,5 +4477,7 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   `missing` → `ok` avec compteurs et durée après exécution du cron ; `cron-status-price-alerts` =
   `ok` sur `/dashboard/cron` ; `/api/wallet/transactions` 200 / 401 / 400). Base remise à l'état seed
   (8 users / 8 annonces / 30 réservations / 21 avis ; `price_alerts` 0, `wishlist_items` 0,
-  `cron_runs` 0, `wallet_transactions` 0). **Reste ouverte** la seule décision produit de T-248 §3
-  (consommation du solde ou gel explicite) — les étapes 1-2 sont livrées et n'en dépendent pas.
+  `cron_runs` 0, `wallet_transactions` 0). **Décision produit T-248 §3 tranchée le 2026-09-11 : gel
+  explicite du programme** — le solde est un « crédit futur » tracé et non déductible, les libellés
+  FR/EN l'annoncent et `wallet-policy.test.ts` (3 tests) verrouille la décision (documentée dans
+  `KNOWN_LIMITATIONS.md`). L'audit n°5 n'a plus aucune ligne ouverte.

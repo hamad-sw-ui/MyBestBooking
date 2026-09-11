@@ -644,7 +644,15 @@ rejoint `purgeTechnicalData()`.
 `users.wallet_balance` écrit sa ligne **dans la même transaction** : un échec du journal annule le
 crédit (prouvé par test). `users.wallet_balance` reste la source de vérité — aucun écran ne change de
 logique — et `/mon-compte` gagne un historique en lecture seule (`GET /api/wallet/transactions`).
-La **consommation** du solde reste une décision produit documentée, non tranchée ici.
+**Le solde est gelé — et on le dit.** Décision produit du 2026-09-11 : le wallet BestRewards reste un
+**crédit futur**. Aucun code de déduction n'est ajouté ; les libellés qui parlent du solde annoncent le
+gel (`account.availableBalance` « Crédit accumulé (crédit futur) », `account.walletHint`,
+`search.walletBanner`, `reservation.walletReductionNote`, `bestrewards.benefitCashback`,
+`bestrewards.how3Desc`, `bestrewards.faq4A`, FR et EN — 14 valeurs révisées, aucune clé ajoutée, verrou
+inchangé à 1739) et `src/lib/wallet-policy.test.ts` verrouille la décision : il échoue si les libellés
+cessent d'annoncer le gel ou si `applyWalletToTotal` / une déduction réapparaît. La décision est
+inscrite dans `KNOWN_LIMITATIONS.md` : ouvrir la consommation (avoir au règlement sur place avec une
+ligne `kind: "booking_payment"`) devient un choix produit explicite, pas une évolution silencieuse.
 
 **Preuves.** `npm run ci` verte : typecheck 0 · lint 0 · vitest **135 fichiers / 775 tests** ·
 build · smoke **95/95** · `ai:check` 19 OK / 1 warn (R7). Runtime : fenêtre et plafond des listes,

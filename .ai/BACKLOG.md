@@ -570,8 +570,14 @@ Aucune ligne de code produit modifiée par l'analyse ; base remise à l'état se
   Preuves : `wallet-ledger` 5/5 (dont « solde = somme des lignes » et « une erreur de journal annule
   le solde »), `cron/price-alerts/route.t248.test.ts` 3/3 (clôture → 1 ligne de 5,00 EUR, rejeu
   idempotent → toujours 1 ligne, trace `cron_runs` écrite), runtime `GET /api/wallet/transactions`
-  200/401/400. **Reste à trancher** : consommation du solde (avoir au règlement sur place) ou gel
-  explicite — l'étape 1 est utile seule et strictement additive.
+  200/401/400). **Décision produit tranchée (2026-09-11) : gel explicite du programme.** Aucun code de
+  consommation n'est ajouté ; les libellés qui parlent du solde annoncent un **crédit futur** gelé
+  (`account.walletHint`, `account.availableBalance`, `search.walletBanner`,
+  `reservation.walletReductionNote`, `bestrewards.benefitCashback`, `bestrewards.how3Desc`,
+  `bestrewards.faq4A`, FR et EN) et `src/lib/wallet-policy.test.ts` (3 tests) verrouille la décision :
+  il échoue si les libellés cessent d'annoncer le gel ou si une déduction (`applyWalletToTotal`)
+  réapparaît. Décision inscrite dans `KNOWN_LIMITATIONS.md`. Verrou i18n inchangé (**1739** : valeurs
+  modifiées, aucune clé ajoutée).
 - ✅ ~~**T-249 (S/P3) — *A4 — tri ignoré en silence.***~~ **FAIT (2026-09-11)** : `GET /api/properties?sort=…` inconnu → 200 avec
   tri `rating` par défaut (`route.ts:216`) alors que les 4 autres filtres écartés déclenchent un
   bandeau (T-175, `search-warnings.ts`). Livrable : warning `sortIgnored` + clé
