@@ -4,18 +4,18 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a0913d-mybestbooking` (branche Arena active)
-- **Implémentation de l'audit n°7 (2026-09-11) — audit entièrement soldé, lots A→C livrés** :
-  **lot A (commit 1/3)** — **C1 → T-265** : la confirmation d'une demande re-vérifie le bien et la
+- **Implémentation de l'audit n°7 (2026-09-11) — audit entièrement soldé, lots A→C livrés (commit `b39fe89`)** :
+  **lot A** — **C1 → T-265** : la confirmation d'une demande re-vérifie le bien et la
   chambre **dans la transaction** (annonce suspendue ou chambre désactivée → `409` au lieu d'un
   séjour réalisable sur un bien sanctionné ; la fiche publique 404 n'est plus contournable) et
   **C2 → T-266** : le remboursement hors plateforme n'est plus « en cours » indéfiniment —
   l'hôte peut le **finaliser** (`refundStatus → refunded`, action + e-mail), et l'état `pending`
   est relabelé « **à traiter par l'hébergeur** » (FR/EN) sur `/mes-reservations` ;
-  **lot B (commit 2/3)** — **C3 → T-267** : le placeholder est un **visuel neutre dédié** (plus de
+  **lot B** — **C3 → T-267** : le placeholder est un **visuel neutre dédié** (plus de
   photo d'autrui) et l'annonce sans photo rend un **état vide explicite** sur la fiche publique
   (plus aucune image de substitution) et **C4 → T-268** : le claim invité pose
   `emailVerified=true` (la maîtrise de la boîte mail est prouvée par le claim) ;
-  **lot C (ce commit)** — **C5 → T-269** : migration additive `0026` — `bookings.confirmed_at`
+  **lot C** — **C5 → T-269** : migration additive `0026` — `bookings.confirmed_at`
   posée **dans la transaction de confirmation** ; la timeline dashboard lit
   `confirmedAt ?? updatedAt ?? createdAt` (lignes historiques inchangées, la date affichée ne
   glisse plus après un `markPaidOffline`) et **C6 → T-270** : `/messages` — dernier message des

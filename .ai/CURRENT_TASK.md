@@ -3,10 +3,10 @@
 - **ID** : Audit n°7 — analyse runtime « fins de parcours », constats **C1 → C6** (2026-09-11)
 - **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution (7ᵉ passe)
 - **Statut** : ✅ **ENTIÈREMENT SOLDÉ (2026-09-11) — les 3 lots livrés et validés** :
-  **lot A** (commit 1/3 de cette pile) (C1 → **T-265** re-vérification du bien avant confirmation, C2 → **T-266**
+  **lot A** (C1 → **T-265** re-vérification du bien avant confirmation, C2 → **T-266**
   remboursement hors plateforme finalisable par l'hôte + label « à traiter par l'hébergeur »),
-  **lot B** (commit 2/3) (C3 → **T-267** visuel neutre + état vide « Pas encore de photos »,
-  C4 → **T-268** claim invité pose `emailVerified`), **lot C** (commit 3/3) (C5 → **T-269** colonne
+  **lot B** (C3 → **T-267** visuel neutre + état vide « Pas encore de photos »,
+  C4 → **T-268** claim invité pose `emailVerified`), **lot C** (C5 → **T-269** colonne
   `bookings.confirmed_at` posée dans la transaction de confirmation + timeline qui la lit,
   C6 → **T-270** `/messages` : dernier message en **une** requête IN-liste + fenêtre T-245
   (25 par défaut, « Afficher 25 de plus », plafond 500) + même condition SQL pour la liste et
@@ -38,10 +38,11 @@
   **C5** (timeline : étape « confirmée » datée de `updated_at` — colonne `confirmed_at` absente) ·
   **C6** (`/messages` voyageur : 1+N requêtes + pas de fenêtre `parsePageWindow`, contrairement
   aux 9 autres écrans T-245/T-257). **Tous les six sont corrigés** (T-265 → T-270).
-- **Lots livrés** : **A** (C1, C2) intégrité cycle de réservation + état de remboursement
-  (commit 1/3) · **B** (C3, C4) visuels honnêtes + fin de parcours du claim (commit 2/3) ·
-  **C** (C5, C6) timeline précise + cohérence du contrat de fenêtre (ce commit). Tous les
-  correctifs sont **non régressifs** (aucun contrat existant modifié).
+- **Lots livrés** : **A** (C1, C2) intégrité cycle de réservation + état de remboursement ·
+  **B** (C3, C4) visuels honnêtes + fin de parcours du claim · **C** (C5, C6) timeline précise +
+  cohérence du contrat de fenêtre — les trois lots sont livrés ensemble dans le commit
+  `b39fe89` (la chaîne CI complète y est verte). Tous les correctifs sont **non régressifs**
+  (aucun contrat existant modifié).
 - **Vérifié sain (à ne pas rouvrir)** : balayage 4 rôles 0 erreur ; 78 liens OK ; cycle de vie
   complet (e-mails ×2 à chaque étape, clôture refusée avant paiement) ; expiration cron (e-mails
   voyageur + hôte) ; avis de bout en bout (agrégats, réponse hôte, modération + motif, vote utile
