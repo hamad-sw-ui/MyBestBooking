@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { eq, like, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 /**
  * T-269 (audit n°7, C5) — la date de confirmation est un **état**, pas un
@@ -178,8 +178,9 @@ dbTest("T-269 — confirmed_at : posée à la confirmation, stable ensuite", () 
     if (bookingIds.length > 0) {
       const outbox = await db
         .select({ id: schema.emailOutbox.id, eventKey: schema.emailOutbox.eventKey })
-        .from(schema.emailOutbox)
-        .where(like(schema.emailOutbox.eventKey, "%" + bookingIds[0].slice(0, 8) + "%"));
+        .from(schema.emailOutbox);
+      // Pas de filtre SQL sur un préfixe : chaque réservation a ses propres
+      // e-mails (confirmation voyageur + hôte) — on filtre sur les IDs complets.
       const idsToDrop = outbox
         .filter((row) => bookingIds.some((id) => row.eventKey.includes(id)))
         .map((row) => row.id);

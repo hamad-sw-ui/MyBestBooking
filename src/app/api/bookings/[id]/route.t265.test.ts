@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { eq, like, inArray } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 
 /**
  * T-265 (audit n°7, C1) — la confirmation d'une demande `pending` re-vérifie
@@ -229,8 +229,9 @@ dbTest("T-265 — PUT /api/bookings/[id] confirmed : garde de disponibilité", (
     if (bookingIds.length > 0) {
       const outbox = await db
         .select({ id: schema.emailOutbox.id, eventKey: schema.emailOutbox.eventKey })
-        .from(schema.emailOutbox)
-        .where(like(schema.emailOutbox.eventKey, "%" + bookingIds[0].slice(0, 8) + "%"));
+        .from(schema.emailOutbox);
+      // Pas de filtre SQL sur un préfixe : chaque réservation a ses propres
+      // e-mails (confirmation voyageur + hôte) — on filtre sur les IDs complets.
       const idsToDrop = outbox
         .filter((row) => bookingIds.some((id) => row.eventKey.includes(id)))
         .map((row) => row.id);

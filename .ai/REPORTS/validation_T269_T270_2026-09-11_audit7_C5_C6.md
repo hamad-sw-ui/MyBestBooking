@@ -16,6 +16,13 @@
 | **T-269** | C5 — la timeline de `/dashboard/bookings/[id]` affichait l'étape « Réservation confirmée » avec `updated_at` : un `markPaidOffline` (ou toute mutation) **faisait glisser la date de confirmation affichée** vers la date du dernier update | (a) migration additive `drizzle/0026_bookings_confirmed_at.sql` : `bookings.confirmed_at` (timestamp, **nullable**) ; (b) `PUT /api/bookings/[id]` pose `confirmed_at = now()` **dans la transaction de confirmation** (branche `status === "confirmed"`, à côté de `confirmed_by`) ; (c) la timeline de la fiche dashboard lit `booking.confirmedAt ?? booking.updatedAt ?? booking.createdAt` : les lignes historiques (`NULL`) replient sur l'ancien affichage, **inchangé** |
 | **T-270** | C6 — `getConversations` de `/messages` : une requête **par fil** pour le dernier message (1 + N), aucun bornage du chargement (tous les fils de l'utilisateur chargés au premier rendu) | (a) le dernier message des fils de la fenêtre est chargé en **UNE requête** `IN (…)` (le tri `createdAt desc` donne le plus récent par fil) ; (b) **fenêtre de chargement** contrat T-245 : 25 fils par défaut, « Afficher 25 de plus », « Tout afficher (N) », plafond 500 (`parsePageWindow` + `<ShowMore>`, 9ᵉ écran rattrapé) ; (c) la **visibilité** (fil avec message OU fil vide de < 7 jours — règle pure T-217/P7) et la **recherche** (nom/ville du bien ou contenu du dernier message) passent en **SQL partagé** entre la liste et le compteur du bandeau : le « N sur M » ne peut pas mentir (contrat T-257). Le garde-fou JS (`isConversationVisible` + filtre recherche) est conservé tel quel |
 
+**Hygiène des purges de test (signalé en cours de route)** : le `afterAll` des tests
+`route.t265`/`route.t269` ne purgeait l'outbox que sur le préfixe de la **première**
+réservation (`LIKE '%<8 premiers caractères>%'`) ; les e-mails des réservations suivantes
+fuyaient (4 lignes observées après une passe). La purge filtre désormais sur les **IDs
+complets** de toutes les réservations créées (aucun filtre SQL préfixe) — vérifié :
+**0** ligne `email_outbox` résiduelle après exécution des deux fichiers (8/8).
+
 **Correctif de robustesse test (hors périmètre, signalé en cours de route)** :
 `src/app/dashboard/list-window.t257.test.ts` codait en dur « 23 chambres seed de l'hôte » —
 le seed est **aléatoire** (2–4 chambres par bien, `Math.random` dans
