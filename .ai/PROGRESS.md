@@ -7,6 +7,23 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-11 — Audit n°6, lot C (1/2) : T-260 (B7) — tri « Populaires », note minimale, « Autour de moi », recherche libre
+
+- **Livré** : 🔨 `sort=popularity` dans le `<select>` (déjà géré par l'API et la liste blanche
+  T-249) ; 🔨 **note minimale** 0–10 (hors bornes → filtre ignoré + `search.warn.minRatingIgnored`) ;
+  🔨 **« Autour de moi »** — bouton client `navigator.geolocation` → `near=lat,lng,25` conservant les
+  filtres, repli « saisissez une ville » en cas de refus, puce « à moins de N km » + retrait du rayon ;
+  🔨 **recherche libre** `search` (nom, ville, description) branchée sur le champ destination, `?city=`
+  inchangé. Distance filtrée **en SQL** (haversine, avant `LIMIT/OFFSET`) ; tri par distance quand
+  aucun `sort` n'est demandé. Nouvelles briques pures `src/lib/geo-distance.ts` et composant
+  `search-near-me-button.tsx`. Verrou i18n **1749 → 1762** (+13 clés FR/EN).
+- **🧪 Tests** : `geo-distance` **8/8**, `search-near-me-button` **1/1**, `search-warnings` +2,
+  ui-strings verrou 1762 — **vitest complet 146 f / 812 t**, tsc 0, eslint 0/0 ; sondes runtime FR/EN
+  (voir `REPORTS/validation_T260_2026-09-11_audit6_B7.md`).
+- **Étape suivante** : **lot C (2/2) — B9 → T-261** (préférences de notification par utilisateur :
+  colonne additive `users.notification_prefs` `null` = héritage global, helper `enabledFor`, écran de
+  préférences étendu, e-mails transactionnels non désactivables).
+
 ## 2026-09-11 — Audit n°6, lot D (fin) : T-263 (B10) et T-264 (B12) — dette rendue visible
 
 - **Livré** : 🔨 **B10 → T-263** : les 5 résidus T-207 (route de paiement 410, stub providers, compat

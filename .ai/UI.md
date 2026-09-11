@@ -55,7 +55,7 @@ Utilitaire `cn(...)` (`clsx` + `tailwind-merge`) exposé par `@/lib/utils`.
 | Route | Fichier | Rôle |
 |---|---|---|
 | `/` | `app/page.tsx` | Accueil : hero + search box + populaires + destinations + valeurs |
-| `/recherche` | `(main)/recherche/page.tsx` | Résultats + filtres |
+| `/recherche` | `(main)/recherche/page.tsx` | Résultats + filtres : destination (recherche libre), dates, type, pays, voyageurs, équipement, prix, **note minimale**, **tri (dont « Populaires »)** et **« Autour de moi »** (T-260) |
 | `/hebergement/[slug]` | `(main)/hebergement/[slug]/page.tsx` | Fiche property + rooms + 5 avis les plus récents (compteur + lien) |
 | `/hebergement/[slug]/avis` | `(main)/hebergement/[slug]/avis/page.tsx` | **T-258** — tous les avis approuvés, 20 par page (`?page=`), mêmes règles de visibilité que la fiche |
 | `/reservation?property=…&room=…` | `(main)/reservation/page.tsx` | Tunnel multi-étapes (client) |
@@ -119,6 +119,11 @@ Deux colonnes du dashboard pro sont directement actionnables :
 - **Zone de danger (T-262)** : `/mon-compte` affiche, **avant** la suppression du compte, un encart
   conditionnel « Votre crédit accumulé de X sera perdu » (montant dans la devise d'affichage) quand
   le solde gelé est positif — aucune saisie nouvelle, la suppression reste au même endroit.
+- **Recherche complète (T-260)** : le formulaire de `/recherche` gagne « Note minimale » (0–10),
+  l'option de tri « Populaires » et le bouton « Autour de moi » (géolocalisation → `near=lat,lng,25`,
+  repli « saisissez une ville » si la position est refusée) ; le champ destination cherche désormais
+  dans le nom, la ville **et** la description, et une puce « Autour de moi : à moins de N km » permet
+  de retirer le rayon sans perdre les autres filtres. Un paramètre invalide reste dit (bandeau T-175).
 - **Champs réparés (T-259)** : l'éditeur d'annonce (`/dashboard/properties/[id]`) gagne
   « Description (EN) » (onglet Informations) et, dans la carte Localisation, « Région / État »
   (également disponible à la création) puis « Latitude » / « Longitude » avec un texte expliquant

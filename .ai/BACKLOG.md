@@ -686,6 +686,20 @@ Numérotation de suivi : **B1→T-253**, **B2→T-254**, **B3→T-255**, **B11�
   lien, fiche toujours bornée à 5 ; page 1 = 20 lignes avec `?page=2`, page 2 = fin de liste ; slug
   inconnu → `notFound()`).
 
+- ✅ ~~**T-260 (M/P2) — *B7 — quatre capacités de l'API que l'interface n'expose pas.***~~ **FAIT
+  (2026-09-11)** : `/recherche` expose (1) le tri **« Populaires »** (`totalReviews DESC`, déjà géré
+  par l'API et par la liste blanche T-249), (2) la **note minimale** (0–10, pas de 0,5 ; hors bornes →
+  filtre ignoré + `search.warn.minRatingIgnored`), (3) le bouton **« Autour de moi »**
+  (`navigator.geolocation` → `near=lat,lng,25`, filtres conservés, refus → message + saisie de ville),
+  avec puce « rayon actif » et retrait du rayon, et (4) la **recherche libre** `search` (nom, ville,
+  description) branchée sur le champ destination — `?city=` garde sa sémantique historique. La
+  distance est calculée **en SQL** (haversine, avant `LIMIT/OFFSET`) pour que `total`/`totalPages`
+  restent justes ; `near` sans tri classe du plus proche au plus loin. Brique pure
+  `src/lib/geo-distance.ts` (+8 tests), composant `SearchNearMeButton` (+1 test), avertissements
+  étendus (+2 tests). Verrou i18n **1749 → 1762** (+13). Preuves : vitest **146 f / 812 t**, tsc 0,
+  eslint 0/0, sondes runtime FR/EN (1 résultat `?search=azur`, 2 `?minRating=9.5`, 1
+  `?near=43.7696,11.2558,50`, `?city=Paris` non régressé).
+
 - ✅ ~~**T-262 (M/P1) — *B8 — suppression de compte : un crédit gelé qui disparaît en silence.***~~
   **FAIT (2026-09-11)** : `DELETE /api/users/me` écrit désormais, **dans la transaction** de
   suppression, une ligne `wallet_transactions` `kind='account_closed'` (montant **0**, `balanceAfter`

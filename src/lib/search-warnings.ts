@@ -15,6 +15,7 @@
 import { priceBoundToStorage } from "@/lib/i18n";
 import type { UiStringKey } from "@/lib/ui-strings";
 import { civilToday } from "@/lib/dates";
+import { parseNear } from "@/lib/geo-distance";
 
 export type SearchWarning =
   /** checkIn/checkOut présents mais mal formés, incomplets ou inversés. */
@@ -26,7 +27,11 @@ export type SearchWarning =
   /** guests présent mais pas un entier > 0. */
   | "guestsIgnored"
   /** T-249 : `sort` présent mais hors liste blanche → tri par défaut (rating). */
-  | "sortIgnored";
+  | "sortIgnored"
+  /** T-260 : `minRating` présent mais hors 0–10 → filtre ignoré. */
+  | "minRatingIgnored"
+  /** T-260 : `near` présent mais illisible/hors bornes → « autour de moi » ignoré. */
+  | "nearIgnored";
 
 export interface SearchWarnParams {
   checkIn?: string;
@@ -37,6 +42,10 @@ export interface SearchWarnParams {
   guests?: string;
   /** T-249 : tri demandé (le moteur applique `rating` si la valeur est inconnue). */
   sort?: string;
+  /** T-260 : note minimale demandée (le moteur l'accepte de 0 à 10). */
+  minRating?: string;
+  /** T-260 : `lat,lng,km` demandé (le moteur exige trois nombres valides). */
+  near?: string;
 }
 
 /** Valeurs de tri réellement traitées par `GET /api/properties` (route.ts:206-216). */
@@ -56,6 +65,8 @@ export const SEARCH_WARNING_KEY: Record<SearchWarning, UiStringKey> = {
   priceInverted: "search.warn.priceInverted",
   guestsIgnored: "search.warn.guestsIgnored",
   sortIgnored: "search.warn.sortIgnored",
+  minRatingIgnored: "search.warn.minRatingIgnored",
+  nearIgnored: "search.warn.nearIgnored",
 };
 
 export function searchFilterWarnings(params: SearchWarnParams): SearchWarning[] {
@@ -99,6 +110,18 @@ export function searchFilterWarnings(params: SearchWarnParams): SearchWarning[] 
   if (sort && !(SORT_VALUES as readonly string[]).includes(sort)) {
     warnings.push("sortIgnored");
   }
+
+  // T-260 : le moteur n'applique `minRating` que dans l'intervalle 0–10
+  // (hors bornes → filtre écarté) et `near` que si les trois nombres sont
+  // valides ; l'utilisateur doit savoir que son filtre n'a pas servi.
+  const minRating = params.minRating?.trim();
+  if (minRating) {
+    const n = Number(minRating);
+    if (!Number.isFinite(n) || n < 0 || n > 10) warnings.push("minRatingIgnored");
+  }
+
+  const near = params.near?.trim();
+  if (near && !parseNear(near)) warnings.push("nearIgnored");
 
   return warnings;
 }

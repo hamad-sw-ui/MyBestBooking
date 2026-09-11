@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  allowedDevOrigins: ["127.0.0.1"],
+  // T-260 (audit n°6, B7) — sonde : la prévisualisation Arena sert le dev
+    // server depuis `https://<port>-<sandbox>.e2b.app` ; sans ce motif,
+    // Next bloque les requêtes `/_next/*` de l'origine prévisualisée.
+    // Option de développement uniquement (sans effet en production).
+    allowedDevOrigins: ["127.0.0.1", "*.e2b.app"],
   // T-008 (BUG-006) : autorise next/image à optimiser les images
   // hébergées sur Unsplash (utilisées par le seed et le hero).
   // T-186 : optimizer `/_next/image` ACTIVÉ — TOUTES les sources passant

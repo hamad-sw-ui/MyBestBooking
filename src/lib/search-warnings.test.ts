@@ -89,6 +89,26 @@ describe("searchFilterWarnings (T-175)", () => {
     }
   });
 
+  // T-260 (audit n°6, B7) : note minimale et « autour de moi » sont désormais
+  // exposés par le formulaire ; une valeur inexploitable doit être dite.
+  it("signale une note minimale hors 0–10 (T-260)", () => {
+    expect(searchFilterWarnings({ minRating: "8" })).toEqual([]);
+    expect(searchFilterWarnings({ minRating: "0" })).toEqual([]);
+    expect(searchFilterWarnings({ minRating: "10" })).toEqual([]);
+    expect(searchFilterWarnings({ minRating: "10.5" })).toContain("minRatingIgnored");
+    expect(searchFilterWarnings({ minRating: "-1" })).toContain("minRatingIgnored");
+    expect(searchFilterWarnings({ minRating: "excellent" })).toContain("minRatingIgnored");
+    expect(SEARCH_WARNING_KEY.minRatingIgnored).toBe("search.warn.minRatingIgnored");
+  });
+
+  it("signale une position « autour de moi » invalide (T-260)", () => {
+    expect(searchFilterWarnings({ near: "48.86,2.35,25" })).toEqual([]);
+    expect(searchFilterWarnings({ near: "48.86,2.35" })).toContain("nearIgnored");
+    expect(searchFilterWarnings({ near: "91,2.35,25" })).toContain("nearIgnored");
+    expect(searchFilterWarnings({ near: "48.86,2.35,0" })).toContain("nearIgnored");
+    expect(SEARCH_WARNING_KEY.nearIgnored).toBe("search.warn.nearIgnored");
+  });
+
   it("chaque warning possède une clé de dictionnaire FR et EN renseignée", () => {
     const fr = uiStrings("fr");
     const en = uiStrings("en");

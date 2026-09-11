@@ -24,6 +24,11 @@ import { propertyTypeOptions } from "@/lib/property-types";
 import { countryOptions } from "@/lib/countries";
 import { hasInvalidRequestedStay, hasStayRequest, parseFutureStay, todayIso } from "@/lib/future-stay";
 import { ACTIVE_HOST_ALIAS, activeHostCondition } from "@/lib/host-suspension";
+// T-260 (audit n°6, B7) — « Autour de moi » : `near` était géré par l'API
+// (T-026) mais aucun écran ne l'envoyait ; la note minimale et le tri par
+// popularité étaient dans la même situation.
+import { normalizeNear, parseNear, type NearPoint } from "@/lib/geo-distance";
+import { SearchNearMeButton } from "@/components/search-near-me-button";
 
 /**
  * T-172 (audit UIT 2026-09-01) — les clés `search.meta.*` existaient depuis
@@ -55,6 +60,12 @@ interface SearchPageProps {
     guests?: string;
     amenity?: string;
     sort?: string;
+    /** T-260 : recherche libre (nom, ville, description) — champ destination. */
+    search?: string;
+    /** T-260 : note minimale 0–10 (hors bornes → ignorée + avertissement). */
+    minRating?: string;
+    /** T-260 : « autour de moi » `lat,lng,km` (voir `lib/geo-distance`). */
+    near?: string;
     page?: string;
     /** T-153 (audit n°25, F) : arrivée depuis « Utiliser mon solde »
      *  (/mon-compte) — affiche un bandeau rappelant le wallet. */
@@ -119,6 +130,15 @@ function eligibleRoomPredicate(room: SQL | typeof rooms, params: Awaited<SearchP
   return sql.join(clauses, sql` AND `);
 }
 
+/** T-260 : note minimale exploitable (0–10), sinon `null` (filtre écarté et
+ *  signalé par `search.warn.minRatingIgnored`). Mêmes bornes que l'API. */
+function minRatingValue(params: Awaited<SearchPageProps["searchParams"]>): number | null {
+  const raw = params.minRating?.trim();
+  if (!raw) return null;
+  const value = Number(raw);
+  return Number.isFinite(value) && value >= 0 && value <= 10 ? value : null;
+}
+
 /** Bornes de prix converties en EUR (saisie dans la devise d'affichage). */
 function priceBounds(params: Awaited<SearchPageProps["searchParams"]>): { min: number | null; max: number | null } {
   const minRaw = params.minPrice ? Number(params.minPrice) : null;
@@ -164,6 +184,37 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
     conditions.push(or(ilike(properties.city, `%${params.city}%`), ilike(properties.name, `%${params.city}%`))!);
   }
   if (params.country) conditions.push(eq(properties.country, params.country));
+  // T-260 : le champ « destination » envoie désormais `search` et couvre le
+  // nom, la ville **et** la description — exactement la sémantique de
+  // `search` dans `GET /api/properties` (T-026). `?city=` reste accepté tel
+  // quel pour les liens existants (nom OU ville, comportement d'origine).
+  const destination = params.search?.trim();
+  if (destination) {
+    conditions.push(sql`(
+      ${properties.name} ILIKE ${`%${destination}%`}
+      OR ${properties.city} ILIKE ${`%${destination}%`}
+      OR ${properties.description} ILIKE ${`%${destination}%`}
+    )`);
+  }
+  // T-260 : note minimale (0–10, pas de 0,5 côté formulaire). Hors bornes :
+  // filtre ignoré + `search.warn.minRatingIgnored` (mêmes règles que l'API).
+  const minRatingNum = minRatingValue(params);
+  if (minRatingNum !== null) conditions.push(sql`${properties.averageRating} >= ${minRatingNum}`);
+  // T-260 : « autour de moi ». La distance est calculée en SQL (haversine,
+  // rayon 6371 km — même formule que `GET /api/properties`) pour que le
+  // filtre s'applique AVANT le LIMIT/OFFSET : la pagination reste fidèle.
+  const near: NearPoint | null = parseNear(params.near);
+  const distanceKm = near
+    ? sql`(6371 * acos(LEAST(1::float8, GREATEST(-1::float8,
+        cos(radians(${near.lat}::float8)) * cos(radians(${properties.latitude}::float8))
+          * cos(radians(${properties.longitude}::float8) - radians(${near.lng}::float8))
+        + sin(radians(${near.lat}::float8)) * sin(radians(${properties.latitude}::float8))
+      ))))`
+    : null;
+  if (near && distanceKm) {
+    conditions.push(sql`${properties.latitude} IS NOT NULL AND ${properties.longitude} IS NOT NULL`);
+    conditions.push(sql`${distanceKm} <= ${near.km}`);
+  }
   if (params.type) conditions.push(eq(properties.type, params.type));
   // T-155 (audit n°27, P3) : certains équipements sont portés par les
   // CHAMBRES (tv, minibar…) et jamais par la propriété — le filtre
@@ -192,11 +243,18 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
   if (max !== null) conditions.push(sql`${minPriceEur} <= ${max}`);
 
   const requestedPage = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
+  // T-260 : `popularity` (déjà traité par l'API et par l'avertissement de tri)
+  // est exposé par le formulaire ; « autour de moi » sans tri explicite classe
+  // du plus proche au plus loin plutôt que par note (attente naturelle).
   const order = params.sort === "price_asc"
     ? [sql`${minPriceEur} ASC`, asc(properties.id)]
     : params.sort === "price_desc"
       ? [sql`${minPriceEur} DESC`, asc(properties.id)]
-      : [desc(properties.averageRating), asc(properties.id)];
+      : params.sort === "popularity"
+        ? [desc(properties.totalReviews), asc(properties.id)]
+        : distanceKm
+          ? [sql`${distanceKm} ASC`, asc(properties.id)]
+          : [desc(properties.averageRating), asc(properties.id)];
 
   // T-184 : le `count(*)` (pagination) et la page courante sont deux
   // requêtes indépendantes — elles étaient séquentielles, désormais
@@ -281,6 +339,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   // avant formatage) : indépendant de la locale et de l'utilisateur.
   const requestedStay = hasStayRequest(params.checkIn, params.checkOut);
   const today = todayIso();
+  // T-260 : « autour de moi » — lu ici pour la clé de cache et la puce
+  // « rayon actif » ; le filtrage lui-même est fait par `searchProperties`.
+  const near = parseNear(params.near);
   const cacheable = !requestedStay;
   const cacheKey = cacheable
     ? JSON.stringify({
@@ -292,6 +353,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         min: priceBounds(params).min,
         max: priceBounds(params).max,
         sort: params.sort ?? null,
+        search: params.search?.trim().toLowerCase() ?? null,
+        minRating: minRatingValue(params),
+        // Normalisé (`lat,lng,km`) : « 48.86,2.35 » et « 48.8600,2.3500 »
+        // partagent la même entrée de cache.
+        near: near ? normalizeNear(near) : null,
         page: Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1),
       })
     : null;
@@ -311,6 +377,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     query.set("page", String(page));
     return `/recherche?${query.toString()}`;
   }
+  const nearRemovalQuery = new URLSearchParams(pageQuery);
+  nearRemovalQuery.delete("near");
+  const nearRemovalHref = `/recherche?${nearRemovalQuery.toString()}`;
   const stayQuery = new URLSearchParams();
   if (params.checkIn) stayQuery.set("checkIn", params.checkIn);
   if (params.checkOut) stayQuery.set("checkOut", params.checkOut);
@@ -345,8 +414,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                 <input
                   type="text"
-                  name="city"
-                  defaultValue={params.city}
+                  name="search"
+                  defaultValue={params.search ?? params.city}
                   placeholder={t("search.destinationPlaceholder")}
                   className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
                 />
@@ -414,9 +483,26 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <div className="w-[150px]">
               <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.sort")}</label>
               <select name="sort" defaultValue={params.sort ?? "rating"} className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm">
-                <option value="rating">{t("search.sort.rating")}</option><option value="price_asc">{t("search.sort.priceAsc")}</option><option value="price_desc">{t("search.sort.priceDesc")}</option>
+                <option value="rating">{t("search.sort.rating")}</option><option value="popularity">{t("search.sort.popularity")}</option><option value="price_asc">{t("search.sort.priceAsc")}</option><option value="price_desc">{t("search.sort.priceDesc")}</option>
               </select>
             </div>
+            {/* T-260 : note minimale (0–10, pas de 0,5) — la valeur hors bornes
+                est ignorée par le moteur et signalée par le bandeau T-175. */}
+            <div className="w-[130px]">
+              <label className="block text-xs font-medium text-gray-500 mb-1">{t("search.minRating")}</label>
+              <input
+                type="number"
+                name="minRating"
+                min="0"
+                max="10"
+                step="0.5"
+                defaultValue={params.minRating}
+                placeholder={t("search.minRatingAll")}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
+              />
+            </div>
+            {/* T-260 : « Autour de moi » (géolocalisation → `near`). */}
+            <SearchNearMeButton />
             <SearchPriceFilter minPrice={params.minPrice} maxPrice={params.maxPrice} />
             <Button type="submit" size="md">
               <Search className="w-4 h-4 mr-2" />
@@ -432,7 +518,9 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
         <div className="flex items-center justify-between mb-6">
           <div>
             <h1 className="text-xl font-bold text-gray-900">
-              {params.city ? (
+              {params.search ? (
+                <>{t("search.resultsFor").replace("{query}", params.search)}</>
+              ) : params.city ? (
                 <>{t("search.accommodationsIn")} {params.city}</>
               ) : (
                 <>{t("search.allAccommodations")}</>
@@ -441,6 +529,16 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
             <p className="text-sm text-gray-500 mt-1">
               {total} {total !== 1 ? t("search.resultsPlural") : t("search.resultsCount")} · {t("search.pageShort")} {currentPage} {t("search.pageOf")} {totalPages}
             </p>
+            {/* T-260 : « autour de moi » actif — l'utilisateur voit le rayon
+                appliqué et peut le retirer sans perdre ses autres filtres. */}
+            {near && (
+              <p className="mt-2 inline-flex items-center gap-2 rounded-full bg-blue-50 border border-blue-200 px-3 py-1 text-xs text-[#1B3A6B]">
+                {t("search.nearActive").replace("{km}", String(near.km))}
+                <Link href={nearRemovalHref} className="underline font-medium">
+                  {t("search.clearNear")}
+                </Link>
+              </p>
+            )}
           </div>
 
           {/* T-175 : avertissements filtres saisis mais ignorés/incohérents —

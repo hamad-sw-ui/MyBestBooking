@@ -813,3 +813,31 @@ développement ou en test (`NODE_ENV=test`).
 stockage partagé », `vi.stubEnv` + deux appels → un seul log), tsc 0, eslint 0/0, aucune clé i18n.
 Rapports : `REPORTS/validation_T263_T264_2026-09-11_audit6_B10_B12.md` (+ impact et conception).
 
+## T-260 — audit n°6, B7 : les capacités de l'API entrent dans le formulaire (2026-09-11)
+
+**Le constat.** `GET /api/properties` savait trier par popularité, filtrer par note minimale
+(`minRating`), par distance (`near`, T-026) et chercher dans le nom, la ville et la description
+(`search`). Le formulaire de `/recherche` n'envoyait que `rating | price_asc | price_desc` : deux
+fonctions réellement implémentées étaient inaccessibles, une troisième n'était connue que de ceux
+qui tapaient l'URL — et depuis T-259, les coordonnées sont saisissables, donc le filtre de distance
+devenait utilisable sans bouton.
+
+**Ce qui a été fait.** Le champ destination envoie `search` (nom + ville + description ; les liens
+`?city=` gardent leur sens d'origine) ; le `<select>` de tri reçoit « Populaires » ; la note minimale
+est un champ numérique borné 0–10 (hors bornes → bandeau « filtre ignoré », comme le reste de T-175) ;
+« Autour de moi » demande la position (`navigator.geolocation`), réutilise les filtres saisis et
+navigue vers `near=lat,lng,25`, avec un repli explicite (« saisissez une ville ») si elle est refusée.
+Une puce dit le rayon actif et permet de le retirer.
+
+**Deux décisions de conception.** (1) La distance est filtrée **en SQL** (haversine, 6371 km) et non
+en JavaScript après pagination : `total`, `totalPages` et la page courante restent fidèles — l'API,
+elle, filtre en JS sur un jeu large, ce qui est impossible ici. (2) Quand `near` est présent sans tri
+explicite, l'ordre est la distance croissante : c'est ce qu'on attend d'un « autour de moi », et
+l'URL est nouvelle (aucune régression). La brique `src/lib/geo-distance.ts` est pure et testée
+(bornes, haversine de référence Paris–Lyon/Paris–Marseille, construction d'URL) ; le composant client
+est couvert par un test de rendu.
+
+**Preuves.** vitest **146 f / 812 t** (dont `geo-distance` 8/8 et le bouton 1/1), tsc 0, eslint 0/0,
+sondes runtime FR/EN : `?search=azur` → 1 carte, `?minRating=9.5` → 2, `?near=43.7696,11.2558,50` → 1
++ puce, `?city=Paris` → 2 (inchangé), EN « Popular / Minimum rating / Near me ».
+
