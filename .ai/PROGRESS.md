@@ -7,6 +7,56 @@
 > Les affirmations sont **taguées** selon `CODING_RULES.md` §16
 > (🔍/🔨/🧪/▶️/🧠/❓).
 
+## 2026-09-11 — Audit n°6 (exécution) : mise en œuvre des lots A et B (T-253 → T-258)
+
+- **Livré — lot A (commit `11165d4`)** : 🔨 **B1** le seuil « stale » de `getCronHealth` suit la
+  cadence déclarée (`CRON_SCHEDULES`, 3 × 24 h pour `price-alerts` — le seuil de 4 h hérité d'une
+  cadence fantôme disparaît) ; **B2** `/api/cron/payouts` retiré de `vercel.json` (410 quotidien tant
+  que `platformPayoutsEnabled()` est faux, reste exécutable à la main par `scripts/cron-runner.mjs`) ;
+  **B3** base URL unique des e-mails (`appBaseUrl()`, 10 fichiers — seul `verify/route.ts` conserve la
+  sienne, justifié en commentaire) ; **B11** un seul squelette `loading.tsx` ajouté
+  (`(main)/mon-compte`), jamais au-dessus d'une route `[id]` (BUG-051). 🧪 `cron-schedule` 3/3,
+  `app-url-usage` 2/2, `cron-trace` recalculé ; **0 clé i18n ajoutée**. Docs : `KNOWN_LIMITATIONS.md`,
+  `docs/CI.md`, §B11 du rapport d'analyse corrigé.
+- **Livré — lot B, B4 → T-257** : 🔨 `/dashboard/rooms` (branche hôte) ne fait plus **une requête par
+  bien** mais **une** jointure `rooms ⋈ properties` filtrée par `host_id` (+ `countRooms()`), et les
+  deux écrans restés hors fenêtre (`rooms`, `messages`) adoptent `parsePageWindow` + `<ShowMore>` —
+  contrat T-245 complet sur les 9 écrans de liste. `conversationScope()` est partagé par la liste et
+  le compteur de conversations (un seul périmètre). 🧪 `list-window.t257.test.ts` **3/3** sur base
+  réelle : 23 chambres → **aucun bandeau** ; 26 lignes → « 25 résultats affichés sur 26 » ; messages
+  26 fils identiques.
+- **Livré — lot B, B5 → T-258** : 🔨 la fiche publique garde ses 5 avis (même requête, même cache)
+  mais affiche le **total** (« Avis vérifiés ✓ — 24 avis ») et un bouton « Voir les 24 avis » dès
+  qu'il y a plus de lignes que la fenêtre ; nouvelle page **`/hebergement/[slug]/avis`** (20 avis par
+  page, `?page=`, `generateMetadata`, mêmes règles de visibilité que la fiche, 404 sinon) ; le bloc
+  d'avis est extrait dans le composant partagé `PropertyReviewsList` (markup inchangé). Titre de la
+  page = clé orpheline `property.reviews` enfin utilisée. 🔤 verrou i18n **1739 → 1742** (+3 :
+  `property.reviewsCount`, `property.reviewsSeeAll`, `property.backToProperty`). 🧪
+  `reviews-page.t258.test.ts` **3/3** (24 avis approuvés : compteur/lien/fiche bornée à 5 ; page 1 =
+  20 lignes avec `?page=2`, page 2 = fin de liste ; slug inconnu → `notFound()`).
+- **Problèmes rencontrés** : les deux premiers runs du test T-258 ont échoué pour des raisons de
+  harnais, pas de code — (1) la fiche embarque des composants clients qui exigent l'App Router
+  (`useRouter`) et le contexte Toast, donc `next/navigation` et `@/components/ui/toast` doivent être
+  mockés dans tout test RSC d'une page publique ; (2) les avis insérés dans la même seconde rendaient
+  la pagination non déterministe → un `createdAt` explicite par fixture a été posé. ⚠️ Aucun bug
+  applicatif découvert ; la qualité « 5 avis sans le dire » et le N+1 par bien sont bien réels.
+- **Sondes runtime** : `/dashboard/rooms` hôte → 200 sans bandeau (23 chambres), puis **« 25 résultats
+  affichés sur 26 »** après création de 3 chambres (`?limit=50` → aucun bandeau, compat T-245) ;
+  `/dashboard/messages` → 200 ; fiche seed → « 2 avis » sans bouton ; fiche portée à **24 avis** →
+  « 24 avis » + « Voir les 24 avis » et **5 avis** seulement dans la section ; page dédiée → 20 avis
+  en page 1 (« page 1 sur 2 »), fin de liste en page 2, **version EN** (« Reviews », « Back to the
+  property ») et **404** sur slug inconnu. Base rendue à l'état seed (23 rooms / 30 réservations /
+  21 avis / 0 favori / 0 alerte).
+- **Preuves de chaîne** : `npm run ci` **verte** — typecheck 0 · lint 0/0 · `i18n:check` 6 candidats
+  pré-existants · `ai:check` **20 OK / 0 warn / 0 fail** · vitest **138 fichiers / 761 tests passés
+  (789 collectés, 28 ignorés par leur sonde DB)** · build production (67 pages) · smoke **95/95**.
+- **Base** : fixtures purgées et agrégats recalculés par `afterAll` (22 avis T-258 supprimés +
+  `recomputePropertyReviewAggregate`, chambres et conversations T-257 supprimées) → retour à l'état
+  seed (8 users / 8 annonces / 30 réservations / 21 avis, `conversations` 0).
+- **Étape suivante** : **B6 → T-259** (champs affichés jamais éditables : `description_en`, `state`,
+  `latitude`/`longitude`), puis le lot D (B8/B10/B12 — le crédit gelé reste **non consommable** :
+  signalement + journal seulement), puis le lot C (B7/B9).
+
 ## 2026-09-11 — Audit n°5 (exécution) : 8 constats A1→A8, tâches T-245 → T-252
 
 - **Livré** : l'analyse `docs/analyse_2026-09-11_audit_runtime_execution.md` (copie

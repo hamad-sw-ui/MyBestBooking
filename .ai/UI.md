@@ -56,7 +56,8 @@ Utilitaire `cn(...)` (`clsx` + `tailwind-merge`) exposé par `@/lib/utils`.
 |---|---|---|
 | `/` | `app/page.tsx` | Accueil : hero + search box + populaires + destinations + valeurs |
 | `/recherche` | `(main)/recherche/page.tsx` | Résultats + filtres |
-| `/hebergement/[slug]` | `(main)/hebergement/[slug]/page.tsx` | Fiche property + rooms + avis |
+| `/hebergement/[slug]` | `(main)/hebergement/[slug]/page.tsx` | Fiche property + rooms + 5 avis les plus récents (compteur + lien) |
+| `/hebergement/[slug]/avis` | `(main)/hebergement/[slug]/avis/page.tsx` | **T-258** — tous les avis approuvés, 20 par page (`?page=`), mêmes règles de visibilité que la fiche |
 | `/reservation?property=…&room=…` | `(main)/reservation/page.tsx` | Tunnel multi-étapes (client) |
 | `/mes-reservations` | | Historique et statuts |
 | `/mes-favoris` | | Wishlists |
@@ -107,6 +108,20 @@ Deux colonnes du dashboard pro sont directement actionnables :
 - **Supervision (T-250)** : `/dashboard/cron` (lien de navigation admin) montre
   l'état de chaque tâche (`ok` / `overdue` / `failed` / `never ran`) et
   l'historique des exécutions.
+
+### Audit n°6 — lot B, écrans modifiés (T-257 / T-258, 2026-09-11)
+
+- **Fenêtre complète (T-257)** : `/dashboard/rooms` et `/dashboard/messages`
+  rejoignent les 7 écrans déjà fenêtrés — 25 lignes par défaut, « Afficher 25 de
+  plus », « Tout afficher », plafond 500, compteur « N résultats affichés sur M »
+  (`ShowMore`, mêmes clés `show.*`). La branche hôte de `rooms` ne fait plus une
+  requête par bien : une seule jointure `rooms ⋈ properties` filtrée par hôte.
+- **Avis de la fiche (T-258)** : l'en-tête « Avis vérifiés ✓ » affiche le nombre
+  total (« 24 avis ») et, au-delà de la fenêtre de 5, un bouton « Voir les 24
+  avis » vers la page dédiée. La page `/hebergement/[slug]/avis` reprend
+  exactement le rendu de la fiche (composant partagé `PropertyReviewsList` :
+  réponse d'hôte, 👍/👎, pays, type de voyageur, bouton « Utile ») avec une
+  pagination « Précédent / page X sur Y / Suivant ».
 
 ### T-217 — écrans ajoutés ou corrigés (2026-09-10)
 

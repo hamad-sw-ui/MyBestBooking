@@ -399,6 +399,13 @@ disparaît (CI hébergée, permissions GitHub, credentials prod).
   `/dashboard/bookings` (`/api/dashboard/billing/export`). Routes et contenus
   inchangés.
 
+## Audit n°6 — lot B (T-257 / T-258, 2026-09-11)
+
+| Feature | État | Preuve | Traçabilité |
+|---|---|---|---|
+| Fenêtre des listes `rooms` + `messages` | ✅ | `parsePageWindow` + `<ShowMore>` sur les 2 écrans ; branche hôte de `rooms` en **une** jointure (fin du N+1) ; `conversationScope()` partagé liste/compteur ; 3 tests RSC sur base réelle | T-257 (B4) |
+| Avis complets sur la fiche publique | ✅ | compteur `property.totalReviews` + lien « Voir les N avis » ; page `/hebergement/[slug]/avis` (20/page, `?page=`, `generateMetadata`, 404 si invisible) ; composant partagé `PropertyReviewsList` ; 3 tests RSC sur base réelle | T-258 (B5) |
+
 ## T-245 → T-250 — exécution de l'audit n°5 (2026-09-11)
 
 | Feature | État | Preuve | Traçabilité |

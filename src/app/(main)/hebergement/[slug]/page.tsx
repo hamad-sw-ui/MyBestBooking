@@ -9,8 +9,8 @@ import { evaluateBookingRules } from "@/lib/booking-rules";
 import { publicCatalogCache } from "@/lib/read-cache";
 import { SmartImage } from "@/components/ui/smart-image";
 import { getCurrentUser } from "@/lib/auth";
-import { formatDate, getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
-import { countryLabel, travelerTypeLabel } from "@/lib/country-label";
+import { getRatingLabel, getPropertyTypeLabel } from "@/lib/utils";
+import { countryLabel } from "@/lib/country-label";
 import { safeJsonForScript } from "@/lib/safe-json-ld";
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
@@ -52,7 +52,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { PriceAlertButton } from "@/components/price-alert-button";
 import { PropertyHeaderActions } from "@/components/property-header-actions";
-import { ReviewHelpfulButton } from "@/components/review-helpful-button";
+import { PropertyReviewsList } from "@/components/property-reviews-list";
 import { PropertyBookingCard } from "@/components/property-booking-card";
 import { LocalizedRoomPrice } from "@/components/localized-room-price";
 import { LocalizedDescription } from "@/components/localized-description";
@@ -68,7 +68,7 @@ import { cancellationPolicyLabel } from "@/lib/cancellation-label";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import {
   Star, MapPin, Check, X, Wifi, Car, Utensils, Waves,
-  Dumbbell, Wind, Users, Calendar, Shield, MessageCircle, Award
+  Dumbbell, Wind, Users, Calendar, Shield, MessageCircle
 } from "lucide-react";
 import Link from "next/link";
 
@@ -529,75 +529,47 @@ export default async function PropertyPage({ params, searchParams }: PropertyPag
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
+                  {/* T-258 (audit n°6, B5) : `property.totalReviews` existait
+                      déjà en base, mais la section n'en disait rien — un bien
+                      à 40 avis n'en montrait que 5, sans le signaler. */}
                   <CardTitle>{t("property.verifiedReviews")} ✓</CardTitle>
-                  {rating && (
-                    <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 px-3 py-1 bg-[#1B3A6B] text-white font-semibold rounded">
-                        <Star className="w-4 h-4 fill-current" />
-                        {rating.toFixed(1)}
-                      </div>
-                      <span className="text-sm text-gray-600">
-                        {ratingInfo?.emoji} {ratingInfo?.label}
+                  <div className="flex items-center gap-3">
+                    {property.totalReviews ? (
+                      <span className="text-sm text-gray-500">
+                        {t("property.reviewsCount").replace("{n}", String(property.totalReviews))}
                       </span>
-                    </div>
-                  )}
+                    ) : null}
+                    {rating && (
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 px-3 py-1 bg-[#1B3A6B] text-white font-semibold rounded">
+                          <Star className="w-4 h-4 fill-current" />
+                          {rating.toFixed(1)}
+                        </div>
+                        <span className="text-sm text-gray-600">
+                          {ratingInfo?.emoji} {ratingInfo?.label}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {propertyReviews.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Award className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                    <p className="text-gray-500">{t("property.newPartner")}</p>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    {propertyReviews.map(({ review, user: reviewer }) => (
-                      <div key={review.id} className="border-b border-gray-100 pb-6 last:border-0">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white font-medium">
-                              {reviewer?.firstName?.charAt(0)}{reviewer?.lastName?.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="font-medium text-gray-900">
-                                {reviewer?.firstName} {reviewer?.lastName?.charAt(0)}.
-                              </p>
-                              <p className="text-sm text-gray-500">
-                                {review.travelerType && (
-                                  <span>{travelerTypeLabel(review.travelerType, t)}</span>
-                                )}
-                                {reviewer?.country && ` · ${countryLabel(reviewer.country, t)}`}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 px-2 py-1 bg-gray-100 rounded text-sm font-medium">
-                            <Star className="w-3 h-3 text-[#F5A623] fill-current" />
-                            {parseFloat(review.overallRating).toFixed(1)}
-                          </div>
-                        </div>
-                        {review.positiveComment && (
-                          <p className="text-gray-700 mb-2">
-                            <span className="text-green-600 font-medium">👍</span> {review.positiveComment}
-                          </p>
-                        )}
-                        {review.negativeComment && (
-                          <p className="text-gray-600 text-sm">
-                            <span className="text-gray-400">👎</span> {review.negativeComment}
-                          </p>
-                        )}
-                        {review.hostReply && (
-                          <div className="mt-3 ml-3 border-l-2 border-[#1B3A6B] bg-blue-50/60 p-3 rounded-r-lg">
-                            <p className="text-xs font-semibold text-[#1B3A6B]">{t("property.hostReply")}</p>
-                            <p className="text-sm text-gray-700 mt-1 whitespace-pre-wrap">{review.hostReply}</p>
-                          </div>
-                        )}
-                        <p className="text-xs text-gray-400 mt-2">
-                          {formatDate(review.createdAt, undefined, locale)}
-                        </p>
-                        <ReviewHelpfulButton reviewId={review.id} initialCount={review.helpfulCount} isOwn={review.userId === viewer?.id} />
-                      </div>
-                    ))}
-                  </div>
+                <PropertyReviewsList
+                  reviews={propertyReviews}
+                  locale={locale}
+                  t={t}
+                  viewerId={viewer?.id}
+                />
+                {/* T-258 (audit n°6, B5) : la fiche reste bornée à 5 avis (même
+                    coût), mais le visiteur sait combien il en existe et peut
+                    lire la suite sur la page dédiée (API déjà paginée). */}
+                {(property.totalReviews ?? 0) > propertyReviews.length && (
+                  <Link
+                    href={`/hebergement/${property.slug}/avis`}
+                    className="mt-6 inline-flex items-center gap-1.5 rounded-lg border border-[#1B3A6B] px-4 py-2 text-sm font-medium text-[#1B3A6B] hover:bg-blue-50"
+                  >
+                    {t("property.reviewsSeeAll").replace("{n}", String(property.totalReviews ?? 0))}
+                  </Link>
                 )}
               </CardContent>
             </Card>

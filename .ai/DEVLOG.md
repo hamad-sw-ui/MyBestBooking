@@ -691,3 +691,41 @@ porte bien ses motifs, l'interface n'atteint jamais les 410 du paiement en ligne
 
 **Livrable.** `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md` — **aucune ligne de
 code modifiée**, base rendue à l'état seed. Solutions découpées en lots A→D, à trancher en oui/non.
+
+## Audit n°6 — exécution (lot A puis lot B) — 2026-09-11
+
+**Lot A (commit `11165d4`) — rendre la supervision et les liens vrais.** Le seuil « stale » de
+`getCronHealth` suit désormais la cadence réellement déclarée (`CRON_SCHEDULES` : 3 × 24 h pour
+`price-alerts`, au lieu d'un 4 h hérité d'une cadence fantôme), `/api/cron/payouts` est retiré de
+`vercel.json` (410 quotidien tant que `platformPayoutsEnabled()` est faux ; exécution manuelle par
+`scripts/cron-runner.mjs`), les e-mails passent par `appBaseUrl()` dans 10 fichiers (seul
+`verify/route.ts` garde la sienne, justifié) et un squelette `loading.tsx` n'est posé que sur une
+feuille (`(main)/mon-compte`) — jamais au-dessus d'une route `[id]` (BUG-051 : soft-404 figé à 200).
+
+**Lot B (T-257) — les deux derniers écrans hors fenêtre, et le N+1 de l'hôte.** `/dashboard/messages`
+et `/dashboard/rooms` chargeaient l'intégralité des lignes alors que sept écrans appliquaient déjà la
+fenêtre T-245 ; la branche hôte de `rooms` interrogeait en plus la base **une fois par bien**. La
+branche hôte passe par la même jointure `rooms ⋈ properties` que l'admin (filtre `host_id`), avec
+`countRooms()` pour la fenêtre ; `conversationScope()` est extrait pour que la liste et le compteur de
+conversations partagent exactement le même périmètre (participant + fenêtre de rattrapage du
+brouillon). Les deux écrans adoptent `parsePageWindow` + `<ShowMore>` : mêmes bornes, mêmes libellés,
+aucun `?page=` introduit (filtres et compteurs restent client).
+
+**Lot B (T-258) — un bien à 40 avis n'en montre plus 5 pour toujours.** La fiche garde sa fenêtre de
+5 avis (même requête, même cache TTL 60 s) mais l'en-tête affiche le total (« Avis vérifiés ✓ —
+24 avis ») et un bouton « Voir les 24 avis » n'apparaît que s'il y a plus de lignes que la fenêtre.
+La page dédiée `/hebergement/[slug]/avis` réutilise les mêmes règles de visibilité
+(`getPropertyForReviews` : bien actif + hôte actif, exception pour l'hôte propriétaire et l'admin),
+pagine 20 avis par page avec `?page=` et `generateMetadata`, et partage le rendu via
+`PropertyReviewsList` (aucun changement visuel : réponse d'hôte, 👍/👎, pays, type de voyageur, bouton
+« Utile »). Le titre réutilise `property.reviews`, orpheline jusqu'ici. Verrou i18n **1739 → 1742**
+(+3 clés FR/EN).
+
+**Preuves.** `list-window.t257.test.ts` **3/3** (23 chambres → aucun bandeau ; 26 lignes → « 25
+résultats affichés sur 26 » ; messages 26 fils idem) et `reviews-page.t258.test.ts` **3/3** (bien porté
+à 24 avis : compteur + lien + fiche toujours bornée à 5 ; page 1 = 20 lignes avec `?page=2`, page 2 =
+fin de liste ; slug inconnu → `notFound()`), fixtures purgées et agrégats recalculés en `afterAll`.
+`npm run ci` **verte** (typecheck 0 · lint 0/0 · `ai:check` 20 OK / 0 warn / 0 fail · vitest 138
+fichiers / 761 tests passés (789 collectés, 28 ignorés) · build 67 pages · smoke 95/95). Rapports :
+`REPORTS/validation_T257_T258_2026-09-11_audit6_B4_B5.md` + analyses d'impact et de conception
+T-257/T-258 (exigées par R12 pour une tâche de niveau S).

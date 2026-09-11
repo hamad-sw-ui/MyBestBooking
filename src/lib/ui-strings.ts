@@ -350,6 +350,12 @@ const FR = {
   "property.reviewPlural": "avis",
   "property.hostReply": "Réponse de l'hébergement",
   "property.verifiedReviews": "Avis vérifiés",
+  // T-258 (audit n°6, B5) : compteur + page « tous les avis » (l'API publique
+  // était déjà paginée alors que la fiche s'arrêtait à 5 avis, sans le dire).
+  // Le titre de la page réutilise `property.reviews`, orpheline jusqu'ici.
+  "property.reviewsCount": "{n} avis",
+  "property.reviewsSeeAll": "Voir les {n} avis",
+  "property.backToProperty": "Retour à l'hébergement",
   "property.policies": "Politiques",
   // Réservation / tunnel
   "reservation.title": "Finaliser la réservation",
@@ -2106,6 +2112,9 @@ const EN: Record<UiStringKey, string> = {
   "property.reviewPlural": "reviews",
   "property.hostReply": "Host reply",
   "property.verifiedReviews": "Verified reviews",
+  "property.reviewsCount": "{n} reviews",
+  "property.reviewsSeeAll": "See all {n} reviews",
+  "property.backToProperty": "Back to the property",
   "property.policies": "Policies",
   "reservation.title": "Complete your booking",
   "reservation.continuePayment": "Send request",

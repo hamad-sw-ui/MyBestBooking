@@ -646,6 +646,35 @@ Détail par constat (problème, preuve d'exécution, correctif non régressif, t
 rapport ; vérifications saines à ne pas rouvrir : § 4 (0 bouton mort, 0 texte en dur, 0 route sans
 contrôle justifié, 12/12 interrupteurs d'e-mail lus, expiration T-203 intacte).
 
+Numérotation de suivi : **B1→T-253**, **B2→T-254**, **B3→T-255**, **B11→T-256**, **B4→T-257**,
+**B5→T-258**, **B6→T-259** (lot B), lot C **B7→T-260**, **B9→T-261**, lot D **B8→T-262**,
+**B10→T-263**, **B12→T-264**.
+
+- ✅ ~~**T-253/T-254/T-255/T-256 (lot A — B1, B2, B3, B11).**~~ **FAIT (2026-09-11, commit `11165d4`)** :
+  cadence `price-alerts` alignée sur l'ordonnanceur réel (24 h), `/api/cron/payouts` déplanifié de
+  `vercel.json` (410 quotidien tant que `platformPayoutsEnabled()` est faux, exécution manuelle via
+  `scripts/cron-runner.mjs`), base URL unique des e-mails (`appBaseUrl()` dans 10 fichiers — seul
+  `verify/route.ts` garde la sienne, justifié en commentaire), squelette `loading.tsx` limité aux
+  feuilles (`(main)/mon-compte`). Tests `cron-schedule` 3/3, `app-url-usage` 2/2, `cron-trace`
+  recalculé. 0 clé i18n ajoutée.
+- ✅ ~~**T-257 (M/P2) — *B4 — deux écrans de liste hors fenêtre + N+1 côté hôte.***~~ **FAIT
+  (2026-09-11)** : branche hôte de `/dashboard/rooms` réécrite en **une** jointure `rooms ⋈ properties`
+  (fin du `for (const prop of hostProperties)`), `countRooms()` + `parsePageWindow`/`<ShowMore>` sur
+  `/dashboard/rooms` **et** `/dashboard/messages`, `conversationScope()` partagé par la liste et le
+  compteur de conversations. Preuves : `list-window.t257.test.ts` **3/3** (23 chambres → aucun bandeau ;
+  26 lignes → « 25 résultats affichés sur 26 » ; messages 26 fils idem). 0 clé i18n ajoutée (`show.*`
+  déjà présentes en T-245).
+- ✅ ~~**T-258 (M/P2) — *B5 — cinq avis pour toujours, sans le dire.***~~ **FAIT (2026-09-11)** :
+  compteur (`property.reviewsCount`) dans l'en-tête « Avis vérifiés ✓ » de la fiche, lien « Voir les N
+  avis » (`property.reviewsSeeAll`) dès que `totalReviews > 5`, **nouvelle page**
+  `/hebergement/[slug]/avis` (20 avis/page, `?page=`, `generateMetadata`, mêmes règles de visibilité
+  que la fiche, 404 sinon), bloc d'avis extrait dans le composant partagé `PropertyReviewsList`
+  (markup inchangé). Titre de la page = clé orpheline `property.reviews` enfin utilisée. Verrou i18n
+  **1739 → 1742** (+3 : `property.reviewsCount`, `property.reviewsSeeAll`,
+  `property.backToProperty`). Preuves : `reviews-page.t258.test.ts` **3/3** (bien à 24 avis : compteur,
+  lien, fiche toujours bornée à 5 ; page 1 = 20 lignes avec `?page=2`, page 2 = fin de liste ; slug
+  inconnu → `notFound()`).
+
 ### Audit T-242 (2026-09-10) — audit de profondeur (analyse n°4)
 
 Analyse : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie
