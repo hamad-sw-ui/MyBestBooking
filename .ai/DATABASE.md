@@ -7,7 +7,15 @@
 
 - Schéma Drizzle : `src/db/schema.ts`; migrations SQL additives `0000` à
   `0013_orchestration-resilience.sql`.
-- Dernière migration : `0024_wallet_transactions.sql` (T-248, 2026-09-11) —
+- Dernière migration : `0025_user_notification_prefs.sql` (T-261, 2026-09-11) —
+  additive : `users.notification_prefs` (jsonb, **nullable, sans défaut**). `NULL`
+  = héritage du réglage global `app_settings.notifications` (aucun envoi ne
+  change pour les comptes existants) ; les trois catégories réglables par
+  l'utilisateur sont `stayReminders`, `reviewRequests` et
+  `moderationDecisions`, et le global **reste maître** (une préférence ne peut
+  que restreindre). Les e-mails transactionnels restent hors de portée de
+  l'utilisateur.
+- Migration `0024_wallet_transactions.sql` (T-248, 2026-09-11) —
   additive : table `wallet_transactions`, journal **append-only** des mouvements
   du wallet BestRewards (`user_id`, `amount` **signé** en EUR, `balance_after`,
   `kind` ∈ `cashback|referral_referee|referral_referrer|booking_refund|booking_payment|manual_adjustment`,

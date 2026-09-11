@@ -22,7 +22,7 @@ Authentification :
 | POST | `/api/auth/register` | 🔓 | Crée un `users`, hash bcrypt, ouvre une session. Body : `{email, password (≥8), firstName, lastName, role?}`. |
 | POST | `/api/auth/login` | 🔓 | Vérifie mdp, met à jour `lastLoginAt`, ouvre une session. |
 | POST | `/api/auth/logout` | 🔓 | Supprime la session en base + le cookie, `302 → /`. |
-| GET | `/api/auth/me` | 🔒 | Retourne le profil courant (sans le hash). |
+| GET | `/api/auth/me` | 🔒 | Retourne le profil courant (sans le hash). Expose `notificationPrefs` (T-261) : `null` = héritage du réglage global, sinon `{ stayReminders?, reviewRequests?, moderationDecisions? }` normalisé. |
 | POST | `/api/auth/2fa/setup` | 🔒 | Génère un secret TOTP `pending` (mot de passe courant requis, plus le code actif en cas de rotation). Aucun service tiers. |
 | POST | `/api/auth/2fa/verify` | 🔒 | Promeut le secret `pending` et **retourne 10 codes de secours en clair une seule fois** (`{enabled:true, backupCodes:[…]}`, T-231) ; seules leurs empreintes bcrypt sont persistées. |
 | POST | `/api/auth/2fa/disable` | 🔒 | Mot de passe + **code TOTP ou code de secours** (`XXXXX-XXXXX`, T-231). Purge secret, secret `pending` et codes de secours. |
@@ -36,7 +36,7 @@ dédié). Un compte **suspendu** répond `401` avec le motif de suspension ; un 
 
 | Méthode | Route | Auth | Ce qu'elle fait |
 |---|---|---|---|
-| GET | `/api/properties` | 🔓 | Liste paginée (`limit`, `offset`) des properties `active`. Filtres : `city`, `country`, `type`, `minRating`, `search` (ilike sur name/city/description), et post-filtrage `minPrice`/`maxPrice` sur le `min(basePrice)` des rooms. Trié par `averageRating desc`. ⚠️ N+1 sur les rooms. |
+| GET | `/api/properties` | 🔓 | Liste paginée (`limit` 1–100, `offset` ≥ 0) des properties `active`. Filtres : `city`, `country`, `type`, `guests`, `amenities` (csv), `checkIn`/`checkOut` (disponibilité), `minRating` (0–10, sinon **400**), `search` (ilike sur name/city/description), `near=lat,lng,km` (haversine, seuls les biens avec `latitude`/`longitude` renseignées), et post-filtrage `minPrice`/`maxPrice` sur le `min(basePrice)` des rooms. Tri `sort=rating|price_asc|price_desc|popularity` (défaut `rating`). `total` compte l'ensemble **après** tous les filtres (pagination fidèle). ⚠️ N+1 sur les rooms. **T-260** : ces quatre capacités (`sort=popularity`, `minRating`, `near`, `search`) sont désormais exposées par le formulaire `/recherche` ; `sort` hors liste blanche est signalé à l'utilisateur (bandeau T-175) sans changer la tolérance de l'API. |
 | POST | `/api/properties` | 👤 `host`, `admin` | Crée une property. Génère un slug unique. Admin → `active`, host → `pending`. Accepte `checkInFrom`/`checkInUntil`/`checkOutUntil` (`HH:MM`, T-227) et `timezone` (IANA vérifié). Fenêtre d'arrivée vide (`début = fin`) → `400`. Les labels (`isEcoCertified`/`isBestrewards`/`isPreferred`) sont **réservés à l'admin** → `403` (T-228). |
 | GET | `/api/properties/[id]` | 🔓 | Détail (avec rooms et reviews). |
 | PATCH / PUT | `/api/properties/[id]` | 👤 propriétaire ou `admin` | Mise à jour partielle (le PUT partage le même schéma). Horaires/fuseau comme POST ; la fenêtre d'arrivée est validée sur **l'état résultant** de la fusion (T-227). Labels et `status` → `403` hors admin (T-228). |
@@ -145,7 +145,12 @@ pas la sonde indisponible.
 | PATCH | `/api/users/[id]/suspend` | 🔒 `admin` | `{suspended:true, reason?}` → `suspendedAt` + révocation des sessions ; `{suspended:false}` → réactivation. **Un compte supprimé (anonymisé) répond `409`** dans les deux sens (T-230) : suspension et suppression ne partagent plus `deleted_at`. |
 | POST | `/api/users/[id]/two-factor/reset` | 🔒 `admin` | Dernier recours support (T-231) : purge la 2FA (secret, `pending`, codes de secours), révoque les sessions, trace `user.2fa.reset` et envoie un e-mail d'information. `400` si la 2FA n'est pas active, `409` sur compte supprimé. |
 
-`PATCH /api/users/me` valide `timezone` (fuseau IANA reconnu, sinon `400`).
+`PATCH /api/users/me` valide `timezone` (fuseau IANA reconnu, sinon `400`) et accepte
+`notificationPrefs` (**T-261**) : objet **strict** limité à `stayReminders` / `reviewRequests` /
+`moderationDecisions`, `null` pour effacer la colonne (`users.notification_prefs`) et revenir à
+l'héritage du réglage global ; une clé inconnue → **400** (`issues[].field`). La réponse renvoie le
+réglage normalisé, comme `priceAlertEnabled`. Les e-mails transactionnels ne sont pas réglables par
+cette route (voir `.ai/KNOWN_LIMITATIONS.md`).
 
 Les actions bulk `suspend`/`reactivate` de `/api/admin/bulk` suivent les mêmes règles (T-230) :
 `reactivate` sur un compte anonymisé est **ignoré avec motif** et compté en `skipped`.
