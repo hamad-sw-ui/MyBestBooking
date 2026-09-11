@@ -625,6 +625,27 @@ promos valides/en minuscule/sous minimum/inconnues → 200/200/400/404 ; **0 bou
 UI ↔ routes), **0** `TODO/FIXME`, **0** `href="#"`. La rétention technique (T-243) et l'export
 analytique (T-241/O6) sont déjà livrés.
 
+### Audit n°6 (2026-09-11) — pages, boutons et fonctionnalités inachevés ou mal pensés
+
+Analyse : `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md` (copie
+`.ai/REPORTS/analyse_runtime_n6_2026-09-11_inacheves.md`). Sixième passe d'exécution : 45 pages
+balayées avec les 3 rôles (0 erreur applicative), 71 routes API, 90 appels UI ↔ routes,
+confrontation **schéma ↔ API ↔ formulaires**, `email_outbox` relue, et mesure de l'état de
+supervision après insertion d'une trace `cron_runs` datée de −4 h (ligne supprimée ensuite).
+**12 constats B1→B12**, aucune ligne de code modifiée, base rendue à l'état seed. Lots à trancher
+(oui/non) :
+
+| Lot | Constats | Contenu | Risque | Effort |
+|---|---|---|---|---|
+| **A** | B1, B2, B3, B11 | Supervision cron juste (cadence déclarée = `vercel.json`), cron `payouts` planifié sans trace ni écran, base URL unique des e-mails (`appBaseUrl()` partout), squelettes de chargement manquants | Très faible | ~1 session |
+| **B** | B4, B5, B6 | Fenêtres de liste (`/dashboard/messages`, `/dashboard/rooms` + N+1 par bien), page « tous les avis » + compteur sur la fiche, champs éditables (`description_en`, `state`, `latitude`/`longitude`) | Faible | 1–2 sessions |
+| **C** | B7, B9 | Exposer `sort=popularity` / `minRating` / `near` / `search` ; préférences de notification par utilisateur (`users.notification_prefs`, `null` = héritage global) | Faible / moyen | 1–2 sessions |
+| **D** | B8, B10, B12 | Crédit gelé signalé et journalisé à la suppression de compte (**sans consommation**), résidus T-207 récapitulés, rate-limit en mémoire documenté au déploiement | Faible | ~0,5 session |
+
+Détail par constat (problème, preuve d'exécution, correctif non régressif, tests et i18n) : § 3 du
+rapport ; vérifications saines à ne pas rouvrir : § 4 (0 bouton mort, 0 texte en dur, 0 route sans
+contrôle justifié, 12/12 interrupteurs d'e-mail lus, expiration T-203 intacte).
+
 ### Audit T-242 (2026-09-10) — audit de profondeur (analyse n°4)
 
 Analyse : `docs/analyse_2026-09-10_audit_runtime_profondeur.md` (copie

@@ -658,3 +658,36 @@ ligne `kind: "booking_payment"`) devient un choix produit explicite, pas une év
 build · smoke **95/95** · `ai:check` 19 OK / 1 warn (R7). Runtime : fenêtre et plafond des listes,
 pagination API et ses bornes, `/api/health` avant/après exécution du cron, écran `/dashboard/cron`,
 `/api/wallet/transactions` (200 / 401 / 400). Base rendue à l'état seed après les sondes.
+
+## 2026-09-11 — Audit runtime n°6 : les finitions qui trompent
+
+Sixième passe d'exécution, demandée après le gel du wallet. Le parti pris est inverse de la
+précédente : ne chercher ni panne ni fonctionnalité absente, mais **ce qui existe, s'affiche et
+ment** — une valeur de supervision calculée sur la mauvaise cadence, un lien d'e-mail qui ne
+fonctionne que si la variable d'environnement est là, une liste qui s'arrête sans le dire.
+
+**Ce qui a été parcouru.** 45 pages balayées avec les trois rôles (0 erreur applicative), 71 routes
+API, 90 appels d'interface confrontés aux routes, confrontation systématique
+**schéma ↔ API ↔ formulaires** (colonnes que personne ne peut remplir), `email_outbox` relue
+(73 lignes), trace `cron_runs` datée de −4 h insérée puis supprimée pour mesurer l'état affiché par
+`/api/health`, test runtime des paramètres que l'interface n'expose pas (`sort=popularity`,
+`minRating`, `near`, `search`).
+
+**Les 12 constats.** B1 la cadence déclarée du cron (1 h) contredit `vercel.json` (quotidien 08:00)
+→ « En retard » ~21 h sur 24 ; B2 `/api/cron/payouts` planifié, muet et en 410 quotidien ; B3 trois
+stratégies de base URL dans les e-mails (liens relatifs avec `?? ""`, liens localhost avec
+`?? "http://localhost:3000"`) alors que `appBaseUrl()` existe ; B4 deux écrans de liste sans fenêtre
+et un N+1 par bien ; B5 les avis de la fiche plafonnés à 5 sans compteur ni page dédiée, alors que
+l'API est paginée ; B6 `description_en`, `state`, coordonnées : affichés, jamais éditables ; B7
+quatre capacités d'API sans entrée d'interface ; B8 le crédit gelé disparaît sans mot à la
+suppression de compte ; B9 une seule préférence de notification par utilisateur contre onze réglages
+globaux ; B10 dettes T-207 à récapituler ; B11 dix écrans lourds sans `loading.tsx` ; B12
+rate-limit en mémoire à rappeler au déploiement.
+
+**Ce qui est infirmé.** Aucun bouton mort (1 seul `<button>` sans handler, volontairement
+désactivé), aucun texte en dur, aucune route sans contrôle justifié, aucun interrupteur d'e-mail
+dormant (12/12 lus), le cron n'annule toujours pas les demandes manuelles (T-203), le contrat bulk
+porte bien ses motifs, l'interface n'atteint jamais les 410 du paiement en ligne.
+
+**Livrable.** `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md` — **aucune ligne de
+code modifiée**, base rendue à l'état seed. Solutions découpées en lots A→D, à trancher en oui/non.

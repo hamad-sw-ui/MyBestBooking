@@ -4481,3 +4481,22 @@ Suite au 4e audit (`REPORTS/audit_fonctionnel_profond4_2026-08-27.md`) :
   explicite du programme** — le solde est un « crédit futur » tracé et non déductible, les libellés
   FR/EN l'annoncent et `wallet-policy.test.ts` (3 tests) verrouille la décision (documentée dans
   `KNOWN_LIMITATIONS.md`). L'audit n°5 n'a plus aucune ligne ouverte.
+
+### Audit runtime n°6 (2026-09-11) — analyse d'exécution, aucun code
+
+- Balayage : **45 pages** × 3 rôles → 0 erreur applicative ; **71 routes API** ; **90 appels UI**
+  confrontés aux routes ; 12 routes sans garde = toutes justifiées (auth publique rate-limitée,
+  santé, partages par jeton, stub sans secret).
+- Constats **B1→B12** : cadence de cron déclarée (1 h) ≠ `vercel.json` (quotidien) → `stale` ~21 h
+  sur 24 (mesuré : trace −4 h → `cronStatus: stale`) ; `/api/cron/payouts` planifié, non tracé, 410
+  quotidien ; trois stratégies de base URL dans les e-mails (liens relatifs / localhost) ;
+  `/dashboard/messages` et `/dashboard/rooms` sans fenêtre (+ N+1 par bien) ; avis de la fiche
+  plafonnés à 5 sans compteur ni page dédiée alors que l'API est paginée ; `description_en`, `state`
+  et coordonnées jamais éditables (0/8 renseignés en base) ; `popularity` / `minRating` / `near` /
+  `search` sans entrée d'interface (200 à l'exécution) ; crédit gelé perdu sans avertissement à la
+  suppression de compte ; 1 préférence de notification par utilisateur contre 11 globales ; résidus
+  T-207 ; 10 écrans sans `loading.tsx` ; rate-limit en mémoire.
+- Solutions non régressives détaillées par constat (§ 3 du rapport) et regroupées en **lots A→D**,
+  ordre conseillé A → D → B → C. **Aucune implémentation** : décisions oui/non attendues.
+- Base inchangée : 8 users / 8 properties / 30 bookings / 21 reviews ; `cron_runs` 0 (ligne de test
+  supprimée), `wallet_transactions` 0, `email_outbox` 73 (aucune écriture).

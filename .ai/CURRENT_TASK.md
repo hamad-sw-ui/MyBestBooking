@@ -1,5 +1,26 @@
 # Tâche courante
 
+- **ID** : Audit n°6 (analyse seule, aucun code) — lots **A → D** à trancher
+- **Titre** : Pages, boutons et fonctionnalités inachevés ou mal pensés à l'exécution
+- **Statut** : ✅ **ANALYSE LIVRÉE (2026-09-11)** — 12 constats **B1→B12** mesurés au runtime,
+  solutions non régressives par lot ; **décisions oui/non attendues** avant toute implémentation.
+- **Niveau** : S (passe d'analyse ; aucune écriture applicative)
+- **Analyse source** : `docs/analyse_2026-09-11_audit_runtime_inacheves_mal_penses.md`
+  (copie `.ai/REPORTS/analyse_runtime_n6_2026-09-11_inacheves.md`)
+- **Moyens** : 45 pages balayées avec les 3 rôles (0 erreur applicative), 71 routes API, 90 appels UI
+  ↔ routes, confrontation schéma ↔ API ↔ formulaires, `email_outbox` (73 lignes), trace `cron_runs`
+  datée de −4 h insérée puis supprimée pour mesurer l'état de supervision affiché.
+- **Lots proposés** : **A** (B1, B2, B3, B11) supervision juste + e-mails fiables + squelettes ·
+  **B** (B4, B5, B6) finir ce qui est à moitié câblé · **C** (B7, B9) exposer les capacités de l'API ·
+  **D** (B8, B10, B12) hygiène produit et dette. Ordre conseillé : A → D (crédit à la suppression de
+  compte) → B → C.
+- **État de la base** : inchangé (8 users / 8 properties / 30 bookings / 21 reviews ; `cron_runs` 0 ;
+  `wallet_transactions` 0).
+
+---
+
+## Livraison précédente — T-245 → T-252 (audit n°5), close le 2026-09-11
+
 - **ID** : T-245 → T-252 (audit n°5 : exécution — parcours métier et fins de parcours)
 - **Titre** : Pagination des listes, favoris multi-listes, dialogues de motif, journal du wallet,
   bandeau « tri ignoré », supervision des crons, message de conversation, hygiène T-207
