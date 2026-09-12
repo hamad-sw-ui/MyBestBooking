@@ -31,9 +31,17 @@
   transport SMTP gagne un chiffrement par défaut conforme ; sans variables SMTP, le comportement est
   strictement identique (ConsoleMailer). Preuves : **tsc 0** · **vitest intégral 162 f / 862 t,
   0 échec** (+4 = tests SMTP) · **ai:check 19 OK / 1 warn (R7) / 0 fail** · fixtures démo purgées
-  (0 résidu `demo-smtp*`, `email_outbox` 0, base à l'état seed). **En attente utilisateur** :
-  vraies coordonnées SMTP (host/port/user/password/from) ou clé Resend pour activer la config réelle
-  — jamais de valeurs inventées. **Incident documenté** : le restore du workspace avait réinitialisé
+  (0 résidu `demo-smtp*`, `email_outbox` 0, base à l'état seed). **Valeurs utilisateur reçues
+  (2026-09-12)** : SMTP **Gmail** fourni (utilisateur + mot de passe d'application) → activé dans
+  `.env.local` (gitignored, **jamais commité** : le mot de passe réel reste un secret) ; testé à
+  l'exécution (réservation guest → 3 e-mails outbox, connexions SMTP tentées) — la **livraison
+  réelle vers Gmail est impossible depuis le sandbox** (egress sélectif : le handshake TLS vers
+  smtp.gmail.com est coupé ; GitHub/npm passent) : les lignes restent `pending` + `last_error` +
+  retry cron, comportement conçu ; elle fonctionnera dans tout environnement à internet réel
+  (machine utilisateur ou production, mêmes variables). **`.env.example` : config Gmail préparée**
+  (host/port/secure/user/from renseignés, `SMTP_PASSWORD=""` volontairement vide — à vide, le
+  code retombe sur Console/Resend, rien ne casse ; le secret va dans `.env.local`).
+  **Incident documenté** : le restore du workspace avait réinitialisé
   la branche locale à `1ad5f2d` avec un tree intermédiaire (brouillons audits #7/#8) ; récupéré par
   `git reset --hard bbeec20` (= remote, fin d'audit #8) + réapplication des 2 fichiers SMTP — aucun
   travail antérieur perdu.
