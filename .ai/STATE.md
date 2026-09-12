@@ -4,6 +4,39 @@
 
 - **Projet** : MyBestBooking
 - **Branche actuelle** : `arena/01a0913d-mybestbooking` (branche Arena active)
+- **Configuration SMTP (2026-09-12) — demande utilisateur : « dites moi si serveur smtp est
+  correctement configuré, si non faites la configuration »** — **Analyse** : aucun `SMTP_*` défini
+  dans l'environnement → le mailer actif est le **ConsoleMailer** (repli dev documenté : les e-mails
+  sont écrits dans `.data/mails/*.txt`) — la chaîne d'envoi elle-même (outbox, lease 5 min,
+  MAX_ATTEMPTS=8, header d'idempotence `X-MyBestBooking-Event-Key`, relivraison cron
+  `deliverPendingEmails(20)`) était saine et testée. **Travaux (non-régressifs)** :
+  (1) `src/lib/mail/smtp-mailer.ts` — **STARTTLS imposé par défaut** en mode non-secure (port 587) :
+  sans TLS, la livraison échoue **proprement** (la ligne outbox repasse en attente et sera retentée ;
+  jamais d'envoi en clair vers un serveur distant) ; `SMTP_REQUIRE_TLS="false"` accepté uniquement
+  pour un relais local en clair sur réseau de confiance (documenté dans `.env.example`) ; le mode
+  `secure=true` (465, TLS implicite) est inchangé (`requireTls` sans effet) ;
+  (2) **preuve d'intégration** `src/lib/mail/smtp-mailer.smtp.test.ts` (4 tests, sink SMTP local
+  `node:net` 127.0.0.1) : sélection SmtpMailer via env, non-régression ConsoleMailer sans env,
+  **livraison réelle** outbox→sink (AUTH PLAIN, enveloppe RFC 5321, DATA From/Subject/Event-Key,
+  ligne `sent` + `providerMessageId`), et 587 strict (sink sans STARTTLS → `ok=false`, ligne
+  `pending`, `lastError` « starttls », retry possible) ;
+  (3) **preuve runtime live** (dev server, `.env.local` pointant un sink local 2525) : réservation
+  guest `MBB-2026-TOT2CA` → e-mail réel capturé par le sink (`X-Mybestbooking-Event-Key:
+  guest-claim:<id>`, `From: MyBestBooking <…>`, corps FR) et 2 lignes outbox `sent` avec
+  `provider_message_id` = Message-ID SMTP (guest-claim + demande hôte) ; le même scénario sans
+  `SMTP_REQUIRE_TLS=false` a **mesuré** le défaut strict (attente 120 s nodemailer, pas de 5xx) ;
+  (4) `.env.example` : bloc SMTP réorganisé (465 TLS implicite / 587 STARTTLS) + `SMTP_REQUIRE_TLS`
+  documenté ; `.env.local` (gitignored) : bloc SMTP **commenté, prêt à remplir** (valeurs à fournir
+  par l'utilisateur). **Aucun e-mail existant modifié** : mêmes gabarits, même outbox, seul le
+  transport SMTP gagne un chiffrement par défaut conforme ; sans variables SMTP, le comportement est
+  strictement identique (ConsoleMailer). Preuves : **tsc 0** · **vitest intégral 162 f / 862 t,
+  0 échec** (+4 = tests SMTP) · **ai:check 19 OK / 1 warn (R7) / 0 fail** · fixtures démo purgées
+  (0 résidu `demo-smtp*`, `email_outbox` 0, base à l'état seed). **En attente utilisateur** :
+  vraies coordonnées SMTP (host/port/user/password/from) ou clé Resend pour activer la config réelle
+  — jamais de valeurs inventées. **Incident documenté** : le restore du workspace avait réinitialisé
+  la branche locale à `1ad5f2d` avec un tree intermédiaire (brouillons audits #7/#8) ; récupéré par
+  `git reset --hard bbeec20` (= remote, fin d'audit #8) + réapplication des 2 fichiers SMTP — aucun
+  travail antérieur perdu.
 - **Implémentation de l'audit n°8 (2026-09-11) — audit entièrement soldé, F1 → F5 livrés (T-271 → T-275)** :
   **T-271 (S/F1, majeur)** — le 500 latent de `/mes-reservations` est corrigé :
   `formatTimestamp` (`src/lib/dates.ts`) n'applique les styles Intl
