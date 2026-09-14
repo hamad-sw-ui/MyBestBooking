@@ -5,12 +5,10 @@ import { desc, eq, sql } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { apiError } from "@/lib/api-error";
 import { makeT } from "@/lib/ui-strings";
-
-function csvCell(value: unknown): string {
-  let text = String(value ?? "");
-  if (/^[=+\-@]/.test(text)) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
+import { getServerLocale } from "@/lib/server-locale";
+import { convertAmount, indicativeRate, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
+import { csvRows } from "@/lib/csv";
 
 /**
  * P9 — Export du ledger de VERSEMENTS (`payouts`) pour la carte « États de
@@ -31,7 +29,18 @@ export async function GET(request: NextRequest) {
     .orderBy(desc(payouts.createdAt))
     .limit(500);
 
-  const t = makeT(user.language);
+  const displayCurrency = await getServerDisplayCurrency(user.currency);
+  const displayAmount = (value: string, sourceCurrency: string) => {
+    const source = sourceCurrency.toUpperCase();
+    if (!isDisplayCurrency(source) || !isDisplayCurrency(displayCurrency)) return "";
+    return convertAmount(Number(value), source, displayCurrency).toFixed(2);
+  };
+  const displayRate = (sourceCurrency: string) => {
+    const source = sourceCurrency.toUpperCase();
+    const rate = indicativeRate(source, displayCurrency);
+    return rate === null ? "" : rate.toFixed(8);
+  };
+  const t = makeT(await getServerLocale());
   const lines = [
     [
       t("billingCsv.periodStart"),
@@ -44,6 +53,12 @@ export async function GET(request: NextRequest) {
       t("billingCsv.status"),
       t("billingCsv.paidAt"),
       t("billingCsv.idempotencyKey"),
+      t("billingCsv.grossDisplay"),
+      t("billingCsv.commissionDisplay"),
+      t("billingCsv.netDisplay"),
+      t("billingCsv.displayCurrency"),
+      t("billingCsv.displayRate"),
+      t("billingCsv.displayRateAsOf"),
     ],
     ...rows.map((p) => [
       p.periodStart,
@@ -56,9 +71,15 @@ export async function GET(request: NextRequest) {
       p.status,
       p.paidAt ? p.paidAt.toISOString() : "",
       p.idempotencyKey,
+      displayAmount(p.grossAmount, p.currency),
+      displayAmount(p.commissionAmount, p.currency),
+      displayAmount(p.netAmount, p.currency),
+      displayCurrency,
+      displayRate(p.currency),
+      displayRate(p.currency) ? FX_SNAPSHOT.asOf : "",
     ]),
   ];
-  const csv = lines.map((line) => line.map(csvCell).join(",")).join("\n");
+  const csv = csvRows(lines);
   return new NextResponse(`\uFEFF${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

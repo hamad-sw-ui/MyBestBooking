@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ShowMore } from "@/components/ui/show-more";
 import { parsePageWindow } from "@/lib/page-window";
+import { formatTimestamp } from "@/lib/dates";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,8 @@ export default async function CronHealthPage({
   if (!user || user.role !== "admin") {
     redirect("/dashboard");
   }
-  const t = makeT(await getServerLocale());
+  const locale = await getServerLocale();
+  const t = makeT(locale);
   const window = parsePageWindow((await searchParams).limit);
   const [health, runs] = await Promise.all([
     getCronHealth(),
@@ -63,7 +65,7 @@ export default async function CronHealthPage({
                   <h2 className="font-semibold text-gray-900">{task.name}</h2>
                   <p className="text-sm text-gray-500 mt-0.5">
                     {task.lastRunAt
-                      ? t("cron.lastRun").replace("{date}", new Date(task.lastRunAt).toLocaleString(undefined, dateFmt))
+                      ? t("cron.lastRun").replace("{date}", formatTimestamp(task.lastRunAt, dateFmt, locale))
                       : t("cron.never")}
                   </p>
                 </div>
@@ -152,7 +154,7 @@ export default async function CronHealthPage({
                   <tr key={run.id} className="border-t border-gray-100">
                     <td className="px-4 py-2 font-medium text-gray-800">{run.name}</td>
                     <td className="px-4 py-2 text-gray-600">
-                      {started.toLocaleString(undefined, dateFmt)}
+                      {formatTimestamp(started, dateFmt, locale)}
                     </td>
                     <td className="px-4 py-2 text-gray-600">
                       {run.durationMs === null ? "—" : `${run.durationMs} ms`}

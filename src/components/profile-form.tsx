@@ -9,6 +9,8 @@ import { PhotoUploadButton } from "@/components/photo-upload-button";
 import { useToast } from "@/components/ui/toast";
 import { SmartImage } from "@/components/ui/smart-image";
 import { countryOptions, isSupportedCountry } from "@/lib/countries";
+import { invalidateDisplayPreferences } from "@/lib/use-display-currency";
+import { SUPPORTED_CURRENCIES } from "@/lib/i18n";
 
 interface Props {
   initial: {
@@ -23,6 +25,7 @@ interface Props {
     displayTimezone?: string | null;
     // T-133 (A4) : photo de profil (URL), optionnelle.
     avatarUrl?: string | null;
+    supportedCurrencies?: string[];
   };
 }
 
@@ -51,6 +54,12 @@ export function ProfileForm({ initial }: Props) {
     // T-133 (A4) : URL de la photo de profil (vide = aucune / initiales).
     avatarUrl: initial.avatarUrl ?? "",
   });
+  const availableCurrencies = Array.from(new Set([
+    ...(initial.supportedCurrencies ?? SUPPORTED_CURRENCIES),
+    ...(form.currency ? [form.currency] : []),
+  ])).filter((currency): currency is typeof SUPPORTED_CURRENCIES[number] =>
+    (SUPPORTED_CURRENCIES as readonly string[]).includes(currency),
+  );
   const countryChoices = [
     { value: "", label: "—" },
     ...countryOptions(t),
@@ -120,6 +129,10 @@ export function ProfileForm({ initial }: Props) {
       if (!res.ok) throw new Error(data.error ?? t("auth.error"));
       setSaved(true);
       addToast("success", t("account.profileSaved"));
+      // Le PATCH a changé la source de vérité langue/devise. `router.refresh`
+      // ne vide pas le cache module des composants clients : on invalide donc
+      // explicitement avant le refresh pour éviter une UI mixte.
+      invalidateDisplayPreferences();
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("auth.error"));
@@ -192,12 +205,9 @@ export function ProfileForm({ initial }: Props) {
         <div>
           <label htmlFor="pf-currency" className="block text-sm font-medium text-gray-700 mb-1">{t("account.currency")}</label>
           <select id="pf-currency" value={form.currency} onChange={(e) => set("currency", e.target.value)} className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]">
-            <option value="EUR">EUR</option>
-            <option value="USD">USD</option>
-            <option value="GBP">GBP</option>
-            <option value="CHF">CHF</option>
-            <option value="MAD">MAD</option>
-            <option value="XAF">XAF (FCFA)</option>
+            {availableCurrencies.map((currency) => (
+              <option key={currency} value={currency}>{currency === "XAF" ? "XAF (FCFA)" : currency}</option>
+            ))}
           </select>
           {/* T-131 : les prix d'aperçu sont convertis (taux figés indicatifs) ;
               le paiement reste en devise de l'hébergement. */}

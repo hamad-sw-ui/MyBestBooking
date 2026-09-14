@@ -12,6 +12,9 @@ import { BookingStatusSelect } from "./booking-status-select";
 import { BookingSettlementCell } from "./booking-settlement-cell";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { formatCivilDate, formatTimestamp } from "@/lib/dates";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
+import { formatCurrencyBreakdown, formatCurrencyConverted, hasMixedCurrencies, sumByCurrency, unconvertibleCurrencies } from "@/lib/currency-summary";
+import { FX_SNAPSHOT } from "@/lib/i18n";
 
 export interface BookingRow {
   booking: {
@@ -108,6 +111,8 @@ export function BookingsManager({
 }: Props & { initialStatus?: string; initialPaymentFilter?: "all" | "due" }) {
   const t = useT();
   const locale = useUiLocale();
+  const { currency: displayCurrency } = useDisplayPreferences();
+  const effectiveDisplayCurrency = displayCurrency ?? "XAF";
   // T-216 : dans cette vue, l'utilisateur est l'hôte du bien ou un admin (le
   // proxy et la page serveur ont déjà filtré). L'admin suit exactement les
   // mêmes transitions que l'hôte (`transitionError`).
@@ -196,14 +201,18 @@ export function BookingsManager({
     }
   }
 
+  const revenueByCurrency = sumByCurrency(
+    bookings
+      .filter((b) => b.booking.paymentStatus === "paid" && b.booking.status !== "cancelled")
+      .map((b) => ({ currency: b.booking.currency, amount: parseFloat(b.booking.total) })),
+  );
   const stats = {
     total: bookings.length,
     confirmed: bookings.filter((b) => b.booking.status === "confirmed").length,
     pending: bookings.filter((b) => b.booking.status === "pending").length,
-    revenue: bookings
-      .filter((b) => b.booking.paymentStatus === "paid")
-      .reduce((s, b) => s + parseFloat(b.booking.total), 0),
+    revenueByCurrency,
   };
+  const unknownCurrencies = unconvertibleCurrencies(stats.revenueByCurrency);
 
   const bulkActions = isAdmin
     ? [
@@ -227,11 +236,7 @@ export function BookingsManager({
           { label: t("status.pending"), value: stats.pending, color: "text-yellow-600" },
           {
             label: t("dash.revenue"),
-            value: new Intl.NumberFormat(locale === "en" ? "en-GB" : "fr-FR", {
-              style: "currency",
-              currency: "EUR",
-              maximumFractionDigits: 0,
-            }).format(stats.revenue),
+            value: formatCurrencyConverted(stats.revenueByCurrency, effectiveDisplayCurrency, locale),
             color: "text-[#1B3A6B]",
           },
         ].map((s) => (
@@ -243,6 +248,17 @@ export function BookingsManager({
           </Card>
         ))}
       </div>
+      {Object.keys(stats.revenueByCurrency).length > 0 && (
+        <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+          <p>{t("currency.indicativeTotal").replace("{currency}", effectiveDisplayCurrency).replace("{asOf}", FX_SNAPSHOT.asOf)}</p>
+          {unknownCurrencies.length > 0 && (
+            <p className="mt-1 text-red-700">{t("currency.unknown").replace("{currencies}", unknownCurrencies.join(", "))}</p>
+          )}
+          {hasMixedCurrencies(stats.revenueByCurrency) && (
+            <p className="mt-1 text-blue-800">{t("currency.nativeBreakdown").replace("{amounts}", formatCurrencyBreakdown(stats.revenueByCurrency, locale))}</p>
+          )}
+        </div>
+      )}
 
       <BulkToolbar
         entity="bookings"
@@ -428,9 +444,15 @@ export function BookingsManager({
                         )}
                       </td>
                       <td className="px-4 py-4 text-sm font-medium">
-                        {money(booking.total, booking.currency, locale)}
-                        {booking.paymentStatus === "paid" && (
-                          <span className="ml-1 text-xs text-green-600">✓</span>
+                        <div>{money(booking.total, booking.currency, locale)}
+                          {booking.paymentStatus === "paid" && (
+                            <span className="ml-1 text-xs text-green-600">✓</span>
+                          )}
+                        </div>
+                        {booking.currency && booking.currency.toUpperCase() !== effectiveDisplayCurrency && (
+                          <div className="text-xs font-normal text-gray-500">
+                            {formatCurrencyConverted({ [booking.currency.toUpperCase()]: Number(booking.total) }, effectiveDisplayCurrency, locale)}
+                          </div>
                         )}
                       </td>
                       <td className="px-4 py-4">

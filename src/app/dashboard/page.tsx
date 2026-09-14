@@ -5,9 +5,11 @@ import { properties, bookings, reviews, users } from "@/db/schema";
 import { eq, and, desc, sql, gte } from "drizzle-orm";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { formatPrice, formatDate, getStatusBadgeColor } from "@/lib/utils";
-import { sumByCurrency, formatCurrencyConverted } from "@/lib/currency-summary";
-import { normalizeDisplayCurrency } from "@/lib/i18n";
+import { formatDate, getStatusBadgeColor } from "@/lib/utils";
+import { formatMoney } from "@/lib/i18n";
+import { sumByCurrency, formatCurrencyBreakdown, formatCurrencyConverted, unconvertibleCurrencies } from "@/lib/currency-summary";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
+import { FX_SNAPSHOT } from "@/lib/i18n";
 import {
   Building2, Calendar, Star, TrendingUp,
   ArrowUpRight, ArrowDownRight, Users, DollarSign, Clock, BadgeCheck
@@ -174,7 +176,8 @@ export default async function DashboardPage() {
   const recentBookings = await getRecentBookings(user.id, isAdmin);
   const locale = await getServerLocale();
   const t = makeT(locale);
-  const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
+  const displayCurrency = await getServerDisplayCurrency(user.currency);
+  const unknownCurrencies = unconvertibleCurrencies(stats.revenue.totalByCurrency);
 
   const statCards = [
     {
@@ -244,6 +247,17 @@ export default async function DashboardPage() {
           </Link>
         ))}
       </div>
+      {Object.keys(stats.revenue.totalByCurrency).length > 0 && (
+        <div className="mb-6 rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-900">
+          <p>{t("currency.indicativeTotal").replace("{currency}", displayCurrency).replace("{asOf}", FX_SNAPSHOT.asOf)}</p>
+          {unknownCurrencies.length > 0 && (
+            <p className="mt-1 text-red-700">{t("currency.unknown").replace("{currencies}", unknownCurrencies.join(", "))}</p>
+          )}
+          {Object.keys(stats.revenue.totalByCurrency).length > 1 && (
+            <p className="mt-1 text-blue-800">{t("currency.nativeBreakdown").replace("{amounts}", formatCurrencyBreakdown(stats.revenue.totalByCurrency, locale))}</p>
+          )}
+        </div>
+      )}
 
       {/* Recent Bookings */}
       <Card>
@@ -295,7 +309,12 @@ export default async function DashboardPage() {
                         {formatDate(booking.checkIn, { day: "numeric", month: "short" }, locale)} → {formatDate(booking.checkOut, { day: "numeric", month: "short" }, locale)}
                       </td>
                       <td className="py-3 font-medium">
-                        {formatPrice(booking.total, booking.currency, locale)}
+                        <div>{formatMoney(Number(booking.total), booking.currency ?? "EUR", locale)}</div>
+                        {booking.currency && booking.currency.toUpperCase() !== displayCurrency && (
+                          <div className="text-xs font-normal text-gray-500">
+                            {formatCurrencyConverted({ [booking.currency.toUpperCase()]: Number(booking.total) }, displayCurrency, locale)}
+                          </div>
+                        )}
                       </td>
                       <td className="py-3">
                         <Badge className={getStatusBadgeColor(booking.status)}>

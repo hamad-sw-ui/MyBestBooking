@@ -19,21 +19,19 @@ import { useT } from "@/components/ui-locale-provider";
  * <LanguageSelector> pour la langue).
  *
  * Options bornées aux devises réellement exposées par le panneau admin
- * (`supportedCurrencies` = EUR/USD/GBP/XAF) — on n'offre pas EUR pour rien,
- * ni CHF/MAD (convertibles mais non proposées).
+ * (`supportedCurrencies`) ; la même allowlist est appliquée côté serveur.
  *
  * Affichage uniquement : la devise d'affichage ne convertit jamais un montant
  * transactionnel (paiement, remboursement, portefeuille restent la devise de
  * la chambre — règle T-132).
  */
-const DASHBOARD_CURRENCY_OPTIONS = ["EUR", "USD", "GBP", "XAF"] as const;
-
 export function DashboardCurrencySelector({ compact = false }: { compact?: boolean }) {
-  const { currency } = useDisplayPreferences();
+  const { currency, supportedCurrencies } = useDisplayPreferences();
   const t = useT();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const current = (currency ?? "EUR").toUpperCase();
+  const requestedCurrent = (currency ?? "EUR").toUpperCase();
+  const current = supportedCurrencies.includes(requestedCurrent) ? requestedCurrent : supportedCurrencies[0] ?? "EUR";
 
   async function change(next: string) {
     if (next === current || saving) return;
@@ -73,7 +71,7 @@ export function DashboardCurrencySelector({ compact = false }: { compact?: boole
         onChange={(e) => change(e.target.value)}
         className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm text-gray-900 disabled:opacity-50"
       >
-        {DASHBOARD_CURRENCY_OPTIONS.map((c) => (
+        {supportedCurrencies.map((c) => (
           <option key={c} value={c}>{c}</option>
         ))}
       </select>

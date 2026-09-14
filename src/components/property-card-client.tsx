@@ -9,7 +9,7 @@ import { formatPrice, getPropertyTypeLabel, intlLocale } from "@/lib/utils";
 import { countryLabel } from "@/lib/country-label";
 import { Badge } from "@/components/ui/badge";
 import type { PublicPropertyCard } from "@/lib/public-property";
-import { convertAmount, formatMoney } from "@/lib/i18n";
+import { convertAmount, formatMoney, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { useWishlistToggle } from "@/lib/use-wishlist-toggle";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
@@ -53,13 +53,16 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
   const priceText = (() => {
     if (!showPrice) return null;
     const numeric = typeof rawPrice === "number" ? rawPrice : parseFloat(rawPrice);
-    if (!displayCurrency || displayCurrency === sourceCurrency.toUpperCase()) {
+    if (!isDisplayCurrency(sourceCurrency)) {
+      return formatMoney(numeric, sourceCurrency, intlLocale(locale));
+    }
+    if (!displayCurrency || !isDisplayCurrency(displayCurrency) || displayCurrency === sourceCurrency.toUpperCase()) {
       return formatPrice(numeric, sourceCurrency, locale);
     }
     // Taux figés V1 (i18n RATES_FROM_EUR) : indique une conversion approximative.
     return formatMoney(convertAmount(numeric, sourceCurrency, displayCurrency), displayCurrency, intlLocale(locale));
   })();
-  const isConverted = showPrice && Boolean(displayCurrency) && displayCurrency !== sourceCurrency.toUpperCase();
+  const isConverted = showPrice && isDisplayCurrency(sourceCurrency) && Boolean(displayCurrency) && isDisplayCurrency(displayCurrency) && displayCurrency !== sourceCurrency.toUpperCase();
 
   async function addToFavorites(event: React.MouseEvent<HTMLButtonElement>) {
     event.preventDefault();
@@ -263,7 +266,7 @@ export function PropertyCardClient({ property, showFavorite = true, searchQuery,
                 <span className="text-sm text-gray-500">{t("price.perNight")}</span>
                 {isConverted && (
                   <span className="block text-[10px] text-gray-400" title={t("bookingCard.conversionTooltip")}>
-                    {t("price.convertedNote")} {sourceCurrency}
+                    {t("price.convertedNote").replace("{currency}", displayCurrency!).replace("{asOf}", FX_SNAPSHOT.asOf)} {sourceCurrency}
                   </span>
                 )}
               </>

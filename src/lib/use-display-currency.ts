@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { normalizeDisplayCurrency } from "@/lib/i18n";
+import { DISPLAY_CURRENCIES, isDisplayCurrency, normalizeDisplayCurrency } from "@/lib/i18n";
 import { isUiLocale } from "@/lib/ui-strings";
 import { UI_LANGUAGE_STORAGE_KEY, readUiLanguageCookie } from "@/lib/ui-language";
 
@@ -33,6 +33,8 @@ export interface DisplayPreferences {
   currency: string | null;
   /** Langue d'affichage ("fr" | "en"). Jamais null une fois prêt. */
   language: string | null;
+  /** Devises activées par le réglage admin, sous-ensemble du catalogue global. */
+  supportedCurrencies: string[];
   /** true quand les préférences ont été résolues (ou échoué → défauts). */
   ready: boolean;
 }
@@ -40,6 +42,7 @@ export interface DisplayPreferences {
 interface Resolved {
   currency: string | null;
   language: string | null;
+  supportedCurrencies: string[];
 }
 
 let cached: Promise<Resolved> | null = null;
@@ -84,43 +87,42 @@ function load(): Promise<Resolved> {
       // 1) Réglages plateforme (défauts publics, accessibles aux anonymes).
       let platformCurrency: string | null = null;
       let platformLanguage: string | null = null;
+      let supportedCurrencies: string[] = [...DISPLAY_CURRENCIES];
       try {
         const prefs = await fetchWithTimeout("/api/app-preferences", { cache: "no-store" });
         if (prefs.ok) {
           const p = await prefs.json();
           platformCurrency = typeof p?.defaultCurrency === "string" ? p.defaultCurrency.toUpperCase() : null;
           platformLanguage = typeof p?.defaultLanguage === "string" ? p.defaultLanguage : null;
+          if (Array.isArray(p?.supportedCurrencies)) {
+            const configured = p.supportedCurrencies.filter(isDisplayCurrency);
+            if (configured.length > 0) supportedCurrencies = configured;
+          }
         }
       } catch {
         // reste en repli codé en dur
       }
 
       // 2) Préférence utilisateur connecté (prime sur le défaut plateforme).
-      //    T-135 : on borne sur les valeurs réellement supportées pour
-      //    qu'une préférence aberrante (« ZZZ », « ar » — issue d'anciennes
-      //    données ou d'un appel direct à l'API) ne casse pas l'affichage :
-      //    devise inconnue → devise plateforme/XAF, langue non traduite → « fr ».
+      // Une valeur legacy inconnue ou désactivée par l'admin ne doit jamais
+      // être utilisée comme devise de rendu ni être remplacée silencieusement
+      // par EUR : on revient au défaut activé et on garde l'alerte côté API.
       let userLanguage: string | null = null;
-      let hasUserCurrency = false;
+      let authenticated = false;
+      let userCurrency: string | null = null;
       try {
         const me = await fetchWithTimeout("/api/auth/me", { cache: "no-store" });
         if (me.ok) {
+          authenticated = true;
           const data = await me.json();
           const u = data?.user;
-          if (typeof u?.currency === "string" && u.currency) {
-            platformCurrency = u.currency.toUpperCase();
-            hasUserCurrency = true;
-          }
-          if (typeof u?.language === "string" && u.language && isUiLocale(u.language)) {
-            userLanguage = u.language;
-          }
+          if (typeof u?.currency === "string" && u.currency) userCurrency = u.currency.toUpperCase();
+          if (typeof u?.language === "string" && u.language && isUiLocale(u.language)) userLanguage = u.language;
         }
       } catch {
         // anonyme : on garde le défaut plateforme
       }
-      // T-152 (D) : priorité compte connecté > localStorage (sélecteur
-      // header, anonyme) > défaut plateforme > fr. La préférence locale ne
-      // prend jamais le pas sur le profil du compte connecté.
+
       if (userLanguage) {
         platformLanguage = userLanguage;
       } else {
@@ -139,27 +141,33 @@ function load(): Promise<Resolved> {
         }
         if (stored && isUiLocale(stored)) platformLanguage = stored;
       }
-      // T-158 : même priorité pour la devise — le sélecteur public de la
-      // recherche (anonyme) persiste en localStorage ; un compte connecté
-      // reste maître (préférence profil), jamais écrasée.
-      if (!hasUserCurrency) {
+
+      const configuredDefault = supportedCurrencies.includes(platformCurrency ?? "")
+        ? platformCurrency
+        : supportedCurrencies[0] ?? "XAF";
+      let effectiveCurrency = configuredDefault;
+      if (authenticated) {
+        if (userCurrency && supportedCurrencies.includes(userCurrency) && isDisplayCurrency(userCurrency)) {
+          effectiveCurrency = userCurrency;
+        }
+      } else {
         try {
-          const stored = window.localStorage.getItem(UI_CURRENCY_STORAGE_KEY);
-          if (stored) platformCurrency = stored.toUpperCase();
+          const stored = window.localStorage.getItem(UI_CURRENCY_STORAGE_KEY)?.toUpperCase();
+          if (stored && supportedCurrencies.includes(stored) && isDisplayCurrency(stored)) effectiveCurrency = stored;
         } catch {
           // localStorage indisponible : défaut plateforme
         }
       }
 
       return {
-        currency: normalizeDisplayCurrency(platformCurrency, "XAF"),
+        currency: normalizeDisplayCurrency(effectiveCurrency, "XAF"),
         language: isUiLocale(platformLanguage) ? platformLanguage : "fr",
+        supportedCurrencies,
       };
     })();
   }
   return cached;
 }
-
 async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, timeoutMs = PREFERENCES_FETCH_TIMEOUT_MS): Promise<Response> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
@@ -171,13 +179,13 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, tim
 }
 
 export function useDisplayPreferences(): DisplayPreferences {
-  const [state, setState] = useState<DisplayPreferences>({ currency: null, language: null, ready: false });
+  const [state, setState] = useState<DisplayPreferences>({ currency: null, language: null, supportedCurrencies: [...DISPLAY_CURRENCIES], ready: false });
 
   useEffect(() => {
     let cancelled = false;
     const reload = () => {
       load().then((r) => {
-        if (!cancelled) setState({ currency: r.currency, language: r.language, ready: true });
+        if (!cancelled) setState({ currency: r.currency, language: r.language, supportedCurrencies: r.supportedCurrencies, ready: true });
       });
     };
     reload();

@@ -3,7 +3,11 @@ import { getCurrentUser } from "@/lib/auth";
 import { apiError } from "@/lib/api-error";
 import { makeT } from "@/lib/ui-strings";
 import { getAnalytics } from "@/lib/analytics";
+import { getServerLocale } from "@/lib/server-locale";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
+import { indicativeRate, FX_SNAPSHOT } from "@/lib/i18n";
 import { defaultPeriod, parseAnalyticsPeriod } from "@/lib/analytics-period";
+import { csvRows } from "@/lib/csv";
 
 /**
  * T-241 (F12) — export CSV du tableau de bord analytique.
@@ -24,16 +28,13 @@ import { defaultPeriod, parseAnalyticsPeriod } from "@/lib/analytics-period";
  *     que `export` et `export-payouts`).
  */
 
-function csvCell(value: unknown): string {
-  let text = String(value ?? "");
-  // Neutralise les formules Excel/LibreOffice provenant d'un nom d'hébergement
-  // saisi par un hôte, sans modifier les montants ni les références métier.
-  if (/^[=+\-@]/.test(text)) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
-
 function amount(value: number): string {
   return value.toFixed(2);
+}
+
+function indicativeRateCell(sourceCurrency: string, targetCurrency: string): string {
+  const rate = indicativeRate(sourceCurrency, targetCurrency);
+  return rate === null ? "" : rate.toFixed(8);
 }
 
 export async function GET(request: NextRequest) {
@@ -51,23 +52,27 @@ export async function GET(request: NextRequest) {
   }
   const period = parsed.period ?? defaultPeriod();
 
-  const analytics = await getAnalytics(user.id, user.role === "admin", period);
+  const displayCurrency = await getServerDisplayCurrency(user.currency);
+  const analytics = await getAnalytics(user.id, user.role === "admin", period, displayCurrency);
   if (!analytics) {
     return NextResponse.json({ error: await apiError("Aucune donnée à exporter") }, { status: 404 });
   }
 
-  const t = makeT(user.language);
+  const t = makeT(await getServerLocale());
   const rows: Array<Array<unknown>> = [];
 
   rows.push([t("analyticsCsv.summary")]);
   rows.push([t("analyticsCsv.metric"), t("analyticsCsv.period"), t("analyticsCsv.previousPeriod"), t("analyticsCsv.currency")]);
-  const currency = analytics.comparisonCurrency;
+  const currency = analytics.displayCurrency;
   rows.push([
     t("analyticsCsv.revenue"),
     amount(analytics.currentRevenue),
     amount(analytics.previousRevenue),
     currency,
   ]);
+  for (const [nativeCurrency, nativeAmount] of Object.entries(analytics.currentRevenueByCurrency)) {
+    rows.push([`${t("analyticsCsv.revenue")} (${nativeCurrency})`, amount(nativeAmount), "", nativeCurrency]);
+  }
   rows.push([
     t("analyticsCsv.bookings"),
     analytics.currentBookingsCount,
@@ -100,14 +105,32 @@ export async function GET(request: NextRequest) {
   rows.push([]);
 
   rows.push([t("analyticsCsv.topProperties")]);
-  rows.push([t("analyticsCsv.property"), t("analyticsCsv.bookings"), t("analyticsCsv.revenue"), t("analyticsCsv.currency")]);
+  rows.push([
+    t("analyticsCsv.property"),
+    t("analyticsCsv.bookings"),
+    t("analyticsCsv.revenue"),
+    t("analyticsCsv.currency"),
+    t("analyticsCsv.displayAmount"),
+    t("analyticsCsv.displayCurrency"),
+    t("analyticsCsv.displayRate"),
+    t("analyticsCsv.displayRateAsOf"),
+  ]);
   for (const property of analytics.topProperties) {
     for (const [code, revenue] of Object.entries(property.revenueByCurrency)) {
-      rows.push([property.name, property.bookings, amount(revenue), code]);
+      rows.push([
+        property.name,
+        property.bookings,
+        amount(revenue),
+        code,
+        amount(property.displayRevenue),
+        property.displayCurrency,
+        indicativeRateCell(code, property.displayCurrency),
+        indicativeRateCell(code, property.displayCurrency) ? FX_SNAPSHOT.asOf : "",
+      ]);
     }
   }
 
-  const csv = rows.map((row) => row.map(csvCell).join(",")).join("\n");
+  const csv = csvRows(rows);
   return new NextResponse(`\uFEFF${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

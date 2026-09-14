@@ -22,7 +22,7 @@ interface DashboardMobileHeaderProps {
   initialLanguage?: string | null;
 }
 
-export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
+export function DashboardMobileHeader({ user, initialLanguage = null }: DashboardMobileHeaderProps) {
   const pathname = usePathname();
   const t = useT();
   const [open, setOpen] = useState(false);
@@ -97,7 +97,7 @@ export function DashboardMobileHeader({ user }: DashboardMobileHeaderProps) {
               </div>
               {/* T-195 : langue + devise d'affichage de l'espace pro. */}
               <div className="flex flex-col gap-2 mt-3">
-                <LanguageSelector user={user} />
+                <LanguageSelector user={user} initialLanguage={initialLanguage} />
                 <DashboardCurrencySelector compact />
               </div>
             </div>

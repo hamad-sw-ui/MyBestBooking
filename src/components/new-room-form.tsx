@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
+import { SUPPORTED_CURRENCIES } from "@/lib/i18n";
 
 interface Props {
   properties: { id: string; name: string }[];
@@ -183,11 +184,9 @@ export function NewRoomForm({ properties }: Props) {
                 onChange={(e) => set("currency", e.target.value)}
                 className="w-full px-4 py-2.5 border border-gray-300 rounded-lg"
               >
-                <option value="EUR">EUR</option>
-                <option value="USD">USD</option>
-                <option value="GBP">GBP</option>
-                <option value="XAF">XAF</option>
-                <option value="MAD">MAD</option>
+                {SUPPORTED_CURRENCIES.map((currency) => (
+                  <option key={currency} value={currency}>{currency === "XAF" ? "XAF (FCFA)" : currency}</option>
+                ))}
               </select>
             </div>
           </div>

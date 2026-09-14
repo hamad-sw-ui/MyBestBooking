@@ -12,7 +12,7 @@ import { ProfileForm } from "@/components/profile-form";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import { formatPrice } from "@/lib/utils";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
-import { convertAmount, formatMoney, normalizeDisplayCurrency } from "@/lib/i18n";
+import { convertAmount, formatMoney, normalizeDisplayCurrency, SUPPORTED_CURRENCIES, FX_SNAPSHOT } from "@/lib/i18n";
 import { UserAvatar } from "@/components/user-avatar";
 import { ChangePasswordForm } from "@/components/change-password-form";
 import { TwoFactorSection } from "@/components/two-factor-section";
@@ -61,6 +61,7 @@ export default function MyAccountPage() {
   const [activeTab, setActiveTab] = useState("profile");
   // T-143 : seuils/taux BestRewards lus depuis les réglages publics (mêmes
   // valeurs que la page /bestrewards) au lieu d'être codés en dur.
+  const [supportedCurrencies, setSupportedCurrencies] = useState<string[]>([...SUPPORTED_CURRENCIES]);
   const [rewardsConfig, setRewardsConfig] = useState<{
     thresholds: [number, number];
     discounts: [number, number, number];
@@ -85,6 +86,9 @@ export default function MyAccountPage() {
     fetch("/api/app-preferences")
       .then((res) => (res.ok ? res.json() : null))
       .then((prefs) => {
+        if (Array.isArray(prefs?.supportedCurrencies) && prefs.supportedCurrencies.length > 0) {
+          setSupportedCurrencies(prefs.supportedCurrencies);
+        }
         if (prefs?.bestrewards?.thresholds && prefs?.bestrewards?.discounts) {
           setRewardsConfig({
             thresholds: prefs.bestrewards.thresholds,
@@ -233,6 +237,7 @@ export default function MyAccountPage() {
                       // saisie (elles-mêmes stockées en UTC).
                       displayTimezone: user.timezone ?? null,
                       avatarUrl: user.avatarUrl ?? null,
+                      supportedCurrencies,
                     }} />
                   </CardContent>
                 </Card>
@@ -304,7 +309,7 @@ export default function MyAccountPage() {
                           })()}
                         </p>
                         {Boolean(displayCurrency) && (displayCurrency ?? "EUR").toUpperCase() !== "EUR" && (
-                          <p className="text-xs text-gray-400">{t("wallet.convertedNote")}</p>
+                          <p className="text-xs text-gray-400">{t("wallet.convertedNote").replace("{currency}", normalizeDisplayCurrency(displayCurrency, "EUR")).replace("{asOf}", FX_SNAPSHOT.asOf)}</p>
                         )}
                       </div>
                       {/* T-207 : le wallet reste informatif ; le CTA n'envoie

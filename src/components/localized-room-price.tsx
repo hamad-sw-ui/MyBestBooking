@@ -1,7 +1,7 @@
 "use client";
 
 import { formatPrice, intlLocale } from "@/lib/utils";
-import { convertAmount, formatMoney } from "@/lib/i18n";
+import { convertAmount, formatMoney, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 
@@ -25,10 +25,14 @@ export function LocalizedRoomPrice({
   const locale = useUiLocale();
   const sourceCurrency = currency ?? "EUR";
   const numeric = typeof basePrice === "number" ? basePrice : parseFloat(basePrice);
-  const converted = Boolean(displayCurrency) && displayCurrency !== sourceCurrency.toUpperCase();
-  const priceText = converted
-    ? formatMoney(convertAmount(numeric, sourceCurrency, displayCurrency!), displayCurrency!, intlLocale(locale))
-    : formatPrice(numeric, sourceCurrency, locale);
+  const sourceKnown = isDisplayCurrency(sourceCurrency);
+  const targetKnown = isDisplayCurrency(displayCurrency);
+  const converted = sourceKnown && targetKnown && displayCurrency !== sourceCurrency.toUpperCase();
+  const priceText = !sourceKnown
+    ? formatMoney(numeric, sourceCurrency, intlLocale(locale))
+    : converted
+      ? formatMoney(convertAmount(numeric, sourceCurrency, displayCurrency!), displayCurrency!, intlLocale(locale))
+      : formatPrice(numeric, sourceCurrency, locale);
 
   return (
     <>
@@ -38,7 +42,7 @@ export function LocalizedRoomPrice({
       <p className="text-sm text-gray-500">{t("price.perNightLong")}</p>
       {converted && (
         <p className="text-[10px] text-gray-400" title={t("bookingCard.conversionTooltip")}>
-          {t("price.convertedNote")} {sourceCurrency}
+          {t("price.convertedNote").replace("{currency}", displayCurrency!).replace("{asOf}", FX_SNAPSHOT.asOf)} {sourceCurrency}
         </p>
       )}
     </>

@@ -35,7 +35,7 @@ interface DashboardSidebarProps {
   initialLanguage?: string | null;
 }
 
-export function DashboardSidebar({ user }: DashboardSidebarProps) {
+export function DashboardSidebar({ user, initialLanguage = null }: DashboardSidebarProps) {
   const pathname = usePathname();
   const t = useT();
   const [collapsed, setCollapsed] = useState(false);
@@ -111,7 +111,7 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
           {/* T-195 : langue + devise d'affichage de l'espace pro, persistées au niveau
               du compte (PATCH /api/users/me). Affichage seulement, jamais transactionnel. */}
           <div className="flex flex-col gap-2 mt-4">
-            <LanguageSelector user={user} />
+            <LanguageSelector user={user} initialLanguage={initialLanguage} />
             <DashboardCurrencySelector compact />
           </div>
         </div>

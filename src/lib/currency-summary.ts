@@ -1,5 +1,4 @@
-import { formatPrice } from "@/lib/utils";
-import { convertAmount, isDisplayCurrency } from "@/lib/i18n";
+import { convertAmount, formatMoney, isDisplayCurrency, RATES_FROM_EUR } from "@/lib/i18n";
 
 /**
  * T-152 (finding C) — Agrégation de montants PAR DEVISE pour les totaux
@@ -11,7 +10,7 @@ import { convertAmount, isDisplayCurrency } from "@/lib/i18n";
  */
 
 export interface CurrencyAmount {
-  currency: string;
+  currency: string | null | undefined;
   amount: number;
 }
 
@@ -45,7 +44,7 @@ export function topCurrency(map: Record<string, number>): string | null {
 
 /** Devises présentes (somme non nulle), ordre stable (EUR puis alphabétique). */
 export function currenciesOf(map: Record<string, number>): string[] {
-  const found = Object.keys(map).filter((currency) => map[currency] !== 0);
+  const found = Object.keys(map).filter((currency) => Number.isFinite(map[currency]) && map[currency] !== 0);
   found.sort((a, b) => {
     if (a === "EUR") return -1;
     if (b === "EUR") return 1;
@@ -59,6 +58,38 @@ export function hasMixedCurrencies(map: Record<string, number>): boolean {
   return currenciesOf(map).length > 1;
 }
 
+/** Devises non convertibles : elles doivent être visibles, jamais ignorées. */
+export function unconvertibleCurrencies(map: Record<string, number>): string[] {
+  return currenciesOf(map).filter((currency) => !isDisplayCurrency(currency));
+}
+
+export function hasUnconvertibleCurrencies(map: Record<string, number>): boolean {
+  return unconvertibleCurrencies(map).length > 0;
+}
+
+/** Valeur nominale comparable dans une devise cible, sans arrondi d'affichage. */
+export function comparableAmount(amount: number, currency: string, targetCurrency: string): number | null {
+  if (!Number.isFinite(amount)) return null;
+  const source = currency.toUpperCase();
+  const target = targetCurrency.toUpperCase();
+  if (!isDisplayCurrency(source) || !isDisplayCurrency(target)) return null;
+  if (source === target) return amount;
+  const sourceRate = RATES_FROM_EUR[source];
+  const targetRate = RATES_FROM_EUR[target];
+  return (amount / sourceRate) * targetRate;
+}
+
+/** Devise dominante après conversion dans une base commune. */
+export function topCurrencyByValue(map: Record<string, number>, targetCurrency: string): string | null {
+  const target = targetCurrency.toUpperCase();
+  const entries = currenciesOf(map)
+    .map((currency) => ({ currency, value: comparableAmount(map[currency], currency, target) }))
+    .filter((entry): entry is { currency: string; value: number } => entry.value !== null);
+  if (entries.length === 0) return null;
+  entries.sort((a, b) => b.value - a.value || a.currency.localeCompare(b.currency));
+  return entries[0].currency;
+}
+
 /**
  * Affichage d'une répartition : une devise → `formatPrice` seul
  * (identique au rendu historique EUR) ; plusieurs devises → liste jointe
@@ -67,8 +98,8 @@ export function hasMixedCurrencies(map: Record<string, number>): boolean {
  */
 export function formatCurrencyBreakdown(map: Record<string, number>, locale: string = "fr-FR"): string {
   const currencies = currenciesOf(map);
-  if (currencies.length === 0) return formatPrice(0, "EUR", locale);
-  return currencies.map((currency) => formatPrice(map[currency], currency, locale)).join(" + ");
+  if (currencies.length === 0) return formatMoney(0, "EUR", locale);
+  return currencies.map((currency) => formatMoney(map[currency], currency, locale)).join(" + ");
 }
 
 /**
@@ -88,6 +119,9 @@ export function sumByCurrencyConverted(
   const map = sumByCurrency(items);
   const cur = (targetCurrency || "EUR").toUpperCase();
   const currencies = currenciesOf(map);
+  if (!isDisplayCurrency(cur)) {
+    return { total: 0, hasMixed: currencies.length > 1 };
+  }
   let total = 0;
   let seen: Record<string, boolean> = {};
   for (const [currency, amount] of Object.entries(map)) {
@@ -95,7 +129,7 @@ export function sumByCurrencyConverted(
     seen[currency] = true;
     if (currency === cur) {
       total += amount;
-    } else if (isDisplayCurrency(currency)) {
+    } else if (isDisplayCurrency(currency) && isDisplayCurrency(cur)) {
       total += convertAmount(amount, currency, cur);
     }
   }
@@ -117,12 +151,16 @@ export function formatCurrencyConverted(
 ): string {
   const cur = (targetCurrency || "EUR").toUpperCase();
   const currencies = currenciesOf(map);
-  if (currencies.length === 0) return formatPrice(0, cur, locale);
+  if (currencies.length === 0) return formatMoney(0, cur, locale);
+  // Une devise inconnue ne doit jamais disparaître d'un KPI. On montre alors
+  // la répartition native, avec le code reçu, plutôt qu'un faux total cible.
+  if (!isDisplayCurrency(cur) || hasUnconvertibleCurrencies(map)) {
+    return formatCurrencyBreakdown(map, locale);
+  }
   let total = 0;
   for (const [currency, amount] of Object.entries(map)) {
     if (!Number.isFinite(amount) || amount === 0) continue;
-    if (currency === cur) total += amount;
-    else if (isDisplayCurrency(currency)) total += convertAmount(amount, currency, cur);
+    total += currency === cur ? amount : convertAmount(amount, currency, cur);
   }
-  return formatPrice(Math.round(total * 100) / 100, cur, locale);
+  return formatMoney(Math.round(total * 100) / 100, cur, locale);
 }

@@ -5,16 +5,12 @@ import { and, eq, gte, lte, ne } from "drizzle-orm";
 import { getCurrentUser } from "@/lib/auth";
 import { apiError } from "@/lib/api-error";
 import { makeT } from "@/lib/ui-strings";
+import { getServerLocale } from "@/lib/server-locale";
+import { convertAmount, indicativeRate, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
+import { csvRows } from "@/lib/csv";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function csvCell(value: unknown): string {
-  let text = String(value ?? "");
-  // Neutralise les formules Excel/LibreOffice provenant d'un nom de property
-  // saisi par un hôte, sans modifier les montants ni références métiers.
-  if (/^[=+\-@]/.test(text)) text = `'${text}`;
-  return `"${text.replaceAll('"', '""')}"`;
-}
 
 /** Export opérationnel, pas une facture légale ni un état de payout. */
 export async function GET(request: NextRequest) {
@@ -52,9 +48,21 @@ export async function GET(request: NextRequest) {
     .where(condition)
     .orderBy(bookings.createdAt);
 
-  // En-têtes localisés dans la langue du compte (fr/en) — UIT : tout libellé
-  // exposé passe par le dictionnaire `ui-strings`.
-  const t = makeT(user.language);
+  // Les colonnes natives restent la source opérationnelle. Les colonnes
+  // `*_display` sont additives, indicatives et reproductibles avec la devise
+  // cible du compte ; une devise source inconnue laisse ces colonnes vides.
+  const displayCurrency = await getServerDisplayCurrency(user.currency);
+  const displayAmount = (value: string, sourceCurrency: string | null) => {
+    const source = (sourceCurrency ?? "EUR").toUpperCase();
+    if (!isDisplayCurrency(source) || !isDisplayCurrency(displayCurrency)) return "";
+    return convertAmount(Number(value), source, displayCurrency).toFixed(2);
+  };
+  const displayRate = (sourceCurrency: string | null) => {
+    const source = (sourceCurrency ?? "EUR").toUpperCase();
+    const rate = indicativeRate(source, displayCurrency);
+    return rate === null ? "" : rate.toFixed(8);
+  };
+  const t = makeT(await getServerLocale());
   const lines = [
     [
       t("billingCsv.reference"),
@@ -67,10 +75,33 @@ export async function GET(request: NextRequest) {
       t("billingCsv.netToHost"),
       t("billingCsv.currency"),
       t("billingCsv.paymentStatus"),
+      t("billingCsv.totalDisplay"),
+      t("billingCsv.commissionDisplay"),
+      t("billingCsv.netToHostDisplay"),
+      t("billingCsv.displayCurrency"),
+      t("billingCsv.displayRate"),
+      t("billingCsv.displayRateAsOf"),
     ],
-    ...rows.map(({ booking, propertyName }) => [booking.bookingReference, propertyName, booking.createdAt.toISOString(), booking.checkIn, booking.checkOut, booking.total, booking.commissionAmount, booking.netToHost, booking.currency, booking.paymentStatus]),
+    ...rows.map(({ booking, propertyName }) => [
+      booking.bookingReference,
+      propertyName,
+      booking.createdAt.toISOString(),
+      booking.checkIn,
+      booking.checkOut,
+      booking.total,
+      booking.commissionAmount,
+      booking.netToHost,
+      booking.currency,
+      booking.paymentStatus,
+      displayAmount(booking.total, booking.currency),
+      displayAmount(booking.commissionAmount, booking.currency),
+      displayAmount(booking.netToHost, booking.currency),
+      displayCurrency,
+      displayRate(booking.currency),
+      displayRate(booking.currency) ? FX_SNAPSHOT.asOf : "",
+    ]),
   ];
-  const csv = lines.map((line) => line.map(csvCell).join(",")).join("\n");
+  const csv = csvRows(lines);
   return new NextResponse(`\uFEFF${csv}`, {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",

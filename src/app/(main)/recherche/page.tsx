@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { Search, MapPin, Building2 } from "lucide-react";
 import Link from "next/link";
-import { RATES_FROM_EUR, priceBoundToStorage } from "@/lib/i18n";
+import { RATES_FROM_EUR, priceBoundToStorage, convertAmount, FX_SNAPSHOT } from "@/lib/i18n";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { SearchPriceFilter } from "@/components/search-price-filter";
@@ -23,6 +23,7 @@ import { publicCatalogCache } from "@/lib/read-cache";
 import { propertyTypeOptions } from "@/lib/property-types";
 import { countryOptions } from "@/lib/countries";
 import { hasInvalidRequestedStay, hasStayRequest, parseFutureStay, todayIso } from "@/lib/future-stay";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
 import { ACTIVE_HOST_ALIAS, activeHostCondition } from "@/lib/host-suspension";
 // T-260 (audit n°6, B7) — « Autour de moi » : `near` était géré par l'API
 // (T-026) mais aucun écran ne l'envoyait ; la note minimale et le tri par
@@ -80,9 +81,11 @@ function validStay(params: Awaited<SearchPageProps["searchParams"]>): params is 
 }
 
 /** Taux de conversion EUR d'une devise de chambre (mêmes taux figés que
- * l'affichage, source unique). Inconnue → 1 (comportement historique). */
-function rateFor(currency: string | null | undefined): number {
-  return RATES_FROM_EUR[(currency ?? "EUR").toUpperCase()] ?? 1;
+ * l'affichage, source unique). Inconnue → exclue du calcul converti pour ne
+ * pas appliquer silencieusement un taux EUR. */
+function rateFor(currency: string | null | undefined): number | null {
+  const code = (currency ?? "EUR").toUpperCase();
+  return RATES_FROM_EUR[code] ?? null;
 }
 
 /** Prix de base normalisé en EUR (SQL) — mêmes taux figés que l'affichage. */
@@ -93,7 +96,7 @@ function roomPriceEur(alias: "r" | "r2"): SQL {
   const rateCases = Object.entries(RATES_FROM_EUR)
     .map(([c, rate]) => sql`WHEN ${c} THEN ${rate}::numeric`)
     .reduce((acc, part) => sql`${acc} ${part}`);
-  return sql`(${room}.base_price::numeric / COALESCE((CASE ${room}.currency ${rateCases} ELSE 1::numeric END), 1))`;
+  return sql`(${room}.base_price::numeric / (CASE ${room}.currency ${rateCases} ELSE NULL END))`;
 }
 
 /** Prédicat d'éligibilité d'une room (hors bornes de prix, appliquées au min).
@@ -299,7 +302,9 @@ async function searchProperties(params: Awaited<SearchPageProps["searchParams"]>
   for (const room of eligibleRooms) {
     const price = Number(room.basePrice);
     if (!Number.isFinite(price)) continue;
-    const eur = price / rateFor(room.currency);
+    const rate = rateFor(room.currency);
+    if (rate === null) continue;
+    const eur = price / rate;
     const current = cheapestByProperty.get(room.propertyId);
     if (!current || eur < current.eur || (eur === current.eur && room.id < current.id)) {
       cheapestByProperty.set(room.propertyId, { price, currency: room.currency ?? "EUR", id: room.id, eur });
@@ -327,9 +332,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   // T-153 (F) : bandeau « pensez à utiliser vos crédits » — lecture seule du
   // solde EUR du wallet (aucun changement de contrat API, aucun filtre).
   let walletAmount: number | null = null;
+  let walletDisplayCurrency = "EUR";
   if (params.wallet === "1") {
     const user = await getCurrentUser();
-    if (user) walletAmount = Number(user.walletBalance ?? "0");
+    if (user) {
+      walletAmount = Number(user.walletBalance ?? "0");
+      walletDisplayCurrency = await getServerDisplayCurrency(user.currency);
+    }
   }
   // T-182 : le catalogue SANS DATES (contenu identique pour tous les
   // visiteurs, aucune donnée de disponibilité) est servi depuis un cache
@@ -400,7 +409,14 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       {walletAmount !== null && (
         <div className="bg-amber-50 border-b border-amber-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 text-sm text-amber-900">
-            💰 {t("search.walletBanner").replace("{amount}", formatPrice(walletAmount, "EUR", locale))}
+            💰 {t("search.walletBanner")
+            .replace("{amount}", formatPrice(
+              walletDisplayCurrency === "EUR" ? walletAmount : convertAmount(walletAmount, "EUR", walletDisplayCurrency),
+              walletDisplayCurrency,
+              locale,
+            ))
+            .replace("{currency}", walletDisplayCurrency)
+            .replace("{asOf}", FX_SNAPSHOT.asOf)}
           </div>
         </div>
       )}

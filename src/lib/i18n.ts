@@ -42,29 +42,28 @@ export const RATES_FROM_EUR: Record<string, number> = {
 
 /** Devises acceptées pour les montants persistés et les paiements. */
 export const SUPPORTED_CURRENCIES = ["EUR", "USD", "GBP", "CHF", "MAD", "XAF"] as const;
+export type SupportedCurrency = (typeof SUPPORTED_CURRENCIES)[number];
 
 /**
- * T-135 — Devises d'affichage supportées (clés de `RATES_FROM_EUR`,
- * sauf qu'EUR est la devise de facturation mais aussi affichable).
- * Source de vérité unique pour la validation de la préférence
- * `currency` du profil (API `PATCH /api/users/me`) et le garde-fou du
- * hook `useDisplayPreferences`.
+ * Catalogue unique des devises que l'interface sait afficher. Il est partagé
+ * par le profil, les réglages admin, les sélecteurs public/dashboard, l'API
+ * de préférences et la validation du profil. Les réglages admin peuvent
+ * désactiver une option, mais aucune surface ne doit inventer un autre code.
  */
-export const DISPLAY_CURRENCIES = [...SUPPORTED_CURRENCIES] as string[];
+export const DISPLAY_CURRENCIES = SUPPORTED_CURRENCIES;
 export type DisplayCurrency = (typeof DISPLAY_CURRENCIES)[number];
+export const UI_CURRENCY_OPTIONS = DISPLAY_CURRENCIES;
 
-/**
- * T-158 (audit n°29) — options exposées par le sélecteur de devise
- * publique (recherche/fiche). Sous-ensemble de DISPLAY_CURRENCIES : le
- * sélecteur n'offre que les devises affichées par la plateforme
- * (CHF/MAD restent convertibles mais non proposées, conformément au
- * panneau admin `supportedCurrencies`).
- */
-export const UI_CURRENCY_OPTIONS = ["EUR", "USD", "GBP", "XAF"] as const;
+/** Métadonnées du snapshot indicatif utilisé par l'affichage uniquement. */
+export const FX_SNAPSHOT = {
+  source: "MyBestBooking indicative snapshot",
+  asOf: "2026-09-14",
+  kind: "indicative" as const,
+};
 
 /** Type-guard : une devise d'affichage est-elle connue/convertible ? */
 export function isDisplayCurrency(cur: string | null | undefined): cur is DisplayCurrency {
-  return typeof cur === "string" && cur.toUpperCase() in RATES_FROM_EUR;
+  return typeof cur === "string" && (DISPLAY_CURRENCIES as readonly string[]).includes(cur.trim().toUpperCase());
 }
 
 /** Valide une devise avant de la persister ou de l'envoyer au PSP. */
@@ -90,10 +89,19 @@ export function convertAmount(
   from: string,
   to: string,
 ): number {
-  const rFrom = RATES_FROM_EUR[from.toUpperCase()] ?? 1;
-  const rTo = RATES_FROM_EUR[to.toUpperCase()] ?? 1;
-  const inEur = amount / rFrom;
-  return Math.round(inEur * rTo * 100) / 100;
+  const source = from.trim().toUpperCase();
+  const target = to.trim().toUpperCase();
+  // Unknown codes are not allowed to masquerade as EUR. Callers that need a
+  // rendered value must keep the native breakdown and expose the code.
+  if (!(source in RATES_FROM_EUR) || !(target in RATES_FROM_EUR)) return amount;
+  const inEur = amount / RATES_FROM_EUR[source];
+  return Math.round(inEur * RATES_FROM_EUR[target] * 100) / 100;
+}
+
+/** Taux indicatif source → cible, ou null si la paire est inconnue. */
+export function indicativeRate(from: string | null | undefined, to: string | null | undefined): number | null {
+  if (!isDisplayCurrency(from) || !isDisplayCurrency(to)) return null;
+  return RATES_FROM_EUR[to] / RATES_FROM_EUR[from];
 }
 
 /**

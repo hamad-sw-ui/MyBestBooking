@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
-import { convertAmount, formatMoney, normalizeDisplayCurrency } from "@/lib/i18n";
+import { convertAmount, formatMoney, normalizeDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
 import { useDisplayCurrency } from "@/lib/use-display-currency";
 import { formatDate } from "@/lib/utils";
 import type { UiStringKey } from "@/lib/ui-strings";
@@ -128,7 +128,11 @@ export function WalletHistoryCard() {
                     displayBalance,
                   )}
                 </p>
-                {converted && <p className="text-[11px] text-gray-400">{t("wallet.convertedNote")}</p>}
+                {converted && (
+                  <p className="text-[11px] text-gray-400">
+                    {t("wallet.convertedNote").replace("{currency}", targetCurrency).replace("{asOf}", FX_SNAPSHOT.asOf)}
+                  </p>
+                )}
               </div>
             </li>
           );

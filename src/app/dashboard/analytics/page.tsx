@@ -4,8 +4,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { formatPrice } from "@/lib/utils";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
-import { formatCurrencyBreakdown, formatCurrencyConverted } from "@/lib/currency-summary";
-import { normalizeDisplayCurrency } from "@/lib/i18n";
+import { formatCurrencyBreakdown, formatCurrencyConverted, unconvertibleCurrencies } from "@/lib/currency-summary";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
+import { FX_SNAPSHOT } from "@/lib/i18n";
 import { getAnalytics } from "@/lib/analytics";
 import { defaultPeriod, parseAnalyticsPeriod } from "@/lib/analytics-period";
 import {
@@ -28,13 +29,12 @@ export default async function AnalyticsPage({
   const { from, to } = await searchParams;
   const parsed = parseAnalyticsPeriod(from, to);
   const period = "period" in parsed ? parsed.period : defaultPeriod();
-  const analytics = await getAnalytics(user.id, isAdmin, period);
   const locale = await getServerLocale();
   const t = makeT(locale);
   // Période invalide dans l'URL : on retombe sur le défaut et on le dit.
   const periodNotice = "error" in parsed && (from || to) ? t("analytics.periodInvalid") : null;
-  // T-195 — devise d'affichage (préférence compte) pour les totaux convertis.
-  const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
+  const displayCurrency = await getServerDisplayCurrency(user.currency);
+  const analytics = await getAnalytics(user.id, isAdmin, period, displayCurrency);
 
   if (!analytics) {
     return (
@@ -70,7 +70,7 @@ export default async function AnalyticsPage({
     },
     {
       title: t("analytics.avgBasket"),
-      value: formatCurrencyConverted(analytics.avgBookingValueByCurrency, displayCurrency, locale),
+      value: formatPrice(analytics.avgBookingValue, displayCurrency, locale),
       change: analytics.previousAvgBookingValue > 0 
         ? ((analytics.avgBookingValue - analytics.previousAvgBookingValue) / analytics.previousAvgBookingValue) * 100 
         : 0,
@@ -142,6 +142,11 @@ export default async function AnalyticsPage({
           {periodNotice && (
             <p className="mt-3 text-sm text-amber-700">{periodNotice}</p>
           )}
+          {analytics.unknownCurrencies.length > 0 && (
+            <p className="mt-3 text-sm text-red-700">
+              {t("currency.unknown").replace("{currencies}", analytics.unknownCurrencies.join(", "))}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -173,6 +178,7 @@ export default async function AnalyticsPage({
           </Card>
         ))}
       </div>
+      <p className="mb-6 text-xs text-gray-500">{t("currency.indicativeTotal").replace("{currency}", displayCurrency).replace("{asOf}", FX_SNAPSHOT.asOf)}</p>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Revenue Chart (simplified bar representation) */}
@@ -228,7 +234,16 @@ export default async function AnalyticsPage({
                       <p className="font-medium text-gray-900 truncate">{prop.name}</p>
                       <p className="text-sm text-gray-500">{t("analytics.nBookings").replace("{n}", String(prop.bookings))}</p>
                     </div>
-                    <p className="font-bold text-[#1B3A6B]">{formatCurrencyBreakdown(prop.revenueByCurrency)}</p>
+                    <div className="text-right">
+                      {unconvertibleCurrencies(prop.revenueByCurrency).length > 0 ? (
+                        <p className="font-bold text-amber-700">{t("currency.unknown").replace("{currencies}", unconvertibleCurrencies(prop.revenueByCurrency).join(", "))}</p>
+                      ) : (
+                        <p className="font-bold text-[#1B3A6B]">{formatPrice(prop.displayRevenue, prop.displayCurrency, locale)}</p>
+                      )}
+                      {(Object.keys(prop.revenueByCurrency).length > 1 || unconvertibleCurrencies(prop.revenueByCurrency).length > 0) && (
+                        <p className="text-xs font-normal text-gray-500">{formatCurrencyBreakdown(prop.revenueByCurrency, locale)}</p>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

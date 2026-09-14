@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { UI_CURRENCY_OPTIONS } from "@/lib/i18n";
 import {
   useDisplayPreferences,
   UI_CURRENCY_STORAGE_KEY,
@@ -25,10 +24,11 @@ import { useT } from "@/components/ui-locale-provider";
  * besoin d'une prop `initialLanguage` dédiée.
  */
 export function CurrencySelector({ compact = false }: { compact?: boolean }) {
-  const { currency } = useDisplayPreferences();
+  const { currency, supportedCurrencies } = useDisplayPreferences();
   const t = useT();
   const [error, setError] = useState<string | null>(null);
-  const current = (currency ?? "XAF").toUpperCase();
+  const requestedCurrent = (currency ?? "XAF").toUpperCase();
+  const current = supportedCurrencies.includes(requestedCurrent) ? requestedCurrent : supportedCurrencies[0] ?? "XAF";
 
   async function change(next: string) {
     if (next === current) return;
@@ -40,9 +40,13 @@ export function CurrencySelector({ compact = false }: { compact?: boolean }) {
       return;
     }
     resetDisplayPreferencesCache();
-    // Rechargement : le SSR du formulaire lit `displayCurrency` soumis par
-    // le client — le sélecteur ne casse jamais les URLs de recherche.
-    window.location.reload();
+    // Le serveur doit filtrer avec la même devise que celle visible dans les
+    // champs. Mettre à jour l'URL évite l'ancien bug où le libellé changeait
+    // côté client mais les bornes restaient interprétées dans l'ancienne
+    // devise lors du rendu SSR.
+    const url = new URL(window.location.href);
+    url.searchParams.set("displayCurrency", next);
+    window.location.assign(url.toString());
   }
 
   const label = t("currency.displayLabel");
@@ -56,7 +60,7 @@ export function CurrencySelector({ compact = false }: { compact?: boolean }) {
         onChange={(e) => change(e.target.value)}
         className="w-full px-2 py-2 border border-gray-200 rounded-lg text-sm text-gray-900"
       >
-        {UI_CURRENCY_OPTIONS.map((c) => (
+        {supportedCurrencies.map((c) => (
           <option key={c} value={c}>{c}</option>
         ))}
       </select>

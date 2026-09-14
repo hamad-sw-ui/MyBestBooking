@@ -7,9 +7,11 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatPrice, formatDate } from "@/lib/utils";
-import { sumByCurrency, formatCurrencyBreakdown, formatCurrencyConverted, sumByCurrencyConverted, hasMixedCurrencies } from "@/lib/currency-summary";
-import { normalizeDisplayCurrency } from "@/lib/i18n";
+import { formatDate } from "@/lib/utils";
+import { formatMoney } from "@/lib/i18n";
+import { sumByCurrency, formatCurrencyBreakdown, formatCurrencyConverted, sumByCurrencyConverted, hasMixedCurrencies, unconvertibleCurrencies } from "@/lib/currency-summary";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
+import { FX_SNAPSHOT } from "@/lib/i18n";
 import { 
   CreditCard, Download, FileText, Calendar,
   TrendingUp, Wallet, CheckCircle
@@ -141,7 +143,7 @@ export default async function BillingPage() {
   const billing = await getBillingData(user.id, isAdmin, locale);
   // T-195 — devise d'affichage (préférence compte, normalisée) pour les totaux
   // convertis. Affichage uniquement ; aucun montant transactionnel converti.
-  const displayCurrency = normalizeDisplayCurrency(user.currency, "EUR");
+  const displayCurrency = await getServerDisplayCurrency(user.currency);
   if (!billing) {
     return (
       <div>
@@ -160,6 +162,12 @@ export default async function BillingPage() {
     );
   }
 
+  const unknownCurrencies = Array.from(new Set([
+    ...unconvertibleCurrencies(billing.thisMonth.netByCurrency),
+    ...unconvertibleCurrencies(billing.lastMonth.netByCurrency),
+    ...unconvertibleCurrencies(billing.total.netByCurrency),
+  ])).sort();
+
   return (
     <div>
       {/* Header */}
@@ -172,6 +180,10 @@ export default async function BillingPage() {
         </p>
       </div>
 
+      {unknownCurrencies.length > 0 && (
+        <p className="mb-4 text-sm text-red-700">{t("currency.unknown").replace("{currencies}", unknownCurrencies.join(", "))}</p>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card className="bg-gradient-to-br from-[#1B3A6B] to-[#0f2444] text-white">
@@ -183,7 +195,7 @@ export default async function BillingPage() {
 <p className="text-white/70 text-sm">{t("billing.netRevenue")}</p>
             <p className="text-3xl font-bold mt-1">{formatCurrencyConverted(billing.thisMonth.netByCurrency, displayCurrency, locale)}</p>
             {hasMixedCurrencies(billing.thisMonth.netByCurrency) && (
-              <p className="text-white/60 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency)}</p>
+              <p className="text-white/60 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency).replace("{asOf}", FX_SNAPSHOT.asOf)}</p>
             )}
             <p className="text-white/60 text-sm mt-2">
 {(billing.thisMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.thisMonth.bookings))}
@@ -200,7 +212,7 @@ export default async function BillingPage() {
 <p className="text-gray-500 text-sm">{t("billing.netRevenue")}</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyConverted(billing.lastMonth.netByCurrency, displayCurrency, locale)}</p>
             {hasMixedCurrencies(billing.lastMonth.netByCurrency) && (
-              <p className="text-gray-400 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency)}</p>
+              <p className="text-gray-400 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency).replace("{asOf}", FX_SNAPSHOT.asOf)}</p>
             )}
             <p className="text-gray-500 text-sm mt-2">
 {(billing.lastMonth.bookings !== 1 ? t("billing.bookingsCountMany") : t("billing.bookingsCount")).replace("{n}", String(billing.lastMonth.bookings))}
@@ -217,7 +229,7 @@ export default async function BillingPage() {
 <p className="text-gray-500 text-sm">{t("billing.cumulated")}</p>
             <p className="text-3xl font-bold text-gray-900 mt-1">{formatCurrencyConverted(billing.total.netByCurrency, displayCurrency, locale)}</p>
             {hasMixedCurrencies(billing.total.netByCurrency) && (
-              <p className="text-gray-400 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency)}</p>
+              <p className="text-gray-400 text-xs mt-1">{t("billing.convertedNote").replace("{currency}", displayCurrency).replace("{asOf}", FX_SNAPSHOT.asOf)}</p>
             )}
             <p className="text-gray-500 text-sm mt-2">
 {(billing.total.bookings !== 1 ? t("billing.bookingsTotalMany") : t("billing.bookingsTotal")).replace("{n}", String(billing.total.bookings))}
@@ -276,7 +288,12 @@ export default async function BillingPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-gray-900">{formatPrice(invoice.net, invoice.currency, locale)}</p>
+                      <p className="font-bold text-gray-900">{formatMoney(invoice.net, invoice.currency, locale)}</p>
+                      {invoice.currency.toUpperCase() !== displayCurrency && (
+                        <p className="text-xs font-normal text-gray-500">
+                          {formatCurrencyConverted({ [invoice.currency.toUpperCase()]: invoice.net }, displayCurrency, locale)}
+                        </p>
+                      )}
                       <div className="flex items-center gap-2 mt-1">
                         {invoice.status === "paid" ? (
                           <Badge variant="success">
@@ -325,9 +342,14 @@ export default async function BillingPage() {
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold text-green-600">+{formatPrice(booking.netToHost, booking.currency, locale)}</p>
+                      <p className="font-bold text-green-600">+{formatMoney(Number(booking.netToHost), booking.currency ?? "EUR", locale)}</p>
+                      {booking.currency && booking.currency.toUpperCase() !== displayCurrency && (
+                        <p className="text-xs font-normal text-gray-500">
+                          {formatCurrencyConverted({ [booking.currency.toUpperCase()]: Number(booking.netToHost) }, displayCurrency, locale)}
+                        </p>
+                      )}
                       <p className="text-xs text-gray-400">
-{t("billing.commission").replace("{amount}", formatPrice(booking.commissionAmount, booking.currency, locale))}
+{t("billing.commission").replace("{amount}", formatMoney(Number(booking.commissionAmount), booking.currency ?? "EUR", locale))}
                       </p>
                     </div>
                   </div>

@@ -35,7 +35,7 @@ function fakeWindow(localLanguage: string | null, localCurrency: string | null =
   };
 }
 
-function stubFetch(meStatus: number, meBody: unknown = null) {
+function stubFetch(meStatus: number, meBody: unknown = null, prefsBody: unknown = { defaultCurrency: "XAF", defaultLanguage: "fr" }) {
   return vi.fn(async (url: string) => {
     if (String(url).includes("/api/auth/me")) {
       return {
@@ -47,7 +47,7 @@ function stubFetch(meStatus: number, meBody: unknown = null) {
     return {
       ok: true,
       status: 200,
-      json: async () => ({ defaultCurrency: "XAF", defaultLanguage: "fr" }),
+      json: async () => prefsBody,
     } as Response;
   });
 }
@@ -85,6 +85,33 @@ describe("display preferences — invalidation (T-173)", () => {
 
     const result = await resolveDisplayPreferences();
     expect(result.currency).toBe("USD");
+  });
+
+  it("applique l'allowlist plateforme avant localStorage et compte", async () => {
+    const { win } = fakeWindow(null, "CHF");
+    vi.stubGlobal("window", win);
+    vi.stubGlobal("fetch", stubFetch(200, { user: { language: "fr", currency: "CHF" } }, {
+      defaultCurrency: "USD",
+      defaultLanguage: "fr",
+      supportedCurrencies: ["EUR", "USD"],
+    }));
+
+    const result = await resolveDisplayPreferences();
+    expect(result.supportedCurrencies).toEqual(["EUR", "USD"]);
+    expect(result.currency).toBe("USD");
+  });
+
+  it("accepte CHF et MAD quand la plateforme les active", async () => {
+    const { win } = fakeWindow(null);
+    vi.stubGlobal("window", win);
+    vi.stubGlobal("fetch", stubFetch(200, { user: { language: "fr", currency: "MAD" } }, {
+      defaultCurrency: "XAF",
+      defaultLanguage: "fr",
+      supportedCurrencies: ["EUR", "USD", "GBP", "CHF", "MAD", "XAF"],
+    }));
+
+    const result = await resolveDisplayPreferences();
+    expect(result.currency).toBe("MAD");
   });
 
   it("invalidateDisplayPreferences vide le cache ET dispatch l'événement", async () => {

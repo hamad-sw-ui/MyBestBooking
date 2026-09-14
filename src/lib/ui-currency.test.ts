@@ -9,13 +9,13 @@ import { UI_CURRENCY_STORAGE_KEY } from "./use-display-currency";
 
 /**
  * T-158 (audit n°29) — sélecteur de devise d'affichage public.
- * Garantit : les 4 options du sélecteur sont des devises affichables
+ * Garantit : les 6 options du sélecteur sont des devises affichables
  * (conversion serveur possible), la clé localStorage est stable, et la
  * normalisation accepte chacune (aucun cas EUR chiffré modifié).
  */
 describe("T-158 — devise d'affichage publique", () => {
-  it("expose exactement EUR/USD/GBP/XAF", () => {
-    expect([...UI_CURRENCY_OPTIONS]).toEqual(["EUR", "USD", "GBP", "XAF"]);
+  it("expose exactement les six devises supportées", () => {
+    expect([...UI_CURRENCY_OPTIONS]).toEqual(["EUR", "USD", "GBP", "CHF", "MAD", "XAF"]);
   });
 
   it("chaque option est une devise affichable/convertible", () => {

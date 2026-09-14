@@ -10,7 +10,7 @@ import Link from "next/link";
 import { PropertySubmitButton } from "@/components/property-submit-button";
 import { PhotoUploadButton } from "@/components/photo-upload-button";
 import { formatPrice } from "@/lib/utils";
-import { convertAmount, formatMoney } from "@/lib/i18n";
+import { convertAmount, formatMoney, FX_SNAPSHOT, isDisplayCurrency } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { COMMON_TIMEZONES } from "@/lib/timezone";
 // T-154e (audit n°26, P3-13) : liste d'équipements harmonisée.
@@ -591,15 +591,17 @@ export default function PropertyEditClient({
                           {(() => {
                             const src = room.currency ?? "EUR";
                             const numeric = parseFloat(room.basePrice);
-                            const converted = Boolean(displayCurrency) && displayCurrency !== src.toUpperCase();
-                            const text = converted
-                              ? formatMoney(convertAmount(numeric, src, displayCurrency!), displayCurrency!, locale)
-                              : formatPrice(numeric, src, locale);
+                            const converted = isDisplayCurrency(src) && isDisplayCurrency(displayCurrency) && displayCurrency !== src.toUpperCase();
+                            const text = !isDisplayCurrency(src)
+                              ? formatMoney(numeric, src, locale)
+                              : converted
+                                ? formatMoney(convertAmount(numeric, src, displayCurrency!), displayCurrency!, locale)
+                                : formatPrice(numeric, src, locale);
                             return text;
                           })()}{t("price.perNight")}
                         </p>
-                        {Boolean(displayCurrency) && displayCurrency !== (room.currency ?? "EUR").toUpperCase() && (
-                          <p className="text-[10px] text-gray-400">{t("price.convertedNote")} {room.currency ?? "EUR"}</p>
+                        {isDisplayCurrency(room.currency ?? "EUR") && isDisplayCurrency(displayCurrency) && displayCurrency !== (room.currency ?? "EUR").toUpperCase() && (
+                          <p className="text-[10px] text-gray-400">{t("price.convertedNote").replace("{currency}", displayCurrency!).replace("{asOf}", FX_SNAPSHOT.asOf)} {room.currency ?? "EUR"}</p>
                         )}
                       </div>
                       <Link href={`/dashboard/rooms/${room.id}/calendrier`}>

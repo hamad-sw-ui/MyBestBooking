@@ -14,6 +14,7 @@ import { assertNotMaintenance, MaintenanceError, maintenanceResponse } from "@/l
 import { anonymizeUserAccount, anonymizedEmailFor } from "@/lib/account-anonymization";
 import { recordAccountClosureEntry } from "@/lib/wallet-ledger";
 import { parseUserNotificationPrefs } from "@/lib/notification-prefs";
+import { getSetting } from "@/lib/settings";
 
 // T-135 — langues de l'UI réellement traduites (fr/en). L'arabe n'a pas
 // de dictionnaire V1 : on le rejette ici plutôt que de stocker une
@@ -34,7 +35,7 @@ const schema = z.object({
     .string()
     .length(3)
     .toUpperCase()
-    .refine((v) => DISPLAY_CURRENCIES.includes(v), "Devise non supportée")
+    .refine((v) => (DISPLAY_CURRENCIES as readonly string[]).includes(v), "Devise non supportée")
     .optional(),
   // T-227 (A7) : un fuseau inventé était accepté puis stocké sans effet. On
   // n'accepte plus que la base IANA reconnue par le runtime.
@@ -72,6 +73,15 @@ export async function PATCH(request: NextRequest) {
     await assertNotMaintenance(user);
 
     const data = schema.parse(await request.json());
+    if (data.currency) {
+      const general = await getSetting("general");
+      if (!(general.supportedCurrencies as readonly string[]).includes(data.currency)) {
+        return NextResponse.json(
+          { error: await apiError("Cette devise d'affichage est désactivée par la plateforme") },
+          { status: 400 },
+        );
+      }
+    }
     const [updated] = await db
       .update(users)
       .set({ ...data, updatedAt: new Date() })

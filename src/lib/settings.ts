@@ -19,6 +19,7 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { appSettings } from "@/db/schema";
+import { SUPPORTED_CURRENCIES } from "@/lib/i18n";
 
 // ─── Clés autorisées ─────────────────────────────────────────────
 export const SETTING_KEYS = [
@@ -38,19 +39,20 @@ export const generalSchema = z.object({
   siteName: z.string().min(1).max(100),
   supportEmail: z.string().email(),
   partnersEmail: z.string().email(),
-  defaultCurrency: z.enum(["EUR", "USD", "GBP", "XAF"]),
+  defaultCurrency: z.enum(SUPPORTED_CURRENCIES),
   defaultLanguage: z.enum(["fr", "en", "ar"]),
-  // BUG-026 (Session 11 quinquies) : exposer explicitement les listes
-  // supportées via l'API pour que l'UI puisse construire ses dropdowns
-  // sans hard-coder — et surtout pour permettre à un admin de restreindre
-  // l'offre disponible (ex: retirer XAF sans redéployer).
-  supportedCurrencies: z.array(z.enum(["EUR", "USD", "GBP", "XAF"])).min(1).default(["EUR", "USD", "GBP", "XAF"]),
+  // BUG-026 : le catalogue global vient de `i18n.ts`; l'admin peut
+  // restreindre l'offre sans créer de second catalogue implicite.
+  supportedCurrencies: z.array(z.enum(SUPPORTED_CURRENCIES)).min(1).default([...SUPPORTED_CURRENCIES]),
   // T-172 : le schéma tolère « ar » (données historiques / futur dictionnaire
   // RTL), mais le défaut annonce uniquement les locales réellement servies
   // (UiLocale = fr|en). Défaut précédent ["fr","en","ar"] : l'API publique
   // /api/app-preferences promettait une langue que toute la chaîne i18n
   // (ui-strings, e-mails, SSR) retombait en français — façade incohérente.
   supportedLocales: z.array(z.enum(["fr", "en", "ar"])).min(1).default(["fr", "en"]),
+}).refine((value) => value.supportedCurrencies.includes(value.defaultCurrency), {
+  message: "La devise par défaut doit être dans les devises supportées",
+  path: ["defaultCurrency"],
 });
 
 export const billingSchema = z.object({
@@ -229,7 +231,7 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     // devise de la chambre/passerelle (Stripe ne supporte pas le XAF).
     defaultCurrency: "XAF",
     defaultLanguage: "fr",
-    supportedCurrencies: ["EUR", "USD", "GBP", "XAF"],
+    supportedCurrencies: [...SUPPORTED_CURRENCIES],
     supportedLocales: ["fr", "en"],
   },
   billing: {

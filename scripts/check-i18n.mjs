@@ -88,18 +88,41 @@ for (const root of SCAN_ROOTS) {
     const rel = relative(ROOT, file);
     if ([...EXCLUDED_FILES].some((x) => rel.endsWith(x))) continue;
     const lines = readFileSync(file, "utf8").split("\n");
+    let blockComment = false;
     lines.forEach((line, i) => {
       if (SKIP_LINE.test(line)) return;
+      // Retirer les commentaires inline avant l'heuristique. Les commentaires
+      // JSX (`{/* ... */}`) ne sont jamais envoyés au navigateur.
+      let code = line;
+      while (true) {
+        if (blockComment) {
+          const end = code.indexOf("*/");
+          if (end < 0) return;
+          code = code.slice(end + 2);
+          blockComment = false;
+        }
+        const start = code.indexOf("/*");
+        if (start < 0) break;
+        const end = code.indexOf("*/", start + 2);
+        if (end < 0) {
+          code = code.slice(0, start);
+          blockComment = true;
+          break;
+        }
+        code = code.slice(0, start) + code.slice(end + 2);
+      }
+      code = code.replace(/\/\/.*$/, "");
+      if (!code.trim()) return;
       // Critère 1 (historique) : accent français dans une chaîne JS ou un JSX.
-      if (ACCENTS.test(line) &&
-          /"[^"\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^"\n]*"|'[^'\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^'\n]*'|>[^<>\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ][^<>\n]*</.test(line)) {
+      if (ACCENTS.test(code) &&
+          /"[^"\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈËÎÏÔÖÙÛÜÇ][^"\n]*"|'[^'\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈËÎÏÔÖÙÛÜÇ][^'\n]*'|>[^<>\n]*[àâäéèêëîïôöùûüçÀÂÄÉÈËÎÏÔÖÙÛÜÇ][^<>\n]*</.test(code)) {
         hits.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
         return;
       }
       // Critère 2 (T-195) : mot français NON accentué dans une chaîne JS ou JSX.
-      if (FRENCH_WORD_RE.test(line) &&
-          /"[^"\n]*[a-zA-ZÀ-ÿ][^"\n]*"|'[^'\n]*[a-zA-ZÀ-ÿ][^'\n]*'|>[^<>\n]*[a-zA-ZÀ-ÿ][^<>\n]*</.test(line) &&
-          !/className|href=|style=|aria-|data-|placeholder=|title=|name=|id=|value=|type=|border|text-|bg-|px-|py-|w-|h-|max-w|flex|grid|rounded|items-|justify-|gap-|p-|m-|sm:|md:|lg:|hover:|focus:/i.test(line)) {
+      if (FRENCH_WORD_RE.test(code) &&
+          /"[^"\n]*[a-zA-ZÀ-ÿ][^"\n]*"|'[^'\n]*[a-zA-ZÀ-ÿ][^'\n]*'|>[^<>\n]*[a-zA-ZÀ-ÿ][^<>\n]*</.test(code) &&
+          !/className|href=|style=|aria-|data-|placeholder=|title=|name=|id=|value=|type=|border|text-|bg-|px-|py-|w-|h-|max-w|flex|grid|rounded|items-|justify-|gap-|p-|m-|sm:|md:|lg:|hover:|focus:/i.test(code)) {
         hits.push({ file: rel, line: i + 1, text: line.trim().slice(0, 110) });
       }
     });

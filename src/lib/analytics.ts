@@ -3,9 +3,12 @@ import { bookings, properties, reviews, rooms } from "@/db/schema";
 import { eq, and, sql } from "drizzle-orm";
 import {
   sumByCurrency,
-  topCurrency,
+  topCurrencyByValue,
   currenciesOf,
+  sumByCurrencyConverted,
+  unconvertibleCurrencies,
 } from "@/lib/currency-summary";
+import { isDisplayCurrency } from "@/lib/i18n";
 import { civilRange, type AnalyticsPeriod } from "@/lib/analytics-period";
 import { shiftCivilDays } from "@/lib/analytics-period";
 
@@ -16,7 +19,8 @@ import { shiftCivilDays } from "@/lib/analytics-period";
  * Toutes les fenêtres sont fournies par `AnalyticsPeriod` (dates civiles,
  * T-232) : la lecture en base ne dépend donc jamais du fuseau du serveur.
  */
-export async function getAnalytics(userId: string, isAdmin: boolean, period: AnalyticsPeriod) {
+export async function getAnalytics(userId: string, isAdmin: boolean, period: AnalyticsPeriod, displayCurrency = "EUR") {
+  const targetCurrency = isDisplayCurrency(displayCurrency) ? displayCurrency.toUpperCase() : "EUR";
   const propertiesQuery = isAdmin
     ? db.select().from(properties)
     : db.select().from(properties).where(eq(properties.hostId, userId));
@@ -44,10 +48,13 @@ export async function getAnalytics(userId: string, isAdmin: boolean, period: Ana
   const previousPeriodBookings = allBookings.filter(
     (b) => createdAt(b) >= previousStart && createdAt(b) <= previousEnd && b.status !== "cancelled",
   );
+  const paidItems = (rows: typeof allBookings) => rows
+    .filter((b) => b.paymentStatus === "paid")
+    .map((b) => ({ currency: b.currency, amount: parseFloat(b.total) }));
 
-  // T-152 (audit n°24, C) : les totaux sont regroupés PAR DEVISE. On
-  // n'additionne jamais deux devises ; les pourcentages d'évolution restent
-  // calculés sur les flux (comparaison de flux, étiquetée comme telle).
+  // Les données restent groupées par devise native. Les KPI et la série
+  // affichée utilisent ensuite une conversion indicative explicite vers la
+  // préférence du compte ; aucune écriture transactionnelle n'est modifiée.
   const currentRevenueByCurrency = sumByCurrency(
     currentPeriodBookings
       .filter((b) => b.paymentStatus === "paid")
@@ -58,9 +65,13 @@ export async function getAnalytics(userId: string, isAdmin: boolean, period: Ana
       .filter((b) => b.paymentStatus === "paid")
       .map((b) => ({ currency: b.currency, amount: parseFloat(b.total) })),
   );
-  const comparisonCurrency = topCurrency(currentRevenueByCurrency) ?? topCurrency(previousRevenueByCurrency) ?? "EUR";
-  const currentRevenue = currentRevenueByCurrency[comparisonCurrency] ?? 0;
-  const previousRevenue = previousRevenueByCurrency[comparisonCurrency] ?? 0;
+  const comparisonCurrency = topCurrencyByValue(currentRevenueByCurrency, targetCurrency)
+    ?? topCurrencyByValue(previousRevenueByCurrency, targetCurrency)
+    ?? "EUR";
+  const currentDisplayRevenue = sumByCurrencyConverted(paidItems(currentPeriodBookings), targetCurrency);
+  const previousDisplayRevenue = sumByCurrencyConverted(paidItems(previousPeriodBookings), targetCurrency);
+  const currentRevenue = currentDisplayRevenue.total;
+  const previousRevenue = previousDisplayRevenue.total;
 
   const revenueChange = previousRevenue > 0
     ? ((currentRevenue - previousRevenue) / previousRevenue) * 100
@@ -79,10 +90,12 @@ export async function getAnalytics(userId: string, isAdmin: boolean, period: Ana
     const count = currentPaidBookings.filter((b) => (b.currency || "EUR").toUpperCase() === currency).length;
     avgBookingValueByCurrency[currency] = count > 0 ? revenue / count : 0;
   }
-  const currentComparisonCount = currentPaidBookings.filter((b) => (b.currency || "EUR").toUpperCase() === comparisonCurrency).length;
-  const previousComparisonCount = previousPaidBookings.filter((b) => (b.currency || "EUR").toUpperCase() === comparisonCurrency).length;
-  const avgBookingValue = currentComparisonCount > 0 ? currentRevenue / currentComparisonCount : 0;
-  const previousAvgBookingValue = previousComparisonCount > 0 ? previousRevenue / previousComparisonCount : 0;
+  const avgBookingValue = currentPaidBookings.length > 0 ? currentRevenue / currentPaidBookings.length : 0;
+  const previousAvgBookingValue = previousPaidBookings.length > 0 ? previousRevenue / previousPaidBookings.length : 0;
+  const unknownCurrencies = Array.from(new Set([
+    ...unconvertibleCurrencies(currentRevenueByCurrency),
+    ...unconvertibleCurrencies(previousRevenueByCurrency),
+  ])).sort();
 
   // Occupation : nuits réellement situées dans la fenêtre (les annulations
   // sont exclues), rapportées au stock déclaré × nombre de nuits de la période.
@@ -117,28 +130,28 @@ export async function getAnalytics(userId: string, isAdmin: boolean, period: Ana
     ? approvedReviews.reduce((sum, r) => sum + parseFloat(r.overallRating), 0) / approvedReviews.length
     : 0;
 
-  // Série journalière : une SEULE devise par série (la dominante de la
-  // période). Sur une période longue, le graphique montre ses 31 derniers
-  // jours — le CSV, lui, reste la source exhaustive.
-  const chartCurrency = topCurrency(currentRevenueByCurrency) ?? "EUR";
+  // Série journalière : toutes les devises sources sont converties dans la
+  // devise choisie pour éviter qu'une valeur nominale XAF domine un EUR.
+  const chartCurrency = targetCurrency;
   const chartDays = Math.min(period.days, 31);
   const chartFrom = shiftCivilDays(period.to, -(chartDays - 1));
   const otherCurrencies = currenciesOf(currentRevenueByCurrency).filter((c) => c !== chartCurrency);
   const revenueByDay: { date: string; revenue: number; currency: string }[] = [];
   for (let i = 0; i < chartDays; i++) {
     const dateStr = shiftCivilDays(chartFrom, i);
-    const dayRevenue = currentPeriodBookings
-      .filter((b) => {
-        const bDate = civilDayOf(createdAt(b));
-        return bDate === dateStr && b.paymentStatus === "paid" &&
-          (b.currency || "EUR").toUpperCase() === chartCurrency;
-      })
-      .reduce((sum, b) => sum + parseFloat(b.total), 0);
+    const dayItems = currentPeriodBookings.filter((b) => {
+      const bDate = civilDayOf(createdAt(b));
+      return bDate === dateStr && b.paymentStatus === "paid";
+    });
+    const dayRevenue = sumByCurrencyConverted(
+      dayItems.map((b) => ({ currency: b.currency, amount: parseFloat(b.total) })),
+      targetCurrency,
+    ).total;
     revenueByDay.push({ date: dateStr, revenue: dayRevenue, currency: chartCurrency });
   }
 
-  // Top hébergements : sur la période analysée (avant T-241 c'était « depuis
-  // toujours », incohérent avec un sélecteur de période).
+  // Top hébergements : classement après conversion dans une base commune,
+  // tout en gardant la répartition native pour audit et export.
   const propertyRevenue = new Map<string, { name: string; revenueByCurrency: Record<string, number>; bookings: number }>();
   for (const booking of currentPeriodBookings) {
     if (booking.paymentStatus !== "paid") continue;
@@ -153,9 +166,21 @@ export async function getAnalytics(userId: string, isAdmin: boolean, period: Ana
   }
 
   const topProperties = Array.from(propertyRevenue.entries())
-    .sort((a, b) => (b[1].revenueByCurrency[chartCurrency] ?? 0) - (a[1].revenueByCurrency[chartCurrency] ?? 0))
+    .sort((a, b) => {
+      const av = sumByCurrencyConverted(Object.entries(a[1].revenueByCurrency).map(([currency, amount]) => ({ currency, amount })), targetCurrency).total;
+      const bv = sumByCurrencyConverted(Object.entries(b[1].revenueByCurrency).map(([currency, amount]) => ({ currency, amount })), targetCurrency).total;
+      return bv - av;
+    })
     .slice(0, 5)
-    .map(([id, data]) => ({ id, ...data }));
+    .map(([id, data]) => ({
+      id,
+      ...data,
+      displayCurrency: targetCurrency,
+      displayRevenue: sumByCurrencyConverted(
+        Object.entries(data.revenueByCurrency).map(([currency, amount]) => ({ currency, amount })),
+        targetCurrency,
+      ).total,
+    }));
 
   return {
     period,
@@ -163,6 +188,8 @@ export async function getAnalytics(userId: string, isAdmin: boolean, period: Ana
     // l'export CSV nomme la devise des montants agrégés au lieu de les
     // présenter comme une somme toutes devises confondues.
     comparisonCurrency,
+    displayCurrency: targetCurrency,
+    unknownCurrencies,
     chartDays,
     chartFrom,
     currentRevenueByCurrency,

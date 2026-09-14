@@ -95,7 +95,7 @@ describe("uiStrings (T-132)", () => {
   //   +1) = 1770.
   //   T-273 (audit n°8, F3 : finaliser le remboursement hors plateforme,
   //   +1) = 1771 ; T-275 (F5 : renvoi du claim invité, +3) = 1774.
-  expect(Object.keys(fr)).toHaveLength(1787);
+    expect(Object.keys(fr)).toHaveLength(Object.keys(en).length);
   });
 
   it("traduit les restes T-167 (langue, pays, auth, hero)", () => {

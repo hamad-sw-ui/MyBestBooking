@@ -29,10 +29,6 @@ import { isMaintenanceActive, shouldBypassMaintenance } from "@/lib/maintenance"
  * est traité comme non authentifié plutôt que de crasher tout Next.
  */
 
-const JWT_SECRET = process.env.JWT_SECRET
-  ? new TextEncoder().encode(process.env.JWT_SECRET)
-  : null;
-
 /** Langue UI depuis `?lang=` (prioritaire) ou cookies anonymes. */
 function localeFromRequest(request: NextRequest): "fr" | "en" | null {
   const q = request.nextUrl.searchParams.get("lang");
@@ -83,11 +79,17 @@ interface SessionInfo {
  * si le JWT l'embarque) ou `null` si absent/invalide/expiré.
  */
 async function getSession(request: NextRequest): Promise<SessionInfo | null> {
-  if (!JWT_SECRET) return null;
+  // Lire la clé à l'appel et non à l'import : les tests/runtime qui chargent
+  // le proxy avant l'initialisation de l'environnement doivent quand même
+  // pouvoir vérifier un JWT configuré ensuite.
+  const jwtSecret = process.env.JWT_SECRET
+    ? new TextEncoder().encode(process.env.JWT_SECRET)
+    : null;
+  if (!jwtSecret) return null;
   const token = request.cookies.get("session")?.value;
   if (!token) return null;
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET);
+    const { payload } = await jwtVerify(token, jwtSecret);
     if (typeof payload.userId !== "string") return null;
     return {
       userId: payload.userId,

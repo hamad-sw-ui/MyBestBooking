@@ -13,6 +13,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useT } from "@/components/ui-locale-provider";
 import { Loader2, CheckCircle } from "lucide-react";
+import { SUPPORTED_CURRENCIES } from "@/lib/i18n";
 
 /**
  * T-195 (G1) — formulaire de configuration du moyen de versement (hôte/admin).
@@ -72,7 +73,7 @@ export function PayoutAccountForm({ defaultCurrency = "EUR" }: { defaultCurrency
             value={currency}
             onChange={(e) => setCurrency(e.target.value)}
           >
-            {["EUR", "USD", "GBP", "XAF"].map((c) => (
+            {SUPPORTED_CURRENCIES.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>

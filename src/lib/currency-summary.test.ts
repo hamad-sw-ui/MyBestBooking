@@ -7,6 +7,7 @@ import {
   formatCurrencyBreakdown,
   sumByCurrencyConverted,
   formatCurrencyConverted,
+  topCurrencyByValue,
 } from "./currency-summary";
 import { RATES_FROM_EUR } from "./i18n";
 
@@ -99,5 +100,15 @@ describe("currency-summary (T-152, finding C)", () => {
 
   it("formatCurrencyConverted : map vide → 0,00 € (devise cible)", () => {
     expect(norm(formatCurrencyConverted({}, "USD"))).toBe("0,00 $US");
+  });
+
+  it("formatCurrencyConverted : devise inconnue reste visible dans le breakdown", () => {
+    const out = formatCurrencyConverted({ EUR: 100, ZZZ: 25 }, "USD");
+    expect(out).toContain("ZZZ");
+    expect(out).toContain("100");
+  });
+
+  it("topCurrencyByValue compare après conversion, pas par valeur nominale", () => {
+    expect(topCurrencyByValue({ EUR: 100, XAF: 1000 }, "EUR")).toBe("EUR");
   });
 });

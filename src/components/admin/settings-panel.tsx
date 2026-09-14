@@ -22,6 +22,7 @@ import type {
 } from "@/lib/settings";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 import type { UiStringKey } from "@/lib/ui-strings";
+import { SUPPORTED_CURRENCIES } from "@/lib/i18n";
 
 type AllSettings = { [K in SettingKey]: SettingValue<K> };
 type Providers = { stripe: boolean; resend: boolean; s3: boolean };
@@ -147,13 +148,38 @@ function GeneralSection({ initial }: { initial: SettingValue<"general"> }) {
               value={v.defaultCurrency}
               onChange={(e) => setV({ ...v, defaultCurrency: e.target.value as typeof v.defaultCurrency })}
             >
-              <option value="EUR">€ EUR</option>
-              <option value="USD">$ USD</option>
-              <option value="GBP">£ GBP</option>
-              <option value="XAF">FCFA XAF</option>
+              {SUPPORTED_CURRENCIES.map((currency) => (
+                <option key={currency} value={currency}>{currency === "XAF" ? "FCFA " : ""}{currency}</option>
+              ))}
             </select>
           </div>
         </div>
+        <fieldset className="rounded-lg border border-gray-200 p-4">
+          <legend className="px-1 text-sm font-medium text-gray-700">{t("settings.supportedCurrencies")}</legend>
+          <p className="mb-3 text-xs text-gray-500">{t("settings.supportedCurrenciesHint")}</p>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+            {SUPPORTED_CURRENCIES.map((currency) => {
+              const checked = v.supportedCurrencies.includes(currency);
+              const isDefault = v.defaultCurrency === currency;
+              return (
+                <label key={currency} className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={isDefault}
+                    onChange={(event) => {
+                      const next = event.target.checked
+                        ? [...v.supportedCurrencies, currency]
+                        : v.supportedCurrencies.filter((item) => item !== currency);
+                      setV({ ...v, supportedCurrencies: SUPPORTED_CURRENCIES.filter((item) => next.includes(item)) });
+                    }}
+                  />
+                  <span>{currency}{isDefault ? ` (${t("settings.defaultCurrency").toLowerCase()})` : ""}</span>
+                </label>
+              );
+            })}
+          </div>
+        </fieldset>
       </CardContent>
       <CardFooter className="flex items-center gap-3">
         <Button onClick={save} disabled={isPending}>{t("action.save")}</Button>

@@ -14,11 +14,17 @@ export function formatPrice(
   locale: string = "fr-FR",
 ): string {
   const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-  return new Intl.NumberFormat(intlLocale(locale), {
-    style: "currency",
-    currency: currency.toUpperCase(),
-    maximumFractionDigits: isZeroDecimalCurrency(currency) ? 0 : 2,
-  }).format(numAmount);
+  try {
+    return new Intl.NumberFormat(intlLocale(locale), {
+      style: "currency",
+      currency: currency.toUpperCase(),
+      maximumFractionDigits: isZeroDecimalCurrency(currency) ? 0 : 2,
+    }).format(numAmount);
+  } catch {
+    // Une devise legacy inconnue reste visible avec son code source au lieu
+    // de faire échouer la page ou d'être traitée silencieusement comme EUR.
+    return `${numAmount.toFixed(isZeroDecimalCurrency(currency) ? 0 : 2)} ${currency}`;
+  }
 }
 
 /** BCP-47 tag for Intl date format from the UI locale (`fr` | `en`). */

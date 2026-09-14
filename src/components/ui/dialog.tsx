@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useId, useRef, type ReactNode } from "react";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
+import { useT } from "@/components/ui-locale-provider";
 
 interface DialogProps {
   open: boolean;
@@ -37,12 +38,13 @@ export function Dialog({
   onClose,
   title,
   description,
-  closeLabel = "Fermer",
+  closeLabel,
   dismissible = true,
   className,
   children,
   footer,
 }: DialogProps) {
+  const t = useT();
   const titleId = useId();
   const descriptionId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
@@ -127,7 +129,7 @@ export function Dialog({
             <button
               type="button"
               onClick={close}
-              aria-label={closeLabel}
+              aria-label={closeLabel ?? t("action.close")}
               className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#1B3A6B]"
             >
               <X className="h-5 w-5" />

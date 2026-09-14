@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { buildReservationUrl } from "@/lib/reservation-url";
 import { formatPrice, intlLocale } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
-import { convertAmount, formatMoney } from "@/lib/i18n";
+import { convertAmount, formatMoney, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
 import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
 // T-154c (audit n°26, P2-5) : libellé d'annulation dérivé de la politique.
@@ -78,11 +78,13 @@ export function PropertyBookingCard({
   const locale = useUiLocale();
   const roomCurrency = room?.currency ?? "EUR";
   const displayPrice = room
-    ? (!displayCurrency || displayCurrency === roomCurrency.toUpperCase()
-        ? formatPrice(room.basePrice, roomCurrency, locale)
-        : formatMoney(convertAmount(Number(room.basePrice), roomCurrency, displayCurrency), displayCurrency, intlLocale(locale)))
+    ? (!isDisplayCurrency(roomCurrency)
+        ? formatMoney(Number(room.basePrice), roomCurrency, intlLocale(locale))
+        : !displayCurrency || !isDisplayCurrency(displayCurrency) || displayCurrency === roomCurrency.toUpperCase()
+          ? formatPrice(room.basePrice, roomCurrency, locale)
+          : formatMoney(convertAmount(Number(room.basePrice), roomCurrency, displayCurrency), displayCurrency, intlLocale(locale)))
     : "—";
-  const isConverted = Boolean(room && displayCurrency && displayCurrency !== roomCurrency.toUpperCase());
+  const isConverted = Boolean(room && isDisplayCurrency(roomCurrency) && displayCurrency && isDisplayCurrency(displayCurrency) && displayCurrency !== roomCurrency.toUpperCase());
   // T-119/T-206-F8 : capacité d'accueil connue → on borne adultes ET
   // enfants à la chambre choisie, avant d'arriver au checkout serveur.
   const adultOptions = Array.from({ length: adultsLimit }, (_, i) => i + 1);
@@ -109,7 +111,7 @@ export function PropertyBookingCard({
           <p className="text-sm text-gray-500">{t("price.perNightLong")}</p>
           {isConverted && (
             <p className="text-[10px] text-gray-400" title={t("bookingCard.conversionTooltip")}>
-              {t("price.convertedNote")} {roomCurrency}
+              {t("price.convertedNote").replace("{currency}", displayCurrency!).replace("{asOf}", FX_SNAPSHOT.asOf)} {roomCurrency}
             </p>
           )}
         </div>

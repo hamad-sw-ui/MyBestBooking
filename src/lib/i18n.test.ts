@@ -12,6 +12,8 @@ import {
   isSupportedCurrency,
   isZeroDecimalCurrency,
   toMinorUnits,
+  indicativeRate,
+  FX_SNAPSHOT,
 } from "./i18n";
 
 describe("pickLocalized (T-029)", () => {
@@ -60,8 +62,16 @@ describe("convertAmount (T-029)", () => {
     expect(eur).toBeCloseTo(1, 2);
   });
 
-  it("devise inconnue → identité neutre", () => {
+  it("devise inconnue → identité neutre sans faux taux EUR", () => {
     expect(convertAmount(100, "ZZZ", "EUR")).toBe(100);
+    expect(convertAmount(100, "EUR", "ZZZ")).toBe(100);
+  });
+
+  it("expose un taux indicatif explicite et la date du snapshot", () => {
+    expect(indicativeRate("EUR", "USD")).toBe(RATES_FROM_EUR.USD);
+    expect(indicativeRate("ZZZ", "USD")).toBeNull();
+    expect(FX_SNAPSHOT.kind).toBe("indicative");
+    expect(FX_SNAPSHOT.asOf).toMatch(/^2026-09-14$/);
   });
 });
 
