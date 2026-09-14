@@ -95,6 +95,10 @@ interface MailStrings {
   noShowSubject: string;
   noShowBody: string;
   noShowCta: string;
+  // Clôture du séjour depuis le dashboard : état final notifié au voyageur.
+  completedSubject: string;
+  completedBody: string;
+  completedCta: string;
   // T-273 (audit n°8, F3) : confirmation du remboursement finalisé hors
   // plateforme (acte hôte/admin, `booking.refund.manual`).
   refundFinalizedSubject: string;
@@ -211,6 +215,12 @@ const FR: MailStrings = {
     "Le séjour n'est ni remboursé ni rémunéré : aucun montant ne vous est dû et aucune récompense ne vous est versée.\n\n" +
     "Si vous pensez qu'il s'agit d'une erreur, contactez l'équipe depuis votre espace réservation.",
   noShowCta: "Voir ma réservation",
+  completedSubject: "Séjour terminé {bookingReference}",
+  completedBody:
+    "Bonjour {firstName},\n\n" +
+    "Votre séjour pour {propertyName} ({checkIn} → {checkOut}) est maintenant marqué comme terminé.\n\n" +
+    "Merci d'avoir voyagé avec MyBestBooking. Vous pouvez retrouver le détail de votre réservation et laisser un avis depuis votre espace.",
+  completedCta: "Voir ma réservation",
   refundFinalizedSubject: "Remboursement confirmé {bookingReference}",
   refundFinalizedBody:
     "Bonjour {firstName},\n\n" +
@@ -333,6 +343,12 @@ const EN: MailStrings = {
     "The stay is neither refunded nor rewarded: no amount is due to you and no reward will be credited.\n\n" +
     "If you believe this is a mistake, please contact our team from your bookings page.",
   noShowCta: "View my booking",
+  completedSubject: "Stay completed {bookingReference}",
+  completedBody:
+    "Hi {firstName},\n\n" +
+    "Your stay at {propertyName} ({checkIn} → {checkOut}) is now marked as completed.\n\n" +
+    "Thank you for travelling with MyBestBooking. You can review your booking details and leave a review from your account.",
+  completedCta: "View my booking",
   refundFinalizedSubject: "Refund confirmed {bookingReference}",
   refundFinalizedBody:
     "Hi {firstName},\n\n" +

@@ -359,6 +359,36 @@ export const templates = {
   },
 
   /**
+   * Notification transactionnelle lorsque le dashboard clôture le séjour.
+   * Elle est distincte de la demande d'avis du cron : le client est informé
+   * immédiatement du changement d'état, sans consommer l'événement review-request.
+   */
+  bookingCompleted({
+    firstName, bookingReference, propertyName, checkIn, checkOut, language,
+  }: {
+    firstName: string; bookingReference: string; propertyName: string;
+    checkIn: string; checkOut: string; language?: string | null;
+  }) {
+    const loc = toMailLocale(language);
+    const s = mailStrings(loc);
+    const vars = { firstName, bookingReference, propertyName, checkIn, checkOut };
+    const subject = renderTemplate(s.completedSubject, vars);
+    const body = renderTemplate(bodyToHtml(s.completedBody), vars);
+    const dashboardUrl = appBaseUrl();
+    const html = layout(`
+      ${body}
+      <table style="width:100%;margin:16px 0;border-collapse:collapse;">
+        <tr><td style="padding:8px 0;color:#666;">${s.lblReference}</td><td style="padding:8px 0;text-align:right;font-weight:600;">${escapeHtml(bookingReference)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblAccommodation}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(propertyName)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblArrival}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkIn)}</td></tr>
+        <tr><td style="padding:8px 0;color:#666;">${s.lblDeparture}</td><td style="padding:8px 0;text-align:right;">${escapeHtml(checkOut)}</td></tr>
+      </table>
+      <p style="margin:24px 0;">${button(`${dashboardUrl}/mes-reservations`, s.completedCta)}</p>
+    `, loc);
+    return { subject, html, text: stripHtml(html) };
+  },
+
+  /**
    * T-273 (audit n°8, F3) — remboursement finalisé hors plateforme, confirmé
    * à l'hôte/admin (langue du voyageur). Constat : `refundStatus` ne devenait
    * `refunded` que par le webhook Stripe ; un paiement sur place remboursé

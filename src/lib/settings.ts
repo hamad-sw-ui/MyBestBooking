@@ -147,6 +147,9 @@ export const notificationsSchema = z.object({
   // T-272 (audit n°8, F2) : e-mail voyageur au no-show — défaut `true`
   // (payloads stockés complétés par mergeDefaults, pattern T-221).
   bookingNoShow: z.boolean(),
+  // Notification transactionnelle lorsque l'hôte/admin clôture le séjour
+  // (`confirmed` → `completed`) depuis le dashboard.
+  bookingCompleted: z.boolean(),
   // T-237 (audit n°3, F6) : décision de validation d'annonce — l'hôte était
   // laissé sans explication. Défaut actif.
   propertyApproved: z.boolean(),
@@ -289,6 +292,8 @@ export const DEFAULTS: { [K in SettingKey]: SettingValue<K> } = {
     reviewModerated: true,
     // T-272 : no-show notifié au voyageur — actif par défaut.
     bookingNoShow: true,
+    // Clôture de séjour notifiée au voyageur — active par défaut.
+    bookingCompleted: true,
     // T-237 : décisions de validation d'annonce — notifiées par défaut.
     propertyApproved: true,
     propertyRejected: true,

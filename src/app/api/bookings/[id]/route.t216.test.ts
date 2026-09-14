@@ -274,6 +274,16 @@ dbTest("T-216 — PUT /api/bookings/[id] : transitions manuelles hôte/admin", (
     const body = (await res.json()) as { booking: { status: string } };
     expect(body.booking.status).toBe("completed");
 
+    // La transition dashboard informe aussi le voyageur, une seule fois,
+    // via l'outbox transactionnel.
+    const completedMail = await db
+      .select({ to: schema.emailOutbox.to, status: schema.emailOutbox.status })
+      .from(schema.emailOutbox)
+      .where(eq(schema.emailOutbox.eventKey, `booking-completed:${id}`));
+    expect(completedMail).toHaveLength(1);
+    expect(completedMail[0]?.to).toBe(customerEmail);
+    expect(completedMail[0]?.status).toBe("sent");
+
     // Effet de bord métier conservé : fidélité attribuée une seule fois.
     const [booking] = await db
       .select({ loyaltyAwardedAt: schema.bookings.loyaltyAwardedAt })

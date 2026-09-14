@@ -18,6 +18,7 @@ import {
 import { BookingCancellationError, cancelBooking, notifyBookingCancellation } from "@/lib/booking-cancellation";
 import { sendBookingConfirmationIfNeeded } from "@/lib/booking-confirmation";
 import { sendNoShowNotificationIfNeeded } from "@/lib/no-show-notification";
+import { sendBookingCompletedNotificationIfNeeded } from "@/lib/booking-completed-notification";
 import { recordAudit, AUDIT_ACTIONS } from "@/lib/audit";
 
 const updateBookingSchema = z.object({
@@ -340,6 +341,14 @@ export async function PUT(
     if (data.status === "no_show") {
       await sendNoShowNotificationIfNeeded(updatedBooking.id).catch((error) => {
         console.error("[bookings/[id]] no-show mail failed:", error);
+      });
+    }
+
+    // La clôture manuelle du séjour depuis le dashboard informe aussi le
+    // voyageur immédiatement. La demande d'avis du cron reste séparée.
+    if (data.status === "completed") {
+      await sendBookingCompletedNotificationIfNeeded(updatedBooking.id).catch((error) => {
+        console.error("[bookings/[id]] completed mail failed:", error);
       });
     }
 

@@ -464,6 +464,7 @@ const NOTIFICATION_SWITCHES = [
   "bookingPaymentReminder",
   "reviewPublished",
   "reviewModerated",
+  "bookingCompleted",
   "propertyApproved",
   "propertyRejected",
 ] as const;
