@@ -233,22 +233,22 @@ export async function proxy(request: NextRequest) {
   );
 
   // T-135 — pages d'authentification publiques (connexion/inscription).
-  // Un visiteur déjà authentifié n'a rien à y faire : on le renvoie à
-  // l'accueil. Un visiteur anonyme, lui, doit y accéder : on court-circuite
-  // la redirection « non authentifié » ci-dessous (sinon boucle
-  // /connexion?next=/connexion). Fait au proxy (pas via redirect() dans un
-  // layout RSC) pour produire un vrai 307 en chargement direct — voir le
-  // commentaire d'en-tête. Les pages d'auth basées sur un jeton
-  // (reinitialiser, activer-compte, verifier-email, mot-de-passe-oublie)
-  // ne sont pas dans le matcher et restent accessibles dans tous les cas.
+  // Un visiteur anonyme doit y accéder : on court-circuite la redirection
+  // « non authentifié » ci-dessous (sinon boucle /connexion?next=/connexion).
+  //
+  // BUG-024 : la redirection « déjà connecté → accueil » N'EST PLUS faite
+  // ici. Le proxy ne lit que la signature du JWT (runtime edge, sans accès
+  // base) : un cookie dont la session a été révoquée/expirée en base, ou
+  // dont l'utilisateur est suspendu/supprimé, passait pour « connecté ».
+  // L'utilisateur voyait alors les boutons « Se connecter / S'inscrire »
+  // (le header, lui, interroge la base et le voyait déconnecté) mais tout
+  // clic était renvoyé vers l'accueil — pages d'auth inaccessibles.
+  // La garde vit désormais dans le layout serveur `(auth)` qui dispose de
+  // `getCurrentUser()` (source de vérité en base) ; les pages d'auth basées
+  // sur un jeton (reinitialiser, activer-compte, verifier-email,
+  // mot-de-passe-oublie) ne sont pas dans le matcher et restent accessibles.
   const isAuthPage = pathname === "/connexion" || pathname === "/inscription";
   if (isAuthPage) {
-    if (session) {
-      const home = request.nextUrl.clone();
-      home.pathname = "/";
-      home.search = "";
-      return NextResponse.redirect(home);
-    }
     return nextWithLocale(request);
   }
 

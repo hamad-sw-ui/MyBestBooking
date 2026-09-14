@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { cookies, headers } from "next/headers";
 import { getCurrentUser } from "@/lib/auth";
 import { getSetting } from "@/lib/settings";
@@ -18,7 +19,14 @@ import { UI_LANGUAGE_COOKIE, UI_LANGUAGE_COOKIE_ALT } from "@/lib/ui-language";
  * Chaque étape a son propre try : un échec auth ne doit pas empêcher
  * la lecture du cookie anonyme.
  */
-export async function getServerLocale(): Promise<UiLocale> {
+/**
+ * PERF-003 — mémoïsé par requête (`React.cache`). La fonction est appelée par
+ * le layout, la page **et** `generateMetadata` ; sans mémoïsation, chaque appel
+ * relançait la résolution complète (dont `getCurrentUser` et un
+ * `getSetting("general")`). Le résultat est identique : la langue résolue ne
+ * dépend que de la requête en cours.
+ */
+export const getServerLocale = cache(async function getServerLocale(): Promise<UiLocale> {
   try {
     const user = await getCurrentUser();
     if (user?.language && isUiLocale(user.language)) return user.language;
@@ -46,4 +54,4 @@ export async function getServerLocale(): Promise<UiLocale> {
     // échec settings
   }
   return "fr";
-}
+});

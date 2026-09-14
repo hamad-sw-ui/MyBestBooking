@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from "jose";
+import { cache } from "react";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { db } from "@/db";
@@ -109,7 +110,26 @@ export async function createSession(userId: string, rememberMe = false): Promise
   return token;
 }
 
-export async function getSession() {
+/**
+ * PERF-003 — lecture de session **dédupliquée par requête**.
+ *
+ * Constat : `getCurrentUser()` fait 2 requêtes (session + user). Il était
+ * appelé plusieurs fois par requête HTTP — une fois par le layout, une fois
+ * par la page, plus une fois via `getServerLocale()`, plus une fois via
+ * `generateMetadata` — sans jamais partager le résultat (mesuré : ~5× le coût
+ * DB par page d'accueil).
+ *
+ * `React.cache` mémoïse l'appel **le temps d'une seule requête** (documenté :
+ * « scoped to the current request only », aucune fuite entre requêtes ni
+ * entre utilisateurs — condition indispensable pour une lecture d'auth).
+ * Hors d'un rendu React (handler API), l'appel reste correct : il s'exécute
+ * simplement sans mémoïsation.
+ *
+ * Le comportement fonctionnel est inchangé : mêmes requêtes, mêmes règles de
+ * validité (token signé + ligne de session non expirée + compte ni supprimé
+ * ni suspendu), même valeur de retour.
+ */
+export const getSession = cache(async function getSession() {
   const cookieStore = await cookies();
   const token = cookieStore.get("session")?.value;
 
@@ -139,12 +159,17 @@ export async function getSession() {
   if (!user || user.deletedAt || user.suspendedAt) return null;
 
   return { user, session };
-}
+});
 
-export async function getCurrentUser() {
+/**
+ * PERF-003 — mémoïsé par requête (voir `getSession`). Appelé par les layouts,
+ * les pages, `generateMetadata` et `getServerLocale` : sans cette mémoïsation,
+ * le même utilisateur était relu autant de fois qu'il y avait d'appelants.
+ */
+export const getCurrentUser = cache(async function getCurrentUser() {
   const session = await getSession();
   return session?.user || null;
-}
+});
 
 export async function logout(): Promise<void> {
   const cookieStore = await cookies();

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { RedirectIfAuthenticated } from "@/components/redirect-if-authenticated";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import LoginPage from "./login-client";
@@ -18,5 +19,9 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Page() {
-  return <LoginPage />;
+  return (
+    <RedirectIfAuthenticated>
+      <LoginPage />
+    </RedirectIfAuthenticated>
+  );
 }

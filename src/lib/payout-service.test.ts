@@ -39,8 +39,10 @@ dbTest("T-195 — createPayoutsForPeriod multi-devise (G6)", () => {
     const [host] = await db.select({ id: schema.users.id, country: schema.users.country }).from(schema.users).where(eq(schema.users.email, "host@mybestbooking.com")).limit(1);
     if (!host) throw new Error("Seed non appliqué (host introuvable)");
     hostId = host.id;
-    const [prop] = await db.select({ id: schema.properties.id }).from(schema.properties).where(eq(schema.properties.hostId, hostId)).limit(1);
-    const [room] = prop ? await db.select({ id: schema.rooms.id }).from(schema.rooms).where(eq(schema.rooms.propertyId, prop.id)).limit(1) : [];
+    // ORDER BY explicite : sans lui, un hébergement sans chambre peut être
+    // retourné en premier et faire échouer le seed de façon non déterministe.
+    const [prop] = await db.select({ id: schema.properties.id }).from(schema.properties).where(eq(schema.properties.hostId, hostId)).orderBy(schema.properties.id).limit(1);
+    const [room] = prop ? await db.select({ id: schema.rooms.id }).from(schema.rooms).where(eq(schema.rooms.propertyId, prop.id)).orderBy(schema.rooms.id).limit(1) : [];
     const [customer] = await db.select({ id: schema.users.id }).from(schema.users).where(eq(schema.users.email, "customer@mybestbooking.com")).limit(1);
     if (!prop || !room || !customer) throw new Error("Seed incomplet");
 
@@ -48,6 +50,20 @@ dbTest("T-195 — createPayoutsForPeriod multi-devise (G6)", () => {
     // avec le cron test (2025-04) ou la route (mois courant précédent).
     periodStart = "2025-03-01";
     periodEnd = "2025-03-31";
+
+    // Idempotence du seed : un run précédent tué par timeout peut avoir laissé
+    // les bookings/payouts de cette période en base (afterAll jamais exécuté).
+    // On purge ces résidus AVANT d'insérer, sinon les montants se cumulent
+    // (ex. 2×85 EUR → net 170 ≠ 85 attendu).
+    // NB : pas de filtre de statut — createPayoutsForPeriod (ou le flux métier)
+    // peut avoir fait passer les bookings résiduels de "confirmed" à
+    // "completed", auquel cas le filtre les laisserait s'accumuler.
+    await db.delete(schema.bookings).where(and(
+      eq(schema.bookings.guestEmail, "payout-multi@test.dev"),
+      eq(schema.bookings.checkIn, periodStart),
+      eq(schema.bookings.checkOut, periodEnd),
+    ));
+    await db.delete(schema.payouts).where(and(eq(schema.payouts.hostId, hostId), eq(schema.payouts.periodStart, periodStart)));
     const createdAt = new Date(2025, 2, 15); // 2025-03-15
 
     for (const [i, cur] of ["EUR", "XAF"].entries()) {

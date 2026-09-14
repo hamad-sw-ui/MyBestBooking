@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useT, useUiLocale } from "@/components/ui-locale-provider";
-import { formatMoney } from "@/lib/i18n";
+import { convertAmount, formatMoney, normalizeDisplayCurrency } from "@/lib/i18n";
+import { useDisplayCurrency } from "@/lib/use-display-currency";
+import { formatDate } from "@/lib/utils";
 import type { UiStringKey } from "@/lib/ui-strings";
 
 /**
@@ -38,6 +40,7 @@ const KIND_KEYS: Record<string, UiStringKey> = {
 export function WalletHistoryCard() {
   const t = useT();
   const locale = useUiLocale();
+  const displayCurrency = useDisplayCurrency();
   const [lines, setLines] = useState<WalletTransactionLine[] | null>(null);
   const [error, setError] = useState(false);
 
@@ -89,6 +92,14 @@ export function WalletHistoryCard() {
         {lines.map((line) => {
           const amount = Number(line.amount);
           const credit = amount > 0;
+          const targetCurrency = normalizeDisplayCurrency(displayCurrency, "EUR");
+          const converted = targetCurrency !== "EUR";
+          const displayAmount = converted
+            ? formatMoney(convertAmount(Math.abs(amount), "EUR", targetCurrency), targetCurrency, locale)
+            : formatMoney(Math.abs(amount), "EUR", locale);
+          const displayBalance = converted
+            ? formatMoney(convertAmount(Number(line.balanceAfter), "EUR", targetCurrency), targetCurrency, locale)
+            : formatMoney(Number(line.balanceAfter), "EUR", locale);
           return (
             <li
               key={line.id}
@@ -99,21 +110,25 @@ export function WalletHistoryCard() {
                   {t(KIND_KEYS[line.kind] ?? "wallet.kind.manualAdjustment")}
                 </p>
                 <p className="text-xs text-gray-500">
-                  {new Date(line.createdAt).toLocaleDateString(locale)}
+                  {formatDate(new Date(line.createdAt), undefined, locale)}
                   {line.note ? ` · ${line.note}` : ""}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className={credit ? "font-semibold text-green-700" : "font-semibold text-red-700"}>
+                <p
+                  className={credit ? "font-semibold text-green-700" : "font-semibold text-red-700"}
+                  title={converted ? formatMoney(Math.abs(amount), "EUR", locale) : undefined}
+                >
                   {credit ? "+" : "−"}
-                  {formatMoney(Math.abs(amount), "EUR", locale)}
+                  {displayAmount}
                 </p>
                 <p className="text-xs text-gray-500">
                   {t("wallet.historyBalanceAfter").replace(
                     "{amount}",
-                    formatMoney(Number(line.balanceAfter), "EUR", locale),
+                    displayBalance,
                   )}
                 </p>
+                {converted && <p className="text-[11px] text-gray-400">{t("wallet.convertedNote")}</p>}
               </div>
             </li>
           );

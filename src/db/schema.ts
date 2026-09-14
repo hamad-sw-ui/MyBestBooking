@@ -205,7 +205,14 @@ export const sessions = pgTable("sessions", {
   token: text("token").unique().notNull(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // PERF-001 — la révocation/suppression de compte purge les sessions par
+  // `user_id` (et un admin peut les auditer) : sans index, chaque purge est un
+  // seq scan sur une table qui croît à chaque connexion.
+  index("idx_sessions_user").on(table.userId),
+  // PERF-001 — nettoyage des sessions expirées (cron) filtré par `expires_at`.
+  index("idx_sessions_expires").on(table.expiresAt),
+]);
 
 // ═══════════════════════════════════════════════
 // PROPERTIES (HÉBERGEMENTS)
@@ -463,7 +470,16 @@ export const conversations = pgTable("conversations", {
   unreadByUser: integer("unread_by_user").default(0),
   unreadByHost: integer("unread_by_host").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // PERF-002 — GET /api/conversations (appelé par le badge du header sur
+  // CHAQUE page) filtre `user_id = $1 OR properties.host_id = $1`. Sans index
+  // sur ces colonnes, PostgreSQL fait un Seq Scan sur `conversations` ET une
+  // jointure coûteuse. Mesuré : « Seq Scan on conversations » (EXPLAIN).
+  index("idx_conversations_user").on(table.userId),
+  index("idx_conversations_property").on(table.propertyId),
+  // Tri par activité récente (liste de la messagerie).
+  index("idx_conversations_last_message").on(table.lastMessageAt),
+]);
 
 export const messages = pgTable("messages", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -478,7 +494,13 @@ export const messages = pgTable("messages", {
   attachmentMimeType: varchar("attachment_mime_type", { length: 100 }),
   isRead: boolean("is_read").default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (table) => [
+  // PERF-002 — le filtre de visibilité (EXISTS sur messages.conversation_id)
+  // et la lecture d'un fil trient par date : sans index, les deux font un
+  // Seq Scan sur `messages` (croissance illimitée dans le temps).
+  index("idx_messages_conversation_created").on(table.conversationId, table.createdAt),
+  index("idx_messages_sender").on(table.senderId),
+]);
 
 // ═══════════════════════════════════════════════
 // PROMOTIONS

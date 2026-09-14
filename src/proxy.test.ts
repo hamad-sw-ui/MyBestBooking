@@ -181,21 +181,26 @@ describe("garde de rôle dashboard (T-123 / G2)", () => {
   });
 });
 
-describe("garde pages d'auth pour visiteurs connectés (T-135)", () => {
-  it("redirige un client connecté depuis /connexion vers l'accueil", async () => {
+describe("pages d'auth : le proxy ne décide plus seul (BUG-024, ex-T-135)", () => {
+  // BUG-024 : la garde « déjà connecté → accueil » a été déplacée du proxy
+  // vers le composant serveur `RedirectIfAuthenticated` (src/components),
+  // qui lit la session en base. Le proxy (runtime edge, sans accès base) ne
+  // peut vérifier que la signature JWT : un cookie obsolète y passait pour
+  // un utilisateur connecté et rendait /connexion et /inscription
+  // inaccessibles. Le proxy laisse donc désormais TOUJOURS passer ces deux
+  // pages ; le test d'accès authentifié vit avec le composant serveur.
+  it("laisse passer /connexion même avec un cookie de session signé", async () => {
     const { proxy } = await import("./proxy");
     const token = await makeSession("cust-1", "customer");
     const res = await proxy(makeRequest("/connexion", token));
-    expect(status(res)).toBe(307);
-    expect(location(res)).toMatch(/\/$/);
+    expect(res.headers.get("location")).toBeNull();
   });
 
-  it("redirige un client connecté depuis /inscription vers l'accueil", async () => {
+  it("laisse passer /inscription même avec un cookie de session signé", async () => {
     const { proxy } = await import("./proxy");
     const token = await makeSession("cust-1", "customer");
     const res = await proxy(makeRequest("/inscription", token));
-    expect(status(res)).toBe(307);
-    expect(location(res)).toMatch(/\/$/);
+    expect(res.headers.get("location")).toBeNull();
   });
 
   it("laisse un visiteur anonyme accéder à /connexion et /inscription (pas de boucle)", async () => {

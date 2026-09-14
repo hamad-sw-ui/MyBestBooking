@@ -3,6 +3,14 @@ import type { ReactNode } from "react";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 
+/**
+ * Note BUG-024 : ce layout couvre AUSSI les pages d'auth à jeton
+ * (`reinitialiser`, `activer-compte`, `verifier-email`,
+ * `mot-de-passe-oublie`) qu'un utilisateur connecté doit pouvoir ouvrir.
+ * La garde « déjà connecté → accueil » n'est donc PAS ici : elle est portée
+ * page par page via `RedirectIfAuthenticated`, uniquement sur `/connexion`
+ * et `/inscription`.
+ */
 export default async function AuthLayout({ children }: { children: ReactNode }) {
   const t = makeT(await getServerLocale());
   return (

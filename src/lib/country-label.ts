@@ -10,6 +10,19 @@ const COUNTRY_KEYS: Record<string, UiStringKey> = {
   DE: "prop.country.DE",
   GB: "prop.country.GB",
   US: "prop.country.US",
+  CM: "prop.country.CM",
+  SN: "prop.country.SN",
+  CI: "prop.country.CI",
+  GA: "prop.country.GA",
+  ML: "prop.country.ML",
+  BF: "prop.country.BF",
+  NE: "prop.country.NE",
+  TD: "prop.country.TD",
+  CG: "prop.country.CG",
+  BE: "prop.country.BE",
+  NL: "prop.country.NL",
+  CH: "prop.country.CH",
+  CA: "prop.country.CA",
 };
 
 /** Libellé pays (ISO-2) via le catalogue ; repli sur le code si inconnu. */

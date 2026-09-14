@@ -35,13 +35,23 @@ function sourceFiles(dir: string): string[] {
       continue;
     }
     if (!/\.(ts|tsx)$/.test(entry) || /\.test\.(ts|tsx)$/.test(entry)) continue;
-    out.push(path.relative(ROOT, full));
+    // Normaliser en séparateurs POSIX : sous Windows, `path.relative()`
+    // renvoie des `\`, ce qui rendait la comparaison avec ALLOWED (chemins
+    // en `/`) toujours fausse et faisait échouer ce test hors Linux/macOS.
+    out.push(path.relative(ROOT, full).split(path.sep).join("/"));
   }
   return out;
 }
 
 describe("B3 — base URL unique des liens sortants", () => {
-  it("aucun fichier applicatif ne lit NEXT_PUBLIC_APP_URL directement", () => {
+  // Ce test parcourt l'intégralité de `src/` (lecture de chaque fichier). Sur
+  // un disque lent (I/O synchronisés, volume réseau), l'itération dépasse le
+  // testTimeout global de 15 s sans que rien ne soit cassé : on lui accorde
+  // un budget dédié, généreux mais borné.
+  it(
+    "aucun fichier applicatif ne lit NEXT_PUBLIC_APP_URL directement",
+    { timeout: 120_000 },
+    () => {
     const offenders = sourceFiles(path.join(ROOT, "src")).filter((file) => {
       if (ALLOWED.has(file)) return false;
       const src = readFileSync(path.join(ROOT, file), "utf8");
@@ -52,7 +62,8 @@ describe("B3 — base URL unique des liens sortants", () => {
         .some((line) => line.includes("NEXT_PUBLIC_APP_URL") && !line.trimStart().startsWith("//") && !line.trimStart().startsWith("*"));
     });
     expect(offenders).toEqual([]);
-  });
+    },
+  );
 
   it("appBaseUrl() renvoie toujours une base absolue (variable absente ou définie)", async () => {
     const { appBaseUrl } = await import("@/lib/app-url");
