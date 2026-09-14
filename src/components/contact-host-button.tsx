@@ -2,23 +2,23 @@
 
 import { useT } from "@/components/ui-locale-provider";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { MessageCircle, Loader2 } from "lucide-react";
+import { BookingChatWidget } from "@/components/booking-chat-widget";
 
 /**
  * T-133 (A3) — « Contacter l'hôte » avant réservation.
  *
  * L'API POST /api/conversations supporte déjà une filature voyageur sans
  * réservation (clé `property:<prop>:user:<voyageur>`, idempotente). Ce bouton
- * ne fait que l'exposer : il crée (ou rouvre) la conversation puis redirige
- * vers /messages/[id]. Un visiteur non connecté est renvoyé à la connexion
- * (comme le bouton favoris). L'hôte sur sa propre propriété ne le voit pas
- * (masqué côté serveur via `hidden`).
+ * ne fait que l'exposer : il ouvre le chat flottant, qui crée (ou rouvre) la
+ * conversation sans quitter la fiche. Un visiteur non connecté est renvoyé à
+ * la connexion (comme le bouton favoris). L'hôte sur sa propre propriété ne le
+ * voit pas (masqué côté serveur via `hidden`).
  */
 export function ContactHostButton({ propertyId, className }: { propertyId: string; className?: string }) {
-  const router = useRouter();
   const t = useT();
   const [busy, setBusy] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function contact() {
@@ -26,21 +26,21 @@ export function ContactHostButton({ propertyId, className }: { propertyId: strin
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ propertyId }),
-      });
-      if (res.status === 401) {
+      const sessionCheck = await fetch("/api/conversations", { cache: "no-store" });
+      if (sessionCheck.status === 401) {
         window.location.assign("/connexion?next=" + encodeURIComponent(window.location.pathname));
         return;
       }
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? t("contact.error"));
-      if (data.conversation?.id) router.push(`/messages/${data.conversation.id}`);
-      else throw new Error(t("contact.notFound"));
+      if (!sessionCheck.ok) {
+        const data = await sessionCheck.json().catch(() => ({}));
+        throw new Error(data.error ?? t("contact.error"));
+      }
+      // Le widget crée/retrouve le fil au moment où il est monté. Cela évite
+      // de changer de page et permet au visiteur de converser immédiatement.
+      setChatOpen(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("settings.error"));
+    } finally {
       setBusy(false);
     }
   }
@@ -58,6 +58,12 @@ export function ContactHostButton({ propertyId, className }: { propertyId: strin
         {t("contact.host")}
       </button>
       {error && <p role="status" className="mt-1 text-xs text-red-600">{error}</p>}
+      {chatOpen && (
+        <BookingChatWidget
+          propertyId={propertyId}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   );
 }

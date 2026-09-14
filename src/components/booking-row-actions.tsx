@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MessageSquare, FileText, XCircle, Loader2, CheckCircle2, UserX, ThumbsUp, BadgeCheck, Clock, Undo2 } from "lucide-react";
 import { useT } from "@/components/ui-locale-provider";
 import { ReasonDialog } from "@/components/admin/reason-dialog";
+import { BookingChatWidget } from "@/components/booking-chat-widget";
 
 interface Props {
   bookingId: string;
@@ -45,7 +46,8 @@ interface Props {
  * <BookingRowActions /> (T-031)
  * Boutons fonctionnels pour une ligne de réservation dans
  * /mes-reservations :
- * - Contacter → mailto vers l'hôte (fallback support si pas d'email)
+ * - Contacter → ouvre le chat lié à la réservation côté voyageur ; l'hôte
+ *   répond depuis son espace dashboard
  * - Confirmation → génère un .txt de confirmation téléchargeable côté client
  * - Annuler → PUT /api/bookings/[id] status:cancelled avec confirmation
  */
@@ -69,6 +71,7 @@ export function BookingRowActions({
   const [error, setError] = useState<string | null>(null);
   // T-273 : dialogue de motif de finalisation de remboursement.
   const [refundDialogOpen, setRefundDialogOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   async function cancel() {
     setError(null);
@@ -125,6 +128,13 @@ export function BookingRowActions({
 
   async function contactHost() {
     setError(null);
+    // Côté voyageur, le fil s'ouvre directement dans le chat fixe en bas à
+    // gauche. Côté dashboard, on conserve le parcours de messagerie complet
+    // de l'hôte (avec la même API et les mêmes contrôles de participant).
+    if (messageArea === "traveler") {
+      setChatOpen(true);
+      return;
+    }
     try {
       const response = await fetch("/api/conversations", {
         method: "POST",
@@ -133,7 +143,7 @@ export function BookingRowActions({
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error ?? t("book.openConvFail"));
-      router.push(messageArea === "dashboard" ? `/dashboard/messages/${data.conversation.id}` : `/messages/${data.conversation.id}`);
+      router.push(`/dashboard/messages/${data.conversation.id}`);
     } catch (error) {
       setError(error instanceof Error ? error.message : t("settings.error"));
     }
@@ -400,6 +410,14 @@ export function BookingRowActions({
         </Button>
       )}
       {error && <span className="text-xs text-red-600 ml-2">{error}</span>}
+      {chatOpen && messageArea === "traveler" && (
+        <BookingChatWidget
+          bookingId={bookingId}
+          bookingReference={bookingReference}
+          propertyId={propertyId}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </>
   );
 }

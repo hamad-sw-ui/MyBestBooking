@@ -7,6 +7,8 @@ import { useT } from "@/components/ui-locale-provider";
 
 interface Props {
   conversationId: string;
+  /** Rechargement optionnel du fil après un envoi (ex. chat flottant). */
+  onSent?: () => void | Promise<void>;
 }
 
 /**
@@ -14,7 +16,7 @@ interface Props {
  * (T-016 + T-029 pièces jointes).
  * POST /api/messages { conversationId, content, attachmentKey?, attachmentMimeType? }
  */
-export function MessageComposer({ conversationId }: Props) {
+export function MessageComposer({ conversationId, onSent }: Props) {
   const t = useT();
   const router = useRouter();
   const [content, setContent] = useState("");
@@ -64,6 +66,7 @@ export function MessageComposer({ conversationId }: Props) {
       if (!res.ok) throw new Error(data.error ?? t("auth.error"));
       setContent("");
       setAttachment(null);
+      await onSent?.();
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("auth.error"));
