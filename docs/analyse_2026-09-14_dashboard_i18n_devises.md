@@ -4,6 +4,7 @@
 - **Branche** : `arena/01a0a06b-mybestbooking`
 - **Commit audité** : `2ab61b6` (`feat(i18n/currency): complete FR/EN audit + display-currency conversion`)
 - **Périmètre** : espace hôte/admin (`/dashboard/*`), navigation desktop/mobile, pages publiques et compte qui alimentent les préférences d'affichage.
+- **Note de lecture** : les sections 1 à 4 conservent le constat et le plan de l'audit initial ; l'état après implémentation et la seconde vérification sont consignés en section 5.
 
 ## Verdict exécutif
 
@@ -152,3 +153,45 @@ La fonctionnalité pourra être déclarée complète uniquement quand, pour chaq
 - les tests runtime passent avec des données réellement multi-devises.
 
 Tant que ces critères ne sont pas réunis, la réponse correcte est **« partiellement fonctionnel, plan correctif requis »**, et non « conversion complète à 100 % ».
+
+## 5. Ré-audit post-correctif — 2026-09-14
+
+Une seconde lecture du code et une nouvelle validation ont été réalisées après
+l'implémentation du plan. Les points suivants ont été contrôlés explicitement :
+
+- le catalogue unique contient bien `EUR`, `USD`, `GBP`, `CHF`, `MAD` et `XAF` ;
+- les montants de réservation, paiement, remboursement, wallet, reçu et payout
+  restent dans leur devise native ;
+- les agrégats multi-devises sont groupés par devise avant toute conversion ;
+- les taux sont indicatifs et datés par `FX_SNAPSHOT.asOf` ;
+- les devises inconnues restent visibles dans un breakdown natif et ne
+  produisent pas de taux CSV ;
+- `indicativeRate` normalise désormais les codes en casse minuscule/majuscule ;
+- l'export analytics convertit chaque ligne native séparément, au lieu de
+  répéter le total multi-devises de l'hébergement sur chaque ligne ;
+- une devise utilisateur valide mais désactivée par la plateforme reste
+  conservée afin qu'une sauvegarde de profil non liée à la devise ne soit pas
+  bloquée ;
+- le sélecteur dashboard retombe sur `XAF`, comme le défaut plateforme, avant
+  résolution asynchrone ;
+- les alertes de prix ne relabellisent plus une chambre legacy inconnue dans la
+  devise cible après un fallback de conversion.
+
+### Résultats de validation de la seconde passe
+
+| Vérification | Résultat |
+|---|---|
+| Suite Vitest avec PostgreSQL seedé | **163 fichiers passés, 2 ignorés ; 871 tests passés, 28 ignorés** |
+| Tests ciblés devise, agrégats, préférences, proxy | **56/56 OK** |
+| Tests ciblés alertes de prix après garde legacy | **49/49 OK** |
+| `npm run typecheck` | **OK** |
+| `npm run lint` | **OK** |
+| `npm run i18n:check -- --strict` | **OK — aucun candidat détecté** |
+| `npm run build` avec PostgreSQL | **OK** |
+| Smoke HTTP runtime | **OK** — santé DB, préférences, recherche EN/MAD, connexion hôte, dashboard et trois exports CSV en 200 |
+
+La seule validation non exécutable dans ce sandbox reste le navigateur
+Playwright : le binaire Chromium manque et son téléchargement échoue au niveau
+réseau (`ECONNRESET`). Les tests E2E sont présents ; le comportement a été
+complété par le smoke HTTP runtime, sans présenter cette limitation comme un
+succès Playwright.

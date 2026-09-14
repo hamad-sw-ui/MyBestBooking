@@ -69,6 +69,7 @@ describe("convertAmount (T-029)", () => {
 
   it("expose un taux indicatif explicite et la date du snapshot", () => {
     expect(indicativeRate("EUR", "USD")).toBe(RATES_FROM_EUR.USD);
+    expect(indicativeRate(" eur ", " usd ")).toBe(RATES_FROM_EUR.USD);
     expect(indicativeRate("ZZZ", "USD")).toBeNull();
     expect(FX_SNAPSHOT.kind).toBe("indicative");
     expect(FX_SNAPSHOT.asOf).toMatch(/^2026-09-14$/);

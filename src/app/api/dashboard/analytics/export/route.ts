@@ -5,7 +5,7 @@ import { makeT } from "@/lib/ui-strings";
 import { getAnalytics } from "@/lib/analytics";
 import { getServerLocale } from "@/lib/server-locale";
 import { getServerDisplayCurrency } from "@/lib/server-display-currency";
-import { indicativeRate, FX_SNAPSHOT } from "@/lib/i18n";
+import { convertAmount, indicativeRate, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
 import { defaultPeriod, parseAnalyticsPeriod } from "@/lib/analytics-period";
 import { csvRows } from "@/lib/csv";
 
@@ -35,6 +35,11 @@ function amount(value: number): string {
 function indicativeRateCell(sourceCurrency: string, targetCurrency: string): string {
   const rate = indicativeRate(sourceCurrency, targetCurrency);
   return rate === null ? "" : rate.toFixed(8);
+}
+
+function indicativeAmountCell(amount: number, sourceCurrency: string, targetCurrency: string): string {
+  if (!isDisplayCurrency(sourceCurrency) || !isDisplayCurrency(targetCurrency)) return "";
+  return convertAmount(amount, sourceCurrency, targetCurrency).toFixed(2);
 }
 
 export async function GET(request: NextRequest) {
@@ -122,7 +127,7 @@ export async function GET(request: NextRequest) {
         property.bookings,
         amount(revenue),
         code,
-        amount(property.displayRevenue),
+        indicativeAmountCell(revenue, code, property.displayCurrency),
         property.displayCurrency,
         indicativeRateCell(code, property.displayCurrency),
         indicativeRateCell(code, property.displayCurrency) ? FX_SNAPSHOT.asOf : "",

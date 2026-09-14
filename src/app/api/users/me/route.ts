@@ -75,7 +75,15 @@ export async function PATCH(request: NextRequest) {
     const data = schema.parse(await request.json());
     if (data.currency) {
       const general = await getSetting("general");
-      if (!(general.supportedCurrencies as readonly string[]).includes(data.currency)) {
+      const currentCurrency = user.currency?.trim().toUpperCase();
+      // Une devise valide déjà persistée peut avoir été désactivée entre-temps.
+      // Elle reste sélectionnable dans le formulaire pour permettre une mise à
+      // jour non liée au profil ; seul un changement vers une option désactivée
+      // est refusé.
+      if (
+        !(general.supportedCurrencies as readonly string[]).includes(data.currency)
+        && data.currency !== currentCurrency
+      ) {
         return NextResponse.json(
           { error: await apiError("Cette devise d'affichage est désactivée par la plateforme") },
           { status: 400 },

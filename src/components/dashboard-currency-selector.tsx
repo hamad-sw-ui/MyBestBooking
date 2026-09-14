@@ -30,8 +30,8 @@ export function DashboardCurrencySelector({ compact = false }: { compact?: boole
   const t = useT();
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const requestedCurrent = (currency ?? "EUR").toUpperCase();
-  const current = supportedCurrencies.includes(requestedCurrent) ? requestedCurrent : supportedCurrencies[0] ?? "EUR";
+  const requestedCurrent = (currency ?? "XAF").toUpperCase();
+  const current = supportedCurrencies.includes(requestedCurrent) ? requestedCurrent : supportedCurrencies[0] ?? "XAF";
 
   async function change(next: string) {
     if (next === current || saving) return;

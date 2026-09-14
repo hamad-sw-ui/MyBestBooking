@@ -2,7 +2,7 @@ import { and, eq, gte, gt, lt, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { bookings, roomAvailability, rooms } from "@/db/schema";
 import { evaluateBookingRules } from "@/lib/booking-rules";
-import { convertAmount } from "@/lib/i18n";
+import { convertAmount, isDisplayCurrency } from "@/lib/i18n";
 
 export interface PriceAlertStayContext {
   checkIn: string;
@@ -36,7 +36,13 @@ export async function quotePriceAlert(input: {
   currency: string | null;
   context: Partial<PriceAlertStayContext>;
 }): Promise<PriceAlertQuote | null> {
-  const targetCurrency = input.currency ? input.currency.toUpperCase() : null;
+  const requestedCurrency = input.currency?.trim().toUpperCase() || null;
+  // Les alertes enregistrées sont validées, mais des chambres legacy peuvent
+  // encore porter un code inconnu. Une telle ligne ne doit jamais être
+  // relabellisée comme la devise cible après un fallback 1:1 de convertAmount.
+  const targetCurrency = requestedCurrency && isDisplayCurrency(requestedCurrency)
+    ? requestedCurrency
+    : null;
   const activeRooms = await db.select().from(rooms).where(and(
     eq(rooms.propertyId, input.propertyId),
     eq(rooms.isActive, true),
@@ -48,16 +54,20 @@ export async function quotePriceAlert(input: {
       .map((room) => ({ price: Number(room.basePrice), currency: room.currency ?? "EUR" }))
       .filter((p) => Number.isFinite(p.price));
     if (!prices.length) return null;
-    let best = prices[0]!;
+    const comparablePrices = targetCurrency
+      ? prices.filter((p) => isDisplayCurrency(p.currency))
+      : prices;
+    if (!comparablePrices.length) return null;
+    let best = comparablePrices[0]!;
     if (targetCurrency) {
-      for (const p of prices) {
+      for (const p of comparablePrices) {
         const converted = convertAmount(p.price, p.currency, targetCurrency);
         const bestConverted = convertAmount(best.price, best.currency, targetCurrency);
         if (converted < bestConverted) best = p;
       }
       return { price: convertAmount(best.price, best.currency, targetCurrency), currency: targetCurrency, mode: "base" };
     }
-    return { price: Math.min(...prices.map((p) => p.price)), currency: input.currency ?? activeRooms[0]!.currency ?? "EUR", mode: "base" };
+    return { price: Math.min(...prices.map((p) => p.price)), currency: activeRooms[0]!.currency ?? "EUR", mode: "base" };
   }
 
   let cheapest: PriceAlertQuote | null = null;
@@ -98,6 +108,7 @@ export async function quotePriceAlert(input: {
     if (!rules.ok) continue;
     const price = rules.nightlyPrices.reduce((total, nightly) => total + nightly, 0);
     const roomCurrency = room.currency ?? "EUR";
+    if (targetCurrency && !isDisplayCurrency(roomCurrency)) continue;
     const comparisonPrice = targetCurrency ? convertAmount(price, roomCurrency, targetCurrency) : price;
     if (!cheapest || comparisonPrice < cheapest.price) {
       cheapest = { price: comparisonPrice, currency: targetCurrency ?? roomCurrency, mode: "trip" };

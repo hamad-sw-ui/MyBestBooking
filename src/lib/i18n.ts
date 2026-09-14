@@ -101,7 +101,9 @@ export function convertAmount(
 /** Taux indicatif source → cible, ou null si la paire est inconnue. */
 export function indicativeRate(from: string | null | undefined, to: string | null | undefined): number | null {
   if (!isDisplayCurrency(from) || !isDisplayCurrency(to)) return null;
-  return RATES_FROM_EUR[to] / RATES_FROM_EUR[from];
+  const source = from.trim().toUpperCase();
+  const target = to.trim().toUpperCase();
+  return RATES_FROM_EUR[target] / RATES_FROM_EUR[source];
 }
 
 /**
