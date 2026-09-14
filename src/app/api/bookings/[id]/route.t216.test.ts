@@ -292,6 +292,28 @@ dbTest("T-216 — PUT /api/bookings/[id] : transitions manuelles hôte/admin", (
     expect(booking.loyaltyAwardedAt).not.toBeNull();
   });
 
+  it("admin : clôture un séjour payé et passé via le même endpoint et notifie le voyageur", async () => {
+    const id = await createBooking({
+      status: "confirmed",
+      paymentStatus: "paid",
+      checkIn: "2026-07-01",
+      checkOut: "2026-07-04",
+      nights: 3,
+    });
+    getCurrentUser.mockResolvedValue({ id: adminId, role: "admin", email: "admin@mybestbooking.com" });
+
+    const res = await put(id, { status: "completed" });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { booking: { status: string } }).booking.status).toBe("completed");
+
+    const completedMail = await db
+      .select({ to: schema.emailOutbox.to })
+      .from(schema.emailOutbox)
+      .where(eq(schema.emailOutbox.eventKey, `booking-completed:${id}`));
+    expect(completedMail).toHaveLength(1);
+    expect(completedMail[0]?.to).toBe(customerEmail);
+  });
+
   it("hôte : refuse de clôturer avant la date de départ", async () => {
     const id = await createBooking({
       status: "confirmed",
