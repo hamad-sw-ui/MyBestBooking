@@ -10,7 +10,9 @@ import { AvailabilityCalendar } from "@/components/availability-calendar";
 import { RatePlansSection } from "@/components/rate-plans-section";
 import { RoomEditSection } from "@/components/room-edit-section";
 import { loadBookedCounts } from "@/lib/room-stock";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, intlLocale } from "@/lib/utils";
+import { convertAmount, formatMoney, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
+import { getServerDisplayCurrency } from "@/lib/server-display-currency";
 import { getServerLocale } from "@/lib/server-locale";
 import { makeT } from "@/lib/ui-strings";
 import { ArrowLeft } from "lucide-react";
@@ -59,6 +61,20 @@ export default async function RoomCalendarPage({
   // T-244 (audit n°4) : séjours en cours par jour, pour afficher le reste
   // vendable à côté du stock déclaré (même règle que le tunnel).
   const bookedCounts = await loadBookedCounts(id, from, to);
+  const displayCurrency = await getServerDisplayCurrency(user.currency);
+  const sourceCurrency = row.room.currency ?? "EUR";
+  const baseNumeric = Number(row.room.basePrice);
+  const converted = isDisplayCurrency(sourceCurrency)
+    && isDisplayCurrency(displayCurrency)
+    && displayCurrency !== sourceCurrency.toUpperCase();
+  const displayBasePrice = !isDisplayCurrency(sourceCurrency)
+    ? formatMoney(baseNumeric, sourceCurrency, intlLocale(locale))
+    : converted
+      ? formatMoney(convertAmount(baseNumeric, sourceCurrency, displayCurrency), displayCurrency, intlLocale(locale))
+      : formatPrice(baseNumeric, sourceCurrency, locale);
+  const displayPriceNote = converted
+    ? t("price.convertedNote").replace("{currency}", displayCurrency).replace("{asOf}", FX_SNAPSHOT.asOf) + ` ${sourceCurrency}`
+    : null;
 
   return (
     <div className="max-w-5xl">
@@ -77,8 +93,9 @@ export default async function RoomCalendarPage({
           {t("cal.meta")
             .replace("{property}", row.property?.name ?? "")
             .replace("{units}", String(row.room.quantity ?? 1))
-            .replace("{price}", formatPrice(row.room.basePrice, row.room.currency ?? "EUR", locale))}
+            .replace("{price}", displayBasePrice)}
         </p>
+        {displayPriceNote && <p className="text-xs text-gray-400 mt-1">{displayPriceNote}</p>}
       </div>
 
       <AvailabilityCalendar
@@ -97,6 +114,7 @@ export default async function RoomCalendarPage({
           stopSell: d.stopSell,
           minStay: d.minStay,
         }))}
+        displayPriceNote={displayPriceNote}
       />
       <div id="room-edit" className="scroll-mt-24">
         {/* T-226 (A6) : tous les champs éditables par l'API sont transmis au

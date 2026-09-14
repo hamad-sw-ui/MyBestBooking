@@ -7,8 +7,10 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, intlLocale } from "@/lib/utils";
 import { formatCurrencyBreakdown } from "@/lib/currency-summary";
+import { convertAmount, formatMoney, isDisplayCurrency, FX_SNAPSHOT } from "@/lib/i18n";
+import { useDisplayPreferences } from "@/lib/use-display-currency";
 import { BedDouble, Users, Maximize, Plus } from "lucide-react";
 import { BulkToolbar, BulkIcons } from "./bulk-toolbar";
 import { RowDeleteButton } from "./row-delete-button";
@@ -47,6 +49,7 @@ interface Props {
 export function RoomsManager({ rooms, isAdmin }: Props) {
   const t = useT();
   const locale = useUiLocale();
+  const { currency: displayCurrency } = useDisplayPreferences();
   const roomTypeLabel = useCallback(function roomTypeLabelInner(type: string): string {
     switch (type) {
       case "single": return t("room.type.single");
@@ -329,12 +332,31 @@ export function RoomsManager({ rooms, isAdmin }: Props) {
 
                 <div className="flex items-center justify-between pt-3 border-t border-gray-100">
                   <div>
-                    <p className="text-xl font-bold text-[#1B3A6B]">
-                      {formatPrice(room.basePrice, room.currency || "EUR", locale)}
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      {((room.quantity ?? 0) > 1 ? t("bulk.perNightUnitsMany") : t("bulk.perNightUnits")).replace("{n}", String(room.quantity ?? 0))}
-                    </p>
+                      {(() => {
+                        const sourceCurrency = room.currency ?? "EUR";
+                        const numeric = Number.parseFloat(room.basePrice);
+                        const converted = isDisplayCurrency(sourceCurrency)
+                          && isDisplayCurrency(displayCurrency)
+                          && displayCurrency !== sourceCurrency.toUpperCase();
+                        const priceText = !isDisplayCurrency(sourceCurrency)
+                          ? formatMoney(numeric, sourceCurrency, intlLocale(locale))
+                          : converted
+                            ? formatMoney(convertAmount(numeric, sourceCurrency, displayCurrency!), displayCurrency!, intlLocale(locale))
+                            : formatPrice(numeric, sourceCurrency, locale);
+                        return (
+                          <>
+                            <p className="text-xl font-bold text-[#1B3A6B]">{priceText}</p>
+                            <p className="text-xs text-gray-500">
+                              {((room.quantity ?? 0) > 1 ? t("bulk.perNightUnitsMany") : t("bulk.perNightUnits")).replace("{n}", String(room.quantity ?? 0))}
+                            </p>
+                            {converted && (
+                              <p className="text-[10px] text-gray-400">
+                                {t("price.convertedNote").replace("{currency}", displayCurrency!).replace("{asOf}", FX_SNAPSHOT.asOf)} {sourceCurrency}
+                              </p>
+                            )}
+                          </>
+                        );
+                      })()}
                   </div>
                   <div className="flex items-center gap-1">
                     {/* T-217/P6 : second lien vers la section de modification

@@ -27,6 +27,8 @@ interface Props {
   initialFrom: string;
   initialTo: string;
   initialDays: Day[];
+  /** Conversion d'affichage indicative de la devise de la chambre. */
+  displayPriceNote?: string | null;
   /**
    * T-244 (audit n°4) : séjours en cours par jour (`YYYY-MM-DD` → nombre de
    * réservations actives couvrant la nuit). Optionnel : un appelant qui ne le
@@ -46,6 +48,7 @@ export function AvailabilityCalendar({
   initialFrom,
   initialTo,
   initialDays,
+  displayPriceNote,
   initialBookedCounts,
 }: Props) {
   const t = useT();
@@ -202,6 +205,7 @@ export function AvailabilityCalendar({
       <p className="text-xs text-gray-500">
         {t("cal.hint").replace("{qty}", String(quantity)).replace("{price}", basePrice)}
       </p>
+      {displayPriceNote && <p className="text-xs text-gray-400">{displayPriceNote}</p>}
 
       <div className="flex items-end gap-3 flex-wrap">
         <div>

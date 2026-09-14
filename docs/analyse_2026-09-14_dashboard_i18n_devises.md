@@ -175,7 +175,15 @@ l'implémentation du plan. Les points suivants ont été contrôlés expliciteme
 - le sélecteur dashboard retombe sur `XAF`, comme le défaut plateforme, avant
   résolution asynchrone ;
 - les alertes de prix ne relabellisent plus une chambre legacy inconnue dans la
-  devise cible après un fallback de conversion.
+  devise cible après un fallback de conversion ;
+- les surfaces chambres, calendrier et plans tarifaires du dashboard appliquent
+  maintenant la même conversion indicative, tout en conservant les prix
+  natifs utilisés par les champs d'édition et les écritures en base.
+
+Une troisième vérification runtime a aussi changé temporairement la préférence
+hôte en `MAD`, puis l'a restaurée à `XAF` : `/dashboard/rooms` et le calendrier
+ont répondu `200` et le calendrier affichait bien la note « conversion
+indicative en MAD … source en EUR ».
 
 ### Résultats de validation de la seconde passe
 
